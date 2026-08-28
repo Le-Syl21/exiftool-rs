@@ -796,6 +796,24 @@ fn process_dr4_tag(
             parse_dr4_stamp_info(data, off, len, tags);
             return;
         }
+        0xf0511 => {
+            // DustInfo (CanonVRD.pm:1277), a plain binary table.
+            let end = (off + len).min(data.len());
+            if off < end {
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                tags.extend(crate::tags::binary_tables_generated::decode(
+                    "CanonVRD::DustInfo",
+                    &data[off..end],
+                    "Canon",
+                    "",
+                    crate::metadata::exif::ByteOrderMark::BigEndian,
+                    "",
+                    "",
+                    &mut dm,
+                ));
+            }
+            return;
+        }
         _ => {}
     }
 

@@ -32,8 +32,19 @@ my %WANTED = (
         ColorData1 ColorData2 ColorData3 ColorData4 ColorData5 ColorData6
         ColorData7 ColorData8 ColorData9 ColorData10 ColorData11 ColorData12
         ColorDataUnknown
-        ShotInfo
+        ShotInfo RawBurstInfo IAD1
     )],
+    CanonCustom => [qw(PersonalFuncs PersonalFuncValues)],
+    # DLOInfo is not here: it sits at index 0xe0 of the VRD edit data, behind
+    # a DLOOn flag and a Hook that shifts every entry after it by the length
+    # of the DLO data. Generating a decoder nothing can call would only move
+    # a counter.
+    CanonVRD => [qw(DustInfo)],
+    Kodak => [qw(Type9)],
+    Photoshop => [qw(PixelInfo)],
+    RIFF => [qw(AVIHeader)],
+    Pentax => [qw(Junk2)],
+    Samsung => [qw(DualShotExtra Thumbnail2)],
     Minolta => [qw(
         CameraSettings7D CameraInfoA100 WBInfoA100 MOV1 MOV2
     )],
@@ -65,6 +76,14 @@ my %WIDTH = (
     int16uRev => 2,
     float => 4, double => 8,
 );
+# The modules whose tables belong to a maker note; the rest name themselves in
+# family 0 (ExifTool sets it on the module's own table definitions).
+my %MAKERNOTE_MODULE = map { $_ => 1 } qw(
+    Canon CanonCustom CanonVRD Casio DJI FLIR FujiFilm GE HP JVC Kodak Leaf
+    Minolta Motorola Nikon NikonCapture NikonCustom Olympus Panasonic Pentax
+    PhaseOne Reconyx Ricoh Samsung Sanyo Sigma Sony
+);
+
 my %IS_RATIONAL = (rational32u => 1, rational32s => 1, rational64u => 1, rational64s => 1);
 
 my @skipped;
@@ -168,6 +187,34 @@ sub scan_fields {
     return @out;
 }
 
+# The source of a conversion, whichever way it is written: `'...'`, `"..."`,
+# or `q{...}` taken by counting braces. Reading only the first of those left
+# MaxDataRate without its conversion and said nothing about it.
+sub code_of {
+    my ($fb, $key) = @_;
+    my $best;
+    my $at = -1;
+    while ($fb =~ /\b\Q$key\E\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
+        ($best, $at) = ($1, $-[0]) if $-[0] > $at;
+    }
+    while ($fb =~ /\b\Q$key\E\s*=>\s*q\{/g) {
+        my $start = $-[0];
+        my $from = pos($fb);
+        my ($depth, $i) = (1, $from);
+        while ($i < length($fb) and $depth) {
+            my $ch = substr($fb, $i, 1);
+            $depth++ if $ch eq '{';
+            $depth-- if $ch eq '}';
+            ++$i;
+        }
+        next if $depth;
+        ($best, $at) = (substr($fb, $from, $i - $from - 1), $start) if $start > $at;
+    }
+    return undef unless defined $best;
+    $best =~ s/\\'/'/g;
+    return $best;
+}
+
 # A Condition, with `q{...}` taken by counting braces.
 sub field_cond {
     my ($fb) = @_;
@@ -260,10 +307,13 @@ sub compile_cond {
         return compile_cond($inner) if $ok and $depth == 0;
     }
     return ("!(" . (compile_cond($1))[0] . ")") if $cond =~ /^not (.*)$/ and compile_cond($1);
-    if ($cond =~ m{^\$\$self\{Model\} (=~|!~) /(.*)/$}) {
-        my ($op, $pat) = ($1, $2);
+    # `$$self{Model} =~ /EOS 70D$/`, `$$self{Make} =~ /Kodak/i`.
+    if ($cond =~ m{^\$\$self\{(Model|Make)\} (=~|!~) /(.*?)/(i?)$}) {
+        my ($what, $op, $pat, $ci) = ($1, $2, $3, $4);
         return () if $pat =~ /\(\?[=!<]/;
-        return sprintf('%sMODEL_RE_%d.is_match(model)', $op eq '!~' ? '!' : '', re_id($pat));
+        $pat = "(?i)$pat" if $ci;
+        return sprintf('%sMODEL_RE_%d.is_match(%s)',
+                       $op eq '!~' ? '!' : '', re_id($pat), lc $what);
     }
     if ($cond =~ /^\$count (==|!=|<=|>=|<|>) (\d+)$/) {
         return "count $1 $2";
@@ -382,7 +432,9 @@ sub parse_table {
     my ($grp0) = $body =~ /GROUPS\s*=>\s*\{[^}]*0\s*=>\s*'(\w+)'/;
     my ($grp1) = $body =~ /GROUPS\s*=>\s*\{[^}]*1\s*=>\s*'(\w+)'/;
     my ($grp2) = $body =~ /GROUPS\s*=>\s*\{[^}]*2\s*=>\s*'(\w+)'/;
-    $grp0 ||= 'MakerNotes';
+    # A table that says nothing takes its module's own family 0 -- which for a
+    # maker-note module is MakerNotes and for RIFF is RIFF.
+    $grp0 ||= $MAKERNOTE_MODULE{$module} ? 'MakerNotes' : $module;
     $grp1 ||= $module;
     $grp2 ||= 'Image';
     my $prio0 = $body =~ /PRIORITY\s*=>\s*0/ ? 1 : 0;
@@ -514,15 +566,15 @@ sub parse_table {
         unless (defined $dmname) {
             ($dmname) = $fb =~ /RawConv\s*=>\s*'\(?\$\$self\{(\w+)\}\s*=\s*\$val/;
         }
-        my ($rconv) = $fb =~ /RawConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
+        my $rconv = code_of($fb, 'RawConv');
         # `($$self{FocusDistanceUpper} = $val) || undef` stores and then tests.
         # The store is the dm.push that already happened, so what is left to
         # evaluate is the test -- and without dropping the assignment the
         # evaluator declines the whole thing and a zero distance is reported
         # where ExifTool reports nothing.
         $rconv =~ s/\$\$self\{\w+\}\s*=(?![~=])\s*//g if defined $rconv;
-        my ($vconv) = $fb =~ /ValueConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
-        my ($pconv) = $fb =~ /PrintConv\s*=>\s*'((?:[^'\\]|\\.)*)'/;
+        my $vconv = code_of($fb, 'ValueConv');
+        my $pconv = code_of($fb, 'PrintConv');
         unless (defined $vconv) {
             ($vconv) = $fb =~ /ValueConv\s*=>\s*\\&(\w+)/;
             $vconv = "Image::ExifTool::${module}::$vconv(\$val)" if defined $vconv;
@@ -542,9 +594,13 @@ sub parse_table {
         # FilterEffectMonochrome splices %psInfo and then names its own.
         my $inline_at = -1;
         $inline_at = $-[0] if $fb =~ /PrintConv\s*=>\s*\{/;
+        # An expression PrintConv wins over an earlier hash or reference just
+        # as a later hash does.
+        my $expr_at = -1;
+        $expr_at = $-[0] if defined $pconv and $fb =~ /PrintConv\s*=>\s*(?:'|q\{)/;
         my $ref_at = -1;
         $ref_at = $-[0] if $fb =~ /PrintConv\s*=>\s*\\%\w+/;
-        if ($ref_at > $inline_at and my ($href) = $fb =~ /PrintConv\s*=>\s*\\%(\w+)/) {
+        if ($ref_at > $inline_at and $ref_at > $expr_at and my ($href) = $fb =~ /PrintConv\s*=>\s*\\%(\w+)/) {
             my $found = 0;
             # A `my %name = (...)` is a file-scoped lexical: invisible to the
             # symbol table, so it is read from the source as text. A package
@@ -582,7 +638,7 @@ sub parse_table {
                 }
             }
         }
-        if (!%conv and $inline_at >= 0 and $fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s*\},/s) {
+        if (!%conv and $inline_at > $expr_at and $fb =~ /PrintConv\s*=>\s*\{(.*?)\n\s*\},/s) {
             my $c = $1;
             while ($c =~ /(-?\d+|0x[0-9a-fA-F]+)\s*=>\s*'((?:[^'\\]|\\.)*)'/g) {
                 my ($k, $v) = ($1, $2);
@@ -592,6 +648,7 @@ sub parse_table {
             }
         }
 
+        undef $pconv if %conv;
         push @{$t->{fields}}, {
             off => $off, name => $name, fmt => $ffmt, n => $count, hidden => $hidden,
             cond => $guard, conv => \%conv, mask => $mask, dmname => $dmname,
@@ -651,12 +708,13 @@ $sel_src .= <<'SEL';
 pub fn variant_for(
     module: &str,
     tag: u16,
+    make: &str,
     model: &str,
     data: &[u8],
     count: usize,
     format: &str,
 ) -> Option<&'static str> {
-    let _ = (model, data, count, format);
+    let _ = (make, model, data, count, format);
     match (module, tag) {
 SEL
 for my $mod (sort keys %SELECTORS) {
@@ -748,7 +806,7 @@ print <<"HDR";
 //! no table happens to need and a cast that happens to be a no-op are both
 //! ordinary here rather than something to tidy away by hand.
 #![allow(dead_code, unused_parens, unused_mut)]
-#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_arguments, clippy::useless_conversion)]
 #![allow(
     clippy::too_many_lines,
     clippy::match_same_arms,
@@ -783,14 +841,25 @@ fn dm_get(dm: &State, name: &str) -> Option<f64> {
 /// TargetExposureTime from another, and `\$\$self{FILE_TYPE} eq "CRW"` decides
 /// whether an ExposureTime of zero means one second or nothing at all.
 struct Ctx<'a> {
+    make: &'a str,
     model: &'a str,
     file_type: &'a str,
     dm: &'a State,
 }
 
 impl conv_expr::ParseState for Ctx<'_> {
+    /// The reader options a conversion asks about. ExifTool's ByteUnit
+    /// defaults to SI, and nothing here can set it to Binary.
+    fn option(&self, name: &str) -> Option<Conv> {
+        match name {
+            "ByteUnit" => Some(Conv::Str("SI".to_string())),
+            _ => None,
+        }
+    }
+
     fn member(&self, name: &str) -> Option<Conv> {
         match name {
+            "Make" => Some(Conv::Str(self.make.to_string())),
             "Model" => Some(Conv::Str(self.model.to_string())),
             "FILE_TYPE" | "FileType" => Some(Conv::Str(self.file_type.to_string())),
             _ => dm_get(self.dm, name).map(Conv::Num),
@@ -912,6 +981,7 @@ print <<'DECODE';
 pub fn decode(
     table: &str,
     data: &[u8],
+    make: &str,
     model: &str,
     bo: ByteOrder,
     file_type: &str,
@@ -921,7 +991,7 @@ pub fn decode(
 DECODE
 print "    match table {\n";
 # Keyed by module and table: Minolta and Olympus both call a table MOV1.
-printf("        \"%s::%s\" => %s(data, model, bo, file_type, format, dm),\n",
+printf("        \"%s::%s\" => %s(data, make, model, bo, file_type, format, dm),\n",
        $_->{module}, $_->{name}, fn_name($_)) for @tables;
 print "        _ => Vec::new(),\n    }\n}\n\n";
 
@@ -932,7 +1002,7 @@ for my $t (@tables) {
         printf "/// Incomplete: a field of variable length moves every entry after\n";
         printf "/// it, and this reads them where they would be without it.\n";
     }
-    printf "fn %s(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {\n", fn_name($t);
+    printf "fn %s(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {\n", fn_name($t);
     printf "    const GRP0: &str = \"%s\";\n", $t->{grp0};
     printf "    const GRP1: &str = \"%s\";\n", $t->{grp1};
     printf "    const GRP2: &str = \"%s\";\n", $t->{grp2};
@@ -942,7 +1012,7 @@ for my $t (@tables) {
     # name ExifTool gives a layout it does not describe -- so every argument
     # has to be spoken for.
     print  "    let mut tags = Vec::new();\n";
-    print  "    let _ = (data, model, bo, file_type, format, &dm);\n";
+    print  "    let _ = (data, make, model, bo, file_type, format, &dm);\n";
 
     for my $f (sort { $a->{off} <=> $b->{off} } @{$t->{fields}}) {
         # `my $entry = int($index) * $increment` (ExifTool.pm:9957): the byte
@@ -1007,7 +1077,7 @@ for my $t (@tables) {
             # exchanged, and joining them without that gives four other
             # numbers entirely.
             if (defined $f->{vconv} or defined $f->{pconv}) {
-                printf "%s        let ctx = Ctx { model, file_type, dm };\n", $ind;
+                printf "%s        let ctx = Ctx { make, model, file_type, dm };\n", $ind;
                 printf "%s        let mut cv = Conv::Str(s.clone());\n", $ind;
                 printf "%s        if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                     $ind, esc($f->{vconv}) if defined $f->{vconv};
@@ -1043,30 +1113,37 @@ for my $t (@tables) {
             print  "    }\n" if defined $f->{cond};
             next;
         }
-        printf "%s    let ctx = Ctx { model, file_type, dm };\n", $ind
+        printf "%s    let ctx = Ctx { make, model, file_type, dm };\n", $ind
             if defined $f->{rconv} or defined $f->{vconv} or defined $f->{pconv};
         my $guard = 0;
+        # A RawConv can rule the value out -- `$val ? $val : undef` -- and it
+        # can change what kind of number it is: AVIHeader's FrameRate is
+        # `1e6 / $val`, and casting that back to the integer the reader
+        # produced turned 29.97 into 29.
+        printf "%s    let base = Conv::Num(f64::from(v));\n", $ind;
         if (defined $f->{rconv}) {
-            printf "%s    let rc = conv_expr::eval_with(\"%s\", &Conv::Num(f64::from(v)), &ctx);\n",
+            printf "%s    let rc = conv_expr::eval_with(\"%s\", &base, &ctx);\n",
                 $ind, esc($f->{rconv});
             printf "%s    if rc.as_ref() != Some(&Conv::Undef) {\n", $ind;
-            printf "%s        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]\n", $ind;
-            printf "%s        let v = rc.map_or(v, |x| x.as_num() as _);\n", $ind;
+            printf "%s        let base = rc.unwrap_or(base);\n", $ind;
             $guard = 1;
             $ind .= "    ";
         }
         my %conv = %{$f->{conv}};
         if (%conv) {
-            printf "%s    let s = match v as i64 {\n", $ind;
+            printf "%s    #[allow(clippy::cast_possible_truncation)]\n", $ind;
+            printf "%s    let s = match base.as_num() as i64 {\n", $ind;
             for my $k (sort { $a <=> $b } keys %conv) {
                 printf "%s        %d => \"%s\".to_string(),\n", $ind, $k, esc($conv{$k});
             }
             printf "%s        other => other.to_string(),\n", $ind;
             printf "%s    };\n", $ind;
-            printf "%s    tags.push(mk(\"%s\", 0x%x, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));\n",
+            printf "%s    #[allow(clippy::cast_possible_truncation)]\n", $ind;
+            printf "%s    let raw = Value::I32(base.as_num() as i32);\n", $ind;
+            printf "%s    tags.push(mk(\"%s\", 0x%x, s, raw, GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
         } elsif (defined $f->{vconv} or defined $f->{pconv}) {
-            printf "%s    let mut cv = Conv::Num(f64::from(v));\n", $ind;
+            printf "%s    let mut cv = base;\n", $ind;
             printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                 $ind, esc($f->{vconv}) if defined $f->{vconv};
             printf "%s    let raw = Value::F64(cv.as_num());\n", $ind;
@@ -1075,7 +1152,8 @@ for my $t (@tables) {
             printf "%s    tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
         } else {
-            printf "%s    tags.push(mk(\"%s\", 0x%x, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));\n",
+            printf "%s    #[allow(clippy::cast_possible_truncation)]\n", $ind;
+            printf "%s    tags.push(mk(\"%s\", 0x%x, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
         }
         if ($guard) {
@@ -1105,7 +1183,7 @@ for my $t (@tables) {
         } else {
             printf "%sif let Some(sub) = data.get(0x%x..) {\n", $ind, $byte;
         }
-        printf "%s    tags.extend(%s(sub, model, bo, file_type, format, dm));\n", $ind, fn_name($target);
+        printf "%s    tags.extend(%s(sub, make, model, bo, file_type, format, dm));\n", $ind, fn_name($target);
         printf "%s}\n", $ind;
         print  "    }\n" if defined $sd->{cond};
     }

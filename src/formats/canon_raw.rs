@@ -520,6 +520,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             let sub_tags = crate::tags::binary_tables_generated::decode(
                 "Canon::ShotInfo",
                 data,
+                "Canon",
                 "CRW",
                 crate::metadata::exif::ByteOrderMark::LittleEndian,
                 "CRW",

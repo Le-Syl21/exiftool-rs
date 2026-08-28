@@ -21,7 +21,24 @@ open my $find, '-|', 'find', $src, '-name', '*.rs' or die $!;
 while (my $f = <$find>) { chomp $f; open my $h, '<', $f or next; local $/; $ours .= <$h>; close $h; }
 close $find;
 
-my (%total, %missing);
+# Everything ExifTool itself points at. A table nothing names is one no
+# reader can reach -- ExifTool's own included -- so counting it against us
+# would be counting something that cannot be done.
+my $lib_src = '';
+{
+    opendir my $d, "$lib/Image/ExifTool" or die $!;
+    # TagLookup.pm names every table there is, so it says nothing about
+    # whether anything points at one.
+    for my $pm (sort grep { /\.pm$/ and $_ ne 'TagLookup.pm' } readdir $d) {
+        open my $h, '<', "$lib/Image/ExifTool/$pm" or next;
+        local $/;
+        $lib_src .= <$h>;
+        close $h;
+    }
+    closedir $d;
+}
+
+my (%total, %missing, %orphan);
 opendir my $dh, "$lib/Image/ExifTool" or die $!;
 for my $pm (sort grep { /\.pm$/ } readdir $dh) {
     my $module = $pm; $module =~ s/\.pm$//;
@@ -34,6 +51,12 @@ for my $pm (sort grep { /\.pm$/ } readdir $dh) {
         next if $table eq 'Main';
         # Only binary sub-tables: those are the ones a reader must decode itself.
         next unless $body =~ /FIRST_ENTRY/;
+        # A reference, not the definition: `'Image::ExifTool::Mod::Table'`
+        # in quotes is how a SubDirectory names one.
+        unless ($lib_src =~ /'Image::ExifTool::\Q$module\E::\Q$table\E'/) {
+            push @{$orphan{$module}}, $table;
+            next;
+        }
         $total{$module}++;
         # A table we can reach is one whose name appears somewhere in our source,
         # whether in a generated file or a hand-written dispatcher.
@@ -56,6 +79,15 @@ printf "\nTOTAL: %d binary sub-tables defined, %d never mentioned in our source 
 
 # The names, not just the count: a number says how far there is to go, a list
 # says what to do next.
+if (%orphan) {
+    my $n = 0;
+    $n += scalar @{$orphan{$_}} for keys %orphan;
+    printf "\nNOT COUNTED -- %d table(s) ExifTool defines and never points at:\n", $n;
+    for my $mod (sort keys %orphan) {
+        printf "  %-14s %s\n", $mod, join ' ', sort @{$orphan{$mod}};
+    }
+}
+
 print "\nNOT REACHED:\n";
 for my $mod (sort keys %missing) {
     printf "  %-14s %s\n", $mod, join ' ', sort @{$missing{$mod}};

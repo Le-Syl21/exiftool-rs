@@ -991,6 +991,7 @@ fn parse_atoms(
                             table,
                             &data[content_start + 16..content_end],
                             "",
+                            "",
                             crate::metadata::exif::ByteOrderMark::BigEndian,
                             "",
                             "",
@@ -1051,6 +1052,7 @@ fn parse_atoms(
                         "Olympus::prms",
                         inner,
                         "",
+                        "",
                         crate::metadata::exif::ByteOrderMark::BigEndian,
                         "",
                         "",
@@ -1065,6 +1067,7 @@ fn parse_atoms(
                         table,
                         cd,
                         "",
+                        "",
                         crate::metadata::exif::ByteOrderMark::LittleEndian,
                         "",
                         "",
@@ -1078,6 +1081,7 @@ fn parse_atoms(
                 tags.extend(crate::tags::binary_tables_generated::decode(
                     if atom_type == b"FFMV" { "FujiFilm::FFMV" } else { "QuickTime::HTCBinary" },
                     &data[content_start..content_end],
+                    "",
                     "",
                     crate::metadata::exif::ByteOrderMark::BigEndian,
                     "",
@@ -3812,6 +3816,23 @@ fn parse_canon_uuid(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
                         t.group.family2 = "Video".into();
                         tags.push(t);
                     }
+                }
+            }
+            // 'CDI1' holds one atom, 'IAD1', whose layout Canon.pm gives
+            // (Canon.pm:9777-9781).
+            b"CDI1" => {
+                if let Some(iad1) = find_atom(&data[content_start..content_end], 0, b"IAD1") {
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    tags.extend(crate::tags::binary_tables_generated::decode(
+                        "Canon::IAD1",
+                        iad1,
+                        "Canon",
+                        "",
+                        crate::metadata::exif::ByteOrderMark::BigEndian,
+                        "",
+                        "",
+                        &mut dm,
+                    ));
                 }
             }
             b"CMT1" => {

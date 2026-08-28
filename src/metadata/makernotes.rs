@@ -232,6 +232,28 @@ pub fn parse_makernotes_exif_base(
         return decode_jvc_text(mn_data);
     }
 
+    // Kodak's ninth maker-note layout: `IIII` then 2 or 3, and a date at
+    // offset 20 (MakerNotes.pm:415-421). Not an IFD either.
+    if mn_data.len() > 30
+        && mn_data.starts_with(b"IIII")
+        && (mn_data[4] == 2 || mn_data[4] == 3)
+        && mn_data[5] == 0
+        && mn_data[20..24].iter().all(u8::is_ascii_digit)
+        && mn_data[24] == b'/'
+    {
+        let mut dm = crate::tags::binary_tables_generated::State::new();
+        return crate::tags::binary_tables_generated::decode(
+            "Kodak::Type9",
+            mn_data,
+            make,
+            model,
+            ByteOrderMark::LittleEndian,
+            "",
+            "",
+            &mut dm,
+        );
+    }
+
     // Kodak binary: "KDK INFO" or "KDK" — not IFD, decode directly
     if mn_data.starts_with(b"KDK") {
         let start = 8;
@@ -5966,6 +5988,7 @@ fn read_makernote_ifd_with_base(
                     crate::tags::binary_tables_generated::decode(
                         "Canon::ShotInfo",
                         value_data,
+                        &crate::metadata::exif::make(),
                         model_name,
                         byte_order,
                         &crate::metadata::exif::tiff_type(),
@@ -6006,6 +6029,7 @@ fn read_makernote_ifd_with_base(
                     let mut t = crate::tags::binary_tables_generated::variant_for(
                         "Canon",
                         0x000d,
+                        &crate::metadata::exif::make(),
                         model_name,
                         value_data,
                         count as usize,
@@ -6015,6 +6039,7 @@ fn read_makernote_ifd_with_base(
                         crate::tags::binary_tables_generated::decode(
                             table,
                             value_data,
+                            &crate::metadata::exif::make(),
                             model_name,
                             byte_order,
                             // Our TIFF_TYPE holds the file-type code ExifTool
@@ -6592,6 +6617,30 @@ fn read_makernote_ifd_with_base(
                     }
                     t
                 }
+                // Three more Canon blocks whose layout Canon.pm gives in
+                // full: the two personal-function tables of the 1D bodies
+                // (0x0091, 0x0092) and the raw burst roll of the R-series
+                // (0x403f).
+                (Manufacturer::Canon, 0x0091)
+                | (Manufacturer::Canon, 0x0092)
+                | (Manufacturer::Canon, 0x403F) => {
+                    let table = match tag_id {
+                        0x0091 => "CanonCustom::PersonalFuncs",
+                        0x0092 => "CanonCustom::PersonalFuncValues",
+                        _ => "Canon::RawBurstInfo",
+                    };
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        table,
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        byte_order,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
+                }
                 (Manufacturer::Canon, 0x4001) => {
                     // Canon ColorData: which of the thirteen tables applies is
                     // decided by the block's own length, straight from
@@ -6600,6 +6649,7 @@ fn read_makernote_ifd_with_base(
                     crate::tags::binary_tables_generated::variant_for(
                         "Canon",
                         0x4001,
+                        &crate::metadata::exif::make(),
                         model_name,
                         value_data,
                         count as usize,
@@ -6609,6 +6659,7 @@ fn read_makernote_ifd_with_base(
                         crate::tags::binary_tables_generated::decode(
                             table,
                             value_data,
+                            &crate::metadata::exif::make(),
                             model_name,
                             byte_order,
                             &crate::metadata::exif::tiff_type(),
@@ -6747,6 +6798,20 @@ fn read_makernote_ifd_with_base(
                     }
                     t
                 }
+                // Samsung's dual-shot block (Samsung.pm:1280).
+                (Manufacturer::Samsung, 0x0AB3) => {
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        "Samsung::DualShotExtra",
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        byte_order,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
+                }
                 // Minolta CameraSettings binary sub-table (int32u format)
                 (Manufacturer::Minolta, 0x0001) | (Manufacturer::Minolta, 0x0003) => {
                     decode_minolta_camera_settings(value_data, byte_order, model_name)
@@ -6768,6 +6833,7 @@ fn read_makernote_ifd_with_base(
                     let mut t = crate::tags::binary_tables_generated::decode(
                         table,
                         value_data,
+                        &crate::metadata::exif::make(),
                         model_name,
                         bo,
                         &crate::metadata::exif::tiff_type(),
@@ -7660,6 +7726,9 @@ fn read_makernote_ifd_with_base(
             (Manufacturer::Canon, 0x00AA) | // MeasuredColor
             (Manufacturer::Canon, 0x00E0) | // SensorInfo
             (Manufacturer::Canon, 0x0035) | // TimeInfo
+            (Manufacturer::Canon, 0x0091) | // PersonalFuncs
+            (Manufacturer::Canon, 0x0092) | // PersonalFuncValues
+            (Manufacturer::Canon, 0x403F) | // RawBurstInfo
             (Manufacturer::Canon, 0x4001) | // ColorData
             (Manufacturer::Canon, 0x4002) | // CRWParam (Unknown, Binary, Drop)
             (Manufacturer::Canon, 0x4003) | // ColorInfo (SubDirectory)
@@ -7681,6 +7750,7 @@ fn read_makernote_ifd_with_base(
             (Manufacturer::Nikon, 0x00B7) | // AFInfo2
             // NikonCaptureOffsets (0x0E0E) and NikonScanIFD (0x0E10) now decoded above
             (Manufacturer::Nikon, 0x0E22) | // NikonICCProfile (SubDirectory)
+            (Manufacturer::Samsung, 0x0AB3) | // DualShotExtra
             (Manufacturer::Minolta, 0x0001) | // CameraSettings
             (Manufacturer::Minolta, 0x0003) | // CameraSettings
             (Manufacturer::Minolta, 0x0004) | // CameraSettings7D

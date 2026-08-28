@@ -28,6 +28,10 @@ thread_local! {
     /// read because MakerNote conditions ask for it. Sony tells one ILCE-9
     /// firmware from another that way, and reads a different offset for each.
     static SOFTWARE: RefCell<String> = const { RefCell::new(String::new()) };
+    /// ExifTool's `$$self{Make}`, kept for the same reason as Software: a
+    /// binary sub-table can be conditioned on it, and Kodak's Type9 reads four
+    /// of its fields only when the file says Kodak wrote it.
+    static MAKE: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
 /// Set the Software string the file declares (ExifTool's `$$self{Software}`).
@@ -39,6 +43,17 @@ pub fn set_software(text: &str) {
 #[must_use]
 pub fn software() -> String {
     SOFTWARE.with(|s| s.borrow().clone())
+}
+
+/// Set the Make the file declares (ExifTool's `$$self{Make}`).
+pub fn set_make(text: &str) {
+    MAKE.with(|s| s.borrow_mut().replace_range(.., text));
+}
+
+/// The Make the file declares.
+#[must_use]
+pub fn make() -> String {
+    MAKE.with(|s| s.borrow().clone())
 }
 
 /// Set the TIFF flavour being read (ExifTool's `TIFF_TYPE`).
@@ -359,6 +374,9 @@ impl ExifReader {
         }
 
         // Extract Make + Model for MakerNotes detection and sub-table dispatch
+        if let Some(mk) = tags.iter().find(|t| t.name == "Make") {
+            set_make(mk.print_value.trim_end());
+        }
         let make = tags
             .iter()
             .find(|t| t.name == "Make")

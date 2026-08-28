@@ -649,7 +649,13 @@ impl<'a> Parser<'a> {
                 Val::Num(cur?.as_num() / d)
             }
         };
-        self.write_lvalue(&target, value.clone())?;
+        // In a branch that was not reached, the value is still worked out --
+        // Perl would not have -- but nothing is written back. `$tmp > 9999 and
+        // $tmp /= $div` divides only when the test held, and writing anyway
+        // turned 206 kB/s into 0.206 MB/s.
+        if self.quiet == 0 {
+            self.write_lvalue(&target, value.clone())?;
+        }
         Some(value)
     }
 
@@ -870,10 +876,38 @@ impl<'a> Parser<'a> {
             }
             self.i += 3;
             if acc.truthy() {
-                acc = self.low_not()?;
+                acc = self.low_comma()?;
             } else {
-                self.skip_branch(Self::low_not)?;
+                self.skip_branch(Self::low_comma)?;
             }
+        }
+    }
+
+    /// `A, B` at the loose level: Perl's comma binds tighter than `and`, so
+    /// both halves of `$tmp > 9999 and $tmp /= $div, $unit =~ s/^./M/` belong
+    /// to the branch. Read as two statements, the second ran whatever the
+    /// test said and stamped an M on the unit of a 206 kB/s file.
+    fn low_comma(&mut self) -> Option<Val> {
+        let mut acc = self.low_not()?;
+        loop {
+            let save = self.i;
+            self.skip_ws();
+            if self.i >= self.s.len() || self.s[self.i] != b',' {
+                self.i = save;
+                return Some(acc);
+            }
+            self.i += 1;
+            self.skip_ws();
+            // A trailing comma before the end of a statement is not an operator.
+            if self.i >= self.s.len() || self.s[self.i] == b';' || self.s[self.i] == b')' {
+                self.i = save;
+                return Some(acc);
+            }
+            let Some(next) = self.low_not() else {
+                self.i = save;
+                return Some(acc);
+            };
+            acc = next;
         }
     }
 

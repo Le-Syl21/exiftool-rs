@@ -2902,6 +2902,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                     table,
                     rec,
                     "",
+                    "",
                     if le {
                         crate::metadata::exif::ByteOrderMark::LittleEndian
                     } else {
@@ -3032,6 +3033,20 @@ fn decode_photoshop_irb_subtags(id: u16, data: &[u8], tags: &mut Vec<crate::tag:
     };
 
     match id {
+        // PixelInfo (Photoshop.pm:302), a plain binary table.
+        0x0428 => {
+            let mut dm = crate::tags::binary_tables_generated::State::new();
+            tags.extend(crate::tags::binary_tables_generated::decode(
+                "Photoshop::PixelInfo",
+                data,
+                "",
+                "",
+                crate::metadata::exif::ByteOrderMark::BigEndian,
+                "",
+                "",
+                &mut dm,
+            ));
+        }
         0x03ED if data.len() >= 14 => {
             // ResolutionInfo (from Perl Photoshop::Resolution)
             let xres = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as f64 / 65536.0;

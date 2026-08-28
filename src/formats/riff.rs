@@ -510,69 +510,46 @@ fn read_riff_chunks(
                 }
             }
             // AVI Main Header
-            b"avih" => {
-                if chunk_size >= 40 {
-                    let cd = &data[chunk_data_start..chunk_data_end];
-                    let us_per_frame = u32::from_le_bytes([cd[0], cd[1], cd[2], cd[3]]);
-                    let max_data_rate = u32::from_le_bytes([cd[4], cd[5], cd[6], cd[7]]);
-                    // cd[8..11] = PaddingGranularity, cd[12..15] = Flags
-                    let total_frames = u32::from_le_bytes([cd[16], cd[17], cd[18], cd[19]]);
-                    // cd[20..23] = InitialFrames
-                    let stream_count = u32::from_le_bytes([cd[24], cd[25], cd[26], cd[27]]);
-                    // cd[28..31] = SuggestedBufferSize
-                    let width = u32::from_le_bytes([cd[32], cd[33], cd[34], cd[35]]);
-                    let height = u32::from_le_bytes([cd[36], cd[37], cd[38], cd[39]]);
-
-                    state.us_per_frame = us_per_frame;
-                    state.total_frames = total_frames;
-
-                    if us_per_frame > 0 {
-                        let fps = 1_000_000.0_f64 / us_per_frame as f64;
-                        // ExifTool prints as int($val * 1000 + 0.5) / 1000
-                        let fps_rounded = (fps * 1000.0 + 0.5).floor() / 1000.0;
-                        tags.push(mk_riff(
-                            family,
-                            "FrameRate",
-                            "Frame Rate",
-                            Value::String(format!("{}", fps_rounded)),
-                        ));
-                    }
-
-                    // MaxDataRate: ExifTool prints as "X kB/s" (sprintf("%.4g %s", $tmp, $unit))
-                    let kbps = max_data_rate as f64 / 1000.0;
-                    let max_data_rate_str = format_sig4(kbps, "kB/s");
-                    tags.push(mk_riff(
-                        family,
-                        "MaxDataRate",
-                        "Max Data Rate",
-                        Value::String(max_data_rate_str),
-                    ));
-
-                    tags.push(mk_riff(
-                        family,
-                        "FrameCount",
-                        "Frame Count",
-                        Value::U32(total_frames),
-                    ));
-                    tags.push(mk_riff(
-                        family,
-                        "StreamCount",
-                        "Stream Count",
-                        Value::U32(stream_count),
-                    ));
-                    tags.push(mk_riff(
-                        family,
-                        "ImageWidth",
-                        "Image Width",
-                        Value::U32(width),
-                    ));
-                    tags.push(mk_riff(
-                        family,
-                        "ImageHeight",
-                        "Image Height",
-                        Value::U32(height),
+            // A JUNK chunk is padding for most writers, but a few cameras
+            // hide a maker note in it. The Optio RZ18's opens with
+            // "PENTDigital Camera" (RIFF.pm:474-478).
+            b"JUNK" | b"junk" => {
+                let cd = &data[chunk_data_start..chunk_data_end];
+                if cd.starts_with(b"PENTDigital Camera") {
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    tags.extend(crate::tags::binary_tables_generated::decode(
+                        "Pentax::Junk2",
+                        cd,
+                        "",
+                        "",
+                        crate::metadata::exif::ByteOrderMark::LittleEndian,
+                        "",
+                        "",
+                        &mut dm,
                     ));
                 }
+            }
+            b"avih" => {
+                // The AVI header, from RIFF.pm's own table. Its FrameRate is
+                // `1e6 / $val` and the composite Duration reads that raw
+                // value, so the two the reader keeps are taken from the tags
+                // rather than computed a second time.
+                let cd = &data[chunk_data_start..chunk_data_end];
+                if chunk_size >= 40 {
+                    state.us_per_frame = u32::from_le_bytes([cd[0], cd[1], cd[2], cd[3]]);
+                    state.total_frames = u32::from_le_bytes([cd[16], cd[17], cd[18], cd[19]]);
+                }
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                tags.extend(crate::tags::binary_tables_generated::decode(
+                    "RIFF::AVIHeader",
+                    cd,
+                    "",
+                    "",
+                    crate::metadata::exif::ByteOrderMark::LittleEndian,
+                    "",
+                    "",
+                    &mut dm,
+                ));
             }
             // Stream Header (strh)
             b"strh" => {
