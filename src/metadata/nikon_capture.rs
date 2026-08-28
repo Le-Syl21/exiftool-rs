@@ -107,6 +107,31 @@ pub fn decode_nikon_capture(data: &[u8]) -> Vec<Tag> {
 }
 
 fn decode_nikon_capture_tag(tag_id: u32, data: &[u8], tags: &mut Vec<Tag>) {
+    // The six records whose layout NikonCapture.pm gives as a binary table.
+    // Every one of them is little-endian, as the rest of this block is.
+    let table = match tag_id {
+        0x890f_f591 => Some("NikonCapture::DLightingHQ"),
+        0xe37b_4337 => Some("NikonCapture::DLightingHS"),
+        0x116f_ea21 => Some("NikonCapture::HighlightData"),
+        0x39c4_56ac => Some("NikonCapture::PictureCtrl"),
+        0xe42b_5161 => Some("NikonCapture::UnsharpData"),
+        0xbf3c_6c20 => Some("NikonCapture::WBAdjData"),
+        _ => None,
+    };
+    if let Some(table) = table {
+        let mut dm = crate::tags::binary_tables_generated::State::new();
+        tags.extend(crate::tags::binary_tables_generated::decode(
+            table,
+            data,
+            "",
+            "",
+            crate::metadata::exif::ByteOrderMark::LittleEndian,
+            "",
+            "",
+            &mut dm,
+        ));
+        return;
+    }
     match tag_id {
         // Simple on/off or value tags
         0x008ae85e => {

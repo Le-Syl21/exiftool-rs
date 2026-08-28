@@ -41,6 +41,10 @@ my %WANTED = (
     # a counter.
     CanonVRD => [qw(DustInfo)],
     Kodak => [qw(Type9)],
+    Nikon => [qw(LensDataUnknown)],
+    NikonCapture => [qw(
+        DLightingHQ DLightingHS HighlightData PictureCtrl UnsharpData WBAdjData
+    )],
     Photoshop => [qw(PixelInfo)],
     RIFF => [qw(AVIHeader)],
     Pentax => [qw(Junk2)],
@@ -107,13 +111,16 @@ sub read_module {
 sub shared_hashes {
     my ($src) = @_;
     my %shared;
-    while ($src =~ /^my %(\w+)\s*=\s*\((.*?)\n\);/gms) {
+    # The opening bracket has to end its line: without that, a one-line
+    # `my %offOn = ( 0 => 'Off', 1 => 'On' );` matched as the start of a
+    # multi-line hash and swallowed everything up to the next `\n);` --
+    # every hash between them, and their entries with them.
+    while ($src =~ /^my %(\w+)\s*=\s*\([ \t]*(?:#[^\n]*)?\n(.*?)\n\);/gms) {
         $shared{$1} = $2;
     }
-    # `my %offOn = ( 0 => 'Off', 1 => 'On' );` is one line, which the pattern
-    # above -- anchored on a closing `\n);` -- never sees.
+    # `my %offOn = ( 0 => 'Off', 1 => 'On' );` on one line.
     while ($src =~ /^my %(\w+)\s*=\s*\(([^()\n]*)\);\s*$/gm) {
-        $shared{$1} = $2 unless exists $shared{$1};
+        $shared{$1} = $2;
     }
     return %shared;
 }

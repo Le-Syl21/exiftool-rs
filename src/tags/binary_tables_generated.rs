@@ -3,7 +3,7 @@
 //! Do not edit: regenerate with
 //! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
 //!
-//! 81 tables, 1706 fields. A binary sub-table is a block of
+//! 88 tables, 1746 fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
 //! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
 //! what to read there. What the generator could not express is on its stderr.
@@ -298,6 +298,13 @@ pub fn decode(
         "Minolta::WBInfoA100" => minolta_wbinfoa100(data, make, model, bo, file_type, format, dm),
         "Minolta::MOV1" => minolta_mov1(data, make, model, bo, file_type, format, dm),
         "Minolta::MOV2" => minolta_mov2(data, make, model, bo, file_type, format, dm),
+        "Nikon::LensDataUnknown" => nikon_lensdataunknown(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::DLightingHQ" => nikoncapture_dlightinghq(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::DLightingHS" => nikoncapture_dlightinghs(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::HighlightData" => nikoncapture_highlightdata(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::PictureCtrl" => nikoncapture_picturectrl(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::UnsharpData" => nikoncapture_unsharpdata(data, make, model, bo, file_type, format, dm),
+        "NikonCapture::WBAdjData" => nikoncapture_wbadjdata(data, make, model, bo, file_type, format, dm),
         "Olympus::MOV1" => olympus_mov1(data, make, model, bo, file_type, format, dm),
         "Olympus::MOV2" => olympus_mov2(data, make, model, bo, file_type, format, dm),
         "Olympus::prms" => olympus_prms(data, make, model, bo, file_type, format, dm),
@@ -8285,16 +8292,8 @@ fn canon_camerainfo1dmkiv(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let base = Conv::Num(f64::from(v));
         #[allow(clippy::cast_possible_truncation)]
         let s = match base.as_num() as i64 {
-            0 => "People".to_string(),
-            1 => "sRGB".to_string(),
-            2 => "Adobe RGB".to_string(),
-            3 => "User 1".to_string(),
-            4 => "User 2".to_string(),
-            5 => "User 3".to_string(),
-            6 => "To Do".to_string(),
-            65535 => "n/a".to_string(),
-            2415919104 => "Format 1".to_string(),
-            2684354560 => "Format 2".to_string(),
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
             other => other.to_string(),
         };
         #[allow(clippy::cast_possible_truncation)]
@@ -10320,16 +10319,8 @@ fn canon_camerainfo5dmkii(data: &[u8], make: &str, model: &str, bo: ByteOrder, f
         let base = Conv::Num(f64::from(v));
         #[allow(clippy::cast_possible_truncation)]
         let s = match base.as_num() as i64 {
-            0 => "People".to_string(),
-            1 => "sRGB".to_string(),
-            2 => "Adobe RGB".to_string(),
-            3 => "User 1".to_string(),
-            4 => "User 2".to_string(),
-            5 => "User 3".to_string(),
-            6 => "To Do".to_string(),
-            65535 => "n/a".to_string(),
-            2415919104 => "Format 1".to_string(),
-            2684354560 => "Format 2".to_string(),
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
             other => other.to_string(),
         };
         #[allow(clippy::cast_possible_truncation)]
@@ -11874,16 +11865,8 @@ fn canon_camerainfo7d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_
         let base = Conv::Num(f64::from(v));
         #[allow(clippy::cast_possible_truncation)]
         let s = match base.as_num() as i64 {
-            0 => "People".to_string(),
-            1 => "sRGB".to_string(),
-            2 => "Adobe RGB".to_string(),
-            3 => "User 1".to_string(),
-            4 => "User 2".to_string(),
-            5 => "User 3".to_string(),
-            6 => "To Do".to_string(),
-            65535 => "n/a".to_string(),
-            2415919104 => "Format 1".to_string(),
-            2684354560 => "Format 2".to_string(),
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
             other => other.to_string(),
         };
         #[allow(clippy::cast_possible_truncation)]
@@ -12880,16 +12863,8 @@ fn canon_camerainfo50d(data: &[u8], make: &str, model: &str, bo: ByteOrder, file
         let base = Conv::Num(f64::from(v));
         #[allow(clippy::cast_possible_truncation)]
         let s = match base.as_num() as i64 {
-            0 => "People".to_string(),
-            1 => "sRGB".to_string(),
-            2 => "Adobe RGB".to_string(),
-            3 => "User 1".to_string(),
-            4 => "User 2".to_string(),
-            5 => "User 3".to_string(),
-            6 => "To Do".to_string(),
-            65535 => "n/a".to_string(),
-            2415919104 => "Format 1".to_string(),
-            2684354560 => "Format 2".to_string(),
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
             other => other.to_string(),
         };
         #[allow(clippy::cast_possible_truncation)]
@@ -15113,16 +15088,8 @@ fn canon_camerainfo500d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let base = Conv::Num(f64::from(v));
         #[allow(clippy::cast_possible_truncation)]
         let s = match base.as_num() as i64 {
-            0 => "People".to_string(),
-            1 => "sRGB".to_string(),
-            2 => "Adobe RGB".to_string(),
-            3 => "User 1".to_string(),
-            4 => "User 2".to_string(),
-            5 => "User 3".to_string(),
-            6 => "To Do".to_string(),
-            65535 => "n/a".to_string(),
-            2415919104 => "Format 1".to_string(),
-            2684354560 => "Format 2".to_string(),
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
             other => other.to_string(),
         };
         #[allow(clippy::cast_possible_truncation)]
@@ -15652,16 +15619,8 @@ fn canon_camerainfo550d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let base = Conv::Num(f64::from(v));
         #[allow(clippy::cast_possible_truncation)]
         let s = match base.as_num() as i64 {
-            0 => "People".to_string(),
-            1 => "sRGB".to_string(),
-            2 => "Adobe RGB".to_string(),
-            3 => "User 1".to_string(),
-            4 => "User 2".to_string(),
-            5 => "User 3".to_string(),
-            6 => "To Do".to_string(),
-            65535 => "n/a".to_string(),
-            2415919104 => "Format 1".to_string(),
-            2684354560 => "Format 2".to_string(),
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
             other => other.to_string(),
         };
         #[allow(clippy::cast_possible_truncation)]
@@ -16161,16 +16120,8 @@ fn canon_camerainfo600d(data: &[u8], make: &str, model: &str, bo: ByteOrder, fil
         let base = Conv::Num(f64::from(v));
         #[allow(clippy::cast_possible_truncation)]
         let s = match base.as_num() as i64 {
-            0 => "People".to_string(),
-            1 => "sRGB".to_string(),
-            2 => "Adobe RGB".to_string(),
-            3 => "User 1".to_string(),
-            4 => "User 2".to_string(),
-            5 => "User 3".to_string(),
-            6 => "To Do".to_string(),
-            65535 => "n/a".to_string(),
-            2415919104 => "Format 1".to_string(),
-            2684354560 => "Format 2".to_string(),
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
             other => other.to_string(),
         };
         #[allow(clippy::cast_possible_truncation)]
@@ -23177,6 +23128,429 @@ fn minolta_mov2(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: 
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f mm\",$val)", &cv, &ctx) { cv = x; }
         tags.push(mk("FocalLength", 0x48, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Nikon::LensDataUnknown` -- FORMAT int8u, FIRST_ENTRY 0.
+fn nikon_lensdataunknown(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "Nikon";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x0, 4, true) {
+        tags.push(mk("LensDataVersion", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::DLightingHQ` -- FORMAT int32u, FIRST_ENTRY 0.
+fn nikoncapture_dlightinghq(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x0, bo) {
+        dm.push(("D-LightingHQShadow".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("D-LightingHQShadow", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("D-LightingHQHighlight".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("D-LightingHQHighlight", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x8, bo) {
+        dm.push(("D-LightingHQColorBoost".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("D-LightingHQColorBoost", 0x2, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::DLightingHS` -- FORMAT int32u, FIRST_ENTRY 0.
+fn nikoncapture_dlightinghs(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u32_at(data, 0x0, bo) {
+        dm.push(("D-LightingHSAdjustment".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("D-LightingHSAdjustment", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u32_at(data, 0x4, bo) {
+        dm.push(("D-LightingHSColorBoost".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("D-LightingHSColorBoost", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::HighlightData` -- FORMAT int8s, FIRST_ENTRY 0.
+fn nikoncapture_highlightdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = i8_at(data, 0x0) {
+        dm.push(("ShadowProtection".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("ShadowProtection", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i8_at(data, 0x1) {
+        dm.push(("SaturationAdj".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("SaturationAdj", 0x1, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i8_at(data, 0x6) {
+        dm.push(("HighlightProtection".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("HighlightProtection", 0x6, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::PictureCtrl` -- FORMAT int8u, FIRST_ENTRY 0.
+fn nikoncapture_picturectrl(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("PictureControlActive".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("PictureControlActive", 0x0, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x13, 16, true) {
+        tags.push(mk("PictureControlMode", 0x13, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2a) {
+        dm.push(("QuickAdjust".to_string(), f64::from(v)));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("QuickAdjust", 0x2a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2b) {
+        dm.push(("SharpeningAdj".to_string(), f64::from(v)));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("SharpeningAdj", 0x2b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2c) {
+        dm.push(("ContrastAdj".to_string(), f64::from(v)));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ContrastAdj", 0x2c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2d) {
+        dm.push(("BrightnessAdj".to_string(), f64::from(v)));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BrightnessAdj", 0x2d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2e) {
+        dm.push(("SaturationAdj".to_string(), f64::from(v)));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val ? $val - 128 : \"Auto\"", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("SaturationAdj", 0x2e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2f) {
+        dm.push(("HueAdj".to_string(), f64::from(v)));
+        let ctx = Ctx { make, model, file_type, dm };
+        let base = Conv::Num(f64::from(v));
+        let mut cv = base;
+        if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("HueAdj", 0x2f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::UnsharpData` -- FORMAT int8u, FIRST_ENTRY 0.
+fn nikoncapture_unsharpdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x0) {
+        dm.push(("UnsharpCount".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("UnsharpCount", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x13, bo) {
+        dm.push(("Unsharp1Color".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "RGB".to_string(),
+            1 => "Red".to_string(),
+            2 => "Green".to_string(),
+            3 => "Blue".to_string(),
+            4 => "Yellow".to_string(),
+            5 => "Magenta".to_string(),
+            6 => "Cyan".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Unsharp1Color", 0x13, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x17, bo) {
+        dm.push(("Unsharp1Intensity".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp1Intensity", 0x17, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x19, bo) {
+        dm.push(("Unsharp1HaloWidth".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp1HaloWidth", 0x19, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x1b) {
+        dm.push(("Unsharp1Threshold".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp1Threshold", 0x1b, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2e, bo) {
+        dm.push(("Unsharp2Color".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "RGB".to_string(),
+            1 => "Red".to_string(),
+            2 => "Green".to_string(),
+            3 => "Blue".to_string(),
+            4 => "Yellow".to_string(),
+            5 => "Magenta".to_string(),
+            6 => "Cyan".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Unsharp2Color", 0x2e, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x32, bo) {
+        dm.push(("Unsharp2Intensity".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp2Intensity", 0x32, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x34, bo) {
+        dm.push(("Unsharp2HaloWidth".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp2HaloWidth", 0x34, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x36) {
+        dm.push(("Unsharp2Threshold".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp2Threshold", 0x36, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x49, bo) {
+        dm.push(("Unsharp3Color".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "RGB".to_string(),
+            1 => "Red".to_string(),
+            2 => "Green".to_string(),
+            3 => "Blue".to_string(),
+            4 => "Yellow".to_string(),
+            5 => "Magenta".to_string(),
+            6 => "Cyan".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Unsharp3Color", 0x49, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4d, bo) {
+        dm.push(("Unsharp3Intensity".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp3Intensity", 0x4d, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4f, bo) {
+        dm.push(("Unsharp3HaloWidth".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp3HaloWidth", 0x4f, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x51) {
+        dm.push(("Unsharp3Threshold".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp3Threshold", 0x51, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x64, bo) {
+        dm.push(("Unsharp4Color".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "RGB".to_string(),
+            1 => "Red".to_string(),
+            2 => "Green".to_string(),
+            3 => "Blue".to_string(),
+            4 => "Yellow".to_string(),
+            5 => "Magenta".to_string(),
+            6 => "Cyan".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("Unsharp4Color", 0x64, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x68, bo) {
+        dm.push(("Unsharp4Intensity".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp4Intensity", 0x68, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6a, bo) {
+        dm.push(("Unsharp4HaloWidth".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp4HaloWidth", 0x6a, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x6c) {
+        dm.push(("Unsharp4Threshold".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("Unsharp4Threshold", 0x6c, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::NikonCapture::WBAdjData` -- FORMAT int8u, FIRST_ENTRY 0.
+fn nikoncapture_wbadjdata(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "NikonCapture";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, make, model, bo, file_type, format, &dm);
+    if let Some(v) = f64_at(data, 0x0, bo) {
+        dm.push(("WBAdjRedBalance".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WBAdjRedBalance", 0x0, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f64_at(data, 0x8, bo) {
+        dm.push(("WBAdjBlueBalance".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WBAdjBlueBalance", 0x8, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x10) {
+        dm.push(("WBAdjMode".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            1 => "Use Gray Point".to_string(),
+            2 => "Recorded Value".to_string(),
+            3 => "Use Temperature".to_string(),
+            4 => "Calculate Automatically".to_string(),
+            5 => "Auto2".to_string(),
+            6 => "Underwater".to_string(),
+            7 => "Auto1".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBAdjMode", 0x10, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x14, bo) {
+        dm.push(("WBAdjLighting".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        let s = match base.as_num() as i64 {
+            0 => "None".to_string(),
+            256 => "Incandescent".to_string(),
+            512 => "Daylight (direct sunlight)".to_string(),
+            513 => "Daylight (shade)".to_string(),
+            514 => "Daylight (cloudy)".to_string(),
+            768 => "Standard Fluorescent (warm white)".to_string(),
+            769 => "Standard Fluorescent (3700K)".to_string(),
+            770 => "Standard Fluorescent (cool white)".to_string(),
+            771 => "Standard Fluorescent (5000K)".to_string(),
+            772 => "Standard Fluorescent (daylight)".to_string(),
+            773 => "Standard Fluorescent (high temperature mercury vapor)".to_string(),
+            1024 => "High Color Rendering Fluorescent (warm white)".to_string(),
+            1025 => "High Color Rendering Fluorescent (3700K)".to_string(),
+            1026 => "High Color Rendering Fluorescent (cool white)".to_string(),
+            1027 => "High Color Rendering Fluorescent (5000K)".to_string(),
+            1028 => "High Color Rendering Fluorescent (daylight)".to_string(),
+            1280 => "Flash".to_string(),
+            1281 => "Flash (FL-G1 filter)".to_string(),
+            1282 => "Flash (FL-G2 filter)".to_string(),
+            1283 => "Flash (TN-A1 filter)".to_string(),
+            1284 => "Flash (TN-A2 filter)".to_string(),
+            1536 => "Sodium Vapor Lamps".to_string(),
+            other => other.to_string(),
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        let raw = Value::I32(base.as_num() as i32);
+        tags.push(mk("WBAdjLighting", 0x14, s, raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x18, bo) {
+        dm.push(("WBAdjTemperature".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WBAdjTemperature", 0x18, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i32_at(data, 0x25, bo) {
+        dm.push(("WBAdjTint".to_string(), f64::from(v)));
+        let base = Conv::Num(f64::from(v));
+        #[allow(clippy::cast_possible_truncation)]
+        tags.push(mk("WBAdjTint", 0x25, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }

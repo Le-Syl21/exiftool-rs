@@ -5204,6 +5204,23 @@ fn decrypt_nikon_subtables(
                             tags.push(mk_nikon_str("EffectiveMaxAperture", &format!("{:.1}", ap)));
                         }
                     }
+                } else if ver != "0100" && ver != "0101" {
+                    // Nikon.pm's last arm for 0x0098: a version none of the
+                    // known ones matched still yields LensDataVersion, and
+                    // nothing else (Nikon.pm:2890-2897). 0100 and 0101 are
+                    // not encrypted and have tables of their own.
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    let end = (value_offset + total_size).min(data.len());
+                    tags.extend(crate::tags::binary_tables_generated::decode(
+                        "Nikon::LensDataUnknown",
+                        &data[value_offset..end],
+                        "",
+                        "",
+                        crate::metadata::exif::ByteOrderMark::BigEndian,
+                        "",
+                        "",
+                        &mut dm,
+                    ));
                 }
             }
             0x0097 => {
