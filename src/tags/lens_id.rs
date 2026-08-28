@@ -122,8 +122,7 @@ fn match_lens_model(list: &mut Vec<String>, lens_model: Option<&str>) {
             // `(F/?|1:)$fnum(\b|[A-Z])`, case-insensitively.
             let pat = format!(r"(?i)(F/?|1:){}(\b|[A-Z])", regex_escape(fnum));
             if let Ok(re) = Regex::new(&pat) {
-                let filt: Vec<String> =
-                    list.iter().filter(|l| re.is_match(l)).cloned().collect();
+                let filt: Vec<String> = list.iter().filter(|l| re.is_match(l)).cloned().collect();
                 if !filt.is_empty() && filt.len() < list.len() {
                     *list = filt;
                 }
@@ -137,7 +136,9 @@ fn match_lens_model(list: &mut Vec<String>, lens_model: Option<&str>) {
         let Ok(re) = Regex::new(&format!(r"\b({pat})\b")) else {
             continue;
         };
-        let Some(c) = re.captures(model) else { continue };
+        let Some(c) = re.captures(model) else {
+            continue;
+        };
         let val = c.get(1).map_or("", |m| m.as_str());
         let Ok(word) = Regex::new(&format!(r"\b{}\b", regex_escape(val))) else {
             continue;
@@ -584,8 +585,9 @@ fn sony_etype_narrow(
             } else if focal_length >= lf {
                 la
             } else {
-                (sa.ln() + (la.ln() - sa.ln()) / (lf.ln() - sf.ln()) * (focal_length.ln() - sf.ln()))
-                    .exp()
+                (sa.ln()
+                    + (la.ln() - sa.ln()) / (lf.ln() - sf.ln()) * (focal_length.ln() - sf.ln()))
+                .exp()
             };
             let d = (max_aperture - aa).abs();
             if let Some(prev) = diff {
@@ -668,7 +670,13 @@ pub fn xmp_print_lens_id(
         if let Some(info) = info.filter(|i| !i.is_empty()) {
             let a: Vec<f64> = info
                 .split_whitespace()
-                .map(|w| if w == "undef" { 0.0 } else { w.parse().unwrap_or(0.0) })
+                .map(|w| {
+                    if w == "undef" {
+                        0.0
+                    } else {
+                        w.parse().unwrap_or(0.0)
+                    }
+                })
                 .collect();
             sf = a.first().copied().unwrap_or(0.0);
             lf = a.get(1).copied().unwrap_or(0.0);
@@ -781,8 +789,17 @@ mod tests {
     #[test]
     fn matches_perl() {
         // id, make, info, focal, lensModel, maxAv, Make, Model => answer
-        type Case = (&'static str, &'static str, &'static str, f64, &'static str, f64,
-                     &'static str, &'static str, &'static str);
+        type Case = (
+            &'static str,
+            &'static str,
+            &'static str,
+            f64,
+            &'static str,
+            f64,
+            &'static str,
+            &'static str,
+            &'static str,
+        );
         let cases: &[Case] = &[
             ("4", "Canon", "35 105 3.5 4.5", 50.0, "", 4.5, "Canon", "Canon EOS 5D",
              "Canon EF 35-105mm f/3.5-4.5"),
@@ -1017,11 +1034,14 @@ mod tests {
         ];
         for (id, make, info, fl, lm, mav, mk, md, want) in cases {
             let got = xmp_print_lens_id(
-                id, make,
+                id,
+                make,
                 if info.is_empty() { None } else { Some(info) },
                 *fl,
                 if lm.is_empty() { None } else { Some(lm) },
-                *mav, mk, md,
+                *mav,
+                mk,
+                md,
             );
             assert_eq!(&got, want, "id {id} make {make}");
         }

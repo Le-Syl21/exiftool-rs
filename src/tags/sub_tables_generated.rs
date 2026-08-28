@@ -72,12 +72,6 @@ impl<'a> DispatchContext<'a> {
 }
 
 // ============================================================================
-// Canon: CameraInfo (0x000D) — 36 variants by Model regex
-// ============================================================================
-
-#[allow(clippy::if_same_then_else)]
-
-// ============================================================================
 // Nikon: ShotInfo (0x0091) — 30 variants by version prefix + count
 // ============================================================================
 
@@ -292,14 +286,15 @@ pub fn dispatch_nikon_af_info2(ctx: &DispatchContext) -> Vec<Tag> {
 pub fn dispatch_sony_camera_settings(ctx: &DispatchContext) -> Vec<Tag> {
     // Same as the Canon case above: the variant is known, the layouts are not
     // ported, and naming the variant is not a value anyone can use.
-    let _ = crate::tags::variant_selectors_generated::variant_for("Sony", 0x0114, ctx.model, ctx.data, ctx.count, ctx.format);
+    let _ = crate::tags::variant_selectors_generated::variant_for(
+        "Sony", 0x0114, ctx.model, ctx.data, ctx.count, ctx.format,
+    );
     Vec::new()
 }
 
 // ============================================================================
 // Sony: Tag2010 — 9 variants by model regex
 // ============================================================================
-
 
 /// Decode a Sony ciphered block whose variant the generated selector resolves.
 #[must_use]
@@ -312,13 +307,7 @@ pub fn decode_sony_ciphered(
     // sits in the file, before any deciphering -- that is where ExifTool tests
     // them, and half of them look at the first byte.
     match crate::tags::sony_ciphered_generated::variant_for(
-        tag,
-        ctx.model,
-        ctx.data,
-        ctx.count,
-        ctx.format,
-        false,
-        false,
+        tag, ctx.model, ctx.data, ctx.count, ctx.format, false, false,
     ) {
         Some(variant) => decode_ciphered(variant.table, ctx, state),
         None => Vec::new(),
@@ -346,7 +335,6 @@ fn decode_ciphered(
 // ============================================================================
 // Sony: Tag9400 — variants by first byte
 // ============================================================================
-
 
 // ============================================================================
 // Helpers

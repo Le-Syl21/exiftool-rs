@@ -1547,7 +1547,6 @@ fn format_duration(seconds: f64) -> String {
     }
 }
 
-
 fn mk_webp(name: &str, description: &str, value: Value) -> Tag {
     let print_value = value.to_display_string();
     Tag {

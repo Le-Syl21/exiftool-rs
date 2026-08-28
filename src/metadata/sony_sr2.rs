@@ -20,12 +20,20 @@ include!("sr2_tags.rs");
 
 fn u16_at(d: &[u8], o: usize, le: bool) -> Option<u16> {
     let b = [*d.get(o)?, *d.get(o + 1)?];
-    Some(if le { u16::from_le_bytes(b) } else { u16::from_be_bytes(b) })
+    Some(if le {
+        u16::from_le_bytes(b)
+    } else {
+        u16::from_be_bytes(b)
+    })
 }
 
 fn u32_at(d: &[u8], o: usize, le: bool) -> Option<u32> {
     let b = [*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?];
-    Some(if le { u32::from_le_bytes(b) } else { u32::from_be_bytes(b) })
+    Some(if le {
+        u32::from_le_bytes(b)
+    } else {
+        u32::from_be_bytes(b)
+    })
 }
 
 fn mk(group1: &str, name: &str, print: String, raw: Value) -> Tag {
@@ -61,11 +69,22 @@ fn type_info(t: u16) -> Option<(usize, bool)> {
 
 /// Read one IFD's worth of integer values, as ExifTool prints them: space
 /// separated, in order.
-fn read_values(block: &[u8], base: usize, dtype: u16, count: usize, voff: usize, le: bool) -> Option<String> {
+fn read_values(
+    block: &[u8],
+    base: usize,
+    dtype: u16,
+    count: usize,
+    voff: usize,
+    le: bool,
+) -> Option<String> {
     let (w, signed) = type_info(dtype)?;
     let total = w.checked_mul(count)?;
     // Values of four bytes or fewer sit in the entry itself.
-    let start = if total <= 4 { voff } else { base.checked_add(0)? + voff.checked_sub(0)? };
+    let start = if total <= 4 {
+        voff
+    } else {
+        base.checked_add(0)? + voff.checked_sub(0)?
+    };
     let mut out = Vec::with_capacity(count);
     for i in 0..count {
         let o = start + i * w;
@@ -93,8 +112,12 @@ pub fn read(data: &[u8], private_offset: usize, le: bool) -> Vec<Tag> {
     let (mut off, mut len, mut key) = (None, None, None);
     for i in 0..n as usize {
         let e = private_offset + 2 + i * 12;
-        let Some(tag) = u16_at(data, e, le) else { break };
-        let Some(v) = u32_at(data, e + 8, le) else { break };
+        let Some(tag) = u16_at(data, e, le) else {
+            break;
+        };
+        let Some(v) = u32_at(data, e + 8, le) else {
+            break;
+        };
         match tag {
             SR2_SUBIFD_OFFSET => {
                 off = Some(v as usize);
@@ -106,7 +129,12 @@ pub fn read(data: &[u8], private_offset: usize, le: bool) -> Vec<Tag> {
             }
             SR2_SUBIFD_KEY => {
                 key = Some(v);
-                tags.push(mk("SR2", "SR2SubIFDKey", format!("0x{v:08x}"), Value::U32(v)));
+                tags.push(mk(
+                    "SR2",
+                    "SR2SubIFDKey",
+                    format!("0x{v:08x}"),
+                    Value::U32(v),
+                ));
             }
             _ => {}
         }
@@ -148,9 +176,15 @@ pub fn read(data: &[u8], private_offset: usize, le: bool) -> Vec<Tag> {
                 _ => continue,
             };
             for k in 0..cnt.min(20) {
-                let Some(target) = u32_at(&block, list + k * 4, le) else { break };
-                let Some(dir) = (target as usize).checked_sub(off) else { continue };
-                let Some(entries) = u16_at(&block, dir, le) else { continue };
+                let Some(target) = u32_at(&block, list + k * 4, le) else {
+                    break;
+                };
+                let Some(dir) = (target as usize).checked_sub(off) else {
+                    continue;
+                };
+                let Some(entries) = u16_at(&block, dir, le) else {
+                    continue;
+                };
                 for j in 0..entries as usize {
                     let de = dir + 2 + j * 12;
                     let (Some(dtag), Some(dtype), Some(dcnt)) = (
@@ -176,7 +210,9 @@ pub fn read(data: &[u8], private_offset: usize, le: bool) -> Vec<Tag> {
                     if dtype != 2 {
                         continue;
                     }
-                    let Some(raw) = block.get(start..start + n) else { continue };
+                    let Some(raw) = block.get(start..start + n) else {
+                        continue;
+                    };
                     let text: String = raw
                         .iter()
                         .take_while(|c| **c != 0)
@@ -204,7 +240,9 @@ pub fn read(data: &[u8], private_offset: usize, le: bool) -> Vec<Tag> {
             continue;
         };
         let cnt = cnt as usize;
-        let Some((w, _)) = type_info(dtype) else { continue };
+        let Some((w, _)) = type_info(dtype) else {
+            continue;
+        };
         let total = w.saturating_mul(cnt);
         let voff = if total <= 4 {
             e + 8

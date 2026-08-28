@@ -492,10 +492,7 @@ pub fn parse_makernotes_exif_base(
     // path -- is Kodak::Unknown (474-478). It is here rather than beside the
     // binary layouts because that is where ExifTool has it: after every arm
     // that reads an IFD.
-    if tags.is_empty()
-        && make.to_lowercase().contains("kodak")
-        && !mn_data.starts_with(b"AOC\0")
-    {
+    if tags.is_empty() && make.to_lowercase().contains("kodak") && !mn_data.starts_with(b"AOC\0") {
         let mut dm = crate::tags::binary_tables_generated::State::new();
         return crate::tags::binary_tables_generated::decode(
             "Kodak::Unknown",
@@ -508,7 +505,6 @@ pub fn parse_makernotes_exif_base(
             &mut dm,
         );
     }
-
 
     tags
 }
@@ -1740,8 +1736,7 @@ fn decode_minolta_camera_settings(data: &[u8], bo: ByteOrderMark, model: &str) -
 fn kodak_binary_layout(d: &[u8], make: &str, model: &str) -> Option<(&'static str, ByteOrderMark)> {
     use ByteOrderMark::{BigEndian, LittleEndian};
     let at = |i: usize| d.get(i).copied().unwrap_or(0);
-    let starts_ii_mm_aoc =
-        d.starts_with(b"MM") || d.starts_with(b"II") || d.starts_with(b"AOC");
+    let starts_ii_mm_aoc = d.starts_with(b"MM") || d.starts_with(b"II") || d.starts_with(b"AOC");
 
     // Type2: `^.{8}Eastman Kodak` or a fixed nine-byte opening then four letters.
     if d.len() > 21 && &d[8..21] == b"Eastman Kodak" {
@@ -1795,8 +1790,10 @@ fn kodak_binary_layout(d: &[u8], make: &str, model: &str) -> Option<(&'static st
     if kodak && d.len() > 13 {
         // `^[CK][A-Z\d]{3} ?[A-Z\d]{1,2}\d{2}[A-Z\d]\d{4}[ \0]`
         static RE: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
-            regex_lite::Regex::new(r"^[CK][A-Z0-9]{3} ?[A-Z0-9]{1,2}[0-9]{2}[A-Z0-9][0-9]{4}[ \x00]")
-                .expect("static pattern")
+            regex_lite::Regex::new(
+                r"^[CK][A-Z0-9]{3} ?[A-Z0-9]{1,2}[0-9]{2}[A-Z0-9][0-9]{4}[ \x00]",
+            )
+            .expect("static pattern")
         });
         let head: String = d[..d.len().min(24)].iter().map(|b| *b as char).collect();
         if RE.is_match(&head) {
@@ -5193,7 +5190,9 @@ fn nikon_z_custom_settings(version: &str, d: &[u8]) -> Vec<Tag> {
     let (table, at) = match version {
         // Z6III, Z50II, Z5II: ShotInfoZ6III 0x90 -> MenuSettingsZ6III.
         "0809" | "0810" | "0811" => {
-            let Some(menu) = le32(0x90) else { return Vec::new() };
+            let Some(menu) = le32(0x90) else {
+                return Vec::new();
+            };
             return decode_z_settings(d, menu + 884, "NikonCustom::SettingsZ6III");
         }
         // Both Z8 layouts keep the settings at the same index.
@@ -5342,14 +5341,7 @@ fn decrypt_nikon_subtables(
                         .unwrap_or(ByteOrderMark::BigEndian);
                     let mut dm = crate::tags::binary_tables_generated::State::new();
                     tags.extend(crate::tags::binary_tables_generated::decode(
-                        table,
-                        &decrypted,
-                        "",
-                        model,
-                        bo,
-                        "",
-                        "",
-                        &mut dm,
+                        table, &decrypted, "", model, bo, "", "", &mut dm,
                     ));
                 }
 
@@ -5378,14 +5370,7 @@ fn decrypt_nikon_subtables(
                     if let Some(block) = decrypted.get(off..) {
                         let mut dm = crate::tags::binary_tables_generated::State::new();
                         tags.extend(crate::tags::binary_tables_generated::decode(
-                            table,
-                            block,
-                            "",
-                            "",
-                            bo,
-                            "",
-                            "",
-                            &mut dm,
+                            table, block, "", "", bo, "", "", &mut dm,
                         ));
                     }
                 }
@@ -6154,7 +6139,11 @@ fn read_makernote_ifd_with_base(
                     // A `string` or `undef` with no count of its own is the
                     // whole entry: taking one byte of it left Olympus's
                     // CameraID as the number 79.
-                    let n = if matches!(ty, 2 | 7) && n <= 1 { value_data.len() } else { n };
+                    let n = if matches!(ty, 2 | 7) && n <= 1 {
+                        value_data.len()
+                    } else {
+                        n
+                    };
                     if ty != 0 && width * n <= value_data.len() {
                         decode_mn_value(value_data, ty, n, byte_order)
                     } else {
@@ -6243,7 +6232,6 @@ fn read_makernote_ifd_with_base(
             };
             main_state.insert(dm.to_string(), raw);
         }
-
 
         if manufacturer == Manufacturer::Pentax {
             // Capture raw Date (0x0006) / Time (0x0007) bytes for ShutterCount decryption.
@@ -8026,11 +8014,9 @@ fn read_makernote_ifd_with_base(
             // A condition can store before it tests -- 0xb042 keeps its first
             // 16-bit value under TagB042 whether or not its own arm is taken,
             // and 0xb043 reads it back.
-            if let Some((name, val)) = crate::tags::sony_ciphered_generated::main_store(
-                tag_id,
-                value_data,
-                &main_state,
-            ) {
+            if let Some((name, val)) =
+                crate::tags::sony_ciphered_generated::main_store(tag_id, value_data, &main_state)
+            {
                 main_state.insert(name.to_string(), val);
             }
             match crate::tags::sony_ciphered_generated::main_tag(
@@ -8696,7 +8682,11 @@ fn read_makernote_ifd_with_base(
                         }
                     }
                     if ok {
-                        printed = if set.is_empty() { zero.to_string() } else { set.join(", ") };
+                        printed = if set.is_empty() {
+                            zero.to_string()
+                        } else {
+                            set.join(", ")
+                        };
                     }
                 }
 
@@ -9199,7 +9189,7 @@ fn decode_canon_afinfo(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag>
         tags.push(mk_canon_str("AFAreaYPositions", &y_pos.join(" ")));
 
         // AFPointsInFocus: ceil(N/16) words after the position arrays, as a bitmask.
-        let focus_words = (num_af + 15) / 16;
+        let focus_words = num_af.div_ceil(16);
         let focus_base = 8 + num_af * 2;
         if focus_base + focus_words <= count {
             let mut bits: u64 = 0;
@@ -9300,7 +9290,7 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
         }
 
         // AFPointsInFocus: ceil(num_af/16) int16s words, decoded as bitmask
-        let focus_words = (num_af + 15) / 16;
+        let focus_words = num_af.div_ceil(16);
         let focus_base = base + num_af * 4;
         // DecodeBits over int16s[(NumAFPoints+15)/16]: bit b lives in word b/16
         // at position b%16. A body with more than 64 AF points needs more than
@@ -9356,7 +9346,6 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
 
     tags
 }
-
 
 /// Convert Unix timestamp (seconds since 1970-01-01) to Exif datetime string "YYYY:MM:DD HH:MM:SS"
 pub(crate) fn unix_time_to_datetime(secs: u32) -> String {
@@ -10828,10 +10817,6 @@ fn decode_nikon_scan_ifd(data: &[u8], offset: usize, bo: ByteOrderMark) -> Vec<T
     tags
 }
 
-
-
-
-
 // Canon FilterInfo (tag 0x4024): custom ProcessFilters format
 // Structure: 4 bytes unknown, 4 bytes numFilters, then for each filter:
 //   4 bytes filterNum, 4 bytes size (not counting filterNum), 4 bytes numParams,
@@ -10928,4 +10913,3 @@ fn decode_canon_filter_info(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
     }
     tags
 }
-

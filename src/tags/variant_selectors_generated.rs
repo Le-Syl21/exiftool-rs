@@ -27,28 +27,42 @@ static RE_11: LazyLock<Regex> = LazyLock::new(|| Regex::new("EOS 50D$").unwrap()
 static RE_12: LazyLock<Regex> = LazyLock::new(|| Regex::new("EOS 60D$").unwrap());
 static RE_13: LazyLock<Regex> = LazyLock::new(|| Regex::new("EOS 70D$").unwrap());
 static RE_14: LazyLock<Regex> = LazyLock::new(|| Regex::new("EOS 80D$").unwrap());
-static RE_15: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(450D|REBEL XSi|Kiss X2)\\b").unwrap());
-static RE_16: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(500D|REBEL T1i|Kiss X3)\\b").unwrap());
-static RE_17: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(550D|REBEL T2i|Kiss X4)\\b").unwrap());
-static RE_18: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(600D|REBEL T3i|Kiss X5)\\b").unwrap());
-static RE_19: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(650D|REBEL T4i|Kiss X6i)\\b").unwrap());
-static RE_20: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(700D|REBEL T5i|Kiss X7i)\\b").unwrap());
-static RE_21: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(750D|Rebel T6i|Kiss X8i)\\b").unwrap());
-static RE_22: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(760D|Rebel T6s|8000D)\\b").unwrap());
-static RE_23: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(1000D|REBEL XS|Kiss F)\\b").unwrap());
-static RE_24: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(1100D|REBEL T3|Kiss X50)\\b").unwrap());
-static RE_25: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\b(1200D|REBEL T5|Kiss X70)\\b").unwrap());
+static RE_15: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(450D|REBEL XSi|Kiss X2)\\b").unwrap());
+static RE_16: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(500D|REBEL T1i|Kiss X3)\\b").unwrap());
+static RE_17: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(550D|REBEL T2i|Kiss X4)\\b").unwrap());
+static RE_18: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(600D|REBEL T3i|Kiss X5)\\b").unwrap());
+static RE_19: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(650D|REBEL T4i|Kiss X6i)\\b").unwrap());
+static RE_20: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(700D|REBEL T5i|Kiss X7i)\\b").unwrap());
+static RE_21: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(750D|Rebel T6i|Kiss X8i)\\b").unwrap());
+static RE_22: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(760D|Rebel T6s|8000D)\\b").unwrap());
+static RE_23: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(1000D|REBEL XS|Kiss F)\\b").unwrap());
+static RE_24: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(1100D|REBEL T3|Kiss X50)\\b").unwrap());
+static RE_25: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\\b(1200D|REBEL T5|Kiss X70)\\b").unwrap());
 static RE_26: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\bEOS R[56]$").unwrap());
 static RE_27: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\bEOS (R6m2|R8|R50)$").unwrap());
 static RE_28: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\bEOS R6 Mark III$").unwrap());
 static RE_29: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\bG5 X Mark II$").unwrap());
 static RE_30: LazyLock<Regex> = LazyLock::new(|| Regex::new("EOS 5D").unwrap());
 static RE_31: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(850|900)\\b").unwrap());
-static RE_32: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390)\\b").unwrap());
+static RE_32: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390)\\b").unwrap());
 static RE_33: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-5N$").unwrap());
-static RE_34: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
+static RE_34: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
 static RE_35: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-F3)$").unwrap());
-static RE_36: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DYNAX 5D|MAXXUM 5D|ALPHA SWEET)").unwrap());
+static RE_36: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(DYNAX 5D|MAXXUM 5D|ALPHA SWEET)").unwrap());
 static RE_37: LazyLock<Regex> = LazyLock::new(|| Regex::new("^Caplio RR1\\b").unwrap());
 
 /// The sub-table ExifTool would use for this MakerNote tag on this body.
@@ -68,201 +82,361 @@ pub fn variant_for(
     let _ = (data, count, format);
     match (module, tag) {
         ("Canon", 0x000d) => {
-            if RE_0.is_match(model) { return Some("CameraInfo1DmkII"); }
-            if RE_1.is_match(model) { return Some("CameraInfo1DmkIIN"); }
-            if RE_2.is_match(model) { return Some("CameraInfo1DmkIII"); }
-            if RE_3.is_match(model) { return Some("CameraInfo1DmkIV"); }
-            if RE_4.is_match(model) { return Some("CameraInfo1DX"); }
-            if RE_5.is_match(model) { return Some("CameraInfo5D"); }
-            if RE_6.is_match(model) { return Some("CameraInfo5DmkII"); }
-            if RE_7.is_match(model) { return Some("CameraInfo5DmkIII"); }
-            if RE_8.is_match(model) { return Some("CameraInfo6D"); }
-            if RE_9.is_match(model) { return Some("CameraInfo7D"); }
-            if RE_10.is_match(model) { return Some("CameraInfo40D"); }
-            if RE_11.is_match(model) { return Some("CameraInfo50D"); }
-            if RE_12.is_match(model) { return Some("CameraInfo60D"); }
-            if RE_13.is_match(model) { return Some("CameraInfo70D"); }
-            if RE_14.is_match(model) { return Some("CameraInfo80D"); }
-            if RE_15.is_match(model) { return Some("CameraInfo450D"); }
-            if RE_16.is_match(model) { return Some("CameraInfo500D"); }
-            if RE_17.is_match(model) { return Some("CameraInfo550D"); }
-            if RE_18.is_match(model) { return Some("CameraInfo600D"); }
-            if RE_19.is_match(model) { return Some("CameraInfo650D"); }
-            if RE_20.is_match(model) { return Some("CameraInfo650D"); }
-            if RE_21.is_match(model) { return Some("CameraInfo750D"); }
-            if RE_22.is_match(model) { return Some("CameraInfo750D"); }
-            if RE_23.is_match(model) { return Some("CameraInfo1000D"); }
-            if RE_24.is_match(model) { return Some("CameraInfo600D"); }
-            if RE_25.is_match(model) { return Some("CameraInfo60D"); }
-            if RE_26.is_match(model) { return Some("CameraInfoR6"); }
-            if RE_27.is_match(model) { return Some("CameraInfoR6m2"); }
-            if RE_28.is_match(model) { return Some("CameraInfoR6m3"); }
-            if RE_29.is_match(model) { return Some("CameraInfoG5XII"); }
-            if format == "int32u" && (count == 138 || count == 148) { return Some("CameraInfoPowerShot"); }
+            if RE_0.is_match(model) {
+                return Some("CameraInfo1DmkII");
+            }
+            if RE_1.is_match(model) {
+                return Some("CameraInfo1DmkIIN");
+            }
+            if RE_2.is_match(model) {
+                return Some("CameraInfo1DmkIII");
+            }
+            if RE_3.is_match(model) {
+                return Some("CameraInfo1DmkIV");
+            }
+            if RE_4.is_match(model) {
+                return Some("CameraInfo1DX");
+            }
+            if RE_5.is_match(model) {
+                return Some("CameraInfo5D");
+            }
+            if RE_6.is_match(model) {
+                return Some("CameraInfo5DmkII");
+            }
+            if RE_7.is_match(model) {
+                return Some("CameraInfo5DmkIII");
+            }
+            if RE_8.is_match(model) {
+                return Some("CameraInfo6D");
+            }
+            if RE_9.is_match(model) {
+                return Some("CameraInfo7D");
+            }
+            if RE_10.is_match(model) {
+                return Some("CameraInfo40D");
+            }
+            if RE_11.is_match(model) {
+                return Some("CameraInfo50D");
+            }
+            if RE_12.is_match(model) {
+                return Some("CameraInfo60D");
+            }
+            if RE_13.is_match(model) {
+                return Some("CameraInfo70D");
+            }
+            if RE_14.is_match(model) {
+                return Some("CameraInfo80D");
+            }
+            if RE_15.is_match(model) {
+                return Some("CameraInfo450D");
+            }
+            if RE_16.is_match(model) {
+                return Some("CameraInfo500D");
+            }
+            if RE_17.is_match(model) {
+                return Some("CameraInfo550D");
+            }
+            if RE_18.is_match(model) {
+                return Some("CameraInfo600D");
+            }
+            if RE_19.is_match(model) {
+                return Some("CameraInfo650D");
+            }
+            if RE_20.is_match(model) {
+                return Some("CameraInfo650D");
+            }
+            if RE_21.is_match(model) {
+                return Some("CameraInfo750D");
+            }
+            if RE_22.is_match(model) {
+                return Some("CameraInfo750D");
+            }
+            if RE_23.is_match(model) {
+                return Some("CameraInfo1000D");
+            }
+            if RE_24.is_match(model) {
+                return Some("CameraInfo600D");
+            }
+            if RE_25.is_match(model) {
+                return Some("CameraInfo60D");
+            }
+            if RE_26.is_match(model) {
+                return Some("CameraInfoR6");
+            }
+            if RE_27.is_match(model) {
+                return Some("CameraInfoR6m2");
+            }
+            if RE_28.is_match(model) {
+                return Some("CameraInfoR6m3");
+            }
+            if RE_29.is_match(model) {
+                return Some("CameraInfoG5XII");
+            }
+            if format == "int32u" && (count == 138 || count == 148) {
+                return Some("CameraInfoPowerShot");
+            }
             None
         }
         ("Canon", 0x0096) => {
-            if RE_30.is_match(model) { return Some("SerialInfo"); }
+            if RE_30.is_match(model) {
+                return Some("SerialInfo");
+            }
             None
         }
-        ("Canon", 0x4001) => {
-            Some("ColorData1")
-        }
+        ("Canon", 0x4001) => Some("ColorData1"),
         ("Minolta", 0x0018) => {
-            if model == "DSLR-A100" { return Some("ISInfoA100"); }
+            if model == "DSLR-A100" {
+                return Some("ISInfoA100");
+            }
             None
         }
         ("Minolta", 0x0114) => {
-            if RE_36.is_match(model) { return Some("CameraSettings5D"); }
-            if model == "DSLR-A100" { return Some("CameraSettingsA100"); }
+            if RE_36.is_match(model) {
+                return Some("CameraSettings5D");
+            }
+            if model == "DSLR-A100" {
+                return Some("CameraSettingsA100");
+            }
             None
         }
         ("Nikon", 0x0014) => {
-            if format == "undef" && count == 2560 { return Some("ColorBalanceA"); }
-            if data.starts_with(b"NRW 0100") { return Some("ColorBalanceB"); }
-            if data.starts_with(b"NRW ") { return Some("ColorBalanceC"); }
+            if format == "undef" && count == 2560 {
+                return Some("ColorBalanceA");
+            }
+            if data.starts_with(b"NRW 0100") {
+                return Some("ColorBalanceB");
+            }
+            if data.starts_with(b"NRW ") {
+                return Some("ColorBalanceC");
+            }
             None
         }
         ("Nikon", 0x0023) => {
-            if data.starts_with(b"01") { return Some("PictureControl"); }
-            if data.starts_with(b"02") { return Some("PictureControl2"); }
-            if data.starts_with(b"03") { return Some("PictureControl3"); }
+            if data.starts_with(b"01") {
+                return Some("PictureControl");
+            }
+            if data.starts_with(b"02") {
+                return Some("PictureControl2");
+            }
+            if data.starts_with(b"03") {
+                return Some("PictureControl3");
+            }
             Some("PictureControlUnknown")
         }
         ("Nikon", 0x0035) => {
-            if count != 6 { return Some("HDRInfo"); }
+            if count != 6 {
+                return Some("HDRInfo");
+            }
             Some("HDRInfo2")
         }
-        ("Nikon", 0x0091) => {
-            Some("ShotInfoD40")
-        }
-        ("Nikon", 0x0097) => {
-            Some("ColorBalance1")
-        }
-        ("Nikon", 0x0098) => {
-            Some("LensData00")
-        }
+        ("Nikon", 0x0091) => Some("ShotInfoD40"),
+        ("Nikon", 0x0097) => Some("ColorBalance1"),
+        ("Nikon", 0x0098) => Some("LensData00"),
         ("Nikon", 0x00a8) => {
-            if data.starts_with(b"0100") || data.starts_with(b"0101") { return Some("FlashInfo0100"); }
-            if data.starts_with(b"0102") { return Some("FlashInfo0102"); }
-            if data.starts_with(b"0103") || data.starts_with(b"0104") || data.starts_with(b"0105") { return Some("FlashInfo0103"); }
-            if data.starts_with(b"0106") { return Some("FlashInfo0106"); }
-            if data.starts_with(b"0107") || data.starts_with(b"0108") { return Some("FlashInfo0107"); }
-            if data.starts_with(b"0300") || data.starts_with(b"0301") { return Some("FlashInfo0300"); }
+            if data.starts_with(b"0100") || data.starts_with(b"0101") {
+                return Some("FlashInfo0100");
+            }
+            if data.starts_with(b"0102") {
+                return Some("FlashInfo0102");
+            }
+            if data.starts_with(b"0103") || data.starts_with(b"0104") || data.starts_with(b"0105") {
+                return Some("FlashInfo0103");
+            }
+            if data.starts_with(b"0106") {
+                return Some("FlashInfo0106");
+            }
+            if data.starts_with(b"0107") || data.starts_with(b"0108") {
+                return Some("FlashInfo0107");
+            }
+            if data.starts_with(b"0300") || data.starts_with(b"0301") {
+                return Some("FlashInfo0300");
+            }
             Some("FlashInfoUnknown")
         }
         ("Olympus", 0x2010) => {
-            if format != "ifd" && format != "int32u" { return Some("Equipment"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("Equipment");
+            }
             Some("Equipment")
         }
         ("Olympus", 0x2020) => {
-            if format != "ifd" && format != "int32u" { return Some("CameraSettings"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("CameraSettings");
+            }
             Some("CameraSettings")
         }
         ("Olympus", 0x2030) => {
-            if format != "ifd" && format != "int32u" { return Some("RawDevelopment"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("RawDevelopment");
+            }
             Some("RawDevelopment")
         }
         ("Olympus", 0x2031) => {
-            if format != "ifd" && format != "int32u" { return Some("RawDevelopment2"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("RawDevelopment2");
+            }
             Some("RawDevelopment2")
         }
         ("Olympus", 0x2040) => {
-            if format != "ifd" && format != "int32u" { return Some("ImageProcessing"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("ImageProcessing");
+            }
             Some("ImageProcessing")
         }
         ("Olympus", 0x2100) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x2200) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x2300) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x2400) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x2500) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x2600) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x2700) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x2800) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x2900) => {
-            if format != "ifd" && format != "int32u" { return Some("FETags"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("FETags");
+            }
             Some("FETags")
         }
         ("Olympus", 0x3000) => {
-            if format != "ifd" && format != "int32u" { return Some("RawInfo"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("RawInfo");
+            }
             Some("RawInfo")
         }
         ("Olympus", 0x4000) => {
-            if format != "ifd" && format != "int32u" { return Some("Main"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("Main");
+            }
             Some("Main")
         }
         ("Olympus", 0x5000) => {
-            if format != "ifd" && format != "int32u" { return Some("UnknownInfo"); }
+            if format != "ifd" && format != "int32u" {
+                return Some("UnknownInfo");
+            }
             Some("UnknownInfo")
         }
         ("Pentax", 0x002d) => {
-            if format == "int16u" { return Some("LensRec"); }
-            if count == 1 { return Some("SRInfo"); }
+            if format == "int16u" {
+                return Some("LensRec");
+            }
+            if count == 1 {
+                return Some("SRInfo");
+            }
             Some("SRInfo2")
         }
         ("Pentax", 0x0208) => {
-            if count == 27 { return Some("FlashInfo"); }
+            if count == 27 {
+                return Some("FlashInfo");
+            }
             Some("FlashInfoUnknown")
         }
         ("Ricoh", 0x1001) => {
-            if format != "int16u" { return Some("ImageInfo"); }
-            if format == "int16u" { return Some("Subdir"); }
-            if !RE_37.is_match(model) { return Some("Subdir"); }
+            if format != "int16u" {
+                return Some("ImageInfo");
+            }
+            if format == "int16u" {
+                return Some("Subdir");
+            }
+            if !RE_37.is_match(model) {
+                return Some("Subdir");
+            }
             Some("Subdir")
         }
         ("Sanyo", 0x0223) => {
-            if format == "rational64u" { return Some("FaceInfo"); }
+            if format == "rational64u" {
+                return Some("FaceInfo");
+            }
             None
         }
         ("Sony", 0x0010) => {
-            if count == 368 || count == 5478 { return Some("CameraInfo"); }
-            if count == 5506 || count == 6118 { return Some("CameraInfo2"); }
-            if count == 15360 { return Some("CameraInfo3"); }
+            if count == 368 || count == 5478 {
+                return Some("CameraInfo");
+            }
+            if count == 5506 || count == 6118 {
+                return Some("CameraInfo2");
+            }
+            if count == 15360 {
+                return Some("CameraInfo3");
+            }
             Some("CameraInfoUnknown")
         }
         ("Sony", 0x0020) => {
-            if count == 19154 || count == 19148 { return Some("FocusInfo"); }
+            if count == 19154 || count == 19148 {
+                return Some("FocusInfo");
+            }
             Some("MoreInfo")
         }
         ("Sony", 0x0114) => {
-            if count == 280 || count == 364 { return Some("CameraSettings"); }
-            if count == 332 { return Some("CameraSettings2"); }
-            if count == 1536 || count == 2048 { return Some("CameraSettings3"); }
+            if count == 280 || count == 364 {
+                return Some("CameraSettings");
+            }
+            if count == 332 {
+                return Some("CameraSettings2");
+            }
+            if count == 1536 || count == 2048 {
+                return Some("CameraSettings3");
+            }
             Some("CameraSettingsUnknown")
         }
         ("Sony", 0x0116) => {
-            if RE_31.is_match(model) { return Some("ExtraInfo"); }
-            if RE_32.is_match(model) { return Some("ExtraInfo2"); }
+            if RE_31.is_match(model) {
+                return Some("ExtraInfo");
+            }
+            if RE_32.is_match(model) {
+                return Some("ExtraInfo2");
+            }
             Some("ExtraInfo3")
         }
         ("Sony", 0x2010) => {
-            if RE_33.is_match(model) { return Some("Tag2010a"); }
-            if RE_34.is_match(model) { return Some("Tag2010b"); }
-            if RE_35.is_match(model) { return Some("Tag2010c"); }
+            if RE_33.is_match(model) {
+                return Some("Tag2010a");
+            }
+            if RE_34.is_match(model) {
+                return Some("Tag2010b");
+            }
+            if RE_35.is_match(model) {
+                return Some("Tag2010c");
+            }
             Some("Tag2010d")
         }
         _ => None,
@@ -320,7 +494,13 @@ mod tests {
     /// and a substring test would.
     #[test]
     fn anchored_patterns_do_not_over_match() {
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X", b"", 0, "int8u"), Some("CameraInfo1DX"));
-        assert_eq!(variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II", b"", 0, "int8u"), None);
+        assert_eq!(
+            variant_for("Canon", 0x000d, "Canon EOS-1D X", b"", 0, "int8u"),
+            Some("CameraInfo1DX")
+        );
+        assert_eq!(
+            variant_for("Canon", 0x000d, "Canon EOS-1D X Mark II", b"", 0, "int8u"),
+            None
+        );
     }
 }

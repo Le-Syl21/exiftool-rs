@@ -20,7 +20,7 @@ pub fn lookup(record: u8, dataset: u8) -> Option<&'static IptcTagInfo> {
 
 /// Check if a tag stores string data.
 pub fn is_string_tag(record: u8, dataset: u8) -> bool {
-    lookup(record, dataset).map_or(true, |t| t.is_string)
+    lookup(record, dataset).is_none_or(|t| t.is_string)
 }
 
 static IPTC_TAGS: &[IptcTagInfo] = &[

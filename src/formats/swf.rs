@@ -60,7 +60,7 @@ fn parse_swf_body(body: &[u8], tags: &mut Vec<Tag>) {
     // Then 4 values each nBits long: Xmin, Xmax, Ymin, Ymax (in twips, 1/20 pixel)
     let n_bits = (body[0] >> 3) as usize;
     let total_bits = 5 + n_bits * 4;
-    let n_bytes = (total_bits + 7) / 8;
+    let n_bytes = total_bits.div_ceil(8);
 
     if body.len() < n_bytes + 4 {
         return;

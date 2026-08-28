@@ -498,7 +498,11 @@ static SONY_TAGS: &[(u16, &str, &str)] = &[
     (0x200F, "SoftSkinEffect", "Soft Skin Effect"),
     (0x2011, "VignettingCorrection", "Vignetting Correction"),
     (0x2012, "LateralChromaticAberration", "Lateral CA"),
-    (0x2013, "DistortionCorrectionSetting", "Distortion Correction Setting"),
+    (
+        0x2013,
+        "DistortionCorrectionSetting",
+        "Distortion Correction Setting",
+    ),
     (0x2016, "AutoPortraitFramed", "Auto Portrait Framed"),
     (0x2017, "FlashAction", "Flash Action"),
     (0x201B, "FocusMode", "Focus Mode"),

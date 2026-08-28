@@ -25,130 +25,246 @@ use std::sync::LazyLock;
 
 use regex_lite::Regex;
 
-use crate::tags::conv_expr::{self, Val as Conv};
 use crate::tag::{Tag, TagGroup, TagId};
+use crate::tags::conv_expr::{self, Val as Conv};
 use crate::value::Value;
 
 static MODEL_RE_0: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(850|900)\\b").unwrap());
 static MODEL_RE_1: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-5C").unwrap());
-static MODEL_RE_2: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-(A450|A500|A550)$").unwrap());
-static MODEL_RE_3: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSLR-A(450|500|550))\\b").unwrap());
-static MODEL_RE_4: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(450|500|550)\\b").unwrap());
-static MODEL_RE_5: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|DSLR-A(560|580))\\b").unwrap());
-static MODEL_RE_6: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390)$").unwrap());
-static MODEL_RE_7: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390|850|900)$").unwrap());
-static MODEL_RE_8: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(200|230|290|300|330|350|380|390|700|850|900)$").unwrap());
+static MODEL_RE_2: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-(A450|A500|A550)$").unwrap());
+static MODEL_RE_3: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(DSLR-A(450|500|550))\\b").unwrap());
+static MODEL_RE_4: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-A(450|500|550)\\b").unwrap());
+static MODEL_RE_5: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(SLT-|DSLR-A(560|580))\\b").unwrap());
+static MODEL_RE_6: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390)$").unwrap());
+static MODEL_RE_7: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390|850|900)$").unwrap());
+static MODEL_RE_8: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-A(200|230|290|300|330|350|380|390|700|850|900)$").unwrap());
 static MODEL_RE_9: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(450|500|550)$").unwrap());
 static MODEL_RE_10: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-(3|5)$").unwrap());
-static MODEL_RE_11: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-(A450|A500|A550)").unwrap());
+static MODEL_RE_11: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-(A450|A500|A550)").unwrap());
 static MODEL_RE_12: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-(3|5|5C)").unwrap());
-static MODEL_RE_13: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-(3|5|5C)|DSLR-(A450|A500|A550)").unwrap());
-static MODEL_RE_14: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|DSLR-(A450|A500|A550)$)").unwrap());
+static MODEL_RE_13: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^NEX-(3|5|5C)|DSLR-(A450|A500|A550)").unwrap());
+static MODEL_RE_14: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(NEX-|DSLR-(A450|A500|A550)$)").unwrap());
 static MODEL_RE_15: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-").unwrap());
-static MODEL_RE_16: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-(3|5|5C|C3|VG10|VG10E))\\b").unwrap());
+static MODEL_RE_16: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(NEX-(3|5|5C|C3|VG10|VG10E))\\b").unwrap());
 static MODEL_RE_17: LazyLock<Regex> = LazyLock::new(|| Regex::new("^SLT-").unwrap());
-static MODEL_RE_18: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-(A450|A500|A550)\\b").unwrap());
+static MODEL_RE_18: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-(A450|A500|A550)\\b").unwrap());
 static MODEL_RE_19: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-").unwrap());
-static MODEL_RE_20: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-(A99|A99V)|NEX-(5R|5T|6|VG900|VG30E)|DSC-RX100|Stellar|HV)\\b").unwrap());
+static MODEL_RE_20: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(SLT-(A99|A99V)|NEX-(5R|5T|6|VG900|VG30E)|DSC-RX100|Stellar|HV)\\b").unwrap()
+});
 static MODEL_RE_21: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX1|RX1R))\\b").unwrap());
-static MODEL_RE_22: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A58|ILCE-(3000|3500)|NEX-3N|DSC-(HX300|HX50V|WX60|WX80|WX200|WX300|TX30))\\b").unwrap());
+static MODEL_RE_22: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(SLT-A58|ILCE-(3000|3500)|NEX-3N|DSC-(HX300|HX50V|WX60|WX80|WX200|WX300|TX30))\\b")
+        .unwrap()
+});
 static MODEL_RE_23: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar)").unwrap());
 static MODEL_RE_24: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSC-").unwrap());
-static MODEL_RE_25: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX100|Stellar)\\b").unwrap());
+static MODEL_RE_25: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(DSC-RX100|Stellar)\\b").unwrap());
 static MODEL_RE_26: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|Lunar|ILCE-)").unwrap());
-static MODEL_RE_27: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7(R|S|M2)?|[56]000|5100|QX1))\\b").unwrap());
-static MODEL_RE_28: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|Lunar|NEX-(5N|7|VG20E))").unwrap());
-static MODEL_RE_29: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(Lunar|NEX-(5N|7|VG20E)|SLT-|HV|ILCA-)").unwrap());
+static MODEL_RE_27: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(7(R|S|M2)?|[56]000|5100|QX1))\\b").unwrap());
+static MODEL_RE_28: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|Lunar|NEX-(5N|7|VG20E))").unwrap());
+static MODEL_RE_29: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(Lunar|NEX-(5N|7|VG20E)|SLT-|HV|ILCA-)").unwrap());
 static MODEL_RE_30: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV|ILCA-)").unwrap());
 static MODEL_RE_31: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A99|HV|ILCE-7)").unwrap());
-static MODEL_RE_32: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57|65|77)V?|Lunar|NEX-(F3|5N|7|VG20E))").unwrap());
-static MODEL_RE_33: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(5100|QX1)|ILCA-(68|77M2))").unwrap());
-static MODEL_RE_34: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(58|99V?)|HV|NEX-(3N|5R|5T|6|VG900|VG30E)|ILCE-([35]000|3500))\\b").unwrap());
+static MODEL_RE_32: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(SLT-A(37|57|65|77)V?|Lunar|NEX-(F3|5N|7|VG20E))").unwrap());
+static MODEL_RE_33: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(5100|QX1)|ILCA-(68|77M2))").unwrap());
+static MODEL_RE_34: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(SLT-A(58|99V?)|HV|NEX-(3N|5R|5T|6|VG900|VG30E)|ILCE-([35]000|3500))\\b").unwrap()
+});
 static MODEL_RE_35: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-)").unwrap());
-static MODEL_RE_36: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100|6400|6600|7C|7RM4A?|9M2)|ZV-E10)").unwrap());
+static MODEL_RE_36: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(6100|6400|6600|7C|7RM4A?|9M2)|ZV-E10)").unwrap());
 static MODEL_RE_37: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-9 (v5.0|v6.0)").unwrap());
 static MODEL_RE_38: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7M3|7RM3A?))").unwrap());
-static MODEL_RE_39: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_40: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_41: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_42: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7|ILCE-9|ILCA-99)").unwrap());
-static MODEL_RE_43: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)\\b").unwrap());
+static MODEL_RE_39: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap()
+});
+static MODEL_RE_40: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap()
+});
+static MODEL_RE_41: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap()
+});
+static MODEL_RE_42: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-7|ILCE-9|ILCA-99)").unwrap());
+static MODEL_RE_43: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)\\b").unwrap()
+});
 static MODEL_RE_44: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7RM2|7SM2))").unwrap());
-static MODEL_RE_45: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|6500)|ILCA-99M2)").unwrap());
-static MODEL_RE_46: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-(7RM4A?|7C|9M2)").unwrap());
-static MODEL_RE_47: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-(7RM4A?|7C|9M2)|ZV-E10").unwrap());
-static MODEL_RE_48: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7M3|7RM3A?|9))\\b").unwrap());
-static MODEL_RE_49: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7M3|7RM3A?|9))\\b").unwrap());
+static MODEL_RE_45: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(6300|6500)|ILCA-99M2)").unwrap());
+static MODEL_RE_46: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^ILCE-(7RM4A?|7C|9M2)").unwrap());
+static MODEL_RE_47: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^ILCE-(7RM4A?|7C|9M2)|ZV-E10").unwrap());
+static MODEL_RE_48: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(7M3|7RM3A?|9))\\b").unwrap());
+static MODEL_RE_49: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7M3|7RM3A?|9))\\b").unwrap());
 static MODEL_RE_50: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2)").unwrap());
-static MODEL_RE_51: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
+static MODEL_RE_51: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
 static MODEL_RE_52: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-1)").unwrap());
-static MODEL_RE_53: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7M5|7RM6)|ILME-FX2)").unwrap());
-static MODEL_RE_54: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|7M5|7RM6))").unwrap());
+static MODEL_RE_53: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7M5|7RM6)|ILME-FX2)").unwrap());
+static MODEL_RE_54: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(1M2|7M5|7RM6))").unwrap());
 static MODEL_RE_55: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ZV-E10M2)").unwrap());
-static MODEL_RE_56: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-(A65|A77)V?|NEX-(5N|7|VG20E)|Lunar|DSC-(HX10V|HX20V|HX200V|TX20|TX55|TX300V|WX30|WX70))\\b").unwrap());
-static MODEL_RE_57: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV|NEX-|Lunar|DSC-RX|Stellar)").unwrap());
-static MODEL_RE_58: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-(68|77M2|99M2)|ILCE-(5000|5100|6000|6300|6500|7|7M2|7R|7RM2|7S|7SM2|QX1)|DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX0|RX1RM2|RX10|RX10M2|RX10M3|RX100M3|RX100M4|RX100M5|WX220|WX350|WX500))\\b").unwrap());
-static MODEL_RE_59: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3|ILCE-(1|1M2|6700|7CM2|7CR|7M4|7M5|7RM5|7RM6|7SM3|9M3)|ILME-(FX2|FX3A?|FX30)|ILX-LR1|ZV-(E1|E10M2))\\b").unwrap());
-static MODEL_RE_60: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3|ILCE-(1|6700|7CM2|7CR|7M4|7M5|7RM5|7RM6|7SM3|9M3)|ILME-(FX2|FX3A?|FX30)|ZV-(E1|E10M2))\\b").unwrap());
-static MODEL_RE_61: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX10|RX10M2|RX10M3|RX100M3|RX100M4))\\b").unwrap());
-static MODEL_RE_62: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX95|HX99|RX0|RX0M2|RX10M4|RX100M5|RX100M5A|RX100M6))\\b").unwrap());
-static MODEL_RE_63: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX100M7A?|ZV-(1A?|1F|1M2))\\b").unwrap());
+static MODEL_RE_56: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(SLT-(A65|A77)V?|NEX-(5N|7|VG20E)|Lunar|DSC-(HX10V|HX20V|HX200V|TX20|TX55|TX300V|WX30|WX70))\\b").unwrap()
+});
+static MODEL_RE_57: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(SLT-|HV|NEX-|Lunar|DSC-RX|Stellar)").unwrap());
+static MODEL_RE_58: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCA-(68|77M2|99M2)|ILCE-(5000|5100|6000|6300|6500|7|7M2|7R|7RM2|7S|7SM2|QX1)|DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX0|RX1RM2|RX10|RX10M2|RX10M3|RX100M3|RX100M4|RX100M5|WX220|WX350|WX500))\\b").unwrap()
+});
+static MODEL_RE_59: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(DSC-RX1RM3|ILCE-(1|1M2|6700|7CM2|7CR|7M4|7M5|7RM5|7RM6|7SM3|9M3)|ILME-(FX2|FX3A?|FX30)|ILX-LR1|ZV-(E1|E10M2))\\b").unwrap()
+});
+static MODEL_RE_60: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(DSC-RX1RM3|ILCE-(1|6700|7CM2|7CR|7M4|7M5|7RM5|7RM6|7SM3|9M3)|ILME-(FX2|FX3A?|FX30)|ZV-(E1|E10M2))\\b").unwrap()
+});
+static MODEL_RE_61: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        "^(DSC-(HX350|HX400V|HX60V|HX80|HX90|HX90V|QX30|RX10|RX10M2|RX10M3|RX100M3|RX100M4))\\b",
+    )
+    .unwrap()
+});
+static MODEL_RE_62: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(DSC-(HX95|HX99|RX0|RX0M2|RX10M4|RX100M5|RX100M5A|RX100M6))\\b").unwrap()
+});
+static MODEL_RE_63: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(DSC-RX100M7A?|ZV-(1A?|1F|1M2))\\b").unwrap());
 static MODEL_RE_64: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-7M4 (v2|v3)").unwrap());
 static MODEL_RE_65: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-1 v2").unwrap());
 static MODEL_RE_66: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ZV-1M2").unwrap());
 static MODEL_RE_67: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|ZV-)").unwrap());
-static MODEL_RE_68: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|ILCE-(7RM2|7M3|7RM3A?|7RM4A?|7SM2|6100|6300|6400|6500|6600|7C|9|9M2)|DSC-(HX80|HX90V|HX99|RX0|RX10M2|RX10M3|RX10M4|RX100M4|RX100M5|RX100M5A|RX100M6|RX100M7|WX500)|ZV-)").unwrap());
-static MODEL_RE_69: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-(68|77M2)|ILCE-(5000|5100|6000|7|7R|7S|QX1)|Lusso)\\b").unwrap());
-static MODEL_RE_70: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M5|RX100M5A|RX100M6|RX100M7|RX10M4|HX99)|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap());
+static MODEL_RE_68: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCA-|ILCE-(7RM2|7M3|7RM3A?|7RM4A?|7SM2|6100|6300|6400|6500|6600|7C|9|9M2)|DSC-(HX80|HX90V|HX99|RX0|RX10M2|RX10M3|RX10M4|RX100M4|RX100M5|RX100M5A|RX100M6|RX100M7|WX500)|ZV-)").unwrap()
+});
+static MODEL_RE_69: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCA-(68|77M2)|ILCE-(5000|5100|6000|7|7R|7S|QX1)|Lusso)\\b").unwrap()
+});
+static MODEL_RE_70: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(DSC-(RX100M5|RX100M5A|RX100M6|RX100M7|RX10M4|HX99)|ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9M2)|ZV-E10)").unwrap()
+});
 static MODEL_RE_71: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M2)").unwrap());
-static MODEL_RE_72: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6500|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_73: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7RM2|7SM2)|DSC-(HX80|HX90V|RX10M2|RX10M3|RX100M4|WX500))").unwrap());
-static MODEL_RE_74: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|7RM2|7SM2))").unwrap());
-static MODEL_RE_75: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-6500)").unwrap());
-static MODEL_RE_76: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap());
-static MODEL_RE_77: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(7|7R)|Lusso)$").unwrap());
+static MODEL_RE_72: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCA-99M2|ILCE-(6100|6400|6500|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap()
+});
+static MODEL_RE_73: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCE-(7RM2|7SM2)|DSC-(HX80|HX90V|RX10M2|RX10M3|RX100M4|WX500))").unwrap()
+});
+static MODEL_RE_74: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(6300|7RM2|7SM2))").unwrap());
+static MODEL_RE_75: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCA-99M2|ILCE-6500)").unwrap());
+static MODEL_RE_76: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCE-(6100|6400|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|ZV-E10)").unwrap()
+});
+static MODEL_RE_77: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(7|7R)|Lusso)$").unwrap());
 static MODEL_RE_78: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCA-").unwrap());
-static MODEL_RE_79: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6300|6500|7M3|7RM2|7RM3A?|7SM2|9))\\b").unwrap());
+static MODEL_RE_79: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(6300|6500|7M3|7RM2|7RM3A?|7SM2|9))\\b").unwrap());
 static MODEL_RE_80: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-)").unwrap());
 static MODEL_RE_81: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)\\b").unwrap());
 static MODEL_RE_82: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)\\b").unwrap());
 static MODEL_RE_83: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M5)").unwrap());
 static MODEL_RE_84: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7RM6)").unwrap());
-static MODEL_RE_85: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1|7SM3)|ILME-FX3A?)\\b").unwrap());
+static MODEL_RE_85: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(1|7SM3)|ILME-FX3A?)\\b").unwrap());
 static MODEL_RE_86: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-7M4)").unwrap());
-static MODEL_RE_87: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7RM5)|ILME-(FX2|FX30)|ZV-(E1|E10M2))\\b").unwrap());
-static MODEL_RE_88: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1M2|7CM2|7CR|7RM5)|ZV-E1)\\b").unwrap());
-static MODEL_RE_89: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390)\\b").unwrap());
+static MODEL_RE_87: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCE-(1M2|6700|7CM2|7CR|7RM5)|ILME-(FX2|FX30)|ZV-(E1|E10M2))\\b").unwrap()
+});
+static MODEL_RE_88: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(1M2|7CM2|7CR|7RM5)|ZV-E1)\\b").unwrap());
+static MODEL_RE_89: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^DSLR-A(230|290|330|380|390)\\b").unwrap());
 static MODEL_RE_90: LazyLock<Regex> = LazyLock::new(|| Regex::new("^NEX-5N$").unwrap());
-static MODEL_RE_91: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
-static MODEL_RE_92: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-F3)$").unwrap());
-static MODEL_RE_93: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX10V|HX20V|HX30V|HX200V|TX66|TX200V|TX300V|WX50|WX70|WX100|WX150))$").unwrap());
-static MODEL_RE_94: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-A99V?|HV|SLT-A58|ILCE-(3000|3500)|NEX-(3N|5R|5T|6|VG900|VG30E)|DSC-(RX100|RX1|RX1R)|Stellar)$").unwrap());
-static MODEL_RE_95: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(HX300|HX50|HX50V|TX30|WX60|WX80|WX200|WX300))$").unwrap());
-static MODEL_RE_96: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX100M2|QX10|QX100))$").unwrap());
-static MODEL_RE_97: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(QX30|RX10|RX100M3|HX60V|HX350|HX400V|WX220|WX350)|ILCE-(7(R|S|M2)?|[56]000|5100|QX1)|ILCA-(68|77M2))\\b").unwrap());
-static MODEL_RE_98: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-(RX0|RX1RM2|RX10M2|RX10M3|RX100M4|RX100M5|HX80|HX90V?|WX500)|ILCE-(6300|6500|7RM2|7SM2)|ILCA-99M2)\\b").unwrap());
-static MODEL_RE_99: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|DSC-(RX10M4|RX100M6|RX100M5A|RX100M7A?|HX95|HX99|RX0M2)|ZV-(1[AF]?|1M2|E10))\\b").unwrap());
+static MODEL_RE_91: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(SLT-A(65|77)V?|NEX-(7|VG20E)|Lunar)$").unwrap());
+static MODEL_RE_92: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(SLT-A(37|57)|NEX-F3)$").unwrap());
+static MODEL_RE_93: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(DSC-(HX10V|HX20V|HX30V|HX200V|TX66|TX200V|TX300V|WX50|WX70|WX100|WX150))$")
+        .unwrap()
+});
+static MODEL_RE_94: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(SLT-A99V?|HV|SLT-A58|ILCE-(3000|3500)|NEX-(3N|5R|5T|6|VG900|VG30E)|DSC-(RX100|RX1|RX1R)|Stellar)$").unwrap()
+});
+static MODEL_RE_95: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(DSC-(HX300|HX50|HX50V|TX30|WX60|WX80|WX200|WX300))$").unwrap());
+static MODEL_RE_96: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(DSC-(RX100M2|QX10|QX100))$").unwrap());
+static MODEL_RE_97: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(DSC-(QX30|RX10|RX100M3|HX60V|HX350|HX400V|WX220|WX350)|ILCE-(7(R|S|M2)?|[56]000|5100|QX1)|ILCA-(68|77M2))\\b").unwrap()
+});
+static MODEL_RE_98: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(DSC-(RX0|RX1RM2|RX10M2|RX10M3|RX100M4|RX100M5|HX80|HX90V?|WX500)|ILCE-(6300|6500|7RM2|7SM2)|ILCA-99M2)\\b").unwrap()
+});
+static MODEL_RE_99: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCE-(6100A?|6400A?|6600|7C|7M3|7RM3A?|7RM4A?|9|9M2)|DSC-(RX10M4|RX100M6|RX100M5A|RX100M7A?|HX95|HX99|RX0M2)|ZV-(1[AF]?|1M2|E10))\\b").unwrap()
+});
 static MODEL_RE_100: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(SLT-|HV)").unwrap());
-static MODEL_RE_101: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|ZV-|DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3))").unwrap());
+static MODEL_RE_101: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        "^(NEX-|ILCE-|ILME-|ZV-|DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3))",
+    )
+    .unwrap()
+});
 static MODEL_RE_102: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-|ILME-)").unwrap());
 static MODEL_RE_103: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCA-(68|77M2)").unwrap());
 static MODEL_RE_104: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCA-99M2").unwrap());
-static MODEL_RE_105: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|ZV-|DSC-RX)").unwrap());
+static MODEL_RE_105: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|ZV-|DSC-RX)").unwrap());
 static MODEL_RE_106: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCA-|DSC-|ZV-)").unwrap());
-static MODEL_RE_107: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(5100|6000|7M2))").unwrap());
+static MODEL_RE_107: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(5100|6000|7M2))").unwrap());
 static MODEL_RE_108: LazyLock<Regex> = LazyLock::new(|| Regex::new("^ILCE-7RM2").unwrap());
-static MODEL_RE_109: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-|Stellar|ILCE-(1|6100|6300|6400|6500|6600|6700|7C|7M3|7M4|7M5|7RM2|7RM3A?|7RM4A?|7RM5|7RM6|7SM2|7SM3|9|9M2)|ILCA-99M2|ILME-(FX2|FX3)|ZV-)").unwrap());
-static MODEL_RE_110: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6100A?|6300|6400A?|6500|6600|7C|7M3|7RM2|7RM3A?|7RM4A?|7SM2|9|9M2)|ILCA-99M2|ZV-E10)\\b").unwrap());
-static MODEL_RE_111: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(1\\b|7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
-static MODEL_RE_112: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(ILCE-(6700|7CM2|7CR)|ILME-FX2|ZV-(E1|E10M2))\\b").unwrap());
-static MODEL_RE_113: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|Lunar|ZV-E10|ZV-E10M2|ZV-E1)\\b").unwrap());
+static MODEL_RE_109: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(DSC-|Stellar|ILCE-(1|6100|6300|6400|6500|6600|6700|7C|7M3|7M4|7M5|7RM2|7RM3A?|7RM4A?|7RM5|7RM6|7SM2|7SM3|9|9M2)|ILCA-99M2|ILME-(FX2|FX3)|ZV-)").unwrap()
+});
+static MODEL_RE_110: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(ILCE-(6100A?|6300|6400A?|6500|6600|7C|7M3|7RM2|7RM3A?|7RM4A?|7SM2|9|9M2)|ILCA-99M2|ZV-E10)\\b").unwrap()
+});
+static MODEL_RE_111: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(1\\b|7M4|7RM5|7SM3)|ILME-FX3)").unwrap());
+static MODEL_RE_112: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(ILCE-(6700|7CM2|7CR)|ILME-FX2|ZV-(E1|E10M2))\\b").unwrap());
+static MODEL_RE_113: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^(NEX-|ILCE-|ILME-|Lunar|ZV-E10|ZV-E10M2|ZV-E1)\\b").unwrap());
 static MODEL_RE_114: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(NEX-|ILCE-|Lunar)").unwrap());
-static MODEL_RE_115: LazyLock<Regex> = LazyLock::new(|| Regex::new("^DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3)").unwrap());
+static MODEL_RE_115: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^DSC-(RX10M4|RX100M6|RX100M7|RX100M5A|HX95|HX99|RX0M2|RX1RM3)").unwrap()
+});
 static MODEL_RE_116: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(DSC-RX1RM3)\\b").unwrap());
 
-fn u8_at(d: &[u8], o: usize) -> Option<u8> { d.get(o).copied() }
-fn i8_at(d: &[u8], o: usize) -> Option<i8> { d.get(o).map(|v| *v as i8) }
+fn u8_at(d: &[u8], o: usize) -> Option<u8> {
+    d.get(o).copied()
+}
+fn i8_at(d: &[u8], o: usize) -> Option<i8> {
+    d.get(o).map(|v| *v as i8)
+}
 /// The 16-bit value at an offset of a Main tag's own bytes, read in the
 /// file's byte order -- which is what ExifTool's Get16u does, and which the
 /// fixed little-endian readers above cannot answer for a Main tag.
@@ -190,10 +306,20 @@ fn i16_at(d: &[u8], o: usize) -> Option<i16> {
     Some(i16::from_le_bytes([*d.get(o)?, *d.get(o + 1)?]))
 }
 fn u32_at(d: &[u8], o: usize) -> Option<u32> {
-    Some(u32::from_le_bytes([*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?]))
+    Some(u32::from_le_bytes([
+        *d.get(o)?,
+        *d.get(o + 1)?,
+        *d.get(o + 2)?,
+        *d.get(o + 3)?,
+    ]))
 }
 fn i32_at(d: &[u8], o: usize) -> Option<i32> {
-    Some(i32::from_le_bytes([*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?]))
+    Some(i32::from_le_bytes([
+        *d.get(o)?,
+        *d.get(o + 1)?,
+        *d.get(o + 2)?,
+        *d.get(o + 3)?,
+    ]))
 }
 
 /// N bytes read as text. A `string` stops at its first NUL; an `undef` keeps
@@ -210,7 +336,13 @@ fn text_at(d: &[u8], o: usize, n: usize, stop_at_nul: bool) -> Option<String> {
 }
 
 fn text_tag(name: &str, default_group2: &'static str, text: String, priority: i32) -> Tag {
-    mk_prio(name, text.clone(), Value::String(text), default_group2, priority)
+    mk_prio(
+        name,
+        text.clone(),
+        Value::String(text),
+        default_group2,
+        priority,
+    )
 }
 
 /// What the sub-tables have read so far in this file.
@@ -287,8 +419,19 @@ fn mk_prio(
 /// block reports a tag ExifTool never has.
 #[must_use]
 pub fn is_subdirectory_only(tag: u16) -> bool {
-    matches!(tag,
-        0x0010 | 0x0020 | 0x0114 | 0x0116 | 0x1003 | 0x202a | 0x2044 | 0x3000 | 0x9401 | 0x9403 | 0x9416
+    matches!(
+        tag,
+        0x0010
+            | 0x0020
+            | 0x0114
+            | 0x0116
+            | 0x1003
+            | 0x202a
+            | 0x2044
+            | 0x3000
+            | 0x9401
+            | 0x9403
+            | 0x9416
     )
 }
 
@@ -319,118 +462,347 @@ pub fn main_tag(
     match tag {
         0x201c => {
             if MODEL_RE_100.is_match(model) {
-                return Some(Some(MainTag { name: "AFAreaModeSetting", conv: &[(0, "Wide"), (4, "Local"), (8, "Zone"), (9, "Spot")] }));
+                return Some(Some(MainTag {
+                    name: "AFAreaModeSetting",
+                    conv: &[(0, "Wide"), (4, "Local"), (8, "Zone"), (9, "Spot")],
+                }));
             }
             if MODEL_RE_101.is_match(model) {
-                return Some(Some(MainTag { name: "AFAreaModeSetting", conv: &[(0, "Wide"), (1, "Center"), (3, "Flexible Spot"), (4, "Flexible Spot (LA-EA4)"), (9, "Center (LA-EA4)"), (11, "Zone"), (12, "Expanded Flexible Spot"), (13, "Custom AF Area")] }));
+                return Some(Some(MainTag {
+                    name: "AFAreaModeSetting",
+                    conv: &[
+                        (0, "Wide"),
+                        (1, "Center"),
+                        (3, "Flexible Spot"),
+                        (4, "Flexible Spot (LA-EA4)"),
+                        (9, "Center (LA-EA4)"),
+                        (11, "Zone"),
+                        (12, "Expanded Flexible Spot"),
+                        (13, "Custom AF Area"),
+                    ],
+                }));
             }
             if MODEL_RE_78.is_match(model) {
-                return Some(Some(MainTag { name: "AFAreaModeSetting", conv: &[(0, "Wide"), (4, "Flexible Spot"), (8, "Zone"), (9, "Center"), (12, "Expanded Flexible Spot")] }));
+                return Some(Some(MainTag {
+                    name: "AFAreaModeSetting",
+                    conv: &[
+                        (0, "Wide"),
+                        (4, "Flexible Spot"),
+                        (8, "Zone"),
+                        (9, "Center"),
+                        (12, "Expanded Flexible Spot"),
+                    ],
+                }));
             }
             Some(None)
         }
         0x201e => {
-            if (MODEL_RE_100.is_match(model) || (MODEL_RE_102.is_match(model) && (state.member("AFAreaILCE").is_some() && state.member("AFAreaILCE").is_some_and(|v| v.as_num() == 4.0)))) {
-                return Some(Some(MainTag { name: "AFPointSelected", conv: &[(0, "Auto"), (1, "Center"), (2, "Top"), (3, "Upper-right"), (4, "Right"), (5, "Lower-right"), (6, "Bottom"), (7, "Lower-left"), (8, "Left"), (9, "Upper-left"), (10, "Far Right"), (11, "Far Left"), (12, "Upper-middle"), (13, "Near Right"), (14, "Lower-middle"), (15, "Near Left"), (16, "Upper Far Right"), (17, "Lower Far Right"), (18, "Lower Far Left"), (19, "Upper Far Left")] }));
+            if (MODEL_RE_100.is_match(model)
+                || (MODEL_RE_102.is_match(model)
+                    && (state.member("AFAreaILCE").is_some()
+                        && state
+                            .member("AFAreaILCE")
+                            .is_some_and(|v| v.as_num() == 4.0))))
+            {
+                return Some(Some(MainTag {
+                    name: "AFPointSelected",
+                    conv: &[
+                        (0, "Auto"),
+                        (1, "Center"),
+                        (2, "Top"),
+                        (3, "Upper-right"),
+                        (4, "Right"),
+                        (5, "Lower-right"),
+                        (6, "Bottom"),
+                        (7, "Lower-left"),
+                        (8, "Left"),
+                        (9, "Upper-left"),
+                        (10, "Far Right"),
+                        (11, "Far Left"),
+                        (12, "Upper-middle"),
+                        (13, "Near Right"),
+                        (14, "Lower-middle"),
+                        (15, "Near Left"),
+                        (16, "Upper Far Right"),
+                        (17, "Lower Far Right"),
+                        (18, "Lower Far Left"),
+                        (19, "Upper Far Left"),
+                    ],
+                }));
             }
-            if (MODEL_RE_103.is_match(model) && (state.member("AFAreaILCA").is_some() && state.member("AFAreaILCA").is_some_and(|v| v.as_num() != 8.0))) {
-                return Some(Some(MainTag { name: "AFPointSelected", conv: &[(-1, "Auto"), (39, "E6 (Center)")] }));
+            if (MODEL_RE_103.is_match(model)
+                && (state.member("AFAreaILCA").is_some()
+                    && state
+                        .member("AFAreaILCA")
+                        .is_some_and(|v| v.as_num() != 8.0)))
+            {
+                return Some(Some(MainTag {
+                    name: "AFPointSelected",
+                    conv: &[(-1, "Auto"), (39, "E6 (Center)")],
+                }));
             }
-            if (MODEL_RE_104.is_match(model) && (state.member("AFAreaILCA").is_some() && state.member("AFAreaILCA").is_some_and(|v| v.as_num() != 8.0))) {
-                return Some(Some(MainTag { name: "AFPointSelected", conv: &[(0, "Auto"), (162, "E6 (162, Center)")] }));
+            if (MODEL_RE_104.is_match(model)
+                && (state.member("AFAreaILCA").is_some()
+                    && state
+                        .member("AFAreaILCA")
+                        .is_some_and(|v| v.as_num() != 8.0)))
+            {
+                return Some(Some(MainTag {
+                    name: "AFPointSelected",
+                    conv: &[(0, "Auto"), (162, "E6 (162, Center)")],
+                }));
             }
-            if (MODEL_RE_78.is_match(model) && (state.member("AFAreaILCA").is_some() && state.member("AFAreaILCA").is_some_and(|v| v.as_num() == 8.0))) {
-                return Some(Some(MainTag { name: "AFPointSelected", conv: &[(0, "n/a"), (1, "Top Left Zone"), (2, "Top Zone"), (3, "Top Right Zone"), (4, "Left Zone"), (5, "Center Zone"), (6, "Right Zone"), (7, "Bottom Left Zone"), (8, "Bottom Zone"), (9, "Bottom Right Zone")] }));
+            if (MODEL_RE_78.is_match(model)
+                && (state.member("AFAreaILCA").is_some()
+                    && state
+                        .member("AFAreaILCA")
+                        .is_some_and(|v| v.as_num() == 8.0)))
+            {
+                return Some(Some(MainTag {
+                    name: "AFPointSelected",
+                    conv: &[
+                        (0, "n/a"),
+                        (1, "Top Left Zone"),
+                        (2, "Top Zone"),
+                        (3, "Top Right Zone"),
+                        (4, "Left Zone"),
+                        (5, "Center Zone"),
+                        (6, "Right Zone"),
+                        (7, "Bottom Left Zone"),
+                        (8, "Bottom Zone"),
+                        (9, "Bottom Right Zone"),
+                    ],
+                }));
             }
             if MODEL_RE_105.is_match(model) {
-                return Some(Some(MainTag { name: "AFPointSelected", conv: &[(0, "n/a"), (1, "Center Zone"), (2, "Top Zone"), (3, "Right Zone"), (4, "Left Zone"), (5, "Bottom Zone"), (6, "Bottom Right Zone"), (7, "Bottom Left Zone"), (8, "Top Left Zone"), (9, "Top Right Zone")] }));
+                return Some(Some(MainTag {
+                    name: "AFPointSelected",
+                    conv: &[
+                        (0, "n/a"),
+                        (1, "Center Zone"),
+                        (2, "Top Zone"),
+                        (3, "Right Zone"),
+                        (4, "Left Zone"),
+                        (5, "Bottom Zone"),
+                        (6, "Bottom Right Zone"),
+                        (7, "Bottom Left Zone"),
+                        (8, "Top Left Zone"),
+                        (9, "Top Right Zone"),
+                    ],
+                }));
             }
             Some(None)
         }
         0x2020 => {
             if !MODEL_RE_106.is_match(model) {
-                return Some(Some(MainTag { name: "AFPointsUsed", conv: &[(0, "Center"), (1, "Top"), (2, "Upper-right"), (3, "Right"), (4, "Lower-right"), (5, "Bottom"), (6, "Lower-left"), (7, "Left"), (8, "Upper-left"), (9, "Far Right"), (10, "Far Left"), (11, "Upper-middle"), (12, "Near Right"), (13, "Lower-middle"), (14, "Near Left"), (15, "Upper Far Right"), (16, "Lower Far Right"), (17, "Lower Far Left"), (18, "Upper Far Left")] }));
+                return Some(Some(MainTag {
+                    name: "AFPointsUsed",
+                    conv: &[
+                        (0, "Center"),
+                        (1, "Top"),
+                        (2, "Upper-right"),
+                        (3, "Right"),
+                        (4, "Lower-right"),
+                        (5, "Bottom"),
+                        (6, "Lower-left"),
+                        (7, "Left"),
+                        (8, "Upper-left"),
+                        (9, "Far Right"),
+                        (10, "Far Left"),
+                        (11, "Upper-middle"),
+                        (12, "Near Right"),
+                        (13, "Lower-middle"),
+                        (14, "Near Left"),
+                        (15, "Upper Far Right"),
+                        (16, "Lower Far Right"),
+                        (17, "Lower Far Left"),
+                        (18, "Upper Far Left"),
+                    ],
+                }));
             }
             if MODEL_RE_103.is_match(model) {
-                return Some(Some(MainTag { name: "AFPointsUsed", conv: &[(0, "(none)")] }));
+                return Some(Some(MainTag {
+                    name: "AFPointsUsed",
+                    conv: &[(0, "(none)")],
+                }));
             }
             Some(None)
         }
         0x2022 => {
             if MODEL_RE_107.is_match(model) {
-                return Some(Some(MainTag { name: "FocalPlaneAFPointsUsed", conv: &[(0, "(none)")] }));
+                return Some(Some(MainTag {
+                    name: "FocalPlaneAFPointsUsed",
+                    conv: &[(0, "(none)")],
+                }));
             }
             if MODEL_RE_108.is_match(model) {
-                return Some(Some(MainTag { name: "FocalPlaneAFPointsUsed", conv: &[(0, "(none)")] }));
+                return Some(Some(MainTag {
+                    name: "FocalPlaneAFPointsUsed",
+                    conv: &[(0, "(none)")],
+                }));
             }
             Some(None)
         }
         0xb043 => {
-            if (!(state.member("MetaVersion").is_some_and(|v| v.truthy())) || state.member("MetaVersion").is_some_and(|v| v.as_string() != "DC7303320222000")) {
-                return Some(Some(MainTag { name: "AFAreaMode", conv: &[(0, "Default"), (1, "Multi"), (2, "Center"), (3, "Spot"), (4, "Flexible Spot"), (6, "Touch"), (14, "Tracking"), (15, "Face Tracking"), (65535, "n/a")] }));
+            if (!(state.member("MetaVersion").is_some_and(|v| v.truthy()))
+                || state
+                    .member("MetaVersion")
+                    .is_some_and(|v| v.as_string() != "DC7303320222000"))
+            {
+                return Some(Some(MainTag {
+                    name: "AFAreaMode",
+                    conv: &[
+                        (0, "Default"),
+                        (1, "Multi"),
+                        (2, "Center"),
+                        (3, "Spot"),
+                        (4, "Flexible Spot"),
+                        (6, "Touch"),
+                        (14, "Tracking"),
+                        (15, "Face Tracking"),
+                        (65535, "n/a"),
+                    ],
+                }));
             }
-            if (state.member("TagB042").is_some_and(|v| v.truthy()) && state.member("TagB042").is_some_and(|v| v.as_num() != 0.0)) {
-                return Some(Some(MainTag { name: "AFAreaMode", conv: &[(0, "Multi"), (1, "Center"), (2, "Spot"), (3, "Flexible Spot"), (10, "Selective (for Miniature effect)"), (14, "Tracking"), (15, "Face Tracking"), (255, "Manual")] }));
+            if (state.member("TagB042").is_some_and(|v| v.truthy())
+                && state.member("TagB042").is_some_and(|v| v.as_num() != 0.0))
+            {
+                return Some(Some(MainTag {
+                    name: "AFAreaMode",
+                    conv: &[
+                        (0, "Multi"),
+                        (1, "Center"),
+                        (2, "Spot"),
+                        (3, "Flexible Spot"),
+                        (10, "Selective (for Miniature effect)"),
+                        (14, "Tracking"),
+                        (15, "Face Tracking"),
+                        (255, "Manual"),
+                    ],
+                }));
             }
             Some(None)
         }
         0x1000 => {
             if format == "undef" {
-                return Some(Some(MainTag { name: "MultiBurstMode", conv: &[] }));
+                return Some(Some(MainTag {
+                    name: "MultiBurstMode",
+                    conv: &[],
+                }));
             }
             Some(None)
         }
         0x1001 => {
             if format == "int16u" {
-                return Some(Some(MainTag { name: "MultiBurstImageWidth", conv: &[] }));
+                return Some(Some(MainTag {
+                    name: "MultiBurstImageWidth",
+                    conv: &[],
+                }));
             }
             Some(None)
         }
         0x1002 => {
             if format == "int16u" {
-                return Some(Some(MainTag { name: "MultiBurstImageHeight", conv: &[] }));
+                return Some(Some(MainTag {
+                    name: "MultiBurstImageHeight",
+                    conv: &[],
+                }));
             }
             Some(None)
         }
         0x201b => {
             if (!MODEL_RE_24.is_match(model) || MODEL_RE_115.is_match(model)) {
-                return Some(Some(MainTag { name: "FocusMode", conv: &[(0, "Manual"), (2, "AF-S"), (3, "AF-C"), (4, "AF-A"), (6, "DMF"), (7, "AF-D")] }));
+                return Some(Some(MainTag {
+                    name: "FocusMode",
+                    conv: &[
+                        (0, "Manual"),
+                        (2, "AF-S"),
+                        (3, "AF-C"),
+                        (4, "AF-A"),
+                        (6, "DMF"),
+                        (7, "AF-D"),
+                    ],
+                }));
             }
             Some(None)
         }
         0x201d => {
             if MODEL_RE_101.is_match(model) {
-                return Some(Some(MainTag { name: "FlexibleSpotPosition", conv: &[] }));
+                return Some(Some(MainTag {
+                    name: "FlexibleSpotPosition",
+                    conv: &[],
+                }));
             }
             Some(None)
         }
         0x2021 => {
             if (!MODEL_RE_24.is_match(model) || MODEL_RE_115.is_match(model)) {
-                return Some(Some(MainTag { name: "AFTracking", conv: &[(0, "Off"), (1, "Face tracking"), (2, "Lock On AF")] }));
+                return Some(Some(MainTag {
+                    name: "AFTracking",
+                    conv: &[(0, "Off"), (1, "Face tracking"), (2, "Lock On AF")],
+                }));
             }
             Some(None)
         }
         0x205c => {
             if MODEL_RE_116.is_match(model) {
-                return Some(Some(MainTag { name: "StepCropShooting", conv: &[(0, "35mm (Off)"), (1, "50mm"), (2, "70mm")] }));
+                return Some(Some(MainTag {
+                    name: "StepCropShooting",
+                    conv: &[(0, "35mm (Off)"), (1, "50mm"), (2, "70mm")],
+                }));
             }
             Some(None)
         }
         0xb042 => {
-            if (get16u(state, data, 0).is_some_and(|v| v != 0) && (!(state.member("MetaVersion").is_some_and(|v| v.truthy())) || state.member("MetaVersion").is_some_and(|v| v.as_string() != "DC7303320222000"))) {
-                return Some(Some(MainTag { name: "FocusMode", conv: &[(1, "AF-S"), (2, "AF-C"), (4, "Permanent-AF"), (65535, "n/a")] }));
+            if (get16u(state, data, 0).is_some_and(|v| v != 0)
+                && (!(state.member("MetaVersion").is_some_and(|v| v.truthy()))
+                    || state
+                        .member("MetaVersion")
+                        .is_some_and(|v| v.as_string() != "DC7303320222000")))
+            {
+                return Some(Some(MainTag {
+                    name: "FocusMode",
+                    conv: &[
+                        (1, "AF-S"),
+                        (2, "AF-C"),
+                        (4, "Permanent-AF"),
+                        (65535, "n/a"),
+                    ],
+                }));
             }
             Some(None)
         }
         0xb04e => {
-            if (state.member("MetaVersion").is_some_and(|v| v.truthy()) && state.member("MetaVersion").is_some_and(|v| v.as_string() == "DC7303320222000")) {
-                return Some(Some(MainTag { name: "FocusMode", conv: &[(0, "Manual"), (2, "AF-S"), (3, "AF-C"), (5, "Semi-manual"), (6, "DMF")] }));
+            if (state.member("MetaVersion").is_some_and(|v| v.truthy())
+                && state
+                    .member("MetaVersion")
+                    .is_some_and(|v| v.as_string() == "DC7303320222000"))
+            {
+                return Some(Some(MainTag {
+                    name: "FocusMode",
+                    conv: &[
+                        (0, "Manual"),
+                        (2, "AF-S"),
+                        (3, "AF-C"),
+                        (5, "Semi-manual"),
+                        (6, "DMF"),
+                    ],
+                }));
             }
             Some(None)
         }
         0xb050 => {
             if MODEL_RE_23.is_match(model) {
-                return Some(Some(MainTag { name: "HighISONoiseReduction2", conv: &[(0, "Normal"), (1, "High"), (2, "Low"), (3, "Off"), (65535, "n/a")] }));
+                return Some(Some(MainTag {
+                    name: "HighISONoiseReduction2",
+                    conv: &[
+                        (0, "Normal"),
+                        (1, "High"),
+                        (2, "Low"),
+                        (3, "Off"),
+                        (65535, "n/a"),
+                    ],
+                }));
             }
             Some(None)
         }
@@ -462,8 +834,39 @@ pub fn main_store(
 /// read off ExifTool's PROCESS_PROC rather than assumed.
 #[must_use]
 pub fn is_enciphered(table: &str) -> bool {
-    matches!(table,
-        "Tag2010a" | "Tag2010b" | "Tag2010c" | "Tag2010d" | "Tag2010e" | "Tag2010f" | "Tag2010g" | "Tag2010h" | "Tag2010i" | "Tag9050a" | "Tag9050b" | "Tag9050c" | "Tag9050d" | "Tag9400a" | "Tag9400b" | "Tag9400c" | "Tag9401" | "Tag9402" | "Tag9403" | "Tag9404a" | "Tag9404b" | "Tag9404c" | "Tag9405a" | "Tag9405b" | "Tag9406" | "Tag9406b" | "Tag940a" | "Tag940c" | "AFInfo" | "Tag940e" | "Tag9416"
+    matches!(
+        table,
+        "Tag2010a"
+            | "Tag2010b"
+            | "Tag2010c"
+            | "Tag2010d"
+            | "Tag2010e"
+            | "Tag2010f"
+            | "Tag2010g"
+            | "Tag2010h"
+            | "Tag2010i"
+            | "Tag9050a"
+            | "Tag9050b"
+            | "Tag9050c"
+            | "Tag9050d"
+            | "Tag9400a"
+            | "Tag9400b"
+            | "Tag9400c"
+            | "Tag9401"
+            | "Tag9402"
+            | "Tag9403"
+            | "Tag9404a"
+            | "Tag9404b"
+            | "Tag9404c"
+            | "Tag9405a"
+            | "Tag9405b"
+            | "Tag9406"
+            | "Tag9406b"
+            | "Tag940a"
+            | "Tag940c"
+            | "AFInfo"
+            | "Tag940e"
+            | "Tag9416"
     )
 }
 
@@ -543,7 +946,10 @@ pub struct Variant {
 /// position is `.` -- any byte will do.
 fn prefix_matches(data: &[u8], pat: &[&[u8]]) -> bool {
     data.len() >= pat.len()
-        && pat.iter().zip(data).all(|(set, b)| set.is_empty() || set.contains(b))
+        && pat
+            .iter()
+            .zip(data)
+            .all(|(set, b)| set.is_empty() || set.contains(b))
 }
 
 /// Mirrors the Condition chain on the Sony Main table entry.
@@ -565,181 +971,315 @@ pub fn variant_for(
     match tag {
         0x0010 => {
             if (count == 368 || count == 5478) {
-                return Some(Variant { table: "CameraInfo", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "CameraInfo",
+                    sets_double_cipher: false,
+                });
             }
             if (count == 5506 || count == 6118) {
-                return Some(Variant { table: "CameraInfo2", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "CameraInfo2",
+                    sets_double_cipher: false,
+                });
             }
             if count == 15360 {
-                return Some(Variant { table: "CameraInfo3", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "CameraInfo3",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x0020 => {
             if (count == 19154 || count == 19148) {
-                return Some(Variant { table: "FocusInfo", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "FocusInfo",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x0114 => {
             if (count == 280 || count == 364) {
-                return Some(Variant { table: "CameraSettings", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "CameraSettings",
+                    sets_double_cipher: false,
+                });
             }
             if count == 332 {
-                return Some(Variant { table: "CameraSettings2", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "CameraSettings2",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x0116 => {
             if MODEL_RE_0.is_match(model) {
-                return Some(Variant { table: "ExtraInfo", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "ExtraInfo",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_89.is_match(model) {
-                return Some(Variant { table: "ExtraInfo2", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "ExtraInfo2",
+                    sets_double_cipher: false,
+                });
             }
-            Some(Variant { table: "ExtraInfo3", sets_double_cipher: false })
+            Some(Variant {
+                table: "ExtraInfo3",
+                sets_double_cipher: false,
+            })
         }
         0x1003 => {
-            if (prefix_matches(data, &[&[0x00], &[0x00], &[0x01], &[0x01]]) || prefix_matches(data, &[&[0x01], &[0x01]])) {
-                return Some(Variant { table: "Panorama", sets_double_cipher: false });
+            if (prefix_matches(data, &[&[0x00], &[0x00], &[0x01], &[0x01]])
+                || prefix_matches(data, &[&[0x01], &[0x01]]))
+            {
+                return Some(Variant {
+                    table: "Panorama",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x2010 => {
             if MODEL_RE_90.is_match(model) {
-                return Some(Variant { table: "Tag2010a", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010a",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_91.is_match(model) {
-                return Some(Variant { table: "Tag2010b", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010b",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_92.is_match(model) {
-                return Some(Variant { table: "Tag2010c", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010c",
+                    sets_double_cipher: false,
+                });
             }
             if (MODEL_RE_93.is_match(model) && !(panorama)) {
-                return Some(Variant { table: "Tag2010d", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010d",
+                    sets_double_cipher: false,
+                });
             }
             if (MODEL_RE_94.is_match(model) || (MODEL_RE_95.is_match(model) && !(panorama))) {
-                return Some(Variant { table: "Tag2010e", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010e",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_96.is_match(model) {
-                return Some(Variant { table: "Tag2010f", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010f",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_97.is_match(model) {
-                return Some(Variant { table: "Tag2010g", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010g",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_98.is_match(model) {
-                return Some(Variant { table: "Tag2010h", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010h",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_99.is_match(model) {
-                return Some(Variant { table: "Tag2010i", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag2010i",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x202a => {
             if prefix_matches(data, &[&[0x01]]) {
-                return Some(Variant { table: "Tag202a", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag202a",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
-        0x2044 => {
-            Some(Variant { table: "HiddenInfo", sets_double_cipher: false })
-        }
-        0x3000 => {
-            Some(Variant { table: "ShotInfo", sets_double_cipher: false })
-        }
+        0x2044 => Some(Variant {
+            table: "HiddenInfo",
+            sets_double_cipher: false,
+        }),
+        0x3000 => Some(Variant {
+            table: "ShotInfo",
+            sets_double_cipher: false,
+        }),
         0x9050 => {
             if !MODEL_RE_109.is_match(model) {
-                return Some(Variant { table: "Tag9050a", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9050a",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_110.is_match(model) {
-                return Some(Variant { table: "Tag9050b", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9050b",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_111.is_match(model) {
-                return Some(Variant { table: "Tag9050c", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9050c",
+                    sets_double_cipher: false,
+                });
             }
-            if (MODEL_RE_112.is_match(model) || (MODEL_RE_54.is_match(model) && prefix_matches(data, &[&[0x00], &[0x00], &[0x00], &[0x00], &[0x00]]))) {
-                return Some(Variant { table: "Tag9050d", sets_double_cipher: false });
+            if (MODEL_RE_112.is_match(model)
+                || (MODEL_RE_54.is_match(model)
+                    && prefix_matches(data, &[&[0x00], &[0x00], &[0x00], &[0x00], &[0x00]])))
+            {
+                return Some(Variant {
+                    table: "Tag9050d",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x9400 => {
-            if (prefix_matches(data, &[&[0x07, 0x09, 0x0a]]) || (prefix_matches(data, &[&[0x5e, 0xe7, 0x04]]) && true)) {
-                return Some(Variant { table: "Tag9400a", sets_double_cipher: (false || (!prefix_matches(data, &[&[0x07, 0x09, 0x0a]]) && (false || (prefix_matches(data, &[&[0x5e, 0xe7, 0x04]]) && true)))) });
+            if (prefix_matches(data, &[&[0x07, 0x09, 0x0a]])
+                || (prefix_matches(data, &[&[0x5e, 0xe7, 0x04]]) && true))
+            {
+                return Some(Variant {
+                    table: "Tag9400a",
+                    sets_double_cipher: (false
+                        || (!prefix_matches(data, &[&[0x07, 0x09, 0x0a]])
+                            && (false || (prefix_matches(data, &[&[0x5e, 0xe7, 0x04]]) && true)))),
+                });
             }
             if prefix_matches(data, &[&[0x0c]]) {
-                return Some(Variant { table: "Tag9400b", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9400b",
+                    sets_double_cipher: false,
+                });
             }
-            if prefix_matches(data, &[&[0x23, 0x24, 0x26, 0x28, 0x31, 0x32, 0x33, 0x41, 0x43]]) {
-                return Some(Variant { table: "Tag9400c", sets_double_cipher: false });
+            if prefix_matches(
+                data,
+                &[&[0x23, 0x24, 0x26, 0x28, 0x31, 0x32, 0x33, 0x41, 0x43]],
+            ) {
+                return Some(Variant {
+                    table: "Tag9400c",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
-        0x9401 => {
-            Some(Variant { table: "Tag9401", sets_double_cipher: false })
-        }
+        0x9401 => Some(Variant {
+            table: "Tag9401",
+            sets_double_cipher: false,
+        }),
         0x9402 => {
             if (!MODEL_RE_30.is_match(model) && !prefix_matches(data, &[&[0x05, 0xff]])) {
-                return Some(Variant { table: "Tag9402", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9402",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
-        0x9403 => {
-            Some(Variant { table: "Tag9403", sets_double_cipher: false })
-        }
+        0x9403 => Some(Variant {
+            table: "Tag9403",
+            sets_double_cipher: false,
+        }),
         0x9404 => {
             if prefix_matches(data, &[&[0x40, 0x7d], &[], &[], &[0x01]]) {
-                return Some(Variant { table: "Tag9404a", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9404a",
+                    sets_double_cipher: false,
+                });
             }
             if prefix_matches(data, &[&[0xe7, 0xea, 0xcd, 0x8a, 0x70], &[], &[], &[0x08]]) {
-                return Some(Variant { table: "Tag9404b", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9404b",
+                    sets_double_cipher: false,
+                });
             }
             if prefix_matches(data, &[&[0xb6], &[], &[], &[0x01]]) {
-                return Some(Variant { table: "Tag9404c", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9404c",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x9405 => {
             if prefix_matches(data, &[&[0x1b, 0x40, 0x7d]]) {
-                return Some(Variant { table: "Tag9405a", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9405a",
+                    sets_double_cipher: false,
+                });
             }
             if prefix_matches(data, &[&[0x3a, 0xb3, 0x7e, 0x9a, 0x25, 0xe1, 0x76, 0x8b]]) {
-                return Some(Variant { table: "Tag9405b", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9405b",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x9406 => {
             if prefix_matches(data, &[&[0x01, 0x08, 0x1b], &[], &[0x08, 0x1b]]) {
-                return Some(Variant { table: "Tag9406", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9406",
+                    sets_double_cipher: false,
+                });
             }
             if prefix_matches(data, &[&[0x40]]) {
-                return Some(Variant { table: "Tag9406b", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag9406b",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x940a => {
             if MODEL_RE_100.is_match(model) {
-                return Some(Variant { table: "Tag940a", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag940a",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x940c => {
             if MODEL_RE_113.is_match(model) {
-                return Some(Variant { table: "Tag940c", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag940c",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
         0x940e => {
             if MODEL_RE_30.is_match(model) {
-                return Some(Variant { table: "AFInfo", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "AFInfo",
+                    sets_double_cipher: false,
+                });
             }
             if MODEL_RE_114.is_match(model) {
-                return Some(Variant { table: "Tag940e", sets_double_cipher: false });
+                return Some(Variant {
+                    table: "Tag940e",
+                    sets_double_cipher: false,
+                });
             }
             None
         }
-        0x9416 => {
-            Some(Variant { table: "Tag9416", sets_double_cipher: false })
-        }
+        0x9416 => Some(Variant {
+            table: "Tag9416",
+            sets_double_cipher: false,
+        }),
         _ => None,
     }
 }
@@ -752,8 +1292,13 @@ fn camerainfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(text) = text_at(data, 0x0, 8, false) {
         let mut cv = Conv::Str(text.clone());
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-        tags.push(at(0x0, mk_prio("LensSpec", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x0,
+            mk_prio("LensSpec", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x14) {
         dm.push(("FocusModeSetting".to_string(), Conv::Num(f64::from(v))));
@@ -765,7 +1310,10 @@ fn camerainfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "DMF".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x14, mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x14,
+            mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("AFPointSelected".to_string(), Conv::Num(f64::from(v))));
@@ -784,7 +1332,10 @@ fn camerainfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             11 => "Far Left".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x15, mk_prio("AFPointSelected", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x15,
+            mk_prio("AFPointSelected", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("AFPoint".to_string(), Conv::Num(f64::from(v))));
@@ -814,111 +1365,353 @@ fn camerainfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             22 => "Center F2.8".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x19, mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x19,
+            mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1e) {
         dm.push(("AFStatusActiveSensor".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1e, mk_prio("AFStatusActiveSensor", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1e,
+            mk_prio(
+                "AFStatusActiveSensor",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x20) {
         dm.push(("AFStatusUpper-left".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x20, mk_prio("AFStatusUpper-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x20,
+            mk_prio(
+                "AFStatusUpper-left",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x22) {
         dm.push(("AFStatusLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x22, mk_prio("AFStatusLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x22,
+            mk_prio(
+                "AFStatusLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24) {
         dm.push(("AFStatusLower-left".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x24, mk_prio("AFStatusLower-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24,
+            mk_prio(
+                "AFStatusLower-left",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x26) {
         dm.push(("AFStatusFarLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x26, mk_prio("AFStatusFarLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x26,
+            mk_prio(
+                "AFStatusFarLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x28) {
-        dm.push(("AFStatusBottomAssist-left".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x28, mk_prio("AFStatusBottomAssist-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusBottomAssist-left".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x28,
+            mk_prio(
+                "AFStatusBottomAssist-left",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2a) {
         dm.push(("AFStatusBottom".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2a, mk_prio("AFStatusBottom", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2a,
+            mk_prio(
+                "AFStatusBottom",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2c) {
-        dm.push(("AFStatusBottomAssist-right".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2c, mk_prio("AFStatusBottomAssist-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusBottomAssist-right".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x2c,
+            mk_prio(
+                "AFStatusBottomAssist-right",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2e) {
         dm.push(("AFStatusCenter-7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2e, mk_prio("AFStatusCenter-7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2e,
+            mk_prio(
+                "AFStatusCenter-7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x30) {
-        dm.push(("AFStatusCenter-horizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x30, mk_prio("AFStatusCenter-horizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusCenter-horizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x30,
+            mk_prio(
+                "AFStatusCenter-horizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x32) {
         dm.push(("AFStatusCenter-9".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x32, mk_prio("AFStatusCenter-9", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x32,
+            mk_prio(
+                "AFStatusCenter-9",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x34) {
         dm.push(("AFStatusCenter-10".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x34, mk_prio("AFStatusCenter-10", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x34,
+            mk_prio(
+                "AFStatusCenter-10",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x36) {
         dm.push(("AFStatusCenter-11".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x36, mk_prio("AFStatusCenter-11", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x36,
+            mk_prio(
+                "AFStatusCenter-11",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x38) {
         dm.push(("AFStatusCenter-12".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x38, mk_prio("AFStatusCenter-12", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x38,
+            mk_prio(
+                "AFStatusCenter-12",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3a) {
-        dm.push(("AFStatusCenter-vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x3a, mk_prio("AFStatusCenter-vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusCenter-vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x3a,
+            mk_prio(
+                "AFStatusCenter-vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3c) {
         dm.push(("AFStatusCenter-14".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x3c, mk_prio("AFStatusCenter-14", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3c,
+            mk_prio(
+                "AFStatusCenter-14",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3e) {
-        dm.push(("AFStatusTopAssist-left".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x3e, mk_prio("AFStatusTopAssist-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusTopAssist-left".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x3e,
+            mk_prio(
+                "AFStatusTopAssist-left",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x40) {
         dm.push(("AFStatusTop".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x40, mk_prio("AFStatusTop", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x40,
+            mk_prio(
+                "AFStatusTop",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x42) {
-        dm.push(("AFStatusTopAssist-right".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x42, mk_prio("AFStatusTopAssist-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusTopAssist-right".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x42,
+            mk_prio(
+                "AFStatusTopAssist-right",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x44) {
         dm.push(("AFStatusFarRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x44, mk_prio("AFStatusFarRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x44,
+            mk_prio(
+                "AFStatusFarRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x46) {
         dm.push(("AFStatusUpper-right".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x46, mk_prio("AFStatusUpper-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x46,
+            mk_prio(
+                "AFStatusUpper-right",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x48) {
         dm.push(("AFStatusRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x48, mk_prio("AFStatusRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x48,
+            mk_prio(
+                "AFStatusRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4a) {
         dm.push(("AFStatusLower-right".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x4a, mk_prio("AFStatusLower-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4a,
+            mk_prio(
+                "AFStatusLower-right",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4c) {
         dm.push(("AFStatusCenterF2-8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x4c, mk_prio("AFStatusCenterF2-8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4c,
+            mk_prio(
+                "AFStatusCenterF2-8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if MODEL_RE_0.is_match(model) {
         if let Some(v) = u8_at(data, 0x130) {
             dm.push(("AFMicroAdjValue".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val - 20", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val - 20", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            tags.push(at(0x130, mk_prio("AFMicroAdjValue", cv.as_string(), raw, GRP2, PRIO)));
+            tags.push(at(
+                0x130,
+                mk_prio("AFMicroAdjValue", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_0.is_match(model) {
@@ -930,7 +1723,10 @@ fn camerainfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x131, mk_prio("AFMicroAdjMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x131,
+                mk_prio("AFMicroAdjMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -944,10 +1740,17 @@ fn camerainfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(text) = text_at(data, 0x0, 8, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvLensSpec($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvLensSpec($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-        tags.push(at(0x0, mk_prio("LensSpec", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x0,
+            mk_prio("LensSpec", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x14) {
         dm.push(("AFPointSelected".to_string(), Conv::Num(f64::from(v))));
@@ -964,7 +1767,10 @@ fn camerainfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Upper-left".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x14, mk_prio("AFPointSelected", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x14,
+            mk_prio("AFPointSelected", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FocusModeSetting".to_string(), Conv::Num(f64::from(v))));
@@ -976,7 +1782,10 @@ fn camerainfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "DMF".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x15, mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x15,
+            mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("AFPoint".to_string(), Conv::Num(f64::from(v))));
@@ -991,55 +1800,175 @@ fn camerainfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             7 => "Bottom-left".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x18, mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x18,
+            mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("AFStatusActiveSensor".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1b, mk_prio("AFStatusActiveSensor", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1b,
+            mk_prio(
+                "AFStatusActiveSensor",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1d) {
         dm.push(("AFStatusTop-right".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1d, mk_prio("AFStatusTop-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1d,
+            mk_prio(
+                "AFStatusTop-right",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1f) {
         dm.push(("AFStatusBottom-right".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1f, mk_prio("AFStatusBottom-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1f,
+            mk_prio(
+                "AFStatusBottom-right",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x21) {
         dm.push(("AFStatusBottom".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x21, mk_prio("AFStatusBottom", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x21,
+            mk_prio(
+                "AFStatusBottom",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x23) {
-        dm.push(("AFStatusMiddleHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x23, mk_prio("AFStatusMiddleHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusMiddleHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x23,
+            mk_prio(
+                "AFStatusMiddleHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x25) {
-        dm.push(("AFStatusCenterVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x25, mk_prio("AFStatusCenterVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusCenterVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x25,
+            mk_prio(
+                "AFStatusCenterVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x27) {
         dm.push(("AFStatusTop".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x27, mk_prio("AFStatusTop", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x27,
+            mk_prio(
+                "AFStatusTop",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x29) {
         dm.push(("AFStatusTop-left".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x29, mk_prio("AFStatusTop-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x29,
+            mk_prio(
+                "AFStatusTop-left",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2b) {
         dm.push(("AFStatusBottom-left".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2b, mk_prio("AFStatusBottom-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2b,
+            mk_prio(
+                "AFStatusBottom-left",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2d) {
         dm.push(("AFStatusLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2d, mk_prio("AFStatusLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2d,
+            mk_prio(
+                "AFStatusLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2f) {
-        dm.push(("AFStatusCenterHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2f, mk_prio("AFStatusCenterHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusCenterHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x2f,
+            mk_prio(
+                "AFStatusCenterHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x31) {
         dm.push(("AFStatusRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x31, mk_prio("AFStatusRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x31,
+            mk_prio(
+                "AFStatusRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     tags
 }
@@ -1052,30 +1981,51 @@ fn camerainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if !MODEL_RE_1.is_match(model) {
         if let Some(text) = text_at(data, 0x0, 8, false) {
             let mut cv = Conv::Str(text.clone());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvLensSpec($val)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvLensSpec($val)", &cv) {
+                cv = x;
+            }
             let raw = Value::String(cv.as_string());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-            tags.push(at(0x0, mk_prio("LensSpec", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x0,
+                mk_prio("LensSpec", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0xe) {
             dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0xe, mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0xe,
+                mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
         if let Some(v) = u16_at(data, 0x10) {
             dm.push(("FocalLengthTeleZoom".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val * 2 / 3", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val * 2 / 3", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x10, mk_prio("FocalLengthTeleZoom", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x10,
+                mk_prio("FocalLengthTeleZoom", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_3.is_match(model) {
@@ -1094,7 +2044,10 @@ fn camerainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 9 => "Upper-left".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x14, mk_prio("AFPointSelected", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x14,
+                mk_prio("AFPointSelected", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_3.is_match(model) {
@@ -1107,7 +2060,10 @@ fn camerainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "AF-A".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x15, mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x15,
+                mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
@@ -1124,7 +2080,10 @@ fn camerainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 7 => "Bottom-left".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18, mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18,
+                mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_5.is_match(model) {
@@ -1138,13 +2097,25 @@ fn camerainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 64 => "AF-S - Confirmed".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x19, mk_prio("FocusStatus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x19,
+                mk_prio("FocusStatus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x1b) {
             dm.push(("AFStatusActiveSensor".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x1b, mk_prio("AFStatusActiveSensor", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1b,
+                mk_prio(
+                    "AFStatusActiveSensor",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_5.is_match(model) {
@@ -1169,7 +2140,10 @@ fn camerainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 15 => "Near Left".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1c, mk_prio("AFPointSelected", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1c,
+                mk_prio("AFPointSelected", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_5.is_match(model) {
@@ -1182,19 +2156,40 @@ fn camerainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "AF-A".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1d, mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1d,
+                mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_5.is_match(model)) && MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x1d) {
             dm.push(("AFStatusTop-right".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x1d, mk_prio("AFStatusTop-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1d,
+                mk_prio(
+                    "AFStatusTop-right",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x1f) {
             dm.push(("AFStatusBottom-right".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x1f, mk_prio("AFStatusBottom-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1f,
+                mk_prio(
+                    "AFStatusBottom-right",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_5.is_match(model) {
@@ -1222,67 +2217,169 @@ fn camerainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "(none)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x20, mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x20,
+                mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_5.is_match(model) {
         if let Some(v) = u8_at(data, 0x21) {
             dm.push(("AFStatusActiveSensor".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x21, mk_prio("AFStatusActiveSensor", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x21,
+                mk_prio(
+                    "AFStatusActiveSensor",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !(MODEL_RE_5.is_match(model)) && MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x21) {
             dm.push(("AFStatusBottom".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x21, mk_prio("AFStatusBottom", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x21,
+                mk_prio(
+                    "AFStatusBottom",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !(MODEL_RE_5.is_match(model)) && MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x23) {
-            dm.push(("AFStatusMiddleHorizontal".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x23, mk_prio("AFStatusMiddleHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            dm.push((
+                "AFStatusMiddleHorizontal".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
+            tags.push(at(
+                0x23,
+                mk_prio(
+                    "AFStatusMiddleHorizontal",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x25) {
-            dm.push(("AFStatusCenterVertical".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x25, mk_prio("AFStatusCenterVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            dm.push((
+                "AFStatusCenterVertical".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
+            tags.push(at(
+                0x25,
+                mk_prio(
+                    "AFStatusCenterVertical",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x27) {
             dm.push(("AFStatusTop".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x27, mk_prio("AFStatusTop", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x27,
+                mk_prio(
+                    "AFStatusTop",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x29) {
             dm.push(("AFStatusTop-left".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x29, mk_prio("AFStatusTop-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x29,
+                mk_prio(
+                    "AFStatusTop-left",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x2b) {
             dm.push(("AFStatusBottom-left".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x2b, mk_prio("AFStatusBottom-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2b,
+                mk_prio(
+                    "AFStatusBottom-left",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x2d) {
             dm.push(("AFStatusLeft".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x2d, mk_prio("AFStatusLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2d,
+                mk_prio(
+                    "AFStatusLeft",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x2f) {
-            dm.push(("AFStatusCenterHorizontal".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x2f, mk_prio("AFStatusCenterHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            dm.push((
+                "AFStatusCenterHorizontal".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
+            tags.push(at(
+                0x2f,
+                mk_prio(
+                    "AFStatusCenterHorizontal",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u8_at(data, 0x31) {
             dm.push(("AFStatusRight".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x31, mk_prio("AFStatusRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x31,
+                mk_prio(
+                    "AFStatusRight",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     tags
@@ -1306,7 +2403,10 @@ fn focusinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 11 => "Continuous Self-timer".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0xe, mk_prio("DriveMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0xe,
+                mk_prio("DriveMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_6.is_match(model)) {
@@ -1328,7 +2428,10 @@ fn focusinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 41 => "D-Range Optimizer Bracketing High".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0xe, mk_prio("DriveMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0xe,
+                mk_prio("DriveMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x10) {
@@ -1339,19 +2442,37 @@ fn focusinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Rotate 90 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x10, mk_prio("Rotation", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10,
+            mk_prio("Rotation", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x14) {
-        dm.push(("ImageStabilizationSetting".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ImageStabilizationSetting".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x14, mk_prio("ImageStabilizationSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x14,
+            mk_prio(
+                "ImageStabilizationSetting",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x15) {
-        dm.push(("DynamicRangeOptimizerMode".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DynamicRangeOptimizerMode".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "Standard".to_string(),
@@ -1359,39 +2480,102 @@ fn focusinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Advanced Level".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x15, mk_prio("DynamicRangeOptimizerMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x15,
+            mk_prio(
+                "DynamicRangeOptimizerMode",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2b) {
         dm.push(("BracketShotNumber".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2b, mk_prio("BracketShotNumber", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2b,
+            mk_prio(
+                "BracketShotNumber",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2c) {
-        dm.push(("WhiteBalanceBracketing".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "WhiteBalanceBracketing".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "Low".to_string(),
             2 => "High".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2c, mk_prio("WhiteBalanceBracketing", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2c,
+            mk_prio(
+                "WhiteBalanceBracketing",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2d) {
         dm.push(("BracketShotNumber2".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2d, mk_prio("BracketShotNumber2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2d,
+            mk_prio(
+                "BracketShotNumber2",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2e) {
-        dm.push(("DynamicRangeOptimizerBracket".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DynamicRangeOptimizerBracket".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "Low".to_string(),
             2 => "High".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2e, mk_prio("DynamicRangeOptimizerBracket", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2e,
+            mk_prio(
+                "DynamicRangeOptimizerBracket",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2f) {
-        dm.push(("ExposureBracketShotNumber".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2f, mk_prio("ExposureBracketShotNumber", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "ExposureBracketShotNumber".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x2f,
+            mk_prio(
+                "ExposureBracketShotNumber",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3f) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -1412,7 +2596,10 @@ fn focusinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             35 => "Auto No Flash".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3f, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3f,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x41) {
         dm.push(("CreativeStyle".to_string(), Conv::Num(f64::from(v))));
@@ -1433,26 +2620,43 @@ fn focusinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             16 => "Sepia".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x41, mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x41,
+            mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6d) {
         dm.push(("ISOSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) { cv = x; }
-        tags.push(at(0x6d, mk_prio("ISOSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x6d,
+            mk_prio("ISOSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6f) {
         dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) {
+            cv = x;
+        }
         tags.push(at(0x6f, mk_prio("ISO", cv.as_string(), raw, GRP2, PRIO)));
     }
     if let Some(v) = u8_at(data, 0x77) {
-        dm.push(("DynamicRangeOptimizerMode".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DynamicRangeOptimizerMode".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "Standard".to_string(),
@@ -1460,7 +2664,16 @@ fn focusinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Advanced Level".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x77, mk_prio("DynamicRangeOptimizerMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x77,
+            mk_prio(
+                "DynamicRangeOptimizerMode",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if MODEL_RE_7.is_match(model) {
         if let Some(v) = u32_at(data, 0x846) {
@@ -1469,14 +2682,32 @@ fn focusinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x846, mk_prio("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x846,
+                    mk_prio(
+                        "ShutterCount",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
     if MODEL_RE_8.is_match(model) {
         if let Some(v) = u8_at(data, 0x9bb) {
             dm.push(("FocusPosition".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x9bb, mk_prio("FocusPosition", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x9bb,
+                mk_prio(
+                    "FocusPosition",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(text) = text_at(data, 0x1110, 9600, false) {
@@ -1497,7 +2728,16 @@ fn moreinfo0201(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x11b, mk_prio("ImageCount", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x11b,
+                    mk_prio(
+                        "ImageCount",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -1508,7 +2748,16 @@ fn moreinfo0201(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x125, mk_prio("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x125,
+                    mk_prio(
+                        "ShutterCount",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -1519,7 +2768,16 @@ fn moreinfo0201(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x14a, mk_prio("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x14a,
+                    mk_prio(
+                        "ShutterCount",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -1533,12 +2791,24 @@ fn moreinfo0401(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if !MODEL_RE_10.is_match(model) {
         if let Some(v) = u32_at(data, 0x44e) {
-            dm.push(("ShotNumberSincePowerUp".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "ShotNumberSincePowerUp".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x44e, mk_prio("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x44e,
+                    mk_prio(
+                        "ShotNumberSincePowerUp",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -1566,7 +2836,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             192 => "Remote Commander".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1, mk_prio("DriveMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1,
+            mk_prio("DriveMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -1605,7 +2878,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             138 => "High Contrast Monochrome".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -1615,17 +2891,32 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Spot".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4) {
-        dm.push(("DynamicRangeOptimizerSetting".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DynamicRangeOptimizerSetting".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             1 => "Off".to_string(),
             16 => "On (Auto)".to_string(),
             17 => "On (Manual)".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("DynamicRangeOptimizerSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio(
+                "DynamicRangeOptimizerSetting",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6) {
         dm.push(("ColorSpace".to_string(), Conv::Num(f64::from(v))));
@@ -1634,7 +2925,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Adobe RGB".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x6, mk_prio("ColorSpace", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6,
+            mk_prio("ColorSpace", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("CreativeStyleSetting".to_string(), Conv::Num(f64::from(v))));
@@ -1647,28 +2941,46 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             160 => "Sunset".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x7, mk_prio("CreativeStyleSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x7,
+            mk_prio("CreativeStyleSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0x8) {
         dm.push(("ContrastSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x8, mk_prio("ContrastSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x8,
+            mk_prio("ContrastSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0x9) {
         dm.push(("SaturationSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x9, mk_prio("SaturationSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x9,
+            mk_prio("SaturationSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0xa) {
         dm.push(("SharpnessSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0xa, mk_prio("SharpnessSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xa,
+            mk_prio("SharpnessSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xd) {
         dm.push(("WhiteBalanceSetting".to_string(), Conv::Num(f64::from(v))));
@@ -1726,22 +3038,49 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             243 => "Color Temperature/Color Filter".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xd, mk_prio("WhiteBalanceSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xd,
+            mk_prio("WhiteBalanceSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xe) {
-        dm.push(("ColorTemperatureSetting".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorTemperatureSetting".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val * 100", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val * 100", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) { cv = x; }
-        tags.push(at(0xe, mk_prio("ColorTemperatureSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xe,
+            mk_prio("ColorTemperatureSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0xf) {
-        dm.push(("ColorCompensationFilterSet".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorCompensationFilterSet".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0xf, mk_prio("ColorCompensationFilterSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xf,
+            mk_prio(
+                "ColorCompensationFilterSet",
+                cv.as_string(),
+                raw,
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x10) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -1754,16 +3093,31 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             20 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x10, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11) {
-        dm.push(("LongExposureNoiseReduction".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "LongExposureNoiseReduction".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             1 => "Off".to_string(),
             16 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11, mk_prio("LongExposureNoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11,
+            mk_prio(
+                "LongExposureNoiseReduction",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x12) {
         dm.push(("HighISONoiseReduction".to_string(), Conv::Num(f64::from(v))));
@@ -1773,7 +3127,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             19 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x12, mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x12,
+            mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_2.is_match(model) {
         if let Some(v) = u8_at(data, 0x13) {
@@ -1786,12 +3143,18 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 48 => "DMF".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x13, mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x13,
+                mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
         if let Some(v) = u8_at(data, 0x15) {
-            dm.push(("MultiFrameNoiseReduction".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "MultiFrameNoiseReduction".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "n/a".to_string(),
                 1 => "Off".to_string(),
@@ -1799,7 +3162,16 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "None".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x15, mk_prio("MultiFrameNoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x15,
+                mk_prio(
+                    "MultiFrameNoiseReduction",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x16) {
@@ -1810,7 +3182,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             17 => "On (Manual)".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x16, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x16,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x17) {
         dm.push(("HDRLevel".to_string(), Conv::Num(f64::from(v))));
@@ -1826,7 +3201,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             41 => "6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x17, mk_prio("HDRLevel", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x17,
+            mk_prio("HDRLevel", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("ViewingMode".to_string(), Conv::Num(f64::from(v))));
@@ -1836,7 +3214,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             34 => "Quick AF Live View".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x18, mk_prio("ViewingMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x18,
+            mk_prio("ViewingMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("FaceDetection".to_string(), Conv::Num(f64::from(v))));
@@ -1845,34 +3226,56 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             16 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x19, mk_prio("FaceDetection", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x19,
+            mk_prio("FaceDetection", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x1e) {
             dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("($val-106)/8", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("($val-106)/8", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            tags.push(at(0x1e, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+            tags.push(at(
+                0x1e,
+                mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) {
         if let Some(v) = u8_at(data, 0x1e) {
-            dm.push(("ExposureCompensationSet".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "ExposureCompensationSet".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-            tags.push(at(0x1e, mk_prio("ExposureCompensationSet", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1e,
+                mk_prio("ExposureCompensationSet", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x1f) {
             dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) {
+                cv = x;
+            }
             tags.push(at(0x1f, mk_prio("ISO", cv.as_string(), raw, GRP2, PRIO)));
         }
     }
@@ -1880,20 +3283,34 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if let Some(v) = u8_at(data, 0x1f) {
             dm.push(("FlashExposureCompSet".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-            tags.push(at(0x1f, mk_prio("FlashExposureCompSet", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1f,
+                mk_prio("FlashExposureCompSet", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x20) {
             dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) { cv = x; }
-            tags.push(at(0x20, mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x20,
+                mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && !MODEL_RE_12.is_match(model) {
@@ -1905,26 +3322,43 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Contrast AF".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x20, mk_prio("LiveViewAFMethod", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x20,
+                mk_prio("LiveViewAFMethod", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x21) {
             dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-            tags.push(at(0x21, mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval(
+                "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+                &cv,
+            ) {
+                cv = x;
+            }
+            tags.push(at(
+                0x21,
+                mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && MODEL_RE_12.is_match(model) {
         if let Some(v) = u8_at(data, 0x21) {
             dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) {
+                cv = x;
+            }
             tags.push(at(0x21, mk_prio("ISO", cv.as_string(), raw, GRP2, PRIO)));
         }
     }
@@ -1932,59 +3366,101 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if let Some(v) = u8_at(data, 0x22) {
             dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) { cv = x; }
-            tags.push(at(0x22, mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x22,
+                mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x23) {
             dm.push(("FocalLength2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("10 * 2 ** (($val-28)/16)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("10 * 2 ** (($val-28)/16)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x23, mk_prio("FocalLength2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x23,
+                mk_prio("FocalLength2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && MODEL_RE_12.is_match(model) {
         if let Some(v) = u8_at(data, 0x23) {
             dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-            tags.push(at(0x23, mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval(
+                "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+                &cv,
+            ) {
+                cv = x;
+            }
+            tags.push(at(
+                0x23,
+                mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = i16_at(data, 0x24) {
             dm.push(("ExposureCompensation2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 8", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 8", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-            tags.push(at(0x24, mk_prio("ExposureCompensation2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x24,
+                mk_prio("ExposureCompensation2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_12.is_match(model) {
         if let Some(v) = u8_at(data, 0x25) {
             dm.push(("FocalLength2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("10 * 2 ** (($val-28)/16)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("10 * 2 ** (($val-28)/16)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x25, mk_prio("FocalLength2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x25,
+                mk_prio("FocalLength2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_12.is_match(model)) && !MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x25) {
             dm.push(("ISO".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) {
+                cv = x;
+            }
             tags.push(at(0x25, mk_prio("ISO", cv.as_string(), raw, GRP2, PRIO)));
         }
     }
@@ -1992,40 +3468,71 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if let Some(v) = i16_at(data, 0x26) {
             dm.push(("FlashExposureCompSet2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 8", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 8", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-            tags.push(at(0x26, mk_prio("FlashExposureCompSet2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x26,
+                mk_prio("FlashExposureCompSet2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && MODEL_RE_12.is_match(model) {
         if let Some(v) = i16_at(data, 0x26) {
             dm.push(("ExposureCompensation2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 8", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 8", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-            tags.push(at(0x26, mk_prio("ExposureCompensation2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x26,
+                mk_prio("ExposureCompensation2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && !(MODEL_RE_12.is_match(model)) {
         if let Some(v) = u8_at(data, 0x26) {
             dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) { cv = x; }
-            tags.push(at(0x26, mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x26,
+                mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_13.is_match(model) {
         if let Some(v) = u8_at(data, 0x27) {
             dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-            tags.push(at(0x27, mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval(
+                "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+                &cv,
+            ) {
+                cv = x;
+            }
+            tags.push(at(
+                0x27,
+                mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
@@ -2038,23 +3545,42 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 8 => "Rotate 270 CW".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x28, mk_prio("Orientation2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x28,
+                mk_prio("Orientation2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
         if let Some(v) = u8_at(data, 0x29) {
             dm.push(("FocusPosition2".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x29, mk_prio("FocusPosition2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x29,
+                mk_prio(
+                    "FocusPosition2",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && !MODEL_RE_12.is_match(model) {
         if let Some(v) = u8_at(data, 0x29) {
             dm.push(("FocalLength2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("10 * 2 ** (($val-28)/16)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("10 * 2 ** (($val-28)/16)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x29, mk_prio("FocalLength2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x29,
+                mk_prio("FocalLength2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
@@ -2065,23 +3591,42 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "Fired".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x2a, mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2a,
+                mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && !MODEL_RE_12.is_match(model) {
         if let Some(v) = i16_at(data, 0x2a) {
             dm.push(("ExposureCompensation2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 8", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 8", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-            tags.push(at(0x2a, mk_prio("ExposureCompensation2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x2a,
+                mk_prio("ExposureCompensation2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_12.is_match(model) {
         if let Some(v) = u8_at(data, 0x2b) {
             dm.push(("FocusPosition2".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x2b, mk_prio("FocusPosition2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2b,
+                mk_prio(
+                    "FocusPosition2",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
@@ -2092,7 +3637,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "MF".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x2c, mk_prio("FocusMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2c,
+                mk_prio("FocusMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && MODEL_RE_12.is_match(model) {
@@ -2103,17 +3651,27 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "Fired".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x2c, mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2c,
+                mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_11.is_match(model)) && !(MODEL_RE_12.is_match(model)) {
         if let Some(v) = i16_at(data, 0x2c) {
             dm.push(("FlashExposureCompSet2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 8", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 8", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-            tags.push(at(0x2c, mk_prio("FlashExposureCompSet2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x2c,
+                mk_prio("FlashExposureCompSet2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_12.is_match(model) {
@@ -2124,7 +3682,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "MF".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x2e, mk_prio("FocusMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2e,
+                mk_prio("FocusMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_12.is_match(model)) && !MODEL_RE_11.is_match(model) {
@@ -2137,13 +3698,25 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 8 => "Rotate 270 CW".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x2e, mk_prio("Orientation2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2e,
+                mk_prio("Orientation2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_13.is_match(model) {
         if let Some(v) = u8_at(data, 0x2f) {
             dm.push(("FocusPosition2".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x2f, mk_prio("FocusPosition2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2f,
+                mk_prio(
+                    "FocusPosition2",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_13.is_match(model) {
@@ -2154,7 +3727,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "Fired".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x30, mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x30,
+                mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_13.is_match(model) {
@@ -2165,7 +3741,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "MF".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x32, mk_prio("FocusMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x32,
+                mk_prio("FocusMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_11.is_match(model) {
@@ -2178,7 +3757,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 4 => "External Flash fired (4)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x77, mk_prio("FlashAction2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x77,
+                mk_prio("FlashAction2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_12.is_match(model) {
@@ -2190,7 +3772,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 136 => "Did not fire".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x78, mk_prio("FlashActionExternal", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x78,
+                mk_prio("FlashActionExternal", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_13.is_match(model) {
@@ -2202,7 +3787,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 182 => "Fired, HSS".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x7c, mk_prio("FlashActionExternal", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x7c,
+                mk_prio("FlashActionExternal", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_12.is_match(model) {
@@ -2213,7 +3801,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "External".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x82, mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x82,
+                mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_13.is_match(model) {
@@ -2225,7 +3816,10 @@ fn moresettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "External".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x86, mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x86,
+                mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -2238,7 +3832,10 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = i16_at(data, 0x0) {
         dm.push(("FacesDetected".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{FacesDetected} = ($val == -1 ? 0 : $val); $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{FacesDetected} = ($val == -1 ? 0 : $val); $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -2246,7 +3843,10 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 -1 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x0, mk_prio("FacesDetected", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x0,
+                mk_prio("FacesDetected", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 1.0) {
@@ -2255,12 +3855,18 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x1 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x1, mk_prio("Face1Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x1,
+                    mk_prio("Face1Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2270,12 +3876,18 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x6 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x6, mk_prio("Face2Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x6,
+                    mk_prio("Face2Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2285,12 +3897,18 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0xb + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0xb, mk_prio("Face3Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0xb,
+                    mk_prio("Face3Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2300,12 +3918,18 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x10 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x10, mk_prio("Face4Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x10,
+                    mk_prio("Face4Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2315,12 +3939,18 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x15 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x15, mk_prio("Face5Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x15,
+                    mk_prio("Face5Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2330,12 +3960,18 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x1a + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x1a, mk_prio("Face6Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x1a,
+                    mk_prio("Face6Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2345,12 +3981,18 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x1f + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x1f, mk_prio("Face7Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x1f,
+                    mk_prio("Face7Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2360,12 +4002,18 @@ fn faceinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x24 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x24, mk_prio("Face8Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x24,
+                    mk_prio("Face8Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2379,7 +4027,10 @@ fn faceinfoa(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u16_at(data, 0x2) {
         dm.push(("FaceTest2".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{FaceTest2} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{FaceTest2} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -2387,141 +4038,273 @@ fn faceinfoa(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     }
     if let Some(v) = u16_at(data, 0x3) {
         dm.push(("FacesDetected".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{FacesDetected} = ($val > 8 ? 0 : $val); $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{FacesDetected} = ($val > 8 ? 0 : $val); $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val > 8 ? 0 : $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val > 8 ? 0 : $val", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            tags.push(at(0x3, mk_prio("FacesDetected", cv.as_string(), raw, GRP2, PRIO)));
+            tags.push(at(
+                0x3,
+                mk_prio("FacesDetected", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x8) {
         dm.push(("FaceTest8".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{FaceTest8} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{FaceTest8} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
         }
     }
-    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 1.0) || (dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0) && (dm_get(&dm, "FaceTest2").is_some_and(|v| v == 1.0) || dm_get(&dm, "FaceTest2").is_some_and(|v| v == 257.0)))) {
+    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 1.0)
+        || (dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0)
+            && (dm_get(&dm, "FaceTest2").is_some_and(|v| v == 1.0)
+                || dm_get(&dm, "FaceTest2").is_some_and(|v| v == 257.0))))
+    {
         {
             let mut parts = Vec::new();
             for k in 0..4 {
                 match u16_at(data, 0xb + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0xb, mk_prio("PotentialFace1Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0xb,
+                    mk_prio(
+                        "PotentialFace1Position",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 2.0) || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 1.0) && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0))) {
+    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 2.0)
+        || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 1.0)
+            && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0)))
+    {
         {
             let mut parts = Vec::new();
             for k in 0..4 {
                 match u16_at(data, 0x15 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x15, mk_prio("PotentialFace2Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x15,
+                    mk_prio(
+                        "PotentialFace2Position",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 3.0) || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 2.0) && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0))) {
+    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 3.0)
+        || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 2.0)
+            && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0)))
+    {
         {
             let mut parts = Vec::new();
             for k in 0..4 {
                 match u16_at(data, 0x1f + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x1f, mk_prio("PotentialFace3Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x1f,
+                    mk_prio(
+                        "PotentialFace3Position",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 4.0) || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 3.0) && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0))) {
+    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 4.0)
+        || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 3.0)
+            && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0)))
+    {
         {
             let mut parts = Vec::new();
             for k in 0..4 {
                 match u16_at(data, 0x29 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x29, mk_prio("PotentialFace4Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x29,
+                    mk_prio(
+                        "PotentialFace4Position",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 5.0) || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 4.0) && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0))) {
+    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 5.0)
+        || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 4.0)
+            && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0)))
+    {
         {
             let mut parts = Vec::new();
             for k in 0..4 {
                 match u16_at(data, 0x33 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x33, mk_prio("PotentialFace5Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x33,
+                    mk_prio(
+                        "PotentialFace5Position",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 6.0) || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 5.0) && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0))) {
+    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 6.0)
+        || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 5.0)
+            && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0)))
+    {
         {
             let mut parts = Vec::new();
             for k in 0..4 {
                 match u16_at(data, 0x3d + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x3d, mk_prio("PotentialFace6Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x3d,
+                    mk_prio(
+                        "PotentialFace6Position",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 7.0) || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 6.0) && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0))) {
+    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 7.0)
+        || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 6.0)
+            && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0)))
+    {
         {
             let mut parts = Vec::new();
             for k in 0..4 {
                 match u16_at(data, 0x47 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x47, mk_prio("PotentialFace7Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x47,
+                    mk_prio(
+                        "PotentialFace7Position",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 8.0) || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 7.0) && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0))) {
+    if (dm_get(&dm, "FacesDetected").is_some_and(|v| v >= 8.0)
+        || (dm_get(&dm, "FacesDetected").is_some_and(|v| v == 7.0)
+            && dm_get(&dm, "FaceTest8").is_some_and(|v| v > 0.0)))
+    {
         {
             let mut parts = Vec::new();
             for k in 0..4 {
                 match u16_at(data, 0x51 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x51, mk_prio("PotentialFace8Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x51,
+                    mk_prio(
+                        "PotentialFace8Position",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -2531,12 +4314,18 @@ fn faceinfoa(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x5b + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x5b, mk_prio("Face1Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x5b,
+                    mk_prio("Face1Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2546,12 +4335,18 @@ fn faceinfoa(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x65 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x65, mk_prio("Face2Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x65,
+                    mk_prio("Face2Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2561,12 +4356,18 @@ fn faceinfoa(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x6f + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x6f, mk_prio("Face3Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x6f,
+                    mk_prio("Face3Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2576,12 +4377,18 @@ fn faceinfoa(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u16_at(data, 0x79 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x79, mk_prio("Face4Position", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x79,
+                    mk_prio("Face4Position", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -2597,17 +4404,31 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u16_at(data, 0x0) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x0, mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x0,
+            mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) {
+            cv = x;
+        }
         tags.push(at(0x1, mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO)));
     }
     if let Some(v) = u16_at(data, 0x2) {
@@ -2617,15 +4438,28 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2, mk_prio("HighSpeedSync", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2,
+            mk_prio("HighSpeedSync", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3) {
-        dm.push(("ExposureCompensationSet".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ExposureCompensationSet".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x3, mk_prio("ExposureCompensationSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x3,
+            mk_prio("ExposureCompensationSet", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x4) {
         let v = v & 0xff;
@@ -2646,7 +4480,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             41 => "D-Range Optimizer Bracketing High".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("DriveMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("DriveMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x5) {
         dm.push(("WhiteBalanceSetting".to_string(), Conv::Num(f64::from(v))));
@@ -2664,46 +4501,103 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             34 => "Custom 3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x5, mk_prio("WhiteBalanceSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x5,
+            mk_prio("WhiteBalanceSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x6) {
         dm.push(("WhiteBalanceFineTune".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x6, mk_prio("WhiteBalanceFineTune", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x6,
+            mk_prio("WhiteBalanceFineTune", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x7) {
         dm.push(("ColorTemperatureSet".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val * 100", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val * 100", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) { cv = x; }
-        tags.push(at(0x7, mk_prio("ColorTemperatureSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x7,
+            mk_prio("ColorTemperatureSet", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x8) {
-        dm.push(("ColorCompensationFilterSet".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorCompensationFilterSet".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x8, mk_prio("ColorCompensationFilterSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x8,
+            mk_prio(
+                "ColorCompensationFilterSet",
+                cv.as_string(),
+                raw,
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0xc) {
-        dm.push(("ColorTemperatureCustom".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorTemperatureCustom".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val * 100", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val * 100", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) { cv = x; }
-        tags.push(at(0xc, mk_prio("ColorTemperatureCustom", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xc,
+            mk_prio("ColorTemperatureCustom", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0xd) {
-        dm.push(("ColorCompensationFilterCustom".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorCompensationFilterCustom".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0xd, mk_prio("ColorCompensationFilterCustom", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xd,
+            mk_prio(
+                "ColorCompensationFilterCustom",
+                cv.as_string(),
+                raw,
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0xf) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -2720,7 +4614,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             17 => "Shade".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xf, mk_prio("WhiteBalance", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xf,
+            mk_prio("WhiteBalance", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x10) {
         dm.push(("FocusModeSetting".to_string(), Conv::Num(f64::from(v))));
@@ -2732,7 +4629,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "DMF".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x10, mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10,
+            mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x11) {
         dm.push(("AFAreaMode".to_string(), Conv::Num(f64::from(v))));
@@ -2742,7 +4642,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Spot".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11, mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11,
+            mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x12) {
         dm.push(("AFPointSetting".to_string(), Conv::Num(f64::from(v))));
@@ -2760,7 +4663,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             11 => "Far Left".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x12, mk_prio("AFPointSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x12,
+            mk_prio("AFPointSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x13) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -2773,15 +4679,25 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Slow Sync".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x13, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x13,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x14) {
         dm.push(("FlashExposureCompSet".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x14, mk_prio("FlashExposureCompSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x14,
+            mk_prio("FlashExposureCompSet", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x15) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -2791,18 +4707,31 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "Spot".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x15, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x15,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x16) {
         dm.push(("ISOSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) { cv = x; }
-        tags.push(at(0x16, mk_prio("ISOSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x16,
+            mk_prio("ISOSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x18) {
-        dm.push(("DynamicRangeOptimizerMode".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DynamicRangeOptimizerMode".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "Standard".to_string(),
@@ -2810,11 +4739,32 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Advanced Level".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x18, mk_prio("DynamicRangeOptimizerMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x18,
+            mk_prio(
+                "DynamicRangeOptimizerMode",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x19) {
-        dm.push(("DynamicRangeOptimizerLevel".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x19, mk_prio("DynamicRangeOptimizerLevel", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "DynamicRangeOptimizerLevel".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x19,
+            mk_prio(
+                "DynamicRangeOptimizerLevel",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1a) {
         dm.push(("CreativeStyle".to_string(), Conv::Num(f64::from(v))));
@@ -2835,7 +4785,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             16 => "Sepia".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1a, mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1a,
+            mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1b) {
         dm.push(("ColorSpace".to_string(), Conv::Num(f64::from(v))));
@@ -2845,47 +4798,85 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Adobe RGB (A700)".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1b, mk_prio("ColorSpace", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1b,
+            mk_prio("ColorSpace", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1c) {
         dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val - 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val - 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x1c, mk_prio("Sharpness", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1c,
+            mk_prio("Sharpness", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1d) {
         dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val - 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val - 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x1d, mk_prio("Contrast", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1d,
+            mk_prio("Contrast", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1e) {
         dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val - 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val - 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x1e, mk_prio("Saturation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1e,
+            mk_prio("Saturation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1f) {
         dm.push(("ZoneMatchingValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val - 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val - 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x1f, mk_prio("ZoneMatchingValue", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1f,
+            mk_prio("ZoneMatchingValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x22) {
         dm.push(("Brightness".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val - 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val - 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x22, mk_prio("Brightness", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x22,
+            mk_prio("Brightness", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x23) {
         dm.push(("FlashControl".to_string(), Conv::Num(f64::from(v))));
@@ -2895,16 +4886,31 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Manual".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x23, mk_prio("FlashControl", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x23,
+            mk_prio("FlashControl", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x28) {
-        dm.push(("PrioritySetupShutterRelease".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "PrioritySetupShutterRelease".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "AF".to_string(),
             1 => "Release".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x28, mk_prio("PrioritySetupShutterRelease", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x28,
+            mk_prio(
+                "PrioritySetupShutterRelease",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x29) {
         dm.push(("AFIlluminator".to_string(), Conv::Num(f64::from(v))));
@@ -2913,7 +4919,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x29, mk_prio("AFIlluminator", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x29,
+            mk_prio("AFIlluminator", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x2a) {
         dm.push(("AFWithShutter".to_string(), Conv::Num(f64::from(v))));
@@ -2922,16 +4931,31 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2a, mk_prio("AFWithShutter", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2a,
+            mk_prio("AFWithShutter", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x2b) {
-        dm.push(("LongExposureNoiseReduction".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "LongExposureNoiseReduction".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2b, mk_prio("LongExposureNoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2b,
+            mk_prio(
+                "LongExposureNoiseReduction",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x2c) {
         dm.push(("HighISONoiseReduction".to_string(), Conv::Num(f64::from(v))));
@@ -2942,7 +4966,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2c, mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2c,
+            mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x2d) {
         dm.push(("ImageStyle".to_string(), Conv::Num(f64::from(v))));
@@ -2964,7 +4991,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             134 => "StyleBox6".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2d, mk_prio("ImageStyle", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2d,
+            mk_prio("ImageStyle", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x2e) {
         dm.push(("FocusModeSwitch".to_string(), Conv::Num(f64::from(v))));
@@ -2973,23 +5003,43 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Manual".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2e, mk_prio("FocusModeSwitch", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2e,
+            mk_prio("FocusModeSwitch", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x2f) {
         dm.push(("ShutterSpeedSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x2f, mk_prio("ShutterSpeedSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x2f,
+            mk_prio("ShutterSpeedSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x30) {
         dm.push(("ApertureSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) { cv = x; }
-        tags.push(at(0x30, mk_prio("ApertureSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x30,
+            mk_prio("ApertureSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3c) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -3010,16 +5060,31 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             35 => "Auto No Flash".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3c, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3c,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3d) {
-        dm.push(("ImageStabilizationSetting".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ImageStabilizationSetting".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3d, mk_prio("ImageStabilizationSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3d,
+            mk_prio(
+                "ImageStabilizationSetting",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3e) {
         dm.push(("FlashAction".to_string(), Conv::Num(f64::from(v))));
@@ -3030,7 +5095,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "External Flash, Fired".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3e, mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3e,
+            mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3f) {
         dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
@@ -3040,7 +5108,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3f, mk_prio("Rotation", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3f,
+            mk_prio("Rotation", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x40) {
         dm.push(("AELock".to_string(), Conv::Num(f64::from(v))));
@@ -3049,7 +5120,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x40, mk_prio("AELock", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x40,
+            mk_prio("AELock", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x4c) {
         dm.push(("FlashAction2".to_string(), Conv::Num(f64::from(v))));
@@ -3065,7 +5139,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             34 => "Fired, Fill-flash, HSS".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4c, mk_prio("FlashAction2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4c,
+            mk_prio("FlashAction2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x4d) {
         dm.push(("FocusMode".to_string(), Conv::Num(f64::from(v))));
@@ -3077,7 +5154,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "DMF".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4d, mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4d,
+            mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x50) {
         dm.push(("BatteryState".to_string(), Conv::Num(f64::from(v))));
@@ -3089,14 +5169,22 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Full".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x50, mk_prio("BatteryState", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x50,
+            mk_prio("BatteryState", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x51) {
         dm.push(("BatteryLevel".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-        tags.push(at(0x51, mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x51,
+            mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x53) {
         dm.push(("FocusStatus".to_string(), Conv::Num(f64::from(v))));
@@ -3107,7 +5195,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "Not confirmed, Tracking".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x53, mk_prio("FocusStatus", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x53,
+            mk_prio("FocusStatus", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x54) {
         dm.push(("SonyImageSize".to_string(), Conv::Num(f64::from(v))));
@@ -3117,7 +5208,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Small".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x54, mk_prio("SonyImageSize", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x54,
+            mk_prio("SonyImageSize", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x55) {
         dm.push(("AspectRatio".to_string(), Conv::Num(f64::from(v))));
@@ -3126,7 +5220,10 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "16:9".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x55, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x55,
+            mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x56) {
         dm.push(("Quality".to_string(), Conv::Num(f64::from(v))));
@@ -3140,16 +5237,31 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             48 => "Standard".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x56, mk_prio("Quality", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x56,
+            mk_prio("Quality", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x58) {
-        dm.push(("ExposureLevelIncrements".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ExposureLevelIncrements".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             33 => "1/3 EV".to_string(),
             50 => "1/2 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x58, mk_prio("ExposureLevelIncrements", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x58,
+            mk_prio(
+                "ExposureLevelIncrements",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x6a) {
         dm.push(("RedEyeReduction".to_string(), Conv::Num(f64::from(v))));
@@ -3158,23 +5270,36 @@ fn camerasettings(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x6a, mk_prio("RedEyeReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6a,
+            mk_prio("RedEyeReduction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x9a) {
         let v = v & 0x3ff;
         dm.push(("FolderNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.3d\",$val)", &cv) { cv = x; }
-        tags.push(at(0x9a, mk_prio("FolderNumber", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.3d\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x9a,
+            mk_prio("FolderNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x9b) {
         let v = v & 0x3fff;
         dm.push(("ImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.4d\",$val)", &cv) { cv = x; }
-        tags.push(at(0x9b, mk_prio("ImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.4d\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x9b,
+            mk_prio("ImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -3188,17 +5313,31 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u16_at(data, 0x0) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x0, mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x0,
+            mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1) {
         dm.push(("FNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) {
+            cv = x;
+        }
         tags.push(at(0x1, mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO)));
     }
     if let Some(v) = u16_at(data, 0x2) {
@@ -3208,15 +5347,28 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2, mk_prio("HighSpeedSync", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2,
+            mk_prio("HighSpeedSync", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3) {
-        dm.push(("ExposureCompensationSet".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ExposureCompensationSet".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x3, mk_prio("ExposureCompensationSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x3,
+            mk_prio("ExposureCompensationSet", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x4) {
         dm.push(("WhiteBalanceSetting".to_string(), Conv::Num(f64::from(v))));
@@ -3234,59 +5386,128 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             34 => "Custom 3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("WhiteBalanceSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("WhiteBalanceSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x5) {
         dm.push(("WhiteBalanceFineTune".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x5, mk_prio("WhiteBalanceFineTune", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x5,
+            mk_prio("WhiteBalanceFineTune", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x6) {
         dm.push(("ColorTemperatureSet".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val * 100", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val * 100", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) { cv = x; }
-        tags.push(at(0x6, mk_prio("ColorTemperatureSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x6,
+            mk_prio("ColorTemperatureSet", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x7) {
-        dm.push(("ColorCompensationFilterSet".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorCompensationFilterSet".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x7, mk_prio("ColorCompensationFilterSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x7,
+            mk_prio(
+                "ColorCompensationFilterSet",
+                cv.as_string(),
+                raw,
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x8 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x8, mk_prio("CustomWB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x8,
+                mk_prio(
+                    "CustomWB_RGBLevels",
+                    s.clone(),
+                    Value::String(s),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0xb) {
-        dm.push(("ColorTemperatureCustom".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorTemperatureCustom".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val * 100", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val * 100", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) { cv = x; }
-        tags.push(at(0xb, mk_prio("ColorTemperatureCustom", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xb,
+            mk_prio("ColorTemperatureCustom", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0xc) {
-        dm.push(("ColorCompensationFilterCustom".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorCompensationFilterCustom".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val > 128 ? $val - 256 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0xc, mk_prio("ColorCompensationFilterCustom", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xc,
+            mk_prio(
+                "ColorCompensationFilterCustom",
+                cv.as_string(),
+                raw,
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0xe) {
         dm.push(("WhiteBalance".to_string(), Conv::Num(f64::from(v))));
@@ -3303,7 +5524,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             17 => "Shade".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xe, mk_prio("WhiteBalance", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xe,
+            mk_prio("WhiteBalance", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0xf) {
         dm.push(("FocusModeSetting".to_string(), Conv::Num(f64::from(v))));
@@ -3314,7 +5538,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "AF-A".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xf, mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xf,
+            mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x10) {
         dm.push(("AFAreaMode".to_string(), Conv::Num(f64::from(v))));
@@ -3324,7 +5551,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Spot".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x10, mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10,
+            mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x11) {
         dm.push(("AFPointSetting".to_string(), Conv::Num(f64::from(v))));
@@ -3340,15 +5570,25 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Upper-left".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11, mk_prio("AFPointSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11,
+            mk_prio("AFPointSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x12) {
         dm.push(("FlashExposureCompSet".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x12, mk_prio("FlashExposureCompSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x12,
+            mk_prio("FlashExposureCompSet", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x13) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -3358,18 +5598,31 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "Spot".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x13, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x13,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x14) {
         dm.push(("ISOSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? exp(($val/8-6)*log(2))*100 : $val", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) { cv = x; }
-        tags.push(at(0x14, mk_prio("ISOSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.0f\",$val) : \"Auto\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x14,
+            mk_prio("ISOSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x16) {
-        dm.push(("DynamicRangeOptimizerMode".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DynamicRangeOptimizerMode".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "Standard".to_string(),
@@ -3377,7 +5630,16 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Advanced Level".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x16, mk_prio("DynamicRangeOptimizerMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x16,
+            mk_prio(
+                "DynamicRangeOptimizerMode",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x18) {
         dm.push(("CreativeStyle".to_string(), Conv::Num(f64::from(v))));
@@ -3391,31 +5653,55 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "B&W".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x18, mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x18,
+            mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x19) {
         dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val - 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val - 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x19, mk_prio("Sharpness", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x19,
+            mk_prio("Sharpness", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1a) {
         dm.push(("Contrast".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val - 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val - 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x1a, mk_prio("Contrast", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1a,
+            mk_prio("Contrast", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1b) {
         dm.push(("Saturation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val - 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val - 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x1b, mk_prio("Saturation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1b,
+            mk_prio("Saturation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1f) {
         dm.push(("FlashControl".to_string(), Conv::Num(f64::from(v))));
@@ -3425,16 +5711,31 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Manual".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1f, mk_prio("FlashControl", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1f,
+            mk_prio("FlashControl", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x25) {
-        dm.push(("LongExposureNoiseReduction".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "LongExposureNoiseReduction".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x25, mk_prio("LongExposureNoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x25,
+            mk_prio(
+                "LongExposureNoiseReduction",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x26) {
         dm.push(("HighISONoiseReduction".to_string(), Conv::Num(f64::from(v))));
@@ -3445,7 +5746,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "High".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x26, mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x26,
+            mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x27) {
         dm.push(("ImageStyle".to_string(), Conv::Num(f64::from(v))));
@@ -3459,23 +5763,43 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "B&W".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x27, mk_prio("ImageStyle", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x27,
+            mk_prio("ImageStyle", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x28) {
         dm.push(("ShutterSpeedSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x28, mk_prio("ShutterSpeedSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x28,
+            mk_prio("ShutterSpeedSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x29) {
         dm.push(("ApertureSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) { cv = x; }
-        tags.push(at(0x29, mk_prio("ApertureSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x29,
+            mk_prio("ApertureSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3c) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -3496,16 +5820,31 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             35 => "Auto No Flash".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3c, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3c,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3d) {
-        dm.push(("ImageStabilizationSetting".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ImageStabilizationSetting".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3d, mk_prio("ImageStabilizationSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3d,
+            mk_prio(
+                "ImageStabilizationSetting",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3e) {
         dm.push(("FlashAction".to_string(), Conv::Num(f64::from(v))));
@@ -3516,7 +5855,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "External Flash, Fired".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3e, mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3e,
+            mk_prio("FlashAction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3f) {
         dm.push(("Rotation".to_string(), Conv::Num(f64::from(v))));
@@ -3526,7 +5868,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3f, mk_prio("Rotation", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3f,
+            mk_prio("Rotation", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x40) {
         dm.push(("AELock".to_string(), Conv::Num(f64::from(v))));
@@ -3535,7 +5880,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x40, mk_prio("AELock", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x40,
+            mk_prio("AELock", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x4c) {
         dm.push(("FlashAction2".to_string(), Conv::Num(f64::from(v))));
@@ -3551,7 +5899,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             34 => "Fired, Fill-flash, HSS".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4c, mk_prio("FlashAction2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4c,
+            mk_prio("FlashAction2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x4d) {
         dm.push(("FocusMode".to_string(), Conv::Num(f64::from(v))));
@@ -3562,7 +5913,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "AF-A".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4d, mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4d,
+            mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x53) {
         dm.push(("FocusStatus".to_string(), Conv::Num(f64::from(v))));
@@ -3573,7 +5927,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "Not confirmed, Tracking".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x53, mk_prio("FocusStatus", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x53,
+            mk_prio("FocusStatus", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x54) {
         dm.push(("SonyImageSize".to_string(), Conv::Num(f64::from(v))));
@@ -3583,7 +5940,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Small".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x54, mk_prio("SonyImageSize", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x54,
+            mk_prio("SonyImageSize", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x55) {
         dm.push(("AspectRatio".to_string(), Conv::Num(f64::from(v))));
@@ -3592,7 +5952,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "16:9".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x55, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x55,
+            mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x56) {
         dm.push(("Quality".to_string(), Conv::Num(f64::from(v))));
@@ -3606,16 +5969,31 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             48 => "Standard".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x56, mk_prio("Quality", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x56,
+            mk_prio("Quality", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x58) {
-        dm.push(("ExposureLevelIncrements".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ExposureLevelIncrements".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             33 => "1/3 EV".to_string(),
             50 => "1/2 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x58, mk_prio("ExposureLevelIncrements", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x58,
+            mk_prio(
+                "ExposureLevelIncrements",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x7e) {
         let v = v & 0xff;
@@ -3630,7 +6008,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             11 => "Continuous Self-timer".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x7e, mk_prio("DriveMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x7e,
+            mk_prio("DriveMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x7f) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -3643,7 +6024,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Slow Sync".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x7f, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x7f,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x83) {
         dm.push(("ColorSpace".to_string(), Conv::Num(f64::from(v))));
@@ -3652,7 +6036,10 @@ fn camerasettings2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "sRGB".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x83, mk_prio("ColorSpace", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x83,
+            mk_prio("ColorSpace", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -3665,33 +6052,68 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u8_at(data, 0x0) {
         dm.push(("ShutterSpeedSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (6 - $val/8) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x0, mk_prio("ShutterSpeedSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x0,
+            mk_prio("ShutterSpeedSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1) {
         dm.push(("ApertureSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) { cv = x; }
-        tags.push(at(0x1, mk_prio("ApertureSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintFNumber($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1,
+            mk_prio("ApertureSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("ISOSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val and $val < 254) ? exp(($val/8-6)*log(2))*100 : $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval(
+            "($val and $val < 254) ? exp(($val/8-6)*log(2))*100 : $val",
+            &cv,
+        ) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x2, mk_prio("ISOSetting", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x2,
+            mk_prio("ISOSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3) {
-        dm.push(("ExposureCompensationSet".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ExposureCompensationSet".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x3, mk_prio("ExposureCompensationSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x3,
+            mk_prio("ExposureCompensationSet", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("DriveModeSetting".to_string(), Conv::Num(f64::from(v))));
@@ -3709,7 +6131,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             192 => "Remote Commander".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("DriveModeSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("DriveModeSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x5) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -3748,7 +6173,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             138 => "High Contrast Monochrome".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x5, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x5,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6) {
         dm.push(("FocusModeSetting".to_string(), Conv::Num(f64::from(v))));
@@ -3760,7 +6188,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             48 => "DMF".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x6, mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6,
+            mk_prio("FocusModeSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -3770,7 +6201,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Spot".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x7, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x7,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x9) {
         dm.push(("SonyImageSize".to_string(), Conv::Num(f64::from(v))));
@@ -3783,7 +6217,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             27 => "Small (16:9)".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x9, mk_prio("SonyImageSize", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x9,
+            mk_prio("SonyImageSize", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa) {
         dm.push(("AspectRatio".to_string(), Conv::Num(f64::from(v))));
@@ -3792,7 +6229,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "16:9".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xa, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa,
+            mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xb) {
         dm.push(("Quality".to_string(), Conv::Num(f64::from(v))));
@@ -3803,17 +6243,32 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             7 => "Standard".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xb, mk_prio("Quality", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xb,
+            mk_prio("Quality", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xc) {
-        dm.push(("DynamicRangeOptimizerSetting".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DynamicRangeOptimizerSetting".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             1 => "Off".to_string(),
             16 => "On (Auto)".to_string(),
             17 => "On (Manual)".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xc, mk_prio("DynamicRangeOptimizerSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xc,
+            mk_prio(
+                "DynamicRangeOptimizerSetting",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xe) {
         dm.push(("ColorSpace".to_string(), Conv::Num(f64::from(v))));
@@ -3822,7 +6277,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Adobe RGB".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xe, mk_prio("ColorSpace", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xe,
+            mk_prio("ColorSpace", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xf) {
         dm.push(("CreativeStyleSetting".to_string(), Conv::Num(f64::from(v))));
@@ -3835,28 +6293,46 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             160 => "Sunset".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xf, mk_prio("CreativeStyleSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xf,
+            mk_prio("CreativeStyleSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0x10) {
         dm.push(("ContrastSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x10, mk_prio("ContrastSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x10,
+            mk_prio("ContrastSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0x11) {
         dm.push(("SaturationSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x11, mk_prio("SaturationSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x11,
+            mk_prio("SaturationSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0x12) {
         dm.push(("SharpnessSetting".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x12, mk_prio("SharpnessSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x12,
+            mk_prio("SharpnessSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x16) {
         dm.push(("WhiteBalanceSetting".to_string(), Conv::Num(f64::from(v))));
@@ -3914,22 +6390,49 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             243 => "Color Temperature/Color Filter".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x16, mk_prio("WhiteBalanceSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x16,
+            mk_prio("WhiteBalanceSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x17) {
-        dm.push(("ColorTemperatureSetting".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorTemperatureSetting".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val * 100", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val * 100", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) { cv = x; }
-        tags.push(at(0x17, mk_prio("ColorTemperatureSetting", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val K\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x17,
+            mk_prio("ColorTemperatureSetting", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0x18) {
-        dm.push(("ColorCompensationFilterSet".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "ColorCompensationFilterSet".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x18, mk_prio("ColorCompensationFilterSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x18,
+            mk_prio(
+                "ColorCompensationFilterSet",
+                cv.as_string(),
+                raw,
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x20) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -3942,7 +6445,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             20 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x20, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x20,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x21) {
         dm.push(("FlashControl".to_string(), Conv::Num(f64::from(v))));
@@ -3951,15 +6457,25 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Pre-flash TTL".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x21, mk_prio("FlashControl", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x21,
+            mk_prio("FlashControl", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x23) {
         dm.push(("FlashExposureCompSet".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 128) / 24", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x23, mk_prio("FlashExposureCompSet", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x23,
+            mk_prio("FlashExposureCompSet", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24) {
         dm.push(("AFAreaMode".to_string(), Conv::Num(f64::from(v))));
@@ -3970,16 +6486,31 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4 => "Flexible".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x24, mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24,
+            mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x25) {
-        dm.push(("LongExposureNoiseReduction".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "LongExposureNoiseReduction".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             1 => "Off".to_string(),
             16 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x25, mk_prio("LongExposureNoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x25,
+            mk_prio(
+                "LongExposureNoiseReduction",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x26) {
         dm.push(("HighISONoiseReduction".to_string(), Conv::Num(f64::from(v))));
@@ -3989,7 +6520,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             19 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x26, mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x26,
+            mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x27) {
         dm.push(("SmileShutterMode".to_string(), Conv::Num(f64::from(v))));
@@ -3999,7 +6533,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             19 => "Big Smile".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x27, mk_prio("SmileShutterMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x27,
+            mk_prio("SmileShutterMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x28) {
         dm.push(("RedEyeReduction".to_string(), Conv::Num(f64::from(v))));
@@ -4008,7 +6545,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             16 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x28, mk_prio("RedEyeReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x28,
+            mk_prio("RedEyeReduction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2d) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -4018,7 +6558,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             17 => "On (Manual)".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2d, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2d,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2e) {
         dm.push(("HDRLevel".to_string(), Conv::Num(f64::from(v))));
@@ -4034,7 +6577,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             41 => "6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2e, mk_prio("HDRLevel", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2e,
+            mk_prio("HDRLevel", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2f) {
         dm.push(("ViewingMode".to_string(), Conv::Num(f64::from(v))));
@@ -4044,7 +6590,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             34 => "Quick AF Live View".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2f, mk_prio("ViewingMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2f,
+            mk_prio("ViewingMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x30) {
         dm.push(("FaceDetection".to_string(), Conv::Num(f64::from(v))));
@@ -4053,7 +6602,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             16 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x30, mk_prio("FaceDetection", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x30,
+            mk_prio("FaceDetection", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x31) {
         dm.push(("SmileShutter".to_string(), Conv::Num(f64::from(v))));
@@ -4062,7 +6614,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             16 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x31, mk_prio("SmileShutter", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x31,
+            mk_prio("SmileShutter", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_2.is_match(model) {
         if let Some(v) = u8_at(data, 0x32) {
@@ -4072,12 +6627,18 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Wide".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x32, mk_prio("SweepPanoramaSize", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x32,
+                mk_prio("SweepPanoramaSize", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
         if let Some(v) = u8_at(data, 0x33) {
-            dm.push(("SweepPanoramaDirection".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "SweepPanoramaDirection".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 1 => "Right".to_string(),
                 2 => "Left".to_string(),
@@ -4085,7 +6646,16 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 4 => "Down".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x33, mk_prio("SweepPanoramaDirection", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x33,
+                mk_prio(
+                    "SweepPanoramaDirection",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
@@ -4111,12 +6681,18 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 214 => "Continuous - 3D Sweep Panorama".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x34, mk_prio("DriveMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x34,
+                mk_prio("DriveMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
         if let Some(v) = u8_at(data, 0x35) {
-            dm.push(("MultiFrameNoiseReduction".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "MultiFrameNoiseReduction".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "n/a".to_string(),
                 1 => "Off".to_string(),
@@ -4124,7 +6700,16 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "None".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x35, mk_prio("MultiFrameNoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x35,
+                mk_prio(
+                    "MultiFrameNoiseReduction",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_14.is_match(model) {
@@ -4136,7 +6721,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Contrast AF".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x36, mk_prio("LiveViewAFSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x36,
+                mk_prio("LiveViewAFSetting", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
@@ -4149,7 +6737,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "16:9".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x38, mk_prio("PanoramaSize3D", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x38,
+                mk_prio("PanoramaSize3D", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_14.is_match(model) {
@@ -4160,7 +6751,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 16 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x83, mk_prio("AFButtonPressed", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x83,
+                mk_prio("AFButtonPressed", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_14.is_match(model) {
@@ -4172,7 +6766,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 32 => "1200-zone Evaluative".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x84, mk_prio("LiveViewMetering", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x84,
+                mk_prio("LiveViewMetering", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_14.is_match(model) {
@@ -4185,7 +6782,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 34 => "Quick AF Live View".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x85, mk_prio("ViewingMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x85,
+                mk_prio("ViewingMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_14.is_match(model) {
@@ -4196,7 +6796,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Off".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x86, mk_prio("AELock", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x86,
+                mk_prio("AELock", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_11.is_match(model) {
@@ -4207,7 +6810,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x87, mk_prio("FlashStatusBuilt-in", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x87,
+                mk_prio("FlashStatusBuilt-in", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_11.is_match(model) {
@@ -4219,7 +6825,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x88, mk_prio("FlashStatusExternal", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x88,
+                mk_prio("FlashStatusExternal", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_14.is_match(model) {
@@ -4231,7 +6840,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 16 => "Manual".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x8b, mk_prio("LiveViewFocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x8b,
+                mk_prio("LiveViewFocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
@@ -4247,7 +6859,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                     17 => "E-mount".to_string(),
                     other => other.to_string(),
                 };
-                tags.push(at(0x99, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x99,
+                    mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -4259,7 +6874,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x10c, mk_prio("SequenceNumber", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x10c,
+                mk_prio("SequenceNumber", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
@@ -4268,14 +6886,31 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("FolderNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.3d\",$val)", &cv) { cv = x; }
-            tags.push(at(0x114, mk_prio("FolderNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.3d\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x114,
+                mk_prio("FolderNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_2.is_match(model) {
         if let Some(v) = u32_at(data, 0x200) {
-            dm.push(("ShotNumberSincePowerUp2".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x200, mk_prio("ShotNumberSincePowerUp2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            dm.push((
+                "ShotNumberSincePowerUp2".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
+            tags.push(at(
+                0x200,
+                mk_prio(
+                    "ShotNumberSincePowerUp2",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4286,7 +6921,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 16 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x283, mk_prio("AFButtonPressed", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x283,
+                mk_prio("AFButtonPressed", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4298,7 +6936,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 32 => "1200-zone Evaluative".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x284, mk_prio("LiveViewMetering", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x284,
+                mk_prio("LiveViewMetering", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4311,7 +6952,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 34 => "Quick AF Live View".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x285, mk_prio("ViewingMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x285,
+                mk_prio("ViewingMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4322,7 +6966,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Off".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x286, mk_prio("AELock", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x286,
+                mk_prio("AELock", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4333,7 +6980,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x287, mk_prio("FlashStatusBuilt-in", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x287,
+                mk_prio("FlashStatusBuilt-in", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4345,7 +6995,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x288, mk_prio("FlashStatusExternal", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x288,
+                mk_prio("FlashStatusExternal", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4357,7 +7010,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 16 => "Manual".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x28b, mk_prio("LiveViewFocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x28b,
+                mk_prio("LiveViewFocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4368,7 +7024,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x30c, mk_prio("SequenceNumber", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x30c,
+                mk_prio("SequenceNumber", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4377,8 +7036,13 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("ImageNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.4d\",$val)", &cv) { cv = x; }
-            tags.push(at(0x314, mk_prio("ImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.4d\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x314,
+                mk_prio("ImageNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4387,8 +7051,13 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("FolderNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.3d\",$val)", &cv) { cv = x; }
-            tags.push(at(0x316, mk_prio("FolderNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.3d\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x316,
+                mk_prio("FolderNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_15.is_match(model) {
@@ -4396,8 +7065,13 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("LensE-mountVersion".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) { cv = x; }
-            tags.push(at(0x3f0, mk_prio("LensE-mountVersion", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x3f0,
+                mk_prio("LensE-mountVersion", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_15.is_match(model) {
@@ -4405,8 +7079,13 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("LensFirmwareVersion".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"Ver.%.2x.%.3d\",$val>>8,$val&0xff)", &cv) { cv = x; }
-            tags.push(at(0x3f3, mk_prio("LensFirmwareVersion", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"Ver.%.2x.%.3d\",$val>>8,$val&0xff)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x3f3,
+                mk_prio("LensFirmwareVersion", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if (MODEL_RE_15.is_match(model) && dm_get(&dm, "LensMount").is_some_and(|v| v != 1.0)) {
@@ -4700,7 +7379,10 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x3f7, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x3f7,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4709,8 +7391,13 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("ImageNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.4d\",$val)", &cv) { cv = x; }
-            tags.push(at(0x400, mk_prio("ImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.4d\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x400,
+                mk_prio("ImageNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -4719,8 +7406,13 @@ fn camerasettings3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("FolderNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.3d\",$val)", &cv) { cv = x; }
-            tags.push(at(0x402, mk_prio("FolderNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.3d\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x402,
+                mk_prio("FolderNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -4735,10 +7427,17 @@ fn extrainfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u8_at(data, 0x1) {
         dm.push(("BatteryTemperature".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 32) / 1.8", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 32) / 1.8", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f C\",$val)", &cv) { cv = x; }
-        tags.push(at(0x1, mk_prio("BatteryTemperature", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f C\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1,
+            mk_prio("BatteryTemperature", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x2, 4, false) {
         tags.push(at(0x2, text_tag("BatteryUnknown", GRP2, text, PRIO)));
@@ -4746,8 +7445,13 @@ fn extrainfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(text) = text_at(data, 0x8, 4, false) {
         let mut cv = Conv::Str(text.clone());
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.2f V\",$val)", &cv) { cv = x; }
-        tags.push(at(0x8, mk_prio("BatteryVoltage", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.2f V\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x8,
+            mk_prio("BatteryVoltage", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa) {
         dm.push(("ImageStabilization2".to_string(), Conv::Num(f64::from(v))));
@@ -4759,26 +7463,40 @@ fn extrainfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             246 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xa, mk_prio("ImageStabilization2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa,
+            mk_prio("ImageStabilization2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xc) {
         dm.push(("BatteryLevel".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-        tags.push(at(0xc, mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xc,
+            mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..4 {
             match u8_at(data, 0x1a + k * 1) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x1a, mk_prio("ExtraInfoVersion", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x1a,
+                mk_prio("ExtraInfoVersion", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -4794,8 +7512,13 @@ fn extrainfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         dm.push(("BatteryLevel".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-        tags.push(at(0x4, mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x4,
+            mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x12) {
         dm.push(("ImageStabilization".to_string(), Conv::Num(f64::from(v))));
@@ -4804,7 +7527,10 @@ fn extrainfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             64 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x12, mk_prio("ImageStabilization", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x12,
+            mk_prio("ImageStabilization", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -4816,41 +7542,76 @@ fn extrainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u16_at(data, 0x0) {
         dm.push(("BatteryUnknown".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x0, mk_prio("BatteryUnknown", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio(
+                "BatteryUnknown",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("BatteryTemperature".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 32) / 1.8", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 32) / 1.8", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f C\",$val)", &cv) { cv = x; }
-        tags.push(at(0x2, mk_prio("BatteryTemperature", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f C\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x2,
+            mk_prio("BatteryTemperature", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("BatteryLevel".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-        tags.push(at(0x4, mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x4,
+            mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_16.is_match(model) {
         if let Some(v) = u16_at(data, 0x6) {
             dm.push(("BatteryVoltage1".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 128", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 128", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.2f V\",$val)", &cv) { cv = x; }
-            tags.push(at(0x6, mk_prio("BatteryVoltage1", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.2f V\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x6,
+                mk_prio("BatteryVoltage1", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_16.is_match(model) {
         if let Some(v) = u16_at(data, 0x8) {
             dm.push(("BatteryVoltage2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 128", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 128", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.2f V\",$val)", &cv) { cv = x; }
-            tags.push(at(0x8, mk_prio("BatteryVoltage2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.2f V\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x8,
+                mk_prio("BatteryVoltage2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_16.is_match(model) {
@@ -4861,7 +7622,10 @@ fn extrainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 64 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x11, mk_prio("ImageStabilization", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x11,
+                mk_prio("ImageStabilization", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_17.is_match(model) {
@@ -4875,7 +7639,10 @@ fn extrainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 5 => "Full".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x14, mk_prio("BatteryState", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x14,
+                mk_prio("BatteryState", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_17.is_match(model)) && MODEL_RE_18.is_match(model) {
@@ -4893,10 +7660,16 @@ fn extrainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "Manual".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x14, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x14,
+                mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
-    if !(MODEL_RE_17.is_match(model)) && !(MODEL_RE_18.is_match(model)) && MODEL_RE_19.is_match(model) {
+    if !(MODEL_RE_17.is_match(model))
+        && !(MODEL_RE_18.is_match(model))
+        && MODEL_RE_19.is_match(model)
+    {
         if let Some(v) = u8_at(data, 0x14) {
             dm.push(("ModeDialPosition".to_string(), Conv::Num(f64::from(v))));
             let s = match v as i64 {
@@ -4910,12 +7683,18 @@ fn extrainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "Manual".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x14, mk_prio("ModeDialPosition", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x14,
+                mk_prio("ModeDialPosition", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_19.is_match(model) {
         if let Some(v) = u8_at(data, 0x16) {
-            dm.push(("MemoryCardConfiguration".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "MemoryCardConfiguration".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 244 => "MemoryStick in use, SD card present".to_string(),
                 245 => "MemoryStick in use, SD slot empty".to_string(),
@@ -4923,7 +7702,16 @@ fn extrainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 254 => "SD card in use, MemoryStick slot empty".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x16, mk_prio("MemoryCardConfiguration", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x16,
+                mk_prio(
+                    "MemoryCardConfiguration",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !(MODEL_RE_19.is_match(model)) && MODEL_RE_16.is_match(model) {
@@ -4937,7 +7725,10 @@ fn extrainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "Rotate 180".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x16, mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x16,
+                mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_16.is_match(model) {
@@ -4951,7 +7742,10 @@ fn extrainfo3(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "Rotate 180".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18, mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18,
+                mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -4965,11 +7759,29 @@ fn hiddeninfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u32_at(data, 0x0) {
         dm.push(("HiddenDataOffset".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x0, mk_prio("HiddenDataOffset", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio(
+                "HiddenDataOffset",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u32_at(data, 0x1) {
         dm.push(("HiddenDataLength".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1, mk_prio("HiddenDataLength", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1,
+            mk_prio(
+                "HiddenDataLength",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     tags
 }
@@ -4986,22 +7798,54 @@ fn shotinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(at(0x2, mk_prio("FaceInfoOffset", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2,
+                mk_prio(
+                    "FaceInfoOffset",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(text) = text_at(data, 0x6, 20, true) {
         let mut cv = Conv::Str(text.clone());
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) { cv = x; }
-        tags.push(at(0x6, mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO)));
+        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x6,
+            mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1a) {
         dm.push(("SonyImageHeight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1a, mk_prio("SonyImageHeight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1a,
+            mk_prio(
+                "SonyImageHeight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1c) {
         dm.push(("SonyImageWidth".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1c, mk_prio("SonyImageWidth", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1c,
+            mk_prio(
+                "SonyImageWidth",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x30) {
         dm.push(("FacesDetected".to_string(), Conv::Num(f64::from(v))));
@@ -5009,7 +7853,16 @@ fn shotinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(at(0x30, mk_prio("FacesDetected", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x30,
+                mk_prio(
+                    "FacesDetected",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x32) {
@@ -5018,7 +7871,16 @@ fn shotinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(at(0x32, mk_prio("FaceInfoLength", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x32,
+                mk_prio(
+                    "FaceInfoLength",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(text) = text_at(data, 0x34, 16, true) {
@@ -5046,7 +7908,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1128, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1128,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x112c) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -5076,7 +7941,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x112c, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x112c,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1134) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -5086,7 +7954,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1134, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1134,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1138) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -5099,22 +7970,37 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1138, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1138,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x113e) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x113e, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x113e,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1140) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x1140, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x1140,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1144) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -5129,7 +8015,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1144, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1144,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1148) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -5144,15 +8033,25 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1148, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1148,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i16_at(data, 0x114c) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("-$val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("-$val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x114c, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x114c,
+            mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x115e) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -5186,7 +8085,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x115e, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x115e,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x115f) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -5220,7 +8122,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x115f, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x115f,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1163) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -5241,7 +8146,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1163, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1163,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1170) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -5251,7 +8159,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "RAW + JPEG".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1170, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1170,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1174) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -5263,7 +8174,10 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1174, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1174,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1175) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -5303,19 +8217,28 @@ fn tag2010a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1175, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1175,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x117c + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x117c, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x117c,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -5330,16 +8253,26 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u32_at(data, 0x0) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x0, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x4) {
         dm.push(("SequenceFileNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x4, mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x8) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -5369,13 +8302,21 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x8, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x1b6, 7, false) {
         let mut cv = Conv::Str(text.clone());
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) { cv = x; }
-        tags.push(at(0x1b6, mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO)));
+        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1b6,
+            mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x324) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -5390,7 +8331,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x324, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x324,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1128) {
         dm.push(("ReleaseMode3".to_string(), Conv::Num(f64::from(v))));
@@ -5404,7 +8348,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1128, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1128,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x112c) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -5434,7 +8381,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x112c, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x112c,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1134) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -5444,7 +8394,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1134, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1134,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1138) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -5457,22 +8410,37 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1138, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1138,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x113e) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x113e, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x113e,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1140) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x1140, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x1140,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1144) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -5487,7 +8455,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1144, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1144,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1148) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -5502,15 +8473,25 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1148, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1148,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i16_at(data, 0x114c) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("-$val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("-$val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x114c, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x114c,
+            mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1162) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -5544,7 +8525,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1162, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1162,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1163) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -5578,7 +8562,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1163, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1163,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1167) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -5599,7 +8586,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1167, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1167,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1174) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -5609,7 +8599,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "RAW + JPEG".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1174, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1174,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1178) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -5621,7 +8614,10 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1178, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1178,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1179) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -5661,40 +8657,68 @@ fn tag2010b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1179, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1179,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x1180 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x1180, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x1180,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x1218) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x1218, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1218,
+            mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..16 {
             match i16_at(data, 0x1a23 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x1a23, mk_prio("DistortionCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x1a23,
+                mk_prio(
+                    "DistortionCorrParams",
+                    s.clone(),
+                    Value::String(s),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     tags
@@ -5709,16 +8733,26 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u32_at(data, 0x0) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x0, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x4) {
         dm.push(("SequenceFileNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x4, mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x8) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -5748,20 +8782,33 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x8, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x200) {
         dm.push(("DigitalZoomRatio".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/16", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/16", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x200, mk_prio("DigitalZoomRatio", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x200,
+            mk_prio("DigitalZoomRatio", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x210, 7, false) {
         let mut cv = Conv::Str(text.clone());
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) { cv = x; }
-        tags.push(at(0x210, mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO)));
+        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x210,
+            mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x300) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -5776,7 +8823,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x300, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x300,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1104) {
         dm.push(("ReleaseMode3".to_string(), Conv::Num(f64::from(v))));
@@ -5790,7 +8840,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1104, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1104,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1108) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -5820,7 +8873,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1108, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1108,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1110) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -5830,7 +8886,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1110, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1110,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1114) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -5843,22 +8902,37 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1114, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1114,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x111a) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x111a, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x111a,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x111c) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x111c, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x111c,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1120) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -5873,7 +8947,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1120, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1120,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1124) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -5888,15 +8965,25 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1124, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1124,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i16_at(data, 0x1128) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("-$val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("-$val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x1128, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1128,
+            mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x113e) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -5930,7 +9017,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x113e, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x113e,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x113f) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -5964,7 +9054,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x113f, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x113f,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1143) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -5985,7 +9078,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1143, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1143,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1150) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -5995,7 +9091,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "RAW + JPEG".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1150, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1150,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1154) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -6007,7 +9106,10 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1154, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1154,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1155) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -6047,28 +9149,44 @@ fn tag2010c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1155, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1155,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x115c + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x115c, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x115c,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x11f4) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x11f4, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x11f4,
+            mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -6082,16 +9200,26 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u32_at(data, 0x0) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x0, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x4) {
         dm.push(("SequenceFileNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x4, mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x8) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -6121,13 +9249,21 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x8, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x1fe, 7, false) {
         let mut cv = Conv::Str(text.clone());
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) { cv = x; }
-        tags.push(at(0x1fe, mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO)));
+        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1fe,
+            mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x37c) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -6142,7 +9278,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x37c, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x37c,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1180) {
         dm.push(("ReleaseMode3".to_string(), Conv::Num(f64::from(v))));
@@ -6156,7 +9295,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1180, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1180,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1184) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -6186,7 +9328,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1184, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1184,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x118c) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -6196,7 +9341,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x118c, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x118c,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1190) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -6209,22 +9357,37 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1190, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1190,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1196) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x1196, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1196,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1198) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x1198, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x1198,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x119c) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -6239,7 +9402,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x119c, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x119c,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11a0) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -6254,7 +9420,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11a0, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11a0,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11ba) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -6288,7 +9457,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11ba, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11ba,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11bb) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -6322,7 +9494,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11bb, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11bb,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11bf) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -6343,7 +9518,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11bf, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11bf,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11d0) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -6355,7 +9533,10 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11d0, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11d0,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11d1) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -6395,28 +9576,44 @@ fn tag2010d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11d1, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11d1,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x11d8 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x11d8, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x11d8,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x1270) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x1270, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1270,
+            mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -6429,16 +9626,26 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u32_at(data, 0x0) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x0, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x4) {
         dm.push(("SequenceFileNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x4, mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x8) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -6468,20 +9675,33 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x8, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x21c) {
         dm.push(("DigitalZoomRatio".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/16", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/16", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x21c, mk_prio("DigitalZoomRatio", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x21c,
+            mk_prio("DigitalZoomRatio", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x22c, 7, false) {
         let mut cv = Conv::Str(text.clone());
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) { cv = x; }
-        tags.push(at(0x22c, mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO)));
+        if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x22c,
+            mk_prio("SonyDateTime", cv.as_string(), raw, "Time", PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x328) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -6496,7 +9716,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x328, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x328,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x115c) {
         dm.push(("ReleaseMode3".to_string(), Conv::Num(f64::from(v))));
@@ -6510,7 +9733,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x115c, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x115c,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1160) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -6540,7 +9766,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1160, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1160,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1168) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -6550,7 +9779,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1168, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1168,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x116c) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -6563,22 +9795,37 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x116c, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x116c,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1172) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x1172, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1172,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1174) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x1174, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x1174,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1178) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -6593,7 +9840,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1178, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1178,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x117c) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -6608,15 +9858,25 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x117c, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x117c,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i16_at(data, 0x1180) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("-$val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("-$val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x1180, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1180,
+            mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1196) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -6650,7 +9910,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1196, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1196,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1197) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -6684,7 +9947,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1197, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1197,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x119b) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -6705,7 +9971,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x119b, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x119b,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11a8) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -6715,7 +9984,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "RAW + JPEG".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11a8, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11a8,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11ac) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -6727,7 +9999,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11ac, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11ac,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x11ad) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -6767,59 +10042,96 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x11ad, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x11ad,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x11b4 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x11b4, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x11b4,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_20.is_match(model) {
         if let Some(v) = u16_at(data, 0x1254) {
             dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x1254, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1254,
+                mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_21.is_match(model) {
         if let Some(v) = u16_at(data, 0x1258) {
             dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x1258, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1258,
+                mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_22.is_match(model) {
         if let Some(v) = u16_at(data, 0x1278) {
             dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x1278, mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1278,
+                mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_22.is_match(model) {
         if let Some(v) = u16_at(data, 0x127a) {
             dm.push(("MinFocalLength".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x127a, mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x127a,
+                mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_22.is_match(model) {
@@ -6830,10 +10142,17 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
                 let mut cv = Conv::Num(f64::from(v));
-                if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+                if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+                    cv = x;
+                }
                 let raw = Value::F64(cv.as_num());
-                if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-                tags.push(at(0x127c, mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+                if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                    cv = x;
+                }
+                tags.push(at(
+                    0x127c,
+                    mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO),
+                ));
             }
         }
     }
@@ -6841,10 +10160,17 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if let Some(v) = u16_at(data, 0x1280) {
             dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x1280, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1280,
+                mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_23.is_match(model) {
@@ -6853,12 +10179,24 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x1870 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x1870, mk_prio("DistortionCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x1870,
+                    mk_prio(
+                        "DistortionCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -6871,12 +10209,18 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1891, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1891,
+                mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x1892) {
         dm.push(("LensMount".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{LensMount} = $val; $$self{Model} =~ /^(DSC-|Stellar)/ ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{LensMount} = $val; $$self{Model} =~ /^(DSC-|Stellar)/ ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -6886,7 +10230,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1892, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1892,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
@@ -7180,35 +10527,65 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1893, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1893,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x1896) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x1896, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1896,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_23.is_match(model) {
         if let Some(v) = u8_at(data, 0x1898) {
-            dm.push(("DistortionCorrParamsPresent".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsPresent".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1898, mk_prio("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1898,
+                mk_prio(
+                    "DistortionCorrParamsPresent",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x1899) {
-            dm.push(("DistortionCorrParamsNumber".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsNumber".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 11 => "11 (APS-C)".to_string(),
                 16 => "16 (Full-frame)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1899, mk_prio("DistortionCorrParamsNumber", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1899,
+                mk_prio(
+                    "DistortionCorrParamsNumber",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_25.is_match(model) {
@@ -7222,7 +10599,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 5 => "Panorama".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x192c, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x192c,
+                mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_25.is_match(model) {
@@ -7236,7 +10616,10 @@ fn tag2010e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 5 => "Panorama".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1a88, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1a88,
+                mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -7276,7 +10659,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x50) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -7291,7 +10677,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x50, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x50,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1014) {
         dm.push(("ReleaseMode3".to_string(), Conv::Num(f64::from(v))));
@@ -7305,7 +10694,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1014, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1014,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1018) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -7335,7 +10727,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1018, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1018,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1020) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -7345,7 +10740,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1020, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1020,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1024) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -7358,22 +10756,37 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1024, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1024,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x102a) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x102a, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x102a,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x102c) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x102c, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x102c,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1030) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -7388,7 +10801,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1030, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1030,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1034) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -7403,15 +10819,25 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1034, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1034,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i16_at(data, 0x1038) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("-$val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("-$val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x1038, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1038,
+            mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x104e) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -7445,7 +10871,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x104e, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x104e,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x104f) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -7479,7 +10908,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x104f, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x104f,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1053) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -7500,7 +10932,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1053, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1053,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1060) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -7510,7 +10945,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "RAW + JPEG".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1060, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1060,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1064) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -7522,7 +10960,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1064, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1064,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1065) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -7562,52 +11003,89 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1065, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1065,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x106c + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x106c, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x106c,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x1134) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x1134, mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1134,
+            mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1136) {
         dm.push(("MinFocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x1136, mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1136,
+            mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x1138) {
         dm.push(("MaxFocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x1138, mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1138,
+            mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x113c) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x113c, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x113c,
+            mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x192c) {
         dm.push(("AspectRatio".to_string(), Conv::Num(f64::from(v))));
@@ -7619,7 +11097,10 @@ fn tag2010f(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x192c, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x192c,
+            mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -7657,7 +11138,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x50) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -7672,7 +11156,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x50, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x50,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x20c) {
         dm.push(("ReleaseMode3".to_string(), Conv::Num(f64::from(v))));
@@ -7686,7 +11173,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x20c, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x20c,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x210) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -7716,7 +11206,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x210, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x210,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x218) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -7726,7 +11219,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x218, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x218,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x21c) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -7739,22 +11235,37 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x21c, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x21c,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x222) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x222, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x222,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x224) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x224, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x224,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x228) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -7769,7 +11280,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x228, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x228,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x22c) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -7784,15 +11298,25 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x22c, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x22c,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i16_at(data, 0x230) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("-$val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("-$val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x230, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x230,
+            mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x246) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -7826,7 +11350,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x246, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x246,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x247) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -7860,7 +11387,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x247, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x247,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24b) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -7881,7 +11411,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x24b, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24b,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x258) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -7891,7 +11424,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "RAW + JPEG".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x258, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x258,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x25c) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -7903,7 +11439,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x25c, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x25c,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x25d) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -7943,36 +11482,59 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x25d, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x25d,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x264 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x264, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x264,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x32c) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x32c, mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x32c,
+            mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x32e) {
         dm.push(("MinFocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x32e, mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x32e,
+            mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x330) {
         dm.push(("MaxFocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -7981,19 +11543,33 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x330, mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x330,
+                mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x344) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x344, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x344,
+            mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_24.is_match(model) {
         {
@@ -8001,12 +11577,24 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x189c + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x189c, mk_prio("DistortionCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x189c,
+                    mk_prio(
+                        "DistortionCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -8019,12 +11607,18 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18bd, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18bd,
+                mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x18be) {
         dm.push(("LensMount".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{LensMount} = $val; $$self{Model} =~ /^DSC-/ ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{LensMount} = $val; $$self{Model} =~ /^DSC-/ ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -8034,7 +11628,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18be, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18be,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
@@ -8328,35 +11925,65 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18bf, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18bf,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x18c2) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x18c2, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18c2,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x18c4) {
-            dm.push(("DistortionCorrParamsPresent".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsPresent".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18c4, mk_prio("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18c4,
+                mk_prio(
+                    "DistortionCorrParamsPresent",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x18c5) {
-            dm.push(("DistortionCorrParamsNumber".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsNumber".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 11 => "11 (APS-C)".to_string(),
                 16 => "16 (Full-frame)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18c5, mk_prio("DistortionCorrParamsNumber", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18c5,
+                mk_prio(
+                    "DistortionCorrParamsNumber",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x1958) {
@@ -8369,7 +11996,10 @@ fn tag2010g(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1958, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1958,
+            mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -8407,7 +12037,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x50) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -8422,7 +12055,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x50, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x50,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x20c) {
         dm.push(("ReleaseMode3".to_string(), Conv::Num(f64::from(v))));
@@ -8436,7 +12072,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x20c, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x20c,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x210) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -8466,7 +12105,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x210, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x210,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x218) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -8476,7 +12118,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x218, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x218,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x21c) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -8489,22 +12134,37 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x21c, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x21c,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x222) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x222, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x222,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x224) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x224, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x224,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x228) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -8519,7 +12179,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x228, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x228,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x22c) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -8534,15 +12197,25 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x22c, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x22c,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i16_at(data, 0x230) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("-$val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("-$val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x230, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x230,
+            mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x246) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -8576,7 +12249,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x246, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x246,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x247) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -8610,7 +12286,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x247, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x247,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24b) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -8631,7 +12310,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x24b, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24b,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x258) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -8641,7 +12323,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "RAW + JPEG".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x258, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x258,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x25c) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -8653,7 +12338,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x25c, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x25c,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x25d) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -8693,36 +12381,59 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x25d, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x25d,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x264 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x264, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x264,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x32c) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x32c, mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x32c,
+            mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x32e) {
         dm.push(("MinFocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x32e, mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x32e,
+            mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x330) {
         dm.push(("MaxFocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -8731,19 +12442,33 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x330, mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x330,
+                mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x346) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x346, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x346,
+            mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_24.is_match(model) {
         {
@@ -8751,12 +12476,24 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x18cc + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x18cc, mk_prio("DistortionCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x18cc,
+                    mk_prio(
+                        "DistortionCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -8769,12 +12506,18 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18ed, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18ed,
+                mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x18ee) {
         dm.push(("LensMount".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{LensMount} = $val; $$self{Model} =~ /^DSC-/ ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{LensMount} = $val; $$self{Model} =~ /^DSC-/ ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -8784,7 +12527,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18ee, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18ee,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
@@ -9078,35 +12824,65 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18ef, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18ef,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x18f2) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x18f2, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18f2,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x18f4) {
-            dm.push(("DistortionCorrParamsPresent".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsPresent".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18f4, mk_prio("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18f4,
+                mk_prio(
+                    "DistortionCorrParamsPresent",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x18f5) {
-            dm.push(("DistortionCorrParamsNumber".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsNumber".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 11 => "11 (APS-C)".to_string(),
                 16 => "16 (Full-frame)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x18f5, mk_prio("DistortionCorrParamsNumber", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x18f5,
+                mk_prio(
+                    "DistortionCorrParamsNumber",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x192c) {
@@ -9119,7 +12895,10 @@ fn tag2010h(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x192c, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x192c,
+            mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -9157,7 +12936,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4e) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -9172,7 +12954,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4e, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4e,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x204) {
         dm.push(("ReleaseMode3".to_string(), Conv::Num(f64::from(v))));
@@ -9186,7 +12971,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             9 => "Single Burst Shooting".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x204, mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x204,
+            mk_prio("ReleaseMode3", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x208) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -9216,7 +13004,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x208, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x208,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x210) {
         dm.push(("SelfTimer".to_string(), Conv::Num(f64::from(v))));
@@ -9226,7 +13017,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Self-timer 2 s".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x210, mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x210,
+            mk_prio("SelfTimer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x211) {
         dm.push(("FlashMode".to_string(), Conv::Num(f64::from(v))));
@@ -9239,22 +13033,37 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "Wireless".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x211, mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x211,
+            mk_prio("FlashMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x217) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x217, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x217,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x219) {
         dm.push(("BrightnessValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val/256 - 56.6", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x219, mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x219,
+            mk_prio("BrightnessValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x21b) {
         dm.push(("DynamicRangeOptimizer".to_string(), Conv::Num(f64::from(v))));
@@ -9269,7 +13078,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x21b, mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x21b,
+            mk_prio("DynamicRangeOptimizer", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x21f) {
         dm.push(("HDRSetting".to_string(), Conv::Num(f64::from(v))));
@@ -9284,15 +13096,25 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "HDR 6 EV".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x21f, mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x21f,
+            mk_prio("HDRSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i16_at(data, 0x223) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("-$val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("-$val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) { cv = x; }
-        tags.push(at(0x223, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%+.1f\",$val) : 0", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x223,
+            mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x237) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -9326,7 +13148,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x237, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x237,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x238) {
         dm.push(("PictureProfile".to_string(), Conv::Num(f64::from(v))));
@@ -9360,7 +13185,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x238, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x238,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x23c) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -9381,7 +13209,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x23c, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x23c,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x247) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -9391,7 +13222,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "RAW + JPEG".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x247, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x247,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24b) {
         dm.push(("MeteringMode".to_string(), Conv::Num(f64::from(v))));
@@ -9403,7 +13237,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Highlight".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x24b, mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24b,
+            mk_prio("MeteringMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24c) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -9443,36 +13280,59 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x24c, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24c,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     {
         let mut parts = Vec::new();
         for k in 0..3 {
             match u16_at(data, 0x252 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x252, mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x252,
+                mk_prio("WB_RGBLevels", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x30a) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x30a, mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x30a,
+            mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x30c) {
         dm.push(("MinFocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x30c, mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x30c,
+            mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x30e) {
         dm.push(("MaxFocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -9481,19 +13341,33 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x30e, mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x30e,
+                mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x320) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x320, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x320,
+            mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_24.is_match(model) {
         {
@@ -9501,12 +13375,24 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x17d0 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x17d0, mk_prio("DistortionCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x17d0,
+                    mk_prio(
+                        "DistortionCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -9519,12 +13405,18 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x17f1, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x17f1,
+                mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x17f2) {
         dm.push(("LensMount".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{LensMount} = $val; $$self{Model} =~ /^DSC-/ ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{LensMount} = $val; $$self{Model} =~ /^DSC-/ ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -9534,7 +13426,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x17f2, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x17f2,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
@@ -9828,35 +13723,65 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x17f3, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x17f3,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x17f6) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x17f6, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x17f6,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f8) {
-            dm.push(("DistortionCorrParamsPresent".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsPresent".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x17f8, mk_prio("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x17f8,
+                mk_prio(
+                    "DistortionCorrParamsPresent",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x17f9) {
-            dm.push(("DistortionCorrParamsNumber".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsNumber".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 11 => "11 (APS-C)".to_string(),
                 16 => "16 (Full-frame)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x17f9, mk_prio("DistortionCorrParamsNumber", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x17f9,
+                mk_prio(
+                    "DistortionCorrParamsNumber",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x188c) {
@@ -9869,7 +13794,10 @@ fn tag2010i(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             5 => "Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x188c, mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x188c,
+            mk_prio("AspectRatio", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -9885,7 +13813,16 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(at(0x1, mk_prio("FocalPlaneAFPointsUsed", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1,
+                mk_prio(
+                    "FocalPlaneAFPointsUsed",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if dm_get(&dm, "Locations").is_some_and(|v| v >= 1.0) {
@@ -9894,12 +13831,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x2 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x2, mk_prio("FocalPlaneAFPointArea", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x2,
+                    mk_prio(
+                        "FocalPlaneAFPointArea",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -9909,12 +13858,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x6 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x6, mk_prio("FocalPlaneAFPointLocation1", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x6,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation1",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -9924,12 +13885,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0xa + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0xa, mk_prio("FocalPlaneAFPointLocation2", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0xa,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation2",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -9939,12 +13912,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0xe + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0xe, mk_prio("FocalPlaneAFPointLocation3", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0xe,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation3",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -9954,12 +13939,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x12 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x12, mk_prio("FocalPlaneAFPointLocation4", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x12,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation4",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -9969,12 +13966,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x16 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x16, mk_prio("FocalPlaneAFPointLocation5", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x16,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation5",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -9984,12 +13993,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x1a + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x1a, mk_prio("FocalPlaneAFPointLocation6", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x1a,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation6",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -9999,12 +14020,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x1e + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x1e, mk_prio("FocalPlaneAFPointLocation7", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x1e,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation7",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10014,12 +14047,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x22 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x22, mk_prio("FocalPlaneAFPointLocation8", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x22,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation8",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10029,12 +14074,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x26 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x26, mk_prio("FocalPlaneAFPointLocation9", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x26,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation9",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10044,12 +14101,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x2a + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x2a, mk_prio("FocalPlaneAFPointLocation10", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x2a,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation10",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10059,12 +14128,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x2e + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x2e, mk_prio("FocalPlaneAFPointLocation11", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x2e,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation11",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10074,12 +14155,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x32 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x32, mk_prio("FocalPlaneAFPointLocation12", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x32,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation12",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10089,12 +14182,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x36 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x36, mk_prio("FocalPlaneAFPointLocation13", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x36,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation13",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10104,12 +14209,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x3a + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x3a, mk_prio("FocalPlaneAFPointLocation14", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x3a,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation14",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10119,12 +14236,24 @@ fn tag202a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..2 {
                 match u16_at(data, 0x3e + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x3e, mk_prio("FocalPlaneAFPointLocation15", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x3e,
+                    mk_prio(
+                        "FocalPlaneAFPointLocation15",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10142,12 +14271,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..27 {
             match u32_at(data, 0x0 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x0, mk_prio("MeterInfo1Row1", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x0,
+                mk_prio("MeterInfo1Row1", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10155,12 +14290,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..27 {
             match u32_at(data, 0x6c + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x6c, mk_prio("MeterInfo1Row2", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x6c,
+                mk_prio("MeterInfo1Row2", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10168,12 +14309,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..27 {
             match u32_at(data, 0xd8 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0xd8, mk_prio("MeterInfo1Row3", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0xd8,
+                mk_prio("MeterInfo1Row3", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10181,12 +14328,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..27 {
             match u32_at(data, 0x144 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x144, mk_prio("MeterInfo1Row4", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x144,
+                mk_prio("MeterInfo1Row4", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10194,12 +14347,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..27 {
             match u32_at(data, 0x1b0 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x1b0, mk_prio("MeterInfo1Row5", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x1b0,
+                mk_prio("MeterInfo1Row5", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10207,12 +14366,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..27 {
             match u32_at(data, 0x21c + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x21c, mk_prio("MeterInfo1Row6", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x21c,
+                mk_prio("MeterInfo1Row6", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10220,12 +14385,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..27 {
             match u32_at(data, 0x288 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x288, mk_prio("MeterInfo1Row7", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x288,
+                mk_prio("MeterInfo1Row7", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10233,12 +14404,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x2f4 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x2f4, mk_prio("MeterInfo2Row1", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x2f4,
+                mk_prio("MeterInfo2Row1", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10246,12 +14423,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x378 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x378, mk_prio("MeterInfo2Row2", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x378,
+                mk_prio("MeterInfo2Row2", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10259,12 +14442,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x3fc + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x3fc, mk_prio("MeterInfo2Row3", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x3fc,
+                mk_prio("MeterInfo2Row3", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10272,12 +14461,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x480 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x480, mk_prio("MeterInfo2Row4", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x480,
+                mk_prio("MeterInfo2Row4", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10285,12 +14480,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x504 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x504, mk_prio("MeterInfo2Row5", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x504,
+                mk_prio("MeterInfo2Row5", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10298,12 +14499,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x588 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x588, mk_prio("MeterInfo2Row6", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x588,
+                mk_prio("MeterInfo2Row6", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10311,12 +14518,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x60c + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x60c, mk_prio("MeterInfo2Row7", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x60c,
+                mk_prio("MeterInfo2Row7", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10324,12 +14537,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x690 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x690, mk_prio("MeterInfo2Row8", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x690,
+                mk_prio("MeterInfo2Row8", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10337,12 +14556,18 @@ fn meterinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..33 {
             match u32_at(data, 0x714 + k * 4) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x714, mk_prio("MeterInfo2Row9", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x714,
+                mk_prio("MeterInfo2Row9", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -10356,115 +14581,275 @@ fn meterinfo9(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(text) = text_at(data, 0x0, 90, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x0, mk_prio("MeterInfo1Row1", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x0,
+            mk_prio("MeterInfo1Row1", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x5a, 90, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x5a, mk_prio("MeterInfo1Row2", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x5a,
+            mk_prio("MeterInfo1Row2", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0xb4, 90, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0xb4, mk_prio("MeterInfo1Row3", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0xb4,
+            mk_prio("MeterInfo1Row3", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x10e, 90, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x10e, mk_prio("MeterInfo1Row4", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x10e,
+            mk_prio("MeterInfo1Row4", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x168, 90, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x168, mk_prio("MeterInfo1Row5", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x168,
+            mk_prio("MeterInfo1Row5", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x1c2, 90, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x1c2, mk_prio("MeterInfo1Row6", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1c2,
+            mk_prio("MeterInfo1Row6", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x21c, 90, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter1($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x21c, mk_prio("MeterInfo1Row7", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%19d %4d %6d\" . \" %3d %4d %6d\" x 8, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x21c,
+            mk_prio("MeterInfo1Row7", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x276, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x276, mk_prio("MeterInfo2Row1", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x276,
+            mk_prio("MeterInfo2Row1", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x2e4, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x2e4, mk_prio("MeterInfo2Row2", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x2e4,
+            mk_prio("MeterInfo2Row2", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x352, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x352, mk_prio("MeterInfo2Row3", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x352,
+            mk_prio("MeterInfo2Row3", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x3c0, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x3c0, mk_prio("MeterInfo2Row4", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x3c0,
+            mk_prio("MeterInfo2Row4", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x42e, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x42e, mk_prio("MeterInfo2Row5", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x42e,
+            mk_prio("MeterInfo2Row5", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x49c, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x49c, mk_prio("MeterInfo2Row6", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x49c,
+            mk_prio("MeterInfo2Row6", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x50a, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x50a, mk_prio("MeterInfo2Row7", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x50a,
+            mk_prio("MeterInfo2Row7", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x578, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x578, mk_prio("MeterInfo2Row8", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x578,
+            mk_prio("MeterInfo2Row8", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x5e6, 110, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::ConvMeter2($val)", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))", &cv) { cv = x; }
-        tags.push(at(0x5e6, mk_prio("MeterInfo2Row9", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "sprintf(\"%3d %4d %6d\" . \" %3d %4d %6d\" x 10, split(\" \",$val))",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x5e6,
+            mk_prio("MeterInfo2Row9", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -10478,20 +14863,34 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if let Some(v) = u8_at(data, 0x0) {
             dm.push(("SonyMaxAperture".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x0, mk_prio("SonyMaxAperture", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x0,
+                mk_prio("SonyMaxAperture", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_26.is_match(model) {
         if let Some(v) = u8_at(data, 0x1) {
             dm.push(("SonyMinAperture".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x1, mk_prio("SonyMinAperture", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1,
+                mk_prio("SonyMinAperture", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     {
@@ -10499,7 +14898,10 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..3 {
             match u16_at(data, 0x20 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
@@ -10509,7 +14911,10 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 _ => conv_expr::eval("\"Mechanical ($val)\"", &Conv::Str(s.clone()))
                     .map_or_else(|| s.clone(), |v| v.as_string()),
             };
-            tags.push(at(0x20, mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x20,
+                mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
@@ -10528,7 +14933,10 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 129 => "External Flash Fired".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x31, mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x31,
+                mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u32_at(data, 0x32) {
@@ -10537,24 +14945,50 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(at(0x32, mk_prio("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x32,
+                mk_prio(
+                    "ShutterCount",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x3a) {
         dm.push(("SonyExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x3a, mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x3a,
+            mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3c) {
         dm.push(("SonyFNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x3c, mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x3c,
+            mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3f) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -10584,16 +15018,30 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3f, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3f,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
-    if (MODEL_RE_27.is_match(model) && dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1)) {
+    if (MODEL_RE_27.is_match(model)
+        && dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1))
+    {
         if let Some(v) = u32_at(data, 0x4c) {
             dm.push(("ShutterCount2".to_string(), Conv::Num(f64::from(v))));
             let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x4c, mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x4c,
+                    mk_prio(
+                        "ShutterCount2",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10601,8 +15049,13 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if let Some(text) = text_at(data, 0x51, 6, false) {
             let mut cv = Conv::Str(text.clone());
             let raw = Value::String(cv.as_string());
-            if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) { cv = x; }
-            tags.push(at(0x51, mk_prio("SonyDateTime2", cv.as_string(), raw, "Time", PRIO)));
+            if let Some(x) = conv_expr::eval("$self->ConvertDateTime($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x51,
+                mk_prio("SonyDateTime2", cv.as_string(), raw, "Time", PRIO),
+            ));
         }
     }
     if !MODEL_RE_28.is_match(model) {
@@ -10634,7 +15087,10 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 146 => "Single Frame - Movie Capture".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x67, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x67,
+                mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_29.is_match(model) {
@@ -10643,12 +15099,27 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..4 {
                 match u8_at(data, 0x7c + k * 1) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
-                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(at(0x7c, mk_prio("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2, PRIO)));
+                let hex: String = parts
+                    .iter()
+                    .map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0)))
+                    .collect();
+                tags.push(at(
+                    0x7c,
+                    mk_prio(
+                        "InternalSerialNumber",
+                        hex,
+                        Value::String(parts.join(" ")),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10658,12 +15129,27 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..5 {
                 match u8_at(data, 0xf0 + k * 1) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
-                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(at(0xf0, mk_prio("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2, PRIO)));
+                let hex: String = parts
+                    .iter()
+                    .map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0)))
+                    .collect();
+                tags.push(at(
+                    0xf0,
+                    mk_prio(
+                        "InternalSerialNumber",
+                        hex,
+                        Value::String(parts.join(" ")),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -10679,7 +15165,10 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x105, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x105,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x106) {
@@ -10690,7 +15179,10 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Full-frame".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x106, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x106,
+            mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
         if let Some(v) = u16_at(data, 0x107) {
@@ -10983,23 +15475,41 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x107, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x107,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x109) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x109, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x109,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x10b) {
-        dm.push(("DistortionCorrParamsPresent".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DistortionCorrParamsPresent".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "No".to_string(),
             1 => "Yes".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x10b, mk_prio("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10b,
+            mk_prio(
+                "DistortionCorrParamsPresent",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if MODEL_RE_31.is_match(model) {
         if let Some(v) = u8_at(data, 0x114) {
@@ -11009,25 +15519,42 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x114, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x114,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_32.is_match(model) {
         if let Some(text) = text_at(data, 0x115, 2, false) {
             let mut cv = Conv::Str(text.clone());
-            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) {
+                cv = x;
+            }
             let raw = Value::String(cv.as_string());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-            tags.push(at(0x115, mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x115,
+                mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_32.is_match(model) {
         if let Some(text) = text_at(data, 0x116, 2, false) {
             let mut cv = Conv::Str(text.clone());
-            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) {
+                cv = x;
+            }
             let raw = Value::String(cv.as_string());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-            tags.push(at(0x116, mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x116,
+                mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_33.is_match(model) {
@@ -11037,7 +15564,16 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x1a0, mk_prio("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x1a0,
+                    mk_prio(
+                        "ShutterCount3",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11048,7 +15584,16 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x1aa, mk_prio("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x1aa,
+                    mk_prio(
+                        "ShutterCount3",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11059,7 +15604,16 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x1bd, mk_prio("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x1bd,
+                    mk_prio(
+                        "ShutterCount3",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11075,20 +15629,34 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if let Some(v) = u8_at(data, 0x0) {
             dm.push(("SonyMaxAperture".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x0, mk_prio("SonyMaxAperture", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x0,
+                mk_prio("SonyMaxAperture", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_35.is_match(model) {
         if let Some(v) = u8_at(data, 0x1) {
             dm.push(("SonyMinAperture".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/8 - 1.06) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x1, mk_prio("SonyMinAperture", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1,
+                mk_prio("SonyMinAperture", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     {
@@ -11096,7 +15664,10 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..3 {
             match u16_at(data, 0x26 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
@@ -11106,7 +15677,10 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 _ => conv_expr::eval("\"Mechanical ($val)\"", &Conv::Str(s.clone()))
                     .map_or_else(|| s.clone(), |v| v.as_string()),
             };
-            tags.push(at(0x26, mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x26,
+                mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
@@ -11125,7 +15699,10 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 129 => "External Flash Fired".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x39, mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x39,
+                mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u32_at(data, 0x3a) {
@@ -11134,24 +15711,50 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(at(0x3a, mk_prio("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x3a,
+                mk_prio(
+                    "ShutterCount",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x46) {
         dm.push(("SonyExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x46, mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x46,
+            mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x48) {
         dm.push(("SonyFNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x48, mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x48,
+            mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4b) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -11181,38 +15784,76 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4b, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4b,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
-    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1) && (MODEL_RE_36.is_match(model) || MODEL_RE_37.is_match(&crate::metadata::exif::software()))) {
+    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1)
+        && (MODEL_RE_36.is_match(model)
+            || MODEL_RE_37.is_match(&crate::metadata::exif::software())))
+    {
         if let Some(v) = u32_at(data, 0x50) {
             dm.push(("ShutterCount2".to_string(), Conv::Num(f64::from(v))));
             let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x50, mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x50,
+                    mk_prio(
+                        "ShutterCount2",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1) && MODEL_RE_38.is_match(model)) {
+    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1)
+        && MODEL_RE_38.is_match(model))
+    {
         if let Some(v) = u32_at(data, 0x52) {
             dm.push(("ShutterCount2".to_string(), Conv::Num(f64::from(v))));
             let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x52, mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x52,
+                    mk_prio(
+                        "ShutterCount2",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
-    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1) && (!MODEL_RE_39.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software()))) {
+    if (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1)
+        && (!MODEL_RE_39.is_match(model)
+            && !MODEL_RE_37.is_match(&crate::metadata::exif::software())))
+    {
         if let Some(v) = u32_at(data, 0x58) {
             dm.push(("ShutterCount2".to_string(), Conv::Num(f64::from(v))));
             let rc = conv_expr::eval("$val & 0x00ffffff", &Conv::Num(f64::from(v)));
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x58, mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x58,
+                    mk_prio(
+                        "ShutterCount2",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11250,7 +15891,10 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 146 => "Single Frame - Movie Capture".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x6b, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x6b,
+                mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_38.is_match(model) {
@@ -11282,7 +15926,10 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 146 => "Single Frame - Movie Capture".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x6d, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x6d,
+                mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if (!MODEL_RE_41.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software())) {
@@ -11314,7 +15961,10 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 146 => "Single Frame - Movie Capture".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x73, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x73,
+                mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -11322,12 +15972,27 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..6 {
             match u8_at(data, 0x88 + k * 1) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
-            let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-            tags.push(at(0x88, mk_prio("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2, PRIO)));
+            let hex: String = parts
+                .iter()
+                .map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0)))
+                .collect();
+            tags.push(at(
+                0x88,
+                mk_prio(
+                    "InternalSerialNumber",
+                    hex,
+                    Value::String(parts.join(" ")),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x105) {
@@ -11342,7 +16007,10 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x105, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x105,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x106) {
@@ -11353,7 +16021,10 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             2 => "Full-frame".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x106, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x106,
+            mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
         if let Some(v) = u16_at(data, 0x107) {
@@ -11646,23 +16317,41 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x107, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x107,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x109) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x109, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x109,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x10b) {
-        dm.push(("DistortionCorrParamsPresent".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "DistortionCorrParamsPresent".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "No".to_string(),
             1 => "Yes".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x10b, mk_prio("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10b,
+            mk_prio(
+                "DistortionCorrParamsPresent",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if MODEL_RE_42.is_match(model) {
         if let Some(v) = u8_at(data, 0x114) {
@@ -11672,15 +16361,25 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x114, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x114,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(text) = text_at(data, 0x116, 2, false) {
         let mut cv = Conv::Str(text.clone());
-        if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) {
+            cv = x;
+        }
         let raw = Value::String(cv.as_string());
-        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-        tags.push(at(0x116, mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x116,
+            mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if MODEL_RE_43.is_match(model) {
         if let Some(v) = u32_at(data, 0x19f) {
@@ -11689,7 +16388,16 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x19f, mk_prio("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x19f,
+                    mk_prio(
+                        "ShutterCount3",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11700,7 +16408,16 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x1cb, mk_prio("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x1cb,
+                    mk_prio(
+                        "ShutterCount3",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11711,7 +16428,16 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x1cd, mk_prio("ShutterCount3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x1cd,
+                    mk_prio(
+                        "ShutterCount3",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11723,16 +16449,26 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1eb, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1eb,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if (MODEL_RE_47.is_match(model) || MODEL_RE_37.is_match(&crate::metadata::exif::software())) {
         if let Some(text) = text_at(data, 0x1ed, 2, false) {
             let mut cv = Conv::Str(text.clone());
-            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) {
+                cv = x;
+            }
             let raw = Value::String(cv.as_string());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-            tags.push(at(0x1ed, mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1ed,
+                mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if (MODEL_RE_48.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software())) {
@@ -11743,16 +16479,26 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x1ee, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x1ee,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if (MODEL_RE_49.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software())) {
         if let Some(text) = text_at(data, 0x1f0, 2, false) {
             let mut cv = Conv::Str(text.clone());
-            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) {
+                cv = x;
+            }
             let raw = Value::String(cv.as_string());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-            tags.push(at(0x1f0, mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1f0,
+                mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_44.is_match(model) {
@@ -11763,16 +16509,26 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x21a, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x21a,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_44.is_match(model) {
         if let Some(text) = text_at(data, 0x21c, 2, false) {
             let mut cv = Conv::Str(text.clone());
-            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) {
+                cv = x;
+            }
             let raw = Value::String(cv.as_string());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-            tags.push(at(0x21c, mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x21c,
+                mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if !(MODEL_RE_44.is_match(model)) && MODEL_RE_50.is_match(model) {
@@ -11783,16 +16539,26 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x21c, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x21c,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_45.is_match(model) {
         if let Some(text) = text_at(data, 0x21e, 2, false) {
             let mut cv = Conv::Str(text.clone());
-            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("join \" \", unpack \"H2H2\", $val", &cv) {
+                cv = x;
+            }
             let raw = Value::String(cv.as_string());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) { cv = x; }
-            tags.push(at(0x21e, mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Sony::PrintLensSpec($val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x21e,
+                mk_prio("LensSpecFeatures", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -11808,7 +16574,10 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..3 {
             match u16_at(data, 0x26 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
@@ -11818,7 +16587,10 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 _ => conv_expr::eval("\"Mechanical ($val)\"", &Conv::Str(s.clone()))
                     .map_or_else(|| s.clone(), |v| v.as_string()),
             };
-            tags.push(at(0x26, mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x26,
+                mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
@@ -11837,7 +16609,10 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 129 => "External Flash Fired".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x39, mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x39,
+                mk_prio("FlashStatus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u32_at(data, 0x3a) {
@@ -11846,24 +16621,50 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(at(0x3a, mk_prio("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x3a,
+                mk_prio(
+                    "ShutterCount",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x46) {
         dm.push(("SonyExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x46, mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x46,
+            mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x48) {
         dm.push(("SonyFNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x48, mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x48,
+            mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4b) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -11893,7 +16694,10 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4b, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4b,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1) {
         if let Some(v) = u32_at(data, 0x50) {
@@ -11902,25 +16706,51 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0x50, mk_prio("ShutterCount2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0x50,
+                    mk_prio(
+                        "ShutterCount2",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
     if let Some(v) = u16_at(data, 0x66) {
         dm.push(("SonyExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x66, mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x66,
+            mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x68) {
         dm.push(("SonyFNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x68, mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x68,
+            mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6b) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -11950,7 +16780,10 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x6b, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6b,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if MODEL_RE_51.is_match(model) {
         {
@@ -11958,12 +16791,27 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..6 {
                 match u8_at(data, 0x88 + k * 1) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
-                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(at(0x88, mk_prio("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2, PRIO)));
+                let hex: String = parts
+                    .iter()
+                    .map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0)))
+                    .collect();
+                tags.push(at(
+                    0x88,
+                    mk_prio(
+                        "InternalSerialNumber",
+                        hex,
+                        Value::String(parts.join(" ")),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11973,12 +16821,27 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..6 {
                 match u8_at(data, 0x8a + k * 1) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
-                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(at(0x8a, mk_prio("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2, PRIO)));
+                let hex: String = parts
+                    .iter()
+                    .map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0)))
+                    .collect();
+                tags.push(at(
+                    0x8a,
+                    mk_prio(
+                        "InternalSerialNumber",
+                        hex,
+                        Value::String(parts.join(" ")),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -11997,26 +16860,52 @@ fn tag9050d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(at(0xa, mk_prio("ShutterCount", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+                tags.push(at(
+                    0xa,
+                    mk_prio(
+                        "ShutterCount",
+                        v.to_string(),
+                        Value::I32(v as i32),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
     if let Some(v) = u16_at(data, 0x1a) {
         dm.push(("SonyExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x1a, mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x1a,
+            mk_prio("SonyExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_54.is_match(model) {
         if let Some(v) = u16_at(data, 0x1c) {
             dm.push(("SonyFNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x1c, mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1c,
+                mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x1f) {
@@ -12047,7 +16936,10 @@ fn tag9050d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1f, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1f,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_55.is_match(model) {
         {
@@ -12055,12 +16947,27 @@ fn tag9050d(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..6 {
                 match u8_at(data, 0x38 + k * 1) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
-                let hex: String = parts.iter().map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0))).collect();
-                tags.push(at(0x38, mk_prio("InternalSerialNumber", hex, Value::String(parts.join(" ")), GRP2, PRIO)));
+                let hex: String = parts
+                    .iter()
+                    .map(|p| format!("{:02x}", p.parse::<u32>().unwrap_or(0)))
+                    .collect();
+                tags.push(at(
+                    0x38,
+                    mk_prio(
+                        "InternalSerialNumber",
+                        hex,
+                        Value::String(parts.join(" ")),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -12075,16 +16982,26 @@ fn tag9400a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u32_at(data, 0x8) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x8, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0xc) {
         dm.push(("SequenceFileNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0xc, mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0xc,
+            mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x10) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -12114,7 +17031,10 @@ fn tag9400a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x10, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_56.is_match(model) {
         if let Some(v) = u8_at(data, 0x12) {
@@ -12124,12 +17044,27 @@ fn tag9400a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x12, mk_prio("DigitalZoom", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x12,
+                mk_prio("DigitalZoom", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u32_at(data, 0x1a) {
-        dm.push(("ShotNumberSincePowerUp".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1a, mk_prio("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "ShotNumberSincePowerUp".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x1a,
+            mk_prio(
+                "ShotNumberSincePowerUp",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x22) {
         dm.push(("SequenceLength".to_string(), Conv::Num(f64::from(v))));
@@ -12146,7 +17081,10 @@ fn tag9400a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             200 => "Continuous - Sweep Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x22, mk_prio("SequenceLength", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x22,
+            mk_prio("SequenceLength", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x28) {
         dm.push(("CameraOrientation".to_string(), Conv::Num(f64::from(v))));
@@ -12157,7 +17095,10 @@ fn tag9400a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x28, mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x28,
+            mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x29) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -12168,15 +17109,23 @@ fn tag9400a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "JPEG + MPO".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x29, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x29,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if MODEL_RE_57.is_match(model) {
         if let Some(v) = u16_at(data, 0x44) {
             dm.push(("SonyImageHeight".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("$val > 0 ? 8*$val : \"n.a.\"", &cv) { cv = x; }
-            tags.push(at(0x44, mk_prio("SonyImageHeight", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("$val > 0 ? 8*$val : \"n.a.\"", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x44,
+                mk_prio("SonyImageHeight", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_57.is_match(model) {
@@ -12184,8 +17133,13 @@ fn tag9400a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("ModelReleaseYear".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
-            tags.push(at(0x52, mk_prio("ModelReleaseYear", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x52,
+                mk_prio("ModelReleaseYear", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -12200,16 +17154,26 @@ fn tag9400b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u32_at(data, 0x8) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x8, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0xc) {
         dm.push(("SequenceFileNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0xc, mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0xc,
+            mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x10) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -12239,7 +17203,10 @@ fn tag9400b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x10, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x12) {
         dm.push(("DigitalZoom".to_string(), Conv::Num(f64::from(v))));
@@ -12248,11 +17215,26 @@ fn tag9400b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Yes".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x12, mk_prio("DigitalZoom", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x12,
+            mk_prio("DigitalZoom", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x16) {
-        dm.push(("ShotNumberSincePowerUp".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x16, mk_prio("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "ShotNumberSincePowerUp".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x16,
+            mk_prio(
+                "ShotNumberSincePowerUp",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1e) {
         dm.push(("SequenceLength".to_string(), Conv::Num(f64::from(v))));
@@ -12269,7 +17251,10 @@ fn tag9400b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             200 => "Continuous - Sweep Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1e, mk_prio("SequenceLength", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1e,
+            mk_prio("SequenceLength", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24) {
         dm.push(("CameraOrientation".to_string(), Conv::Num(f64::from(v))));
@@ -12280,7 +17265,10 @@ fn tag9400b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x24, mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24,
+            mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x25) {
         dm.push(("Quality2".to_string(), Conv::Num(f64::from(v))));
@@ -12291,21 +17279,34 @@ fn tag9400b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "JPEG + MPO".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x25, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x25,
+            mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3f) {
         dm.push(("SonyImageHeight".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? 8*$val : \"n.a.\"", &cv) { cv = x; }
-        tags.push(at(0x3f, mk_prio("SonyImageHeight", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? 8*$val : \"n.a.\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x3f,
+            mk_prio("SonyImageHeight", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x46) {
         dm.push(("ModelReleaseYear".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
-        tags.push(at(0x46, mk_prio("ModelReleaseYear", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x46,
+            mk_prio("ModelReleaseYear", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -12343,20 +17344,40 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x9, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x9,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if MODEL_RE_58.is_match(model) {
         if let Some(v) = u32_at(data, 0xa) {
-            dm.push(("ShotNumberSincePowerUp".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0xa, mk_prio("ShotNumberSincePowerUp", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            dm.push((
+                "ShotNumberSincePowerUp".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
+            tags.push(at(
+                0xa,
+                mk_prio(
+                    "ShotNumberSincePowerUp",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u32_at(data, 0x12) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x12, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x12,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x16) {
         dm.push(("SequenceLength".to_string(), Conv::Num(f64::from(v))));
@@ -12377,14 +17398,22 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             200 => "Continuous - Sweep Panorama".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x16, mk_prio("SequenceLength", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x16,
+            mk_prio("SequenceLength", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x1a) {
         dm.push(("SequenceFileNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x1a, mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x1a,
+            mk_prio("SequenceFileNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1e) {
         dm.push(("SequenceLength".to_string(), Conv::Num(f64::from(v))));
@@ -12399,7 +17428,10 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             10 => "10 files".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1e, mk_prio("SequenceLength", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1e,
+            mk_prio("SequenceLength", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x29) {
         dm.push(("CameraOrientation".to_string(), Conv::Num(f64::from(v))));
@@ -12410,7 +17442,10 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             8 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x29, mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x29,
+            mk_prio("CameraOrientation", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_59.is_match(model) {
         if let Some(v) = u8_at(data, 0x2a) {
@@ -12422,7 +17457,10 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "JPEG + MPO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x2a, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2a,
+                mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !(!MODEL_RE_59.is_match(model)) {
@@ -12436,7 +17474,10 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 6 => "RAW + HEIF".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x2a, mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2a,
+                mk_prio("Quality2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_60.is_match(model) {
@@ -12444,8 +17485,13 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("ModelReleaseYear".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) { cv = x; }
-            tags.push(at(0x53, mk_prio("ModelReleaseYear", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"20%.2d\", $val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x53,
+                mk_prio("ModelReleaseYear", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_61.is_match(model) {
@@ -12456,7 +17502,10 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 23 => "Mechanical".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x133, mk_prio("ShutterType", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x133,
+                mk_prio("ShutterType", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_62.is_match(model) {
@@ -12467,7 +17516,10 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 23 => "Mechanical".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x139, mk_prio("ShutterType", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x139,
+                mk_prio("ShutterType", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_63.is_match(model) {
@@ -12478,7 +17530,10 @@ fn tag9400c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 23 => "Mechanical".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x13f, mk_prio("ShutterType", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x13f,
+                mk_prio("ShutterType", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -12492,7 +17547,10 @@ fn tag9401(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x0) {
         dm.push(("Ver9401".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{Ver9401} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{Ver9401} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -12513,12 +17571,16 @@ fn tag9401(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             tags.extend(isoinfo(sub, model, dm));
         }
     }
-    if (dm_get(&dm, "Ver9401").is_some_and(|v| v == 167.0) && !MODEL_RE_64.is_match(&crate::metadata::exif::software())) {
+    if (dm_get(&dm, "Ver9401").is_some_and(|v| v == 167.0)
+        && !MODEL_RE_64.is_match(&crate::metadata::exif::software()))
+    {
         if let Some(sub) = data.get(0x49d..0x49d + 5) {
             tags.extend(isoinfo(sub, model, dm));
         }
     }
-    if (dm_get(&dm, "Ver9401").is_some_and(|v| v == 167.0) && MODEL_RE_64.is_match(&crate::metadata::exif::software())) {
+    if (dm_get(&dm, "Ver9401").is_some_and(|v| v == 167.0)
+        && MODEL_RE_64.is_match(&crate::metadata::exif::software()))
+    {
         if let Some(sub) = data.get(0x49e..0x49e + 5) {
             tags.extend(isoinfo(sub, model, dm));
         }
@@ -12600,7 +17662,10 @@ fn isoinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             47 => "409600".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x0, mk_prio("ISOSetting", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio("ISOSetting", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("ISOAutoMin".to_string(), Conv::Num(f64::from(v))));
@@ -12650,7 +17715,10 @@ fn isoinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             47 => "409600".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2, mk_prio("ISOAutoMin", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2,
+            mk_prio("ISOAutoMin", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("ISOAutoMax".to_string(), Conv::Num(f64::from(v))));
@@ -12700,7 +17768,10 @@ fn isoinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             47 => "409600".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("ISOAutoMax", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("ISOAutoMax", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -12712,7 +17783,10 @@ fn tag9402(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("TempTest1".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{TempTest1}=$val; $$self{OPTIONS}{Unknown}<2 ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{TempTest1}=$val; $$self{OPTIONS}{Unknown}<2 ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -12723,8 +17797,13 @@ fn tag9402(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("AmbientTemperature".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("\"$val C\"", &cv) { cv = x; }
-            tags.push(at(0x4, mk_prio("AmbientTemperature", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("\"$val C\"", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x4,
+                mk_prio("AmbientTemperature", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x16) {
@@ -12738,7 +17817,10 @@ fn tag9402(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             6 => "DMF".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x16, mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x16,
+            mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x17) {
         dm.push(("AFAreaMode".to_string(), Conv::Num(f64::from(v))));
@@ -12758,12 +17840,24 @@ fn tag9402(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             255 => "Manual".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x17, mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x17,
+            mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_23.is_match(model) {
         if let Some(v) = u8_at(data, 0x2d) {
             dm.push(("FocusPosition2".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x2d, mk_prio("FocusPosition2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2d,
+                mk_prio(
+                    "FocusPosition2",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     tags
@@ -12776,19 +17870,29 @@ fn tag9403(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("TempTest2".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{TempTest2}=$val; $$self{OPTIONS}{Unknown}<2 ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{TempTest2}=$val; $$self{OPTIONS}{Unknown}<2 ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
         }
     }
-    if (dm_get(&dm, "TempTest2").is_some_and(|v| v != 0.0) && dm_get(&dm, "TempTest2").is_some_and(|v| v < 100.0)) {
+    if (dm_get(&dm, "TempTest2").is_some_and(|v| v != 0.0)
+        && dm_get(&dm, "TempTest2").is_some_and(|v| v < 100.0))
+    {
         if let Some(v) = i8_at(data, 0x5) {
             dm.push(("CameraTemperature".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("\"$val C\"", &cv) { cv = x; }
-            tags.push(at(0x5, mk_prio("CameraTemperature", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("\"$val C\"", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x5,
+                mk_prio("CameraTemperature", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -12837,7 +17941,10 @@ fn tag9404a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xb, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xb,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xd) {
         dm.push(("IntelligentAuto".to_string(), Conv::Num(f64::from(v))));
@@ -12846,15 +17953,23 @@ fn tag9404a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xd, mk_prio("IntelligentAuto", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xd,
+            mk_prio("IntelligentAuto", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_17.is_match(model) {
         if let Some(v) = u16_at(data, 0x19) {
             dm.push(("LensZoomPosition".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(at(0x19, mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x19,
+                mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -12903,7 +18018,10 @@ fn tag9404b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xc, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xc,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xe) {
         dm.push(("IntelligentAuto".to_string(), Conv::Num(f64::from(v))));
@@ -12912,21 +18030,38 @@ fn tag9404b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xe, mk_prio("IntelligentAuto", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xe,
+            mk_prio("IntelligentAuto", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_30.is_match(model) {
         if let Some(v) = u16_at(data, 0x1e) {
             dm.push(("LensZoomPosition".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(at(0x1e, mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x1e,
+                mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_30.is_match(model) {
         if let Some(v) = u8_at(data, 0x20) {
             dm.push(("FocusPosition2".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x20, mk_prio("FocusPosition2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x20,
+                mk_prio(
+                    "FocusPosition2",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     tags
@@ -12976,7 +18111,10 @@ fn tag9404c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xb, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xb,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0xd) {
         dm.push(("IntelligentAuto".to_string(), Conv::Num(f64::from(v))));
@@ -12985,7 +18123,10 @@ fn tag9404c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0xd, mk_prio("IntelligentAuto", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xd,
+            mk_prio("IntelligentAuto", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -12997,13 +18138,25 @@ fn tag9405a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if !MODEL_RE_23.is_match(model) {
         if let Some(v) = u8_at(data, 0x600) {
-            dm.push(("DistortionCorrParamsPresent".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsPresent".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x600, mk_prio("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x600,
+                mk_prio(
+                    "DistortionCorrParamsPresent",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x601) {
@@ -13013,7 +18166,10 @@ fn tag9405a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Applied".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x601, mk_prio("DistortionCorrection", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x601,
+            mk_prio("DistortionCorrection", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_23.is_match(model) {
         if let Some(v) = u8_at(data, 0x603) {
@@ -13024,12 +18180,18 @@ fn tag9405a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x603, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x603,
+                mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x604) {
         dm.push(("LensMount".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{LensMount} = $val; $$self{Model} =~ /^(DSC-|Stellar)/ ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{LensMount} = $val; $$self{Model} =~ /^(DSC-|Stellar)/ ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -13039,7 +18201,10 @@ fn tag9405a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x604, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x604,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
@@ -13333,13 +18498,19 @@ fn tag9405a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x605, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x605,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x608) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x608, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x608,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_23.is_match(model) {
@@ -13348,12 +18519,24 @@ fn tag9405a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x64a + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x64a, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x64a,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -13363,12 +18546,24 @@ fn tag9405a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x66a + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x66a, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x66a,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -13378,12 +18573,24 @@ fn tag9405a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x6ca + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x6ca, mk_prio("DistortionCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x6ca,
+                    mk_prio(
+                        "DistortionCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -13398,66 +18605,118 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u16_at(data, 0x4) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
         tags.push(at(0x4, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
     }
     if let Some(v) = u16_at(data, 0x6) {
         dm.push(("BaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
         tags.push(at(0x6, mk_prio("BaseISO", cv.as_string(), raw, GRP2, PRIO)));
     }
     if let Some(v) = u16_at(data, 0xa) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0xa, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xa,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0xe) {
         dm.push(("SonyExposureTime2".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0xe, mk_prio("SonyExposureTime2", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0xe,
+            mk_prio("SonyExposureTime2", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = rat32u_at(data, 0x10) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0x10, mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0x10,
+            mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_67.is_match(model) {
         if let Some(v) = u16_at(data, 0x14) {
             dm.push(("SonyFNumber".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-            tags.push(at(0x14, mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x14,
+                mk_prio("SonyFNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x16) {
         dm.push(("SonyMaxApertureValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x16, mk_prio("SonyMaxApertureValue", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x16,
+            mk_prio("SonyMaxApertureValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x24) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x24, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x24,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x34) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -13487,15 +18746,36 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x34, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x34,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x3e) {
         dm.push(("SonyImageWidthMax".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x3e, mk_prio("SonyImageWidthMax", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3e,
+            mk_prio(
+                "SonyImageWidthMax",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x40) {
         dm.push(("SonyImageHeightMax".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x40, mk_prio("SonyImageHeightMax", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x40,
+            mk_prio(
+                "SonyImageHeightMax",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x42) {
         dm.push(("HighISONoiseReduction".to_string(), Conv::Num(f64::from(v))));
@@ -13506,16 +18786,31 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "High".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x42, mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x42,
+            mk_prio("HighISONoiseReduction", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x44) {
-        dm.push(("LongExposureNoiseReduction".to_string(), Conv::Num(f64::from(v))));
+        dm.push((
+            "LongExposureNoiseReduction".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
         let s = match v as i64 {
             0 => "Off".to_string(),
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x44, mk_prio("LongExposureNoiseReduction", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x44,
+            mk_prio(
+                "LongExposureNoiseReduction",
+                s,
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x46) {
         dm.push(("PictureEffect2".to_string(), Conv::Num(f64::from(v))));
@@ -13536,7 +18831,10 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             13 => "Illustration".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x46, mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x46,
+            mk_prio("PictureEffect2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x48) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -13576,7 +18874,10 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x48, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x48,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4a) {
         dm.push(("CreativeStyle".to_string(), Conv::Num(f64::from(v))));
@@ -13601,24 +18902,44 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             255 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4a, mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4a,
+            mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = i8_at(data, 0x52) {
         dm.push(("Sharpness".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) { cv = x; }
-        tags.push(at(0x52, mk_prio("Sharpness", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val > 0 ? \"+$val\" : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x52,
+            mk_prio("Sharpness", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x5a) {
-            dm.push(("DistortionCorrParamsPresent".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "DistortionCorrParamsPresent".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "No".to_string(),
                 1 => "Yes".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x5a, mk_prio("DistortionCorrParamsPresent", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x5a,
+                mk_prio(
+                    "DistortionCorrParamsPresent",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x5b) {
@@ -13628,7 +18949,10 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Applied".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x5b, mk_prio("DistortionCorrection", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x5b,
+            mk_prio("DistortionCorrection", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_24.is_match(model) {
         if let Some(v) = u8_at(data, 0x5d) {
@@ -13639,12 +18963,18 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x5d, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x5d,
+                mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x5e) {
         dm.push(("LensMount".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{LensMount} = $val; $$self{Model} =~ /^DSC-/ ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{LensMount} = $val; $$self{Model} =~ /^DSC-/ ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -13654,7 +18984,10 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x5e, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x5e,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
@@ -13948,13 +19281,19 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x60, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x60,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x62) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x62, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x62,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_24.is_match(model) {
@@ -13963,12 +19302,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x64 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x64, mk_prio("DistortionCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x64,
+                    mk_prio(
+                        "DistortionCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -13977,8 +19328,13 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("LensZoomPosition".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(at(0x342, mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x342,
+                mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_69.is_match(model) {
@@ -13987,12 +19343,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x34a + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x34a, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x34a,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14001,8 +19369,13 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("LensZoomPosition".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(at(0x34e, mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x34e,
+                mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_71.is_match(model) {
@@ -14011,12 +19384,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x350 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x350, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x350,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14025,8 +19410,13 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("LensZoomPosition".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) { cv = x; }
-            tags.push(at(0x35a, mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.0f%%\",$val/10.24)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x35a,
+                mk_prio("LensZoomPosition", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_72.is_match(model) {
@@ -14035,12 +19425,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x35c + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x35c, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x35c,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14050,12 +19452,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x368 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x368, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x368,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14065,12 +19479,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x37c + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x37c, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x37c,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14080,12 +19506,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x384 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x384, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x384,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14095,12 +19533,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x39c + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x39c, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x39c,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14110,12 +19560,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x3b0 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x3b0, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x3b0,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14125,12 +19587,24 @@ fn tag9405b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x3b8 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x3b8, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x3b8,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -14145,10 +19619,17 @@ fn tag9406(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     if let Some(v) = u8_at(data, 0x5) {
         dm.push(("BatteryTemperature".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("($val - 32) / 1.8", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("($val - 32) / 1.8", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f C\",$val)", &cv) { cv = x; }
-        tags.push(at(0x5, mk_prio("BatteryTemperature", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f C\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x5,
+            mk_prio("BatteryTemperature", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6) {
         dm.push(("BatteryLevelGrip1".to_string(), Conv::Num(f64::from(v))));
@@ -14158,28 +19639,46 @@ fn tag9406(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-            tags.push(at(0x6, mk_prio("BatteryLevelGrip1", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x6,
+                mk_prio("BatteryLevelGrip1", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("BatteryLevel".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-        tags.push(at(0x7, mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x7,
+            mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_77.is_match(model) {
         if let Some(v) = u8_at(data, 0x8) {
             dm.push(("BatteryLevelGrip2".to_string(), Conv::Num(f64::from(v))));
-            let rc = conv_expr::eval("($val and $val != 255) ? $val : undef", &Conv::Num(f64::from(v)));
+            let rc = conv_expr::eval(
+                "($val and $val != 255) ? $val : undef",
+                &Conv::Num(f64::from(v)),
+            );
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
                 let mut cv = Conv::Num(f64::from(v));
                 let raw = Value::F64(cv.as_num());
-                if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-                tags.push(at(0x8, mk_prio("BatteryLevelGrip2", cv.as_string(), raw, GRP2, PRIO)));
+                if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+                    cv = x;
+                }
+                tags.push(at(
+                    0x8,
+                    mk_prio("BatteryLevelGrip2", cv.as_string(), raw, GRP2, PRIO),
+                ));
             }
         }
     }
@@ -14193,7 +19692,10 @@ fn tag9406b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x1) {
         dm.push(("Battery2".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{Battery2} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{Battery2} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -14201,7 +19703,10 @@ fn tag9406b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     }
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("BatteryStatus1".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{BatteryStatus1} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{BatteryStatus1} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -14212,27 +19717,42 @@ fn tag9406b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("BatteryLevel".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-            tags.push(at(0x5, mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x5,
+                mk_prio("BatteryLevel", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "Battery2").is_some_and(|v| v == 1.0) {
         if let Some(v) = u8_at(data, 0x6) {
             dm.push(("BatteryStatus2".to_string(), Conv::Num(f64::from(v))));
-            let rc = conv_expr::eval("$$self{BatteryStatus2} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val", &Conv::Num(f64::from(v)));
+            let rc = conv_expr::eval(
+                "$$self{BatteryStatus2} = $val; $$self{OPTIONS}{Unknown}<2 ? undef : $val",
+                &Conv::Num(f64::from(v)),
+            );
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
             }
         }
     }
-    if (dm_get(&dm, "Battery2").is_some_and(|v| v == 1.0) && dm_get(&dm, "BatteryStatus2").is_some_and(|v| v != 5.0)) {
+    if (dm_get(&dm, "Battery2").is_some_and(|v| v == 1.0)
+        && dm_get(&dm, "BatteryStatus2").is_some_and(|v| v != 5.0))
+    {
         if let Some(v) = u8_at(data, 0x7) {
             dm.push(("BatteryLevel2".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("\"$val%\"", &cv) { cv = x; }
-            tags.push(at(0x7, mk_prio("BatteryLevel2", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("\"$val%\"", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x7,
+                mk_prio("BatteryLevel2", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -14274,7 +19794,10 @@ fn tag940a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             4294967295 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x4, mk_prio("AFPointsSelected", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio("AFPointsSelected", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -14297,12 +19820,18 @@ fn tag940c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 5 => "A-mount (5)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x8, mk_prio("LensMount2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x8,
+                mk_prio("LensMount2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0x9) {
         dm.push(("LensType3".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("(($$self{LensMount} != 0) or ($val > 0 and $val < 32784)) ? $val : undef", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "(($$self{LensMount} != 0) or ($val > 0 and $val < 32784)) ? $val : undef",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -14594,23 +20123,36 @@ fn tag940c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x9, mk_prio("LensType3", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x9,
+                mk_prio("LensType3", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u16_at(data, 0xb) {
         dm.push(("CameraE-mountVersion".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) { cv = x; }
-        tags.push(at(0xb, mk_prio("CameraE-mountVersion", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0xb,
+            mk_prio("CameraE-mountVersion", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v != 0.0) {
         if let Some(v) = u16_at(data, 0xd) {
             dm.push(("LensE-mountVersion".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) { cv = x; }
-            tags.push(at(0xd, mk_prio("LensE-mountVersion", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%x.%.2x\",$val>>8,$val&0xff)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0xd,
+                mk_prio("LensE-mountVersion", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v != 0.0) {
@@ -14618,8 +20160,13 @@ fn tag940c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             dm.push(("LensFirmwareVersion".to_string(), Conv::Num(f64::from(v))));
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"Ver.%.2x.%.3d\",$val>>8,$val&0xff)", &cv) { cv = x; }
-            tags.push(at(0x14, mk_prio("LensFirmwareVersion", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"Ver.%.2x.%.3d\",$val>>8,$val&0xff)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x14,
+                mk_prio("LensFirmwareVersion", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -14642,13 +20189,25 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "79-point".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x2, mk_prio("AFType", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x2,
+                mk_prio("AFType", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_78.is_match(model) {
         if let Some(v) = u8_at(data, 0x4) {
             dm.push(("AFStatusActiveSensor".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x4, mk_prio("AFStatusActiveSensor", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x4,
+                mk_prio(
+                    "AFStatusActiveSensor",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_78.is_match(model) {
@@ -14662,7 +20221,10 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 6 => "DMF".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x5, mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x5,
+                mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "AFType").is_some_and(|v| v == 1.0) {
@@ -14689,10 +20251,15 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 17 => "Lower-middle".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x7, mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x7,
+                mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
-    if !(dm_get(&dm, "AFType").is_some_and(|v| v == 1.0)) && dm_get(&dm, "AFType").is_some_and(|v| v == 2.0) {
+    if !(dm_get(&dm, "AFType").is_some_and(|v| v == 1.0))
+        && dm_get(&dm, "AFType").is_some_and(|v| v == 2.0)
+    {
         if let Some(v) = u8_at(data, 0x7) {
             dm.push(("AFPoint".to_string(), Conv::Num(f64::from(v))));
             let s = match v as i64 {
@@ -14728,7 +20295,10 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 29 => "Lower-right (vertical)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x7, mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x7,
+                mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "AFType").is_some_and(|v| v == 1.0) {
@@ -14756,10 +20326,15 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "(none)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x8, mk_prio("AFPointInFocus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x8,
+                mk_prio("AFPointInFocus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
-    if !(dm_get(&dm, "AFType").is_some_and(|v| v == 1.0)) && dm_get(&dm, "AFType").is_some_and(|v| v == 2.0) {
+    if !(dm_get(&dm, "AFType").is_some_and(|v| v == 1.0))
+        && dm_get(&dm, "AFType").is_some_and(|v| v == 2.0)
+    {
         if let Some(v) = u8_at(data, 0x8) {
             dm.push(("AFPointInFocus".to_string(), Conv::Num(f64::from(v))));
             let s = match v as i64 {
@@ -14796,12 +20371,18 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "(none)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x8, mk_prio("AFPointInFocus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x8,
+                mk_prio("AFPointInFocus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "AFType").is_some_and(|v| v == 1.0) {
         if let Some(v) = u8_at(data, 0x9) {
-            dm.push(("AFPointAtShutterRelease".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "AFPointAtShutterRelease".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "Upper-left".to_string(),
                 1 => "Left".to_string(),
@@ -14824,12 +20405,26 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 30 => "(out of focus)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x9, mk_prio("AFPointAtShutterRelease", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x9,
+                mk_prio(
+                    "AFPointAtShutterRelease",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
-    if !(dm_get(&dm, "AFType").is_some_and(|v| v == 1.0)) && dm_get(&dm, "AFType").is_some_and(|v| v == 2.0) {
+    if !(dm_get(&dm, "AFType").is_some_and(|v| v == 1.0))
+        && dm_get(&dm, "AFType").is_some_and(|v| v == 2.0)
+    {
         if let Some(v) = u8_at(data, 0x9) {
-            dm.push(("AFPointAtShutterRelease".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "AFPointAtShutterRelease".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "Upper Far Left".to_string(),
                 1 => "Upper-left (horizontal)".to_string(),
@@ -14864,7 +20459,16 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 30 => "(out of focus)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x9, mk_prio("AFPointAtShutterRelease", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x9,
+                mk_prio(
+                    "AFPointAtShutterRelease",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_78.is_match(model) {
@@ -14877,7 +20481,10 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "Zone".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0xa, mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0xa,
+                mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_78.is_match(model) {
@@ -14892,7 +20499,10 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 7 => "AF-D".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0xb, mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0xb,
+                mk_prio("FocusMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_78.is_match(model) {
@@ -14901,12 +20511,18 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..10 {
                 match u8_at(data, 0x10 + k * 1) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x10, mk_prio("AFPointsUsed", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x10,
+                    mk_prio("AFPointsUsed", s.clone(), Value::String(s), GRP2, PRIO),
+                ));
             }
         }
     }
@@ -15012,7 +20628,10 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "(none)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x37, mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x37,
+                mk_prio("AFPoint", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "AFType").is_some_and(|v| v == 3.0) {
@@ -15117,12 +20736,18 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 255 => "(none)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x38, mk_prio("AFPointInFocus", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x38,
+                mk_prio("AFPointInFocus", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "AFType").is_some_and(|v| v == 3.0) {
         if let Some(v) = u8_at(data, 0x39) {
-            dm.push(("AFPointAtShutterRelease".to_string(), Conv::Num(f64::from(v))));
+            dm.push((
+                "AFPointAtShutterRelease".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
             let s = match v as i64 {
                 0 => "B4".to_string(),
                 1 => "C4".to_string(),
@@ -15222,7 +20847,16 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 95 => "(none)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x39, mk_prio("AFPointAtShutterRelease", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x39,
+                mk_prio(
+                    "AFPointAtShutterRelease",
+                    s,
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_78.is_match(model) {
@@ -15236,13 +20870,25 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 4 => "Expanded Flexible Spot".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x3a, mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x3a,
+                mk_prio("AFAreaMode", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_78.is_match(model) {
         if let Some(v) = u8_at(data, 0x3b) {
             dm.push(("AFStatusActiveSensor".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x3b, mk_prio("AFStatusActiveSensor", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x3b,
+                mk_prio(
+                    "AFStatusActiveSensor",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if MODEL_RE_78.is_match(model) {
@@ -15284,13 +20930,25 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 46 => "Party".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x43, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x43,
+                mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_78.is_match(model) {
         if let Some(v) = i8_at(data, 0x50) {
             dm.push(("AFMicroAdj".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x50, mk_prio("AFMicroAdj", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x50,
+                mk_prio(
+                    "AFMicroAdj",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_78.is_match(model) {
@@ -15318,13 +20976,25 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 18 => "Upper Far Left".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x16e, mk_prio("AFPointsUsed", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x16e,
+                mk_prio("AFPointsUsed", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_78.is_match(model) {
         if let Some(v) = i8_at(data, 0x17d) {
             dm.push(("AFMicroAdj".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x17d, mk_prio("AFMicroAdj", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x17d,
+                mk_prio(
+                    "AFMicroAdj",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if !MODEL_RE_78.is_match(model) {
@@ -15366,7 +21036,10 @@ fn afinfo(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 46 => "Party".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x17e, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x17e,
+                mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -15379,14 +21052,38 @@ fn tag940e(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if (MODEL_RE_79.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software())) {
         if let Some(v) = u8_at(data, 0x1a06) {
-            dm.push(("TiffMeteringImageWidth".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x1a06, mk_prio("TiffMeteringImageWidth", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            dm.push((
+                "TiffMeteringImageWidth".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
+            tags.push(at(
+                0x1a06,
+                mk_prio(
+                    "TiffMeteringImageWidth",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if (MODEL_RE_79.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software())) {
         if let Some(v) = u8_at(data, 0x1a07) {
-            dm.push(("TiffMeteringImageHeight".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x1a07, mk_prio("TiffMeteringImageHeight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            dm.push((
+                "TiffMeteringImageHeight".to_string(),
+                Conv::Num(f64::from(v)),
+            ));
+            tags.push(at(
+                0x1a07,
+                mk_prio(
+                    "TiffMeteringImageHeight",
+                    v.to_string(),
+                    Value::I32(v as i32),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if (MODEL_RE_79.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software())) {
@@ -15405,75 +21102,249 @@ fn afstatus15(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x0) {
         dm.push(("AFStatusUpper-left".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x0, mk_prio("AFStatusUpper-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio(
+                "AFStatusUpper-left",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("AFStatusLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2, mk_prio("AFStatusLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2,
+            mk_prio(
+                "AFStatusLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("AFStatusLower-left".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x4, mk_prio("AFStatusLower-left", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio(
+                "AFStatusLower-left",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6) {
         dm.push(("AFStatusFarLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x6, mk_prio("AFStatusFarLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6,
+            mk_prio(
+                "AFStatusFarLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x8) {
         dm.push(("AFStatusTopHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x8, mk_prio("AFStatusTopHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio(
+                "AFStatusTopHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa) {
         dm.push(("AFStatusNearRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xa, mk_prio("AFStatusNearRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa,
+            mk_prio(
+                "AFStatusNearRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xc) {
-        dm.push(("AFStatusCenterHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xc, mk_prio("AFStatusCenterHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusCenterHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0xc,
+            mk_prio(
+                "AFStatusCenterHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xe) {
         dm.push(("AFStatusNearLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xe, mk_prio("AFStatusNearLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xe,
+            mk_prio(
+                "AFStatusNearLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x10) {
-        dm.push(("AFStatusBottomHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x10, mk_prio("AFStatusBottomHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusBottomHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x10,
+            mk_prio(
+                "AFStatusBottomHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x12) {
         dm.push(("AFStatusTopVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x12, mk_prio("AFStatusTopVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x12,
+            mk_prio(
+                "AFStatusTopVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x14) {
-        dm.push(("AFStatusCenterVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x14, mk_prio("AFStatusCenterVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusCenterVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x14,
+            mk_prio(
+                "AFStatusCenterVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x16) {
-        dm.push(("AFStatusBottomVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x16, mk_prio("AFStatusBottomVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusBottomVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x16,
+            mk_prio(
+                "AFStatusBottomVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("AFStatusFarRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x18, mk_prio("AFStatusFarRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x18,
+            mk_prio(
+                "AFStatusFarRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1a) {
         dm.push(("AFStatusUpper-right".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1a, mk_prio("AFStatusUpper-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1a,
+            mk_prio(
+                "AFStatusUpper-right",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1c) {
         dm.push(("AFStatusRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1c, mk_prio("AFStatusRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1c,
+            mk_prio(
+                "AFStatusRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1e) {
         dm.push(("AFStatusLower-right".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1e, mk_prio("AFStatusLower-right", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1e,
+            mk_prio(
+                "AFStatusLower-right",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x20) {
         dm.push(("AFStatusUpper-middle".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x20, mk_prio("AFStatusUpper-middle", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x20,
+            mk_prio(
+                "AFStatusUpper-middle",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x22) {
         dm.push(("AFStatusLower-middle".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x22, mk_prio("AFStatusLower-middle", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x22,
+            mk_prio(
+                "AFStatusLower-middle",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     tags
 }
@@ -15486,123 +21357,447 @@ fn afstatus19(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x0) {
         dm.push(("AFStatusUpperFarLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x0, mk_prio("AFStatusUpperFarLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio(
+                "AFStatusUpperFarLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2) {
-        dm.push(("AFStatusUpper-leftHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2, mk_prio("AFStatusUpper-leftHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusUpper-leftHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x2,
+            mk_prio(
+                "AFStatusUpper-leftHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4) {
-        dm.push(("AFStatusFarLeftHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x4, mk_prio("AFStatusFarLeftHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusFarLeftHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x4,
+            mk_prio(
+                "AFStatusFarLeftHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6) {
-        dm.push(("AFStatusLeftHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x6, mk_prio("AFStatusLeftHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusLeftHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x6,
+            mk_prio(
+                "AFStatusLeftHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x8) {
         dm.push(("AFStatusLowerFarLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x8, mk_prio("AFStatusLowerFarLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio(
+                "AFStatusLowerFarLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa) {
-        dm.push(("AFStatusLower-leftHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xa, mk_prio("AFStatusLower-leftHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusLower-leftHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0xa,
+            mk_prio(
+                "AFStatusLower-leftHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xc) {
-        dm.push(("AFStatusUpper-leftVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xc, mk_prio("AFStatusUpper-leftVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusUpper-leftVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0xc,
+            mk_prio(
+                "AFStatusUpper-leftVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xe) {
         dm.push(("AFStatusLeftVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xe, mk_prio("AFStatusLeftVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xe,
+            mk_prio(
+                "AFStatusLeftVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x10) {
-        dm.push(("AFStatusLower-leftVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x10, mk_prio("AFStatusLower-leftVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusLower-leftVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x10,
+            mk_prio(
+                "AFStatusLower-leftVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x12) {
-        dm.push(("AFStatusFarLeftVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x12, mk_prio("AFStatusFarLeftVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusFarLeftVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x12,
+            mk_prio(
+                "AFStatusFarLeftVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x14) {
         dm.push(("AFStatusTopHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x14, mk_prio("AFStatusTopHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x14,
+            mk_prio(
+                "AFStatusTopHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x16) {
         dm.push(("AFStatusNearRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x16, mk_prio("AFStatusNearRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x16,
+            mk_prio(
+                "AFStatusNearRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x18) {
-        dm.push(("AFStatusCenterHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x18, mk_prio("AFStatusCenterHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusCenterHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x18,
+            mk_prio(
+                "AFStatusCenterHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1a) {
         dm.push(("AFStatusNearLeft".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1a, mk_prio("AFStatusNearLeft", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1a,
+            mk_prio(
+                "AFStatusNearLeft",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1c) {
-        dm.push(("AFStatusBottomHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1c, mk_prio("AFStatusBottomHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusBottomHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x1c,
+            mk_prio(
+                "AFStatusBottomHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1e) {
         dm.push(("AFStatusTopVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1e, mk_prio("AFStatusTopVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1e,
+            mk_prio(
+                "AFStatusTopVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x20) {
         dm.push(("AFStatusUpper-middle".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x20, mk_prio("AFStatusUpper-middle", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x20,
+            mk_prio(
+                "AFStatusUpper-middle",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x22) {
-        dm.push(("AFStatusCenterVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x22, mk_prio("AFStatusCenterVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusCenterVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x22,
+            mk_prio(
+                "AFStatusCenterVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24) {
         dm.push(("AFStatusLower-middle".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x24, mk_prio("AFStatusLower-middle", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24,
+            mk_prio(
+                "AFStatusLower-middle",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x26) {
-        dm.push(("AFStatusBottomVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x26, mk_prio("AFStatusBottomVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusBottomVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x26,
+            mk_prio(
+                "AFStatusBottomVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x28) {
         dm.push(("AFStatusUpperFarRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x28, mk_prio("AFStatusUpperFarRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x28,
+            mk_prio(
+                "AFStatusUpperFarRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2a) {
-        dm.push(("AFStatusUpper-rightHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2a, mk_prio("AFStatusUpper-rightHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusUpper-rightHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x2a,
+            mk_prio(
+                "AFStatusUpper-rightHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2c) {
-        dm.push(("AFStatusFarRightHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2c, mk_prio("AFStatusFarRightHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusFarRightHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x2c,
+            mk_prio(
+                "AFStatusFarRightHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2e) {
-        dm.push(("AFStatusRightHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2e, mk_prio("AFStatusRightHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusRightHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x2e,
+            mk_prio(
+                "AFStatusRightHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x30) {
         dm.push(("AFStatusLowerFarRight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x30, mk_prio("AFStatusLowerFarRight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x30,
+            mk_prio(
+                "AFStatusLowerFarRight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x32) {
-        dm.push(("AFStatusLower-rightHorizontal".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x32, mk_prio("AFStatusLower-rightHorizontal", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusLower-rightHorizontal".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x32,
+            mk_prio(
+                "AFStatusLower-rightHorizontal",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x34) {
-        dm.push(("AFStatusFarRightVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x34, mk_prio("AFStatusFarRightVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusFarRightVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x34,
+            mk_prio(
+                "AFStatusFarRightVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x36) {
-        dm.push(("AFStatusUpper-rightVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x36, mk_prio("AFStatusUpper-rightVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusUpper-rightVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x36,
+            mk_prio(
+                "AFStatusUpper-rightVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x38) {
         dm.push(("AFStatusRightVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x38, mk_prio("AFStatusRightVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x38,
+            mk_prio(
+                "AFStatusRightVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3a) {
-        dm.push(("AFStatusLower-rightVertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x3a, mk_prio("AFStatusLower-rightVertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatusLower-rightVertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x3a,
+            mk_prio(
+                "AFStatusLower-rightVertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     tags
 }
@@ -15615,383 +21810,1286 @@ fn afstatus79(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u8_at(data, 0x0) {
         dm.push(("AFStatus_00_B4".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x0, mk_prio("AFStatus_00_B4", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x0,
+            mk_prio(
+                "AFStatus_00_B4",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("AFStatus_01_C4".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2, mk_prio("AFStatus_01_C4", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2,
+            mk_prio(
+                "AFStatus_01_C4",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("AFStatus_02_D4".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x4, mk_prio("AFStatus_02_D4", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x4,
+            mk_prio(
+                "AFStatus_02_D4",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6) {
         dm.push(("AFStatus_03_E4".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x6, mk_prio("AFStatus_03_E4", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6,
+            mk_prio(
+                "AFStatus_03_E4",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x8) {
         dm.push(("AFStatus_04_F4".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x8, mk_prio("AFStatus_04_F4", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio(
+                "AFStatus_04_F4",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa) {
         dm.push(("AFStatus_05_G4".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xa, mk_prio("AFStatus_05_G4", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa,
+            mk_prio(
+                "AFStatus_05_G4",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xc) {
         dm.push(("AFStatus_06_H4".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xc, mk_prio("AFStatus_06_H4", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xc,
+            mk_prio(
+                "AFStatus_06_H4",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xe) {
         dm.push(("AFStatus_07_B3".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xe, mk_prio("AFStatus_07_B3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xe,
+            mk_prio(
+                "AFStatus_07_B3",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x10) {
         dm.push(("AFStatus_08_C3".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x10, mk_prio("AFStatus_08_C3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x10,
+            mk_prio(
+                "AFStatus_08_C3",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x12) {
         dm.push(("AFStatus_09_D3".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x12, mk_prio("AFStatus_09_D3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x12,
+            mk_prio(
+                "AFStatus_09_D3",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x14) {
         dm.push(("AFStatus_10_E3".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x14, mk_prio("AFStatus_10_E3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x14,
+            mk_prio(
+                "AFStatus_10_E3",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x16) {
         dm.push(("AFStatus_11_F3".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x16, mk_prio("AFStatus_11_F3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x16,
+            mk_prio(
+                "AFStatus_11_F3",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("AFStatus_12_G3".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x18, mk_prio("AFStatus_12_G3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x18,
+            mk_prio(
+                "AFStatus_12_G3",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1a) {
         dm.push(("AFStatus_13_H3".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1a, mk_prio("AFStatus_13_H3", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1a,
+            mk_prio(
+                "AFStatus_13_H3",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1c) {
         dm.push(("AFStatus_14_B2".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1c, mk_prio("AFStatus_14_B2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1c,
+            mk_prio(
+                "AFStatus_14_B2",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1e) {
         dm.push(("AFStatus_15_C2".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x1e, mk_prio("AFStatus_15_C2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1e,
+            mk_prio(
+                "AFStatus_15_C2",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x20) {
         dm.push(("AFStatus_16_D2".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x20, mk_prio("AFStatus_16_D2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x20,
+            mk_prio(
+                "AFStatus_16_D2",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x22) {
         dm.push(("AFStatus_17_E2".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x22, mk_prio("AFStatus_17_E2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x22,
+            mk_prio(
+                "AFStatus_17_E2",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x24) {
         dm.push(("AFStatus_18_F2".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x24, mk_prio("AFStatus_18_F2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x24,
+            mk_prio(
+                "AFStatus_18_F2",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x26) {
         dm.push(("AFStatus_19_G2".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x26, mk_prio("AFStatus_19_G2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x26,
+            mk_prio(
+                "AFStatus_19_G2",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x28) {
         dm.push(("AFStatus_20_H2".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x28, mk_prio("AFStatus_20_H2", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x28,
+            mk_prio(
+                "AFStatus_20_H2",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2a) {
         dm.push(("AFStatus_21_C1".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2a, mk_prio("AFStatus_21_C1", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2a,
+            mk_prio(
+                "AFStatus_21_C1",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2c) {
         dm.push(("AFStatus_22_D1".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2c, mk_prio("AFStatus_22_D1", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2c,
+            mk_prio(
+                "AFStatus_22_D1",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2e) {
         dm.push(("AFStatus_23_E1".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x2e, mk_prio("AFStatus_23_E1", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2e,
+            mk_prio(
+                "AFStatus_23_E1",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x30) {
         dm.push(("AFStatus_24_F1".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x30, mk_prio("AFStatus_24_F1", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x30,
+            mk_prio(
+                "AFStatus_24_F1",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x32) {
         dm.push(("AFStatus_25_G1".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x32, mk_prio("AFStatus_25_G1", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x32,
+            mk_prio(
+                "AFStatus_25_G1",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x34) {
-        dm.push(("AFStatus_26_A7_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x34, mk_prio("AFStatus_26_A7_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_26_A7_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x34,
+            mk_prio(
+                "AFStatus_26_A7_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x36) {
-        dm.push(("AFStatus_27_A6_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x36, mk_prio("AFStatus_27_A6_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_27_A6_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x36,
+            mk_prio(
+                "AFStatus_27_A6_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x38) {
-        dm.push(("AFStatus_28_A5_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x38, mk_prio("AFStatus_28_A5_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_28_A5_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x38,
+            mk_prio(
+                "AFStatus_28_A5_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3a) {
-        dm.push(("AFStatus_29_C7_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x3a, mk_prio("AFStatus_29_C7_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_29_C7_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x3a,
+            mk_prio(
+                "AFStatus_29_C7_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3c) {
-        dm.push(("AFStatus_30_C6_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x3c, mk_prio("AFStatus_30_C6_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_30_C6_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x3c,
+            mk_prio(
+                "AFStatus_30_C6_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x3e) {
-        dm.push(("AFStatus_31_C5_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x3e, mk_prio("AFStatus_31_C5_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_31_C5_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x3e,
+            mk_prio(
+                "AFStatus_31_C5_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x40) {
-        dm.push(("AFStatus_32_E7_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x40, mk_prio("AFStatus_32_E7_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_32_E7_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x40,
+            mk_prio(
+                "AFStatus_32_E7_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x42) {
-        dm.push(("AFStatus_33_E6_Center_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x42, mk_prio("AFStatus_33_E6_Center_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_33_E6_Center_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x42,
+            mk_prio(
+                "AFStatus_33_E6_Center_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x44) {
-        dm.push(("AFStatus_34_E5_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x44, mk_prio("AFStatus_34_E5_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_34_E5_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x44,
+            mk_prio(
+                "AFStatus_34_E5_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x46) {
-        dm.push(("AFStatus_35_G7_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x46, mk_prio("AFStatus_35_G7_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_35_G7_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x46,
+            mk_prio(
+                "AFStatus_35_G7_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x48) {
-        dm.push(("AFStatus_36_G6_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x48, mk_prio("AFStatus_36_G6_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_36_G6_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x48,
+            mk_prio(
+                "AFStatus_36_G6_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4a) {
-        dm.push(("AFStatus_37_G5_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x4a, mk_prio("AFStatus_37_G5_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_37_G5_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x4a,
+            mk_prio(
+                "AFStatus_37_G5_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4c) {
-        dm.push(("AFStatus_38_I7_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x4c, mk_prio("AFStatus_38_I7_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_38_I7_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x4c,
+            mk_prio(
+                "AFStatus_38_I7_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x4e) {
-        dm.push(("AFStatus_39_I6_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x4e, mk_prio("AFStatus_39_I6_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_39_I6_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x4e,
+            mk_prio(
+                "AFStatus_39_I6_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x50) {
-        dm.push(("AFStatus_40_I5_Vertical".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x50, mk_prio("AFStatus_40_I5_Vertical", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_40_I5_Vertical".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0x50,
+            mk_prio(
+                "AFStatus_40_I5_Vertical",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x52) {
         dm.push(("AFStatus_41_A7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x52, mk_prio("AFStatus_41_A7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x52,
+            mk_prio(
+                "AFStatus_41_A7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x54) {
         dm.push(("AFStatus_42_B7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x54, mk_prio("AFStatus_42_B7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x54,
+            mk_prio(
+                "AFStatus_42_B7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x56) {
         dm.push(("AFStatus_43_C7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x56, mk_prio("AFStatus_43_C7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x56,
+            mk_prio(
+                "AFStatus_43_C7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x58) {
         dm.push(("AFStatus_44_D7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x58, mk_prio("AFStatus_44_D7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x58,
+            mk_prio(
+                "AFStatus_44_D7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x5a) {
         dm.push(("AFStatus_45_E7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x5a, mk_prio("AFStatus_45_E7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x5a,
+            mk_prio(
+                "AFStatus_45_E7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x5c) {
         dm.push(("AFStatus_46_F7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x5c, mk_prio("AFStatus_46_F7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x5c,
+            mk_prio(
+                "AFStatus_46_F7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x5e) {
         dm.push(("AFStatus_47_G7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x5e, mk_prio("AFStatus_47_G7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x5e,
+            mk_prio(
+                "AFStatus_47_G7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x60) {
         dm.push(("AFStatus_48_H7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x60, mk_prio("AFStatus_48_H7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x60,
+            mk_prio(
+                "AFStatus_48_H7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x62) {
         dm.push(("AFStatus_49_I7".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x62, mk_prio("AFStatus_49_I7", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x62,
+            mk_prio(
+                "AFStatus_49_I7",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x64) {
         dm.push(("AFStatus_50_A6".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x64, mk_prio("AFStatus_50_A6", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x64,
+            mk_prio(
+                "AFStatus_50_A6",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x66) {
         dm.push(("AFStatus_51_B6".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x66, mk_prio("AFStatus_51_B6", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x66,
+            mk_prio(
+                "AFStatus_51_B6",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x68) {
         dm.push(("AFStatus_52_C6".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x68, mk_prio("AFStatus_52_C6", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x68,
+            mk_prio(
+                "AFStatus_52_C6",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6a) {
         dm.push(("AFStatus_53_D6".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x6a, mk_prio("AFStatus_53_D6", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6a,
+            mk_prio(
+                "AFStatus_53_D6",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6c) {
         dm.push(("AFStatus_54_E6_Center".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x6c, mk_prio("AFStatus_54_E6_Center", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6c,
+            mk_prio(
+                "AFStatus_54_E6_Center",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x6e) {
         dm.push(("AFStatus_55_F6".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x6e, mk_prio("AFStatus_55_F6", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x6e,
+            mk_prio(
+                "AFStatus_55_F6",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x70) {
         dm.push(("AFStatus_56_G6".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x70, mk_prio("AFStatus_56_G6", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x70,
+            mk_prio(
+                "AFStatus_56_G6",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x72) {
         dm.push(("AFStatus_57_H6".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x72, mk_prio("AFStatus_57_H6", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x72,
+            mk_prio(
+                "AFStatus_57_H6",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x74) {
         dm.push(("AFStatus_58_I6".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x74, mk_prio("AFStatus_58_I6", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x74,
+            mk_prio(
+                "AFStatus_58_I6",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x76) {
         dm.push(("AFStatus_59_A5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x76, mk_prio("AFStatus_59_A5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x76,
+            mk_prio(
+                "AFStatus_59_A5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x78) {
         dm.push(("AFStatus_60_B5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x78, mk_prio("AFStatus_60_B5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x78,
+            mk_prio(
+                "AFStatus_60_B5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x7a) {
         dm.push(("AFStatus_61_C5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x7a, mk_prio("AFStatus_61_C5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x7a,
+            mk_prio(
+                "AFStatus_61_C5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x7c) {
         dm.push(("AFStatus_62_D5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x7c, mk_prio("AFStatus_62_D5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x7c,
+            mk_prio(
+                "AFStatus_62_D5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x7e) {
         dm.push(("AFStatus_63_E5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x7e, mk_prio("AFStatus_63_E5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x7e,
+            mk_prio(
+                "AFStatus_63_E5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x80) {
         dm.push(("AFStatus_64_F5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x80, mk_prio("AFStatus_64_F5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x80,
+            mk_prio(
+                "AFStatus_64_F5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x82) {
         dm.push(("AFStatus_65_G5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x82, mk_prio("AFStatus_65_G5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x82,
+            mk_prio(
+                "AFStatus_65_G5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x84) {
         dm.push(("AFStatus_66_H5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x84, mk_prio("AFStatus_66_H5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x84,
+            mk_prio(
+                "AFStatus_66_H5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x86) {
         dm.push(("AFStatus_67_I5".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x86, mk_prio("AFStatus_67_I5", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x86,
+            mk_prio(
+                "AFStatus_67_I5",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x88) {
         dm.push(("AFStatus_68_C11".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x88, mk_prio("AFStatus_68_C11", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x88,
+            mk_prio(
+                "AFStatus_68_C11",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x8a) {
         dm.push(("AFStatus_69_D11".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x8a, mk_prio("AFStatus_69_D11", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8a,
+            mk_prio(
+                "AFStatus_69_D11",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x8c) {
         dm.push(("AFStatus_70_E11".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x8c, mk_prio("AFStatus_70_E11", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8c,
+            mk_prio(
+                "AFStatus_70_E11",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x8e) {
         dm.push(("AFStatus_71_F11".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x8e, mk_prio("AFStatus_71_F11", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8e,
+            mk_prio(
+                "AFStatus_71_F11",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x90) {
         dm.push(("AFStatus_72_G11".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x90, mk_prio("AFStatus_72_G11", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x90,
+            mk_prio(
+                "AFStatus_72_G11",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x92) {
         dm.push(("AFStatus_73_B10".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x92, mk_prio("AFStatus_73_B10", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x92,
+            mk_prio(
+                "AFStatus_73_B10",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x94) {
         dm.push(("AFStatus_74_C10".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x94, mk_prio("AFStatus_74_C10", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x94,
+            mk_prio(
+                "AFStatus_74_C10",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x96) {
         dm.push(("AFStatus_75_D10".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x96, mk_prio("AFStatus_75_D10", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x96,
+            mk_prio(
+                "AFStatus_75_D10",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x98) {
         dm.push(("AFStatus_76_E10".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x98, mk_prio("AFStatus_76_E10", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x98,
+            mk_prio(
+                "AFStatus_76_E10",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x9a) {
         dm.push(("AFStatus_77_F10".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x9a, mk_prio("AFStatus_77_F10", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x9a,
+            mk_prio(
+                "AFStatus_77_F10",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x9c) {
         dm.push(("AFStatus_78_G10".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x9c, mk_prio("AFStatus_78_G10", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x9c,
+            mk_prio(
+                "AFStatus_78_G10",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x9e) {
         dm.push(("AFStatus_79_H10".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x9e, mk_prio("AFStatus_79_H10", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x9e,
+            mk_prio(
+                "AFStatus_79_H10",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa0) {
         dm.push(("AFStatus_80_B9".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xa0, mk_prio("AFStatus_80_B9", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa0,
+            mk_prio(
+                "AFStatus_80_B9",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa2) {
         dm.push(("AFStatus_81_C9".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xa2, mk_prio("AFStatus_81_C9", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa2,
+            mk_prio(
+                "AFStatus_81_C9",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa4) {
         dm.push(("AFStatus_82_D9".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xa4, mk_prio("AFStatus_82_D9", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa4,
+            mk_prio(
+                "AFStatus_82_D9",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa6) {
         dm.push(("AFStatus_83_E9".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xa6, mk_prio("AFStatus_83_E9", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa6,
+            mk_prio(
+                "AFStatus_83_E9",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xa8) {
         dm.push(("AFStatus_84_F9".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xa8, mk_prio("AFStatus_84_F9", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xa8,
+            mk_prio(
+                "AFStatus_84_F9",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xaa) {
         dm.push(("AFStatus_85_G9".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xaa, mk_prio("AFStatus_85_G9", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xaa,
+            mk_prio(
+                "AFStatus_85_G9",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xac) {
         dm.push(("AFStatus_86_H9".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xac, mk_prio("AFStatus_86_H9", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xac,
+            mk_prio(
+                "AFStatus_86_H9",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xae) {
         dm.push(("AFStatus_87_B8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xae, mk_prio("AFStatus_87_B8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xae,
+            mk_prio(
+                "AFStatus_87_B8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xb0) {
         dm.push(("AFStatus_88_C8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xb0, mk_prio("AFStatus_88_C8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xb0,
+            mk_prio(
+                "AFStatus_88_C8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xb2) {
         dm.push(("AFStatus_89_D8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xb2, mk_prio("AFStatus_89_D8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xb2,
+            mk_prio(
+                "AFStatus_89_D8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xb4) {
         dm.push(("AFStatus_90_E8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xb4, mk_prio("AFStatus_90_E8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xb4,
+            mk_prio(
+                "AFStatus_90_E8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xb6) {
         dm.push(("AFStatus_91_F8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xb6, mk_prio("AFStatus_91_F8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xb6,
+            mk_prio(
+                "AFStatus_91_F8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xb8) {
         dm.push(("AFStatus_92_G8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xb8, mk_prio("AFStatus_92_G8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xb8,
+            mk_prio(
+                "AFStatus_92_G8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xba) {
         dm.push(("AFStatus_93_H8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xba, mk_prio("AFStatus_93_H8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xba,
+            mk_prio(
+                "AFStatus_93_H8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0xbc) {
-        dm.push(("AFStatus_94_E6_Center_F2-8".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xbc, mk_prio("AFStatus_94_E6_Center_F2-8", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        dm.push((
+            "AFStatus_94_E6_Center_F2-8".to_string(),
+            Conv::Num(f64::from(v)),
+        ));
+        tags.push(at(
+            0xbc,
+            mk_prio(
+                "AFStatus_94_E6_Center_F2-8",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     tags
 }
@@ -16009,63 +23107,113 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%3d\",$val)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("sprintf(\"%3d\",$val)", &cv) {
+                cv = x;
+            }
             let _ = &cv;
         }
     }
     if let Some(v) = u16_at(data, 0x4) {
         dm.push(("SonyISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("100 * 2**(16 - $val/256)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("sprintf(\"%.0f\",$val)", &cv) {
+            cv = x;
+        }
         tags.push(at(0x4, mk_prio("SonyISO", cv.as_string(), raw, GRP2, PRIO)));
     }
     if let Some(v) = u16_at(data, 0x6) {
         dm.push(("StopsAboveBaseISO".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("16 - $val/256", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) { cv = x; }
-        tags.push(at(0x6, mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("$val ? sprintf(\"%.1f\",$val) : $val", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x6,
+            mk_prio("StopsAboveBaseISO", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0xa) {
         dm.push(("SonyExposureTime2".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val ? 2 ** (16 - $val/256) : 0", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0xa, mk_prio("SonyExposureTime2", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0xa,
+            mk_prio("SonyExposureTime2", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = rat32u_at(data, 0xc) {
         dm.push(("ExposureTime".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv) { cv = x; }
-        tags.push(at(0xc, mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval(
+            "$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"",
+            &cv,
+        ) {
+            cv = x;
+        }
+        tags.push(at(
+            0xc,
+            mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x10) {
         dm.push(("SonyFNumber2".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x10, mk_prio("SonyFNumber2", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x10,
+            mk_prio("SonyFNumber2", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x12) {
         dm.push(("SonyMaxApertureValue".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("2 ** (($val/256 - 16) / 2)", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) { cv = x; }
-        tags.push(at(0x12, mk_prio("SonyMaxApertureValue", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x12,
+            mk_prio("SonyMaxApertureValue", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u32_at(data, 0x1d) {
         dm.push(("SequenceImageNumber".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val + 1", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val + 1", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        tags.push(at(0x1d, mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO)));
+        tags.push(at(
+            0x1d,
+            mk_prio("SequenceImageNumber", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x2b) {
         dm.push(("ReleaseMode2".to_string(), Conv::Num(f64::from(v))));
@@ -16095,7 +23243,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             146 => "Single Frame - Movie Capture".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x2b, mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x2b,
+            mk_prio("ReleaseMode2", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x35) {
         dm.push(("ExposureProgram".to_string(), Conv::Num(f64::from(v))));
@@ -16135,7 +23286,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             46 => "Party".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x35, mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x35,
+            mk_prio("ExposureProgram", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x37) {
         dm.push(("CreativeStyle".to_string(), Conv::Num(f64::from(v))));
@@ -16162,7 +23316,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             255 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x37, mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x37,
+            mk_prio("CreativeStyle", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if !MODEL_RE_80.is_match(model) {
         if let Some(v) = u8_at(data, 0x48) {
@@ -16174,7 +23331,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 3 => "A-mount (3)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x48, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x48,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if !MODEL_RE_80.is_match(model) {
@@ -16186,12 +23346,18 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "Full-frame".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x49, mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x49,
+                mk_prio("LensFormat", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x4a) {
         dm.push(("LensMount".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("$$self{LensMount} = $val; $$self{Model} =~ /^(DSC-)/ ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "$$self{LensMount} = $val; $$self{Model} =~ /^(DSC-)/ ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
@@ -16201,7 +23367,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 2 => "E-mount".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x4a, mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x4a,
+                mk_prio("LensMount", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 2.0) {
@@ -16495,13 +23664,19 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 61789 => "Viltrox 35mm F1.8 II FE EVO".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x4b, mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x4b,
+                mk_prio("LensType2", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if dm_get(&dm, "LensMount").is_some_and(|v| v == 1.0) {
         if let Some(v) = u16_at(data, 0x4d) {
             dm.push(("LensType".to_string(), Conv::Num(f64::from(v))));
-            tags.push(at(0x4d, mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x4d,
+                mk_prio("LensType", v.to_string(), Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16509,12 +23684,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..16 {
             match i16_at(data, 0x4f + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x4f, mk_prio("DistortionCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x4f,
+                mk_prio(
+                    "DistortionCorrParams",
+                    s.clone(),
+                    Value::String(s),
+                    GRP2,
+                    PRIO,
+                ),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x70) {
@@ -16549,23 +23736,40 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             49 => "FL3".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x70, mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x70,
+            mk_prio("PictureProfile", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x71) {
         dm.push(("FocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x71, mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x71,
+            mk_prio("FocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x73) {
         dm.push(("MinFocalLength".to_string(), Conv::Num(f64::from(v))));
         let mut cv = Conv::Num(f64::from(v));
-        if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+        if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+            cv = x;
+        }
         let raw = Value::F64(cv.as_num());
-        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-        tags.push(at(0x73, mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+        if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+            cv = x;
+        }
+        tags.push(at(
+            0x73,
+            mk_prio("MinFocalLength", cv.as_string(), raw, GRP2, PRIO),
+        ));
     }
     if let Some(v) = u16_at(data, 0x75) {
         dm.push(("MaxFocalLength".to_string(), Conv::Num(f64::from(v))));
@@ -16574,10 +23778,17 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 10", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 10", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x75, mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x75,
+                mk_prio("MaxFocalLength", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_81.is_match(model) {
@@ -16586,12 +23797,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x702 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x702, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x702,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16601,12 +23824,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x708 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x708, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x708,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16618,7 +23853,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x74a, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x74a,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_84.is_match(model) {
@@ -16629,7 +23867,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x74f, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x74f,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_83.is_match(model) {
@@ -16638,12 +23879,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x83b + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x83b, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x83b,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16653,12 +23906,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x843 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x843, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x843,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16668,12 +23933,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x88f + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x88f, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x88f,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16683,12 +23960,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..16 {
                 match i16_at(data, 0x891 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x891, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x891,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16698,12 +23987,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x89d + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x89d, mk_prio("VignettingCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x89d,
+                    mk_prio(
+                        "VignettingCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16715,7 +24016,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x8b5, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x8b5,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_86.is_match(model) {
@@ -16726,7 +24030,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x8b7, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x8b7,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_88.is_match(model) {
@@ -16737,7 +24044,10 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
                 1 => "On".to_string(),
                 other => other.to_string(),
             };
-            tags.push(at(0x8e5, mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO)));
+            tags.push(at(
+                0x8e5,
+                mk_prio("APS-CSizeCapture", s, Value::I32(v as i32), GRP2, PRIO),
+            ));
         }
     }
     if MODEL_RE_85.is_match(model) {
@@ -16746,12 +24056,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x914 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x914, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x914,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16761,12 +24083,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x916 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x916, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x916,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16776,12 +24110,24 @@ fn tag9416(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             for k in 0..32 {
                 match i16_at(data, 0x945 + k * 2) {
                     Some(x) => parts.push(x.to_string()),
-                    None => { parts.clear(); break }
+                    None => {
+                        parts.clear();
+                        break;
+                    }
                 }
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(at(0x945, mk_prio("ChromaticAberrationCorrParams", s.clone(), Value::String(s), GRP2, PRIO)));
+                tags.push(at(
+                    0x945,
+                    mk_prio(
+                        "ChromaticAberrationCorrParams",
+                        s.clone(),
+                        Value::String(s),
+                        GRP2,
+                        PRIO,
+                    ),
+                ));
             }
         }
     }
@@ -16799,12 +24145,18 @@ fn faceinfo1(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x0 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x0, mk_prio("Face1Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x0,
+                mk_prio("Face1Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16812,12 +24164,18 @@ fn faceinfo1(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x20 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x20, mk_prio("Face2Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x20,
+                mk_prio("Face2Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16825,12 +24183,18 @@ fn faceinfo1(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x40 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x40, mk_prio("Face3Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x40,
+                mk_prio("Face3Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16838,12 +24202,18 @@ fn faceinfo1(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x60 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x60, mk_prio("Face4Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x60,
+                mk_prio("Face4Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16851,12 +24221,18 @@ fn faceinfo1(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x80 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x80, mk_prio("Face5Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x80,
+                mk_prio("Face5Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16864,12 +24240,18 @@ fn faceinfo1(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0xa0 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0xa0, mk_prio("Face6Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0xa0,
+                mk_prio("Face6Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16877,12 +24259,18 @@ fn faceinfo1(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0xc0 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0xc0, mk_prio("Face7Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0xc0,
+                mk_prio("Face7Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16890,12 +24278,18 @@ fn faceinfo1(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0xe0 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0xe0, mk_prio("Face8Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0xe0,
+                mk_prio("Face8Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -16912,12 +24306,18 @@ fn faceinfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x0 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x0, mk_prio("Face1Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x0,
+                mk_prio("Face1Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16925,12 +24325,18 @@ fn faceinfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x25 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x25, mk_prio("Face2Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x25,
+                mk_prio("Face2Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16938,12 +24344,18 @@ fn faceinfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x4a + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x4a, mk_prio("Face3Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x4a,
+                mk_prio("Face3Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16951,12 +24363,18 @@ fn faceinfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x6f + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x6f, mk_prio("Face4Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x6f,
+                mk_prio("Face4Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16964,12 +24382,18 @@ fn faceinfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x94 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x94, mk_prio("Face5Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x94,
+                mk_prio("Face5Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16977,12 +24401,18 @@ fn faceinfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0xb9 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0xb9, mk_prio("Face6Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0xb9,
+                mk_prio("Face6Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -16990,12 +24420,18 @@ fn faceinfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0xde + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0xde, mk_prio("Face7Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0xde,
+                mk_prio("Face7Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     {
@@ -17003,12 +24439,18 @@ fn faceinfo2(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..4 {
             match u16_at(data, 0x103 + k * 2) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x103, mk_prio("Face8Position", s.clone(), Value::String(s), GRP2, PRIO)));
+            tags.push(at(
+                0x103,
+                mk_prio("Face8Position", s.clone(), Value::String(s), GRP2, PRIO),
+            ));
         }
     }
     tags
@@ -17027,7 +24469,10 @@ fn panorama(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Right or Down".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x3, mk_prio("PanoramaDirection", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x3,
+            mk_prio("PanoramaDirection", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     tags
 }
@@ -17040,19 +24485,55 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let _ = &dm;
     if let Some(v) = u32_at(data, 0x8) {
         dm.push(("JpgFromRawStart".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x8, mk_prio("JpgFromRawStart", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x8,
+            mk_prio(
+                "JpgFromRawStart",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u32_at(data, 0xc) {
         dm.push(("JpgFromRawLength".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0xc, mk_prio("JpgFromRawLength", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0xc,
+            mk_prio(
+                "JpgFromRawLength",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x16) {
         dm.push(("SonyImageWidth".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x16, mk_prio("SonyImageWidth", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x16,
+            mk_prio(
+                "SonyImageWidth",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u16_at(data, 0x18) {
         dm.push(("SonyImageHeight".to_string(), Conv::Num(f64::from(v))));
-        tags.push(at(0x18, mk_prio("SonyImageHeight", v.to_string(), Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x18,
+            mk_prio(
+                "SonyImageHeight",
+                v.to_string(),
+                Value::I32(v as i32),
+                GRP2,
+                PRIO,
+            ),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("Orientation".to_string(), Conv::Num(f64::from(v))));
@@ -17063,7 +24544,10 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             3 => "Rotate 90 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1b, mk_prio("Orientation", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1b,
+            mk_prio("Orientation", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(v) = u8_at(data, 0x1d) {
         dm.push(("ImageQuality".to_string(), Conv::Num(f64::from(v))));
@@ -17073,7 +24557,10 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             51 => "Fine".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x1d, mk_prio("ImageQuality", s, Value::I32(v as i32), GRP2, PRIO)));
+        tags.push(at(
+            0x1d,
+            mk_prio("ImageQuality", s, Value::I32(v as i32), GRP2, PRIO),
+        ));
     }
     if let Some(text) = text_at(data, 0x34, 19, true) {
         tags.push(at(0x34, text_tag("Comment", GRP2, text, PRIO)));
@@ -17083,12 +24570,24 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..6 {
             match u8_at(data, 0x4c + k * 1) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x4c, mk_prio("DateTimeOriginal", s.clone(), Value::String(s), "Time", PRIO)));
+            tags.push(at(
+                0x4c,
+                mk_prio(
+                    "DateTimeOriginal",
+                    s.clone(),
+                    Value::String(s),
+                    "Time",
+                    PRIO,
+                ),
+            ));
         }
     }
     {
@@ -17096,12 +24595,18 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         for k in 0..6 {
             match u8_at(data, 0x54 + k * 1) {
                 Some(x) => parts.push(x.to_string()),
-                None => { parts.clear(); break }
+                None => {
+                    parts.clear();
+                    break;
+                }
             }
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(at(0x54, mk_prio("ModifyDate", s.clone(), Value::String(s), "Time", PRIO)));
+            tags.push(at(
+                0x54,
+                mk_prio("ModifyDate", s.clone(), Value::String(s), "Time", PRIO),
+            ));
         }
     }
     if let Some(v) = i16_at(data, 0x66) {
@@ -17111,10 +24616,18 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("2 ** (-$val / 100)", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("2 ** (-$val / 100)", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintExposureTime($val)", &cv) { cv = x; }
-            tags.push(at(0x66, mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO)));
+            if let Some(x) = conv_expr::eval("Image::ExifTool::Exif::PrintExposureTime($val)", &cv)
+            {
+                cv = x;
+            }
+            tags.push(at(
+                0x66,
+                mk_prio("ExposureTime", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = i16_at(data, 0x6a) {
@@ -17124,21 +24637,34 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 100", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 100", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            tags.push(at(0x6a, mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO)));
+            tags.push(at(
+                0x6a,
+                mk_prio("FNumber", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = i16_at(data, 0x6c) {
         dm.push(("ExposureCompensation".to_string(), Conv::Num(f64::from(v))));
-        let rc = conv_expr::eval("($val == -1 or $val == -32768) ? undef : $val", &Conv::Num(f64::from(v)));
+        let rc = conv_expr::eval(
+            "($val == -1 or $val == -32768) ? undef : $val",
+            &Conv::Num(f64::from(v)),
+        );
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 100", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 100", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            tags.push(at(0x6c, mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO)));
+            tags.push(at(
+                0x6c,
+                mk_prio("ExposureCompensation", cv.as_string(), raw, GRP2, PRIO),
+            ));
         }
     }
     if let Some(v) = i16_at(data, 0x70) {
@@ -17148,10 +24674,17 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
             let mut cv = Conv::Num(f64::from(v));
-            if let Some(x) = conv_expr::eval("$val / 100", &cv) { cv = x; }
+            if let Some(x) = conv_expr::eval("$val / 100", &cv) {
+                cv = x;
+            }
             let raw = Value::F64(cv.as_num());
-            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) { cv = x; }
-            tags.push(at(0x70, mk_prio("FocalLength", cv.as_string(), raw, "Camera", PRIO)));
+            if let Some(x) = conv_expr::eval("sprintf(\"%.1f mm\",$val)", &cv) {
+                cv = x;
+            }
+            tags.push(at(
+                0x70,
+                mk_prio("FocalLength", cv.as_string(), raw, "Camera", PRIO),
+            ));
         }
     }
     if let Some(v) = u8_at(data, 0x76) {
@@ -17161,7 +24694,10 @@ fn pmp(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
             1 => "Fired".to_string(),
             other => other.to_string(),
         };
-        tags.push(at(0x76, mk_prio("Flash", s, Value::I32(v as i32), "Camera", PRIO)));
+        tags.push(at(
+            0x76,
+            mk_prio("Flash", s, Value::I32(v as i32), "Camera", PRIO),
+        ));
     }
     tags
 }

@@ -18,7 +18,6 @@ pub fn canon_ev(val: i32) -> f64 {
     sign * (int_part as f64 + frac_val) / 0x20 as f64
 }
 
-
 /// Canon.pm:1119 `%pictureStyles` (used with the PrintHex flag).
 pub fn canon_picture_style(val: u32) -> Option<&'static str> {
     Some(match val {
@@ -553,7 +552,6 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
     }
     tags
 }
-
 
 pub fn decode_focal_length(values: &[u16], model: &str, focal_units: u16) -> Vec<Tag> {
     let mut tags = Vec::new();

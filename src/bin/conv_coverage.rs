@@ -93,10 +93,12 @@ fn perl_verdict(expr: &str) -> Option<Option<String>> {
         // ExifTool evaluates these inside a module that runs under `strict`,
         // and the eval inherits it -- so an undeclared variable is a compile
         // error there just as it is here.
-        .arg("use strict; use warnings; my ($val, $self, $tag) = (42, undef, 'T'); \
+        .arg(
+            "use strict; use warnings; my ($val, $self, $tag) = (42, undef, 'T'); \
               my (@val, @prt, @raw) = ((1,2), (1,2), (1,2)); \
               eval $ARGV[0]; \
-              print $@ if $@ and $@ =~ /syntax error|not terminated|requires explicit package/")
+              print $@ if $@ and $@ =~ /syntax error|not terminated|requires explicit package/",
+        )
         .arg(expr)
         .output()
         .ok()?;
@@ -126,7 +128,9 @@ fn collect(lib: &PathBuf) -> (Vec<(usize, String)>, HashMap<String, Vec<String>>
         if p.extension().is_none_or(|x| x != "pm") {
             continue;
         }
-        let Ok(text) = std::fs::read_to_string(&p) else { continue };
+        let Ok(text) = std::fs::read_to_string(&p) else {
+            continue;
+        };
         // Scanned over the whole file rather than line by line: a good number
         // of these expressions run to three or four lines, and cutting them at
         // the newline counted a fragment nothing could evaluate.
@@ -184,7 +188,8 @@ fn collect(lib: &PathBuf) -> (Vec<(usize, String)>, HashMap<String, Vec<String>>
             let line = 1 + b[..start].iter().filter(|c| **c == '\n').count();
             sites.entry(body.clone()).or_default().push(format!(
                 "{}:{line}",
-                p.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+                p.file_name()
+                    .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
             ));
             *counts.entry(body).or_default() += 1;
         }
@@ -200,10 +205,10 @@ fn main() {
     // conversion this evaluator has stopped understanding.
     let args: Vec<String> = std::env::args().skip(1).collect();
     let check = args.iter().any(|a| a == "--check");
-    let lib = args
-        .iter()
-        .find(|a| !a.starts_with("--"))
-        .map_or_else(|| PathBuf::from("/home/sylvain/dev/exiftool/lib"), PathBuf::from);
+    let lib = args.iter().find(|a| !a.starts_with("--")).map_or_else(
+        || PathBuf::from("/home/sylvain/dev/exiftool/lib"),
+        PathBuf::from,
+    );
 
     let (exprs, sites) = collect(&lib);
     let (mut ok_d, mut ok_o, mut no_d, mut no_o) = (0usize, 0usize, 0usize, 0usize);
@@ -216,8 +221,9 @@ fn main() {
         // printed forms, and says so by reading `@val`, `$val[0]` or `$prt[0]`;
         // everything else gets a number, which exercises the arithmetic
         // without dividing by zero.
-        let composite =
-            ["$val[", "@val", "$prt[", "@prt", "$raw[", "@raw"].iter().any(|m| e.contains(m));
+        let composite = ["$val[", "@val", "$prt[", "@prt", "$raw[", "@raw"]
+            .iter()
+            .any(|m| e.contains(m));
         // A Composite tag can be built from a dozen parts; a short list would
         // make one of these read past the end and refuse for the wrong reason.
         let parts: Vec<Val> = (1..=12).map(|k| Val::Num(f64::from(k))).collect();
@@ -266,7 +272,10 @@ fn main() {
     let total_o = ok_o + no_o;
     let total_d = ok_d + no_d;
     println!("COUNTER ONE — conversion expressions understood by tags::conv_expr");
-    println!("  occurrences : {ok_o} / {total_o}  ({}%)", 100 * ok_o / total_o.max(1));
+    println!(
+        "  occurrences : {ok_o} / {total_o}  ({}%)",
+        100 * ok_o / total_o.max(1)
+    );
     println!("  distinct    : {ok_d} / {total_d}");
     // The count that can reach 100%: an expression Perl itself cannot compile
     // is one ExifTool prints the raw value for, and no evaluator can do more.
@@ -313,7 +322,9 @@ fn main() {
     if check {
         println!();
         if ok_o == total_o && ok_d == total_d {
-            println!("COUNTER ONE OK — {ok_o} / {total_o} occurrences, {ok_d} / {total_d} distinct.");
+            println!(
+                "COUNTER ONE OK — {ok_o} / {total_o} occurrences, {ok_d} / {total_d} distinct."
+            );
         } else {
             println!(
                 "COUNTER ONE FAILED — {ok_o} / {total_o} occurrences, {ok_d} / {total_d} distinct; \

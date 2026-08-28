@@ -148,8 +148,12 @@ print <<'BITHEAD';
 /// ExifTool runs DecodeBits over the value with these: each word contributes
 /// its own bits, numbered from the word's start, and a value with no bit set
 /// prints the table's entry for 0.
+///
+/// The width in bits, the name of the whole set, and the name of each bit.
+pub type Bitmask = (usize, &'static str, &'static [(u32, &'static str)]);
+
 #[must_use]
-pub fn bitmask(maker: &str, tag: u16) -> Option<(usize, &'static str, &'static [(u32, &'static str)])> {
+pub fn bitmask(maker: &str, tag: u16) -> Option<Bitmask> {
     Some(match (maker, tag) {
 BITHEAD
 {

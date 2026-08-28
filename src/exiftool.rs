@@ -1147,9 +1147,7 @@ impl ExifTool {
         // in IFD0 is a thumbnail offset in a JPEG and a preview offset in an ARW --
         // so it has to be in place before anything is parsed, not after.
         let file_type_result = self.detect_file_type(data, path);
-        crate::metadata::exif::set_tiff_type(
-            file_type_result.as_ref().map_or("", |ft| ft.code()),
-        );
+        crate::metadata::exif::set_tiff_type(file_type_result.as_ref().map_or("", |ft| ft.code()));
         let (file_type, mut tags) = match file_type_result {
             Ok(ft) => {
                 let t = self

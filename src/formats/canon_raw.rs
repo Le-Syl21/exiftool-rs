@@ -665,7 +665,7 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
                 }
                 // AFPointsInFocus: ceil(N/16) int16s
                 let focus_start = ypos_end;
-                let focus_count = (num_points + 15) / 16;
+                let focus_count = num_points.div_ceil(16);
                 if data.len() >= focus_start + focus_count * 2 && focus_count > 0 {
                     // Decode bitmask
                     let bits: u64 = (0..focus_count).fold(0u64, |acc, i| {

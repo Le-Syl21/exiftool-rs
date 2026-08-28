@@ -642,7 +642,11 @@ impl ExifReader {
                     let key = (
                         t.name.as_str(),
                         if by_id { Some(&t.id) } else { None },
-                        if by_id { Some(t.group.family1.as_str()) } else { None },
+                        if by_id {
+                            Some(t.group.family1.as_str())
+                        } else {
+                            None
+                        },
                     );
                     match winner.get(&key).copied() {
                         None => {
@@ -1036,8 +1040,8 @@ impl ExifReader {
                 0x4748 => {
                     // StitchInfo, a binary block Microsoft writes in IFD0
                     // (Exif.pm:1534-1540), little-endian whatever the file is.
-                    let total = type_size(entry.data_type)
-                        .map_or(0, |sz| sz * entry.count as usize);
+                    let total =
+                        type_size(entry.data_type).map_or(0, |sz| sz * entry.count as usize);
                     let block: Option<&[u8]> = if total <= 4 {
                         Some(&entry.inline_data[..total.min(4)])
                     } else {

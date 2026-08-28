@@ -201,10 +201,7 @@ pub static ID3_GENRE: &[(i64, &str)] = &[
 ];
 
 /// The entries of `%genre` whose key is a word, not a number.
-pub static ID3_GENRE_NAMED: &[(&str, &str)] = &[
-    ("CR", "Cover"),
-    ("RX", "Remix"),
-];
+pub static ID3_GENRE_NAMED: &[(&str, &str)] = &[("CR", "Cover"), ("RX", "Remix")];
 
 /// `%minoltaWhiteBalance` from Minolta.pm, as ExifTool defines it.
 pub static MINOLTA_WHITE_BAL: &[(i64, &str)] = &[

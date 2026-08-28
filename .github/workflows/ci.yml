@@ -55,11 +55,14 @@ jobs:
       - name: Check formatting
         run: cargo fmt --check
 
+      # --all-targets so the tests are linted too: without it the gate covered
+      # the library and the binaries only, and a lint error sitting in a test
+      # stayed invisible until someone ran clippy differently.
       - name: Clippy (CLI)
-        run: cargo clippy --release -- -D warnings
+        run: cargo clippy --release --all-targets -- -D warnings
 
       - name: Clippy (GUI)
-        run: cargo clippy --release --features gui -- -D warnings
+        run: cargo clippy --release --features gui --all-targets -- -D warnings
 
   build:
     needs: lint

@@ -590,7 +590,7 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<(Vec<u8>, String, String)> {
         .unwrap_or(1) as u16;
 
     // Calculate image dimensions from strip data
-    let bytes_per_pixel: u32 = bps_vals.iter().map(|&b| ((b as u32) + 7) / 8).sum();
+    let bytes_per_pixel: u32 = bps_vals.iter().map(|&b| (b as u32).div_ceil(8)).sum();
     if bytes_per_pixel == 0 || rps == 0 {
         return None;
     }

@@ -739,9 +739,7 @@ pub fn xmp_is_priority0(family1: &str, name: &str) -> bool {
 /// (ExifTool.pm:9544-9551) — and only raises a 0 to 1 inside the PRIORITY_DIR
 /// (:9554), so a negative one is left alone on both counts. It therefore never
 /// displaces anything and can itself be displaced by a priority-0 tag.
-static XMP_PRIORITY_BELOW0: &[(&str, &str)] = &[
-    ("XMP-pdf", "Keywords"),
-];
+static XMP_PRIORITY_BELOW0: &[(&str, &str)] = &[("XMP-pdf", "Keywords")];
 
 /// Whether ExifTool stores the XMP property `name` of namespace group `family1`
 /// below priority 0 — see [`XMP_PRIORITY_BELOW0`].
@@ -882,30 +880,31 @@ pub fn keys_is_priority0(key: &[u8]) -> bool {
 /// duplicate never displaces a value already stored under that name.
 #[must_use]
 pub fn makernote_is_priority0(maker: &str, id: u16) -> bool {
-    matches!((maker, id),
+    matches!(
+        (maker, id),
         ("Casio", 0x0014)
-        | ("FujiFilm", 0x1431)
-        | ("Nikon", 0x0002)
-        | ("Olympus", 0x1000)
-        | ("Olympus", 0x1001)
-        | ("Olympus", 0x1002)
-        | ("Olympus", 0x1003)
-        | ("Olympus", 0x100f)
-        | ("Olympus", 0x0207)
-        | ("Pentax", 0x008b)
-        | ("Pentax", 0x0012)
-        | ("Pentax", 0x0013)
-        | ("Pentax", 0x001d)
-        | ("Sigma", 0x0018)
-        | ("Sigma", 0x0031)
-        | ("Sigma", 0x0032)
-        | ("Sigma", 0x003b)
-        | ("Sigma", 0x003c)
-        | ("Sigma", 0x0049)
-        | ("Sigma", 0x004a)
-        | ("Sigma", 0x0057)
-        | ("Sigma", 0x0058)
-        | ("Sony", 0xb04f)
-        | ("Sony", 0x201b)
+            | ("FujiFilm", 0x1431)
+            | ("Nikon", 0x0002)
+            | ("Olympus", 0x1000)
+            | ("Olympus", 0x1001)
+            | ("Olympus", 0x1002)
+            | ("Olympus", 0x1003)
+            | ("Olympus", 0x100f)
+            | ("Olympus", 0x0207)
+            | ("Pentax", 0x008b)
+            | ("Pentax", 0x0012)
+            | ("Pentax", 0x0013)
+            | ("Pentax", 0x001d)
+            | ("Sigma", 0x0018)
+            | ("Sigma", 0x0031)
+            | ("Sigma", 0x0032)
+            | ("Sigma", 0x003b)
+            | ("Sigma", 0x003c)
+            | ("Sigma", 0x0049)
+            | ("Sigma", 0x004a)
+            | ("Sigma", 0x0057)
+            | ("Sigma", 0x0058)
+            | ("Sony", 0xb04f)
+            | ("Sony", 0x201b)
     )
 }

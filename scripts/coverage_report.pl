@@ -92,7 +92,10 @@ if (open my $h, '<', $gen) {
     # The decode dispatcher's own arms, not `table_byte_order`'s: both are
     # keyed by the same strings, and matching either left every table mapped
     # to the function `Some`.
-    while ($body =~ /"(\w+)::(\w+)" => (\w+)\(data, /g) {
+    # Written whitespace-insensitively: rustfmt reflows the longer arms into
+    # a block and breaks the argument list, and a regex that assumed one line
+    # silently lost every table whose name was long enough to wrap.
+    while ($body =~ /"(\w+)::(\w+)" => \{?\s*(\w+)\(\s*data\s*,/g) {
         $fn_of_table{"$1\::$2"} = $3;
         $table_of_fn{$3} = "$1\::$2";
     }
@@ -103,7 +106,7 @@ if (open my $h, '<', $gen) {
     while ($bodies =~ /^fn (\w+)\(.*?\n\}/gms) {
         my $whole = $&;
         my $from = $1;
-        while ($whole =~ /\b(\w+)\(sub, /g) {
+        while ($whole =~ /\b(\w+)\(\s*sub\s*,/gs) {
             push @{$calls{$from}}, $1;
         }
     }

@@ -434,8 +434,6 @@ fn rw2_read_value(
     })
 }
 
-
-
 /// Read an IFD entry (12 bytes starting at off) and return tag_id, dtype, count, offset, inline.
 struct RW2IfdEntry {
     tag: u16,
@@ -604,7 +602,6 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                 continue;
             }
             // Skip tags that are subdirectories or handled elsewhere
-            0x0013 | // WBInfo (old format)
             0x0120 | // CameraIFD
             0x02bc | // ApplicationNotes (XMP)
             0x83bb | // IPTC-NAA

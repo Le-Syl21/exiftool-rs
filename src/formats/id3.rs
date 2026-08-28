@@ -537,7 +537,7 @@ fn decode_rva_frame(data: &[u8]) -> Option<Tag> {
     if bits == 0 {
         return None;
     }
-    let bytes = ((bits + 7) / 8) as usize;
+    let bytes = bits.div_ceil(8) as usize;
 
     // channels: (name, vol_idx, peak_idx, flag_bit)
     let channels: &[(&str, usize, usize, u32)] = &[

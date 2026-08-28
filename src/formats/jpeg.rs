@@ -2868,7 +2868,7 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                 };
                 // PiP, GPSInfo and MeterLink are `ByteOrder => 'LittleEndian'`
                 // (FLIR.pm:167-180); the rest follow the block's own order.
-                let rec_le = le || matches!(rec_type, 0x2a | 0x2b | 0x2c);
+                let rec_le = le || matches!(rec_type, 0x2a..=0x2c);
                 let mut dm = crate::tags::binary_tables_generated::State::new();
                 tags.extend(crate::tags::binary_tables_generated::decode(
                     table,

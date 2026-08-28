@@ -268,87 +268,123 @@ pub fn print_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
 /// ExifTool runs DecodeBits over the value with these: each word contributes
 /// its own bits, numbered from the word's start, and a value with no bit set
 /// prints the table's entry for 0.
+///
+/// The width in bits, the name of the whole set, and the name of each bit.
+pub type Bitmask = (usize, &'static str, &'static [(u32, &'static str)]);
+
 #[must_use]
-pub fn bitmask(maker: &str, tag: u16) -> Option<(usize, &'static str, &'static [(u32, &'static str)])> {
+pub fn bitmask(maker: &str, tag: u16) -> Option<Bitmask> {
     Some(match (maker, tag) {
-        ("Apple", 0x0019) => (32, "", &[ // ImageProcessingFlags
-        ]),
-        ("Apple", 0x0025) => (32, "", &[ // SceneFlags
-        ]),
-        ("Canon", 0x0023) => (32, "(none)", &[ // Categories
-            (0, "People"),
-            (1, "Scenery"),
-            (2, "Events"),
-            (3, "User 1"),
-            (4, "User 2"),
-            (5, "User 3"),
-            (6, "To Do"),
-        ]),
-        ("Pentax", 0x000f) => (32, "(none)", &[ // AFPointsInFocus
-            (0, "Top-left"),
-            (1, "Top Near-left"),
-            (2, "Top"),
-            (3, "Top Near-right"),
-            (4, "Top-right"),
-            (5, "Upper-left"),
-            (6, "Upper Near-left"),
-            (7, "Upper-middle"),
-            (8, "Upper Near-right"),
-            (9, "Upper-right"),
-            (10, "Far Left"),
-            (11, "Left"),
-            (12, "Near-left"),
-            (13, "Center"),
-            (14, "Near-right"),
-            (15, "Right"),
-            (16, "Far Right"),
-            (17, "Lower-left"),
-            (18, "Lower Near-left"),
-            (19, "Lower-middle"),
-            (20, "Lower Near-right"),
-            (21, "Lower-right"),
-            (22, "Bottom-left"),
-            (23, "Bottom Near-left"),
-            (24, "Bottom"),
-            (25, "Bottom Near-right"),
-            (26, "Bottom-right"),
-        ]),
-        ("Pentax", 0x003c) => (32, "(none)", &[ // AFPointsInFocus
-            (0, "Upper-left"),
-            (1, "Top"),
-            (2, "Upper-right"),
-            (3, "Left"),
-            (4, "Mid-left"),
-            (5, "Center"),
-            (6, "Mid-right"),
-            (7, "Right"),
-            (8, "Lower-left"),
-            (9, "Bottom"),
-            (10, "Lower-right"),
-        ]),
-        ("Sony", 0x2020) => (8, "(none)", &[ // AFPointsUsed
-            (0, "Center"),
-            (1, "Top"),
-            (2, "Upper-right"),
-            (3, "Right"),
-            (4, "Lower-right"),
-            (5, "Bottom"),
-            (6, "Lower-left"),
-            (7, "Left"),
-            (8, "Upper-left"),
-            (9, "Far Right"),
-            (10, "Far Left"),
-            (11, "Upper-middle"),
-            (12, "Near Right"),
-            (13, "Lower-middle"),
-            (14, "Near Left"),
-            (15, "Upper Far Right"),
-            (16, "Lower Far Right"),
-            (17, "Lower Far Left"),
-            (18, "Upper Far Left"),
-        ]),
-        ("Sony", 0x2022) => (8, "(none)", &[ // FocalPlaneAFPointsUsed
-        ]),
+        ("Apple", 0x0019) => (
+            32,
+            "",
+            &[ // ImageProcessingFlags
+        ],
+        ),
+        ("Apple", 0x0025) => (
+            32,
+            "",
+            &[ // SceneFlags
+        ],
+        ),
+        ("Canon", 0x0023) => (
+            32,
+            "(none)",
+            &[
+                // Categories
+                (0, "People"),
+                (1, "Scenery"),
+                (2, "Events"),
+                (3, "User 1"),
+                (4, "User 2"),
+                (5, "User 3"),
+                (6, "To Do"),
+            ],
+        ),
+        ("Pentax", 0x000f) => (
+            32,
+            "(none)",
+            &[
+                // AFPointsInFocus
+                (0, "Top-left"),
+                (1, "Top Near-left"),
+                (2, "Top"),
+                (3, "Top Near-right"),
+                (4, "Top-right"),
+                (5, "Upper-left"),
+                (6, "Upper Near-left"),
+                (7, "Upper-middle"),
+                (8, "Upper Near-right"),
+                (9, "Upper-right"),
+                (10, "Far Left"),
+                (11, "Left"),
+                (12, "Near-left"),
+                (13, "Center"),
+                (14, "Near-right"),
+                (15, "Right"),
+                (16, "Far Right"),
+                (17, "Lower-left"),
+                (18, "Lower Near-left"),
+                (19, "Lower-middle"),
+                (20, "Lower Near-right"),
+                (21, "Lower-right"),
+                (22, "Bottom-left"),
+                (23, "Bottom Near-left"),
+                (24, "Bottom"),
+                (25, "Bottom Near-right"),
+                (26, "Bottom-right"),
+            ],
+        ),
+        ("Pentax", 0x003c) => (
+            32,
+            "(none)",
+            &[
+                // AFPointsInFocus
+                (0, "Upper-left"),
+                (1, "Top"),
+                (2, "Upper-right"),
+                (3, "Left"),
+                (4, "Mid-left"),
+                (5, "Center"),
+                (6, "Mid-right"),
+                (7, "Right"),
+                (8, "Lower-left"),
+                (9, "Bottom"),
+                (10, "Lower-right"),
+            ],
+        ),
+        ("Sony", 0x2020) => (
+            8,
+            "(none)",
+            &[
+                // AFPointsUsed
+                (0, "Center"),
+                (1, "Top"),
+                (2, "Upper-right"),
+                (3, "Right"),
+                (4, "Lower-right"),
+                (5, "Bottom"),
+                (6, "Lower-left"),
+                (7, "Left"),
+                (8, "Upper-left"),
+                (9, "Far Right"),
+                (10, "Far Left"),
+                (11, "Upper-middle"),
+                (12, "Near Right"),
+                (13, "Lower-middle"),
+                (14, "Near Left"),
+                (15, "Upper Far Right"),
+                (16, "Lower Far Right"),
+                (17, "Lower Far Left"),
+                (18, "Upper Far Left"),
+            ],
+        ),
+        ("Sony", 0x2022) => (
+            8,
+            "(none)",
+            &[ // FocalPlaneAFPointsUsed
+        ],
+        ),
         _ => return None,
     })
 }
@@ -358,11 +394,11 @@ pub fn bitmask(maker: &str, tag: u16) -> Option<(usize, &'static str, &'static [
 #[must_use]
 pub fn data_member(maker: &str, tag: u16) -> Option<&'static str> {
     Some(match (maker, tag) {
-        ("Nikon", 0x0034) => "ShutterMode", // ShutterMode
-        ("Olympus", 0x0207) => "CameraType", // CameraType
+        ("Nikon", 0x0034) => "ShutterMode",    // ShutterMode
+        ("Olympus", 0x0207) => "CameraType",   // CameraType
         ("Pentax", 0x0005) => "PentaxModelID", // PentaxModelID
-        ("Pentax", 0x0006) => "PentaxDate", // Date
-        ("Pentax", 0x0007) => "PentaxTime", // Time
+        ("Pentax", 0x0006) => "PentaxDate",    // Date
+        ("Pentax", 0x0007) => "PentaxTime",    // Time
         ("Pentax", 0x0076) => "FacesDetected", // FaceDetect
         _ => return None,
     })
@@ -374,17 +410,17 @@ pub fn data_member(maker: &str, tag: u16) -> Option<&'static str> {
 #[must_use]
 pub fn format_override(maker: &str, tag: u16) -> Option<(&'static str, usize)> {
     Some(match (maker, tag) {
-        ("Canon", 0x0023) => ("int32u", 2), // Categories
-        ("Canon", 0x0028) => ("undef", 1), // ImageUniqueID
-        ("Canon", 0x4002) => ("undef", 1), // CRWParam
-        ("Casio", 0x0015) => ("undef", 18), // FirmwareDate
-        ("FujiFilm", 0x1049) => ("int8s", 1), // BWAdjustment
-        ("FujiFilm", 0x104b) => ("int8s", 1), // BWMagentaGreen
-        ("Minolta", 0x0112) => ("int32s", 1), // WhiteBalanceFineTune
-        ("Olympus", 0x0209) => ("string", 1), // CameraID
-        ("Olympus", 0x0280) => ("undef", 1), // PreviewImage
-        ("Olympus", 0x0400) => ("int16u", 4), // SensorArea
-        ("Olympus", 0x1011) => ("int16s", 9), // ColorMatrix
+        ("Canon", 0x0023) => ("int32u", 2),     // Categories
+        ("Canon", 0x0028) => ("undef", 1),      // ImageUniqueID
+        ("Canon", 0x4002) => ("undef", 1),      // CRWParam
+        ("Casio", 0x0015) => ("undef", 18),     // FirmwareDate
+        ("FujiFilm", 0x1049) => ("int8s", 1),   // BWAdjustment
+        ("FujiFilm", 0x104b) => ("int8s", 1),   // BWMagentaGreen
+        ("Minolta", 0x0112) => ("int32s", 1),   // WhiteBalanceFineTune
+        ("Olympus", 0x0209) => ("string", 1),   // CameraID
+        ("Olympus", 0x0280) => ("undef", 1),    // PreviewImage
+        ("Olympus", 0x0400) => ("int16u", 4),   // SensorArea
+        ("Olympus", 0x1011) => ("int16s", 9),   // ColorMatrix
         ("Panasonic", 0x0023) => ("int16s", 1), // WhiteBalanceBias
         ("Panasonic", 0x0024) => ("int16s", 1), // FlashBias
         ("Panasonic", 0x0039) => ("int16s", 1), // Contrast
@@ -394,8 +430,8 @@ pub fn format_override(maker: &str, tag: u16) -> Option<(&'static str, usize)> {
         ("Panasonic", 0x0046) => ("int16s", 1), // WBShiftAB
         ("Panasonic", 0x0047) => ("int16s", 1), // WBShiftGM
         ("Panasonic", 0x0059) => ("int16s", 2), // Transform
-        ("Panasonic", 0x0060) => ("int8u", 4), // LensFirmwareVersion
-        ("Panasonic", 0x0063) => ("int8u", 4), // RecognizedFaceFlags
+        ("Panasonic", 0x0060) => ("int8u", 4),  // LensFirmwareVersion
+        ("Panasonic", 0x0063) => ("int8u", 4),  // RecognizedFaceFlags
         ("Panasonic", 0x0065) => ("string", 1), // Title
         ("Panasonic", 0x0066) => ("string", 1), // BabyName
         ("Panasonic", 0x0067) => ("string", 1), // Location
@@ -410,39 +446,38 @@ pub fn format_override(maker: &str, tag: u16) -> Option<(&'static str, usize)> {
         ("Panasonic", 0x008e) => ("int16s", 1), // AccelerometerY
         ("Panasonic", 0x0090) => ("int16s", 1), // RollAngle
         ("Panasonic", 0x0091) => ("int16s", 1), // PitchAngle
-        ("Panasonic", 0x0092) => ("int8s", 1), // WBShiftCreativeControl
+        ("Panasonic", 0x0092) => ("int8s", 1),  // WBShiftCreativeControl
         ("Panasonic", 0x00a1) => ("int32u", 1), // FilterEffect
         ("Panasonic", 0x00ad) => ("int16s", 2), // HighlightShadow
         ("Panasonic", 0x00bd) => ("int16s", 1), // FocusBracket
         ("Panasonic", 0x00bf) => ("int32u", 2), // PostFocusMerging
-        ("Panasonic", 0x8000) => ("undef", 1), // MakerNoteVersion
+        ("Panasonic", 0x8000) => ("undef", 1),  // MakerNoteVersion
         ("Panasonic", 0x8012) => ("int16s", 2), // Transform
-        ("Pentax", 0x0015) => ("int16s", 1), // LightReading
-        ("Pentax", 0x0032) => ("int8u", 4), // ImageEditing
-        ("Pentax", 0x0035) => ("int16u", 2), // SensorSize
-        ("Pentax", 0x003c) => ("int32u", 1), // AFPointsInFocus
-        ("Pentax", 0x005c) => ("undef", 1), // ShakeReductionInfo
-        ("Pentax", 0x0060) => ("undef", 1), // FaceInfo
-        ("Pentax", 0x0068) => ("undef", 1), // AWBInfo
-        ("Pentax", 0x0069) => ("int8u", 4), // DynamicRangeExpansion
-        ("Pentax", 0x006b) => ("undef", 1), // TimeInfo
-        ("Pentax", 0x0071) => ("int8u", 1), // HighISONoiseReduction
-        ("Pentax", 0x007d) => ("undef", 1), // LensCorr
-        ("Pentax", 0x0085) => ("int8u", 4), // HDR
-        ("Pentax", 0x0215) => ("undef", 1), // CameraInfo
-        ("Pentax", 0x021c) => ("int16s", 9), // ColorMatrixA2
-        ("Pentax", 0x021d) => ("int16s", 9), // ColorMatrixB2
-        ("Pentax", 0x0235) => ("int8u", 10), // CrossProcessParams
-        ("Ricoh", 0x1004) => ("int16s", 1), // WhiteBalanceFineTune
-        ("Ricoh", 0x1012) => ("int32s", 1), // Contrast
-        ("Samsung", 000000) => ("undef", 8), // MakerNoteVersion
-        ("Sony", 0x0112) => ("int32s", 1), // WhiteBalanceFineTune
-        ("Sony", 0x1000) => ("int8u", 1), // MultiBurstMode
-        ("Sony", 0x200a) => ("int16u", 2), // HDR
-        ("Sony", 0x2037) => ("int16u", 3), // FocusFrameSize
-        ("Sony", 0xb022) => ("int32s", 1), // ColorCompensationFilter
-        ("Sony", 0xb02a) => ("undef", 8), // LensSpec
+        ("Pentax", 0x0015) => ("int16s", 1),    // LightReading
+        ("Pentax", 0x0032) => ("int8u", 4),     // ImageEditing
+        ("Pentax", 0x0035) => ("int16u", 2),    // SensorSize
+        ("Pentax", 0x003c) => ("int32u", 1),    // AFPointsInFocus
+        ("Pentax", 0x005c) => ("undef", 1),     // ShakeReductionInfo
+        ("Pentax", 0x0060) => ("undef", 1),     // FaceInfo
+        ("Pentax", 0x0068) => ("undef", 1),     // AWBInfo
+        ("Pentax", 0x0069) => ("int8u", 4),     // DynamicRangeExpansion
+        ("Pentax", 0x006b) => ("undef", 1),     // TimeInfo
+        ("Pentax", 0x0071) => ("int8u", 1),     // HighISONoiseReduction
+        ("Pentax", 0x007d) => ("undef", 1),     // LensCorr
+        ("Pentax", 0x0085) => ("int8u", 4),     // HDR
+        ("Pentax", 0x0215) => ("undef", 1),     // CameraInfo
+        ("Pentax", 0x021c) => ("int16s", 9),    // ColorMatrixA2
+        ("Pentax", 0x021d) => ("int16s", 9),    // ColorMatrixB2
+        ("Pentax", 0x0235) => ("int8u", 10),    // CrossProcessParams
+        ("Ricoh", 0x1004) => ("int16s", 1),     // WhiteBalanceFineTune
+        ("Ricoh", 0x1012) => ("int32s", 1),     // Contrast
+        ("Samsung", 000000) => ("undef", 8),    // MakerNoteVersion
+        ("Sony", 0x0112) => ("int32s", 1),      // WhiteBalanceFineTune
+        ("Sony", 0x1000) => ("int8u", 1),       // MultiBurstMode
+        ("Sony", 0x200a) => ("int16u", 2),      // HDR
+        ("Sony", 0x2037) => ("int16u", 3),      // FocusFrameSize
+        ("Sony", 0xb022) => ("int32s", 1),      // ColorCompensationFilter
+        ("Sony", 0xb02a) => ("undef", 8),       // LensSpec
         _ => return None,
     })
 }
-

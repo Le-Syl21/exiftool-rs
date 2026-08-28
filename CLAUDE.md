@@ -56,7 +56,16 @@ cargo run --features gui --bin exiftool-rs-gui -- -lang fr  # GUI in French
 # Regenerate from Perl source:
 perl scripts/gen_tags.pl ../exiftool/lib > src/tags/generated.rs
 perl scripts/gen_print_conv.pl ../exiftool/lib > src/tags/print_conv_generated.rs
+
+# Always finish a regeneration with:
+cargo fmt
 ```
+
+The generators emit readable Rust, not rustfmt's layout — long `match` arms and
+`Regex::new` lines come out on a single line where rustfmt would wrap them. The
+committed files are the formatted version, and `cargo fmt --check` is a blocking
+CI gate, so a regeneration that skips `cargo fmt` shows up as a several-thousand
+line diff and a red lint job.
 
 ## Key Design Decisions
 

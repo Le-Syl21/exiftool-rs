@@ -1131,7 +1131,11 @@ fn parse_atoms(
             b"FFMV" | b"htcb" => {
                 let mut dm = crate::tags::binary_tables_generated::State::new();
                 tags.extend(crate::tags::binary_tables_generated::decode(
-                    if atom_type == b"FFMV" { "FujiFilm::FFMV" } else { "QuickTime::HTCBinary" },
+                    if atom_type == b"FFMV" {
+                        "FujiFilm::FFMV"
+                    } else {
+                        "QuickTime::HTCBinary"
+                    },
                     &data[content_start..content_end],
                     "",
                     "",
@@ -2587,7 +2591,10 @@ fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
                     .position(|b| *b == 0)
                     .map_or(entry.len(), |n| at + n);
                 state.stream_current.meta_type = Some(
-                    entry[at..end].iter().map(|b| *b as char).collect::<String>(),
+                    entry[at..end]
+                        .iter()
+                        .map(|b| *b as char)
+                        .collect::<String>(),
                 );
             }
         }

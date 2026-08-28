@@ -263,16 +263,18 @@ fn m2ts_parse_mdpm(data: &[u8]) -> Option<M2tsMdpmData> {
                     _ => "H264::FrameInfo",
                 };
                 let mut dm = crate::tags::binary_tables_generated::State::new();
-                result.extra.extend(crate::tags::binary_tables_generated::decode(
-                    table,
-                    &val4,
-                    "",
-                    "",
-                    crate::metadata::exif::ByteOrderMark::BigEndian,
-                    "",
-                    "",
-                    &mut dm,
-                ));
+                result
+                    .extra
+                    .extend(crate::tags::binary_tables_generated::decode(
+                        table,
+                        &val4,
+                        "",
+                        "",
+                        crate::metadata::exif::ByteOrderMark::BigEndian,
+                        "",
+                        "",
+                        &mut dm,
+                    ));
             }
             _ => {}
         }
