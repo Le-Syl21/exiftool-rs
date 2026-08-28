@@ -1033,6 +1033,32 @@ impl ExifReader {
                     }
                     continue;
                 }
+                0x4748 => {
+                    // StitchInfo, a binary block Microsoft writes in IFD0
+                    // (Exif.pm:1534-1540), little-endian whatever the file is.
+                    let total = type_size(entry.data_type)
+                        .map_or(0, |sz| sz * entry.count as usize);
+                    let block: Option<&[u8]> = if total <= 4 {
+                        Some(&entry.inline_data[..total.min(4)])
+                    } else {
+                        let off = entry.value_offset as usize;
+                        data.get(off..off + total)
+                    };
+                    if let Some(block) = block {
+                        let mut dm = crate::tags::binary_tables_generated::State::new();
+                        tags.extend(crate::tags::binary_tables_generated::decode(
+                            "Microsoft::Stitch",
+                            block,
+                            "",
+                            "",
+                            ByteOrderMark::LittleEndian,
+                            "",
+                            "",
+                            &mut dm,
+                        ));
+                    }
+                    continue;
+                }
                 0x8825 => {
                     // GPS IFD
                     let sub_offset = entry.value_offset;

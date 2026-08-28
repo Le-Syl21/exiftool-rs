@@ -315,6 +315,20 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                         }
                     }
                 } else if seg_data.len() >= 14 && {
+                    // Ocad, an APP0 of its own (JPEG.pm:42-44).
+                    if seg_data.starts_with(b"Ocad") {
+                        let mut dm = crate::tags::binary_tables_generated::State::new();
+                        tags.extend(crate::tags::binary_tables_generated::decode(
+                            "JPEG::Ocad",
+                            seg_data,
+                            "",
+                            "",
+                            crate::metadata::exif::ByteOrderMark::BigEndian,
+                            "",
+                            "",
+                            &mut dm,
+                        ));
+                    }
                     // CIFF check: (II|MM) + 4 bytes + HEAPJPGM
                     (seg_data.starts_with(b"II") || seg_data.starts_with(b"MM"))
                         && seg_data.len() > 10
