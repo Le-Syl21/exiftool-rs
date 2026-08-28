@@ -110,6 +110,9 @@ fn decode_nikon_capture_tag(tag_id: u32, data: &[u8], tags: &mut Vec<Tag>) {
     // The six records whose layout NikonCapture.pm gives as a binary table.
     // Every one of them is little-endian, as the rest of this block is.
     let table = match tag_id {
+        0x8458_9434 => Some("NikonCapture::Brightness"),
+        0xb999_a36f => Some("NikonCapture::ColorBoost"),
+        0x56a5_4260 => Some("NikonCapture::Exposure"),
         0x890f_f591 => Some("NikonCapture::DLightingHQ"),
         0xe37b_4337 => Some("NikonCapture::DLightingHS"),
         0x116f_ea21 => Some("NikonCapture::HighlightData"),

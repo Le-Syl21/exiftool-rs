@@ -7073,6 +7073,37 @@ fn read_makernote_ifd_with_base(
                     }
                     t
                 }
+                // Samsung's orientation and picture-wizard blocks
+                // (Samsung.pm's Type2 table), and Pentax's contrast-AF points.
+                (Manufacturer::Samsung, 0x0011)
+                | (Manufacturer::Samsung, 0x0021)
+                | (Manufacturer::Pentax, 0x0238)
+                // Sanyo writes ManualFocusDistance at the same id when the
+                // format is a rational (Sanyo.pm:180-186); FaceInfo is the
+                // other arm.
+                | (Manufacturer::Sanyo, 0x0223)
+                    if manufacturer != Manufacturer::Sanyo
+                        || crate::tags::sub_tables_generated::tiff_format_name(data_type)
+                            != "rational64u" =>
+                {
+                    let table = match (manufacturer, tag_id) {
+                        (Manufacturer::Samsung, 0x0011) => "Samsung::OrientationInfo",
+                        (Manufacturer::Samsung, _) => "Samsung::PictureWizard",
+                        (Manufacturer::Pentax, _) => "Pentax::CAFPointInfo",
+                        _ => "Sanyo::FaceInfo",
+                    };
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        table,
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        byte_order,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
+                }
                 // Samsung's dual-shot block (Samsung.pm:1280).
                 (Manufacturer::Samsung, 0x0AB3) => {
                     let mut dm = crate::tags::binary_tables_generated::State::new();
