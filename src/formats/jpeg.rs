@@ -2504,6 +2504,9 @@ fn float8g(v: f32) -> String {
 
 /// Decode FLIR FFF data (from Perl FLIR.pm ProcessFLIR).
 fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
+    // An AFF file carries the same record structure as an FFF one but numbers
+    // its record types differently (FLIR.pm:1256-1272).
+    let is_aff = data.starts_with(b"AFF\0");
     let mut tags = Vec::new();
     if data.len() < 0x40 {
         return tags;
@@ -2881,6 +2884,34 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
                         ),
                     ));
                 }
+            // The record types whose layout FLIR.pm gives as a plain binary
+            // table. An AFF file numbers its records differently from an FFF
+            // one -- type 1 is AFF1 where an FFF's is RawData, and type 5 is
+            // AFF5 where an FFF's is the gain/dead calibration map -- so the
+            // magic the block opened with decides.
+            0x01 | 0x05 | 0x06 | 0x28 if is_aff || rec_type != 0x01 => {
+                let table = match (is_aff, rec_type) {
+                    (true, 0x01) => "AFF1",
+                    (true, 0x05) => "AFF5",
+                    (_, 0x05) => "GainDeadData",
+                    (_, 0x06) => "CoarseData",
+                    _ => "PaintData",
+                };
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                tags.extend(crate::tags::binary_tables_generated::decode(
+                    table,
+                    rec,
+                    "",
+                    if le {
+                        crate::metadata::exif::ByteOrderMark::LittleEndian
+                    } else {
+                        crate::metadata::exif::ByteOrderMark::BigEndian
+                    },
+                    "",
+                    "",
+                    &mut dm,
+                ));
+            }
             _ => {}
         }
     }

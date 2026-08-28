@@ -970,6 +970,33 @@ fn parse_atoms(
                             tags.extend(xmp_tags);
                         }
                     }
+                    // The three boxes FLIR writes into its MP4s, each named by
+                    // its own UUID (QuickTime.pm:988-1020). Their tables are
+                    // generated from FLIR.pm, and their contents start after
+                    // the sixteen bytes of the id.
+                    else if let Some(table) = match uuid {
+                        b"\x57\xf5\xb9\x3e\x51\xe4\x48\xaf\xa0\xd9\xc3\xef\x1b\x37\xf7\x12" => {
+                            Some("SerialNums")
+                        }
+                        b"\x57\x45\x20\x50\x2c\xbb\x44\xad\xae\x54\x15\xe9\xb8\x39\xd9\x03" => {
+                            Some("UnknownUUID")
+                        }
+                        b"\x7f\x2e\x21\x00\x8b\x46\x49\x18\xaf\xb1\xde\x70\x9a\x74\xf6\xf5" => {
+                            Some("GPS_UUID")
+                        }
+                        _ => None,
+                    } {
+                        let mut dm = crate::tags::binary_tables_generated::State::new();
+                        tags.extend(crate::tags::binary_tables_generated::decode(
+                            table,
+                            &data[content_start + 16..content_end],
+                            "",
+                            crate::metadata::exif::ByteOrderMark::BigEndian,
+                            "",
+                            "",
+                            &mut dm,
+                        ));
+                    }
                 }
             }
             // Preview/thumbnail images stored as whole-atom binaries in udta.

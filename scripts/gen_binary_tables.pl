@@ -37,6 +37,10 @@ my %WANTED = (
     Minolta => [qw(
         CameraSettings7D CameraInfoA100 WBInfoA100
     )],
+    FLIR => [qw(
+        GainDeadData CoarseData PaintData SerialNums UnknownUUID GPS_UUID
+        AFF1 AFF5
+    )],
 );
 
 # Main-table ids whose sub-table is chosen by a chain of conditions. The arms
@@ -54,6 +58,7 @@ my %WIDTH = (
     # the rest of the block -- Canon writes LensType and ColorTemperature that
     # way inside a little-endian file.
     int16uRev => 2,
+    float => 4, double => 8,
 );
 my %IS_RATIONAL = (rational32u => 1, rational32s => 1);
 
@@ -367,13 +372,19 @@ sub parse_table {
     }
     my ($first) = $body =~ /FIRST_ENTRY\s*=>\s*(\d+)/;
     $first = 0 unless defined $first;
+    # A table names its own families: FLIR's calibration blocks are APP1, not
+    # MakerNotes, and its GPS box says family 1 is FLIR.
+    my ($grp0) = $body =~ /GROUPS\s*=>\s*\{[^}]*0\s*=>\s*'(\w+)'/;
+    my ($grp1) = $body =~ /GROUPS\s*=>\s*\{[^}]*1\s*=>\s*'(\w+)'/;
     my ($grp2) = $body =~ /GROUPS\s*=>\s*\{[^}]*2\s*=>\s*'(\w+)'/;
+    $grp0 ||= 'MakerNotes';
+    $grp1 ||= $module;
     $grp2 ||= 'Image';
     my $prio0 = $body =~ /PRIORITY\s*=>\s*0/ ? 1 : 0;
 
     my $t = {
         module => $module, name => $table, fmt => $fmt, width => $WIDTH{$fmt},
-        first => $first, grp2 => $grp2, prio0 => $prio0,
+        first => $first, grp0 => $grp0, grp1 => $grp1, grp2 => $grp2, prio0 => $prio0,
         fields => [], subdirs => [],
     };
     $by_name{"$module\::$table"} = $t;
@@ -732,6 +743,7 @@ print <<"HDR";
 //! no table happens to need and a cast that happens to be a no-op are both
 //! ordinary here rather than something to tidy away by hand.
 #![allow(dead_code, unused_parens, unused_mut)]
+#![allow(clippy::too_many_arguments)]
 #![allow(
     clippy::too_many_lines,
     clippy::match_same_arms,
@@ -796,6 +808,17 @@ fn u32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u32> {
 }
 fn i32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<i32> { u32_at(d, o, bo).map(|v| v as i32) }
 
+fn f32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f32> {
+    let b = [*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?];
+    Some(if bo == ByteOrder::BigEndian { f32::from_be_bytes(b) } else { f32::from_le_bytes(b) })
+}
+
+fn f64_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
+    let mut b = [0u8; 8];
+    b.copy_from_slice(d.get(o..o + 8)?);
+    Some(if bo == ByteOrder::BigEndian { f64::from_be_bytes(b) } else { f64::from_le_bytes(b) })
+}
+
 /// A 16-bit value stored the other way round from the rest of the block.
 fn u16rev_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u16> {
     let other = if bo == ByteOrder::BigEndian { ByteOrder::LittleEndian } else { ByteOrder::BigEndian };
@@ -839,6 +862,7 @@ fn mk(
     id: u16,
     print_value: String,
     raw: Value,
+    grp0: &'static str,
     grp1: &'static str,
     grp2: &'static str,
     priority: i32,
@@ -848,7 +872,7 @@ fn mk(
         name: name.to_string(),
         description: name.to_string(),
         group: TagGroup {
-            family0: "MakerNotes".into(),
+            family0: grp0.into(),
             family1: grp1.into(),
             family2: grp2.into(),
             family3: crate::tag::MAIN_DOCUMENT.into(),
@@ -893,7 +917,8 @@ for my $t (@tables) {
         printf "/// it, and this reads them where they would be without it.\n";
     }
     printf "fn %s(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {\n", fn_name($t);
-    printf "    const GRP1: &str = \"%s\";\n", $t->{module};
+    printf "    const GRP0: &str = \"%s\";\n", $t->{grp0};
+    printf "    const GRP1: &str = \"%s\";\n", $t->{grp1};
     printf "    const GRP2: &str = \"%s\";\n", $t->{grp2};
     printf "    const PRIO: i32 = %s;\n",
         $t->{prio0} ? 'crate::tag::PRIORITY_EXPLICIT_ZERO' : '0';
@@ -916,9 +941,15 @@ for my $t (@tables) {
             $ind .= "    ";
         }
         if ($f->{text}) {
+            if ($f->{hidden}) {
+                # Read but not reported, and nothing else looks at a string
+                # member, so there is nothing to read it for.
+                print  "    }\n" if defined $f->{cond};
+                next;
+            }
             printf "%sif let Some(text) = text_at(data, 0x%x, %d, %s) {\n",
                 $ind, $byte, $f->{n}, ($f->{fmt} eq 'string' ? 'true' : 'false');
-            printf "%s    tags.push(mk(\"%s\", 0x%x, text.clone(), Value::String(text), GRP1, GRP2, PRIO));\n",
+            printf "%s    tags.push(mk(\"%s\", 0x%x, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
             printf "%s}\n", $ind;
             print  "    }\n" if defined $f->{cond};
@@ -930,6 +961,7 @@ for my $t (@tables) {
             int32u => 'u32_at', int32s => 'i32_at',
             rational32u => 'rat32u_at', rational32s => 'rat32s_at',
             int16uRev => 'u16rev_at',
+            float => 'f32_at', double => 'f64_at',
         }->{$f->{fmt}};
         my $args = $f->{fmt} =~ /^int8/ ? '' : ', bo';
         my $w = $WIDTH{$f->{fmt}};
@@ -965,10 +997,10 @@ for my $t (@tables) {
                 printf "%s        let raw = Value::String(cv.as_string());\n", $ind;
                 printf "%s        if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                     $ind, esc($f->{pconv}) if defined $f->{pconv};
-                printf "%s        tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP1, GRP2, PRIO));\n",
+                printf "%s        tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));\n",
                     $ind, $f->{name}, $f->{off} unless $f->{hidden};
             } else {
-                printf "%s        tags.push(mk(\"%s\", 0x%x, s.clone(), Value::String(s), GRP1, GRP2, PRIO));\n",
+                printf "%s        tags.push(mk(\"%s\", 0x%x, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));\n",
                     $ind, $f->{name}, $f->{off} unless $f->{hidden};
             }
             printf "%s    }\n%s}\n", $ind, $ind;
@@ -1014,7 +1046,7 @@ for my $t (@tables) {
             }
             printf "%s        other => other.to_string(),\n", $ind;
             printf "%s    };\n", $ind;
-            printf "%s    tags.push(mk(\"%s\", 0x%x, s, Value::I32(v as i32), GRP1, GRP2, PRIO));\n",
+            printf "%s    tags.push(mk(\"%s\", 0x%x, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
         } elsif (defined $f->{vconv} or defined $f->{pconv}) {
             printf "%s    let mut cv = Conv::Num(f64::from(v));\n", $ind;
@@ -1023,10 +1055,10 @@ for my $t (@tables) {
             printf "%s    let raw = Value::F64(cv.as_num());\n", $ind;
             printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
                 $ind, esc($f->{pconv}) if defined $f->{pconv};
-            printf "%s    tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP1, GRP2, PRIO));\n",
+            printf "%s    tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
         } else {
-            printf "%s    tags.push(mk(\"%s\", 0x%x, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));\n",
+            printf "%s    tags.push(mk(\"%s\", 0x%x, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));\n",
                 $ind, $f->{name}, $f->{off} unless $f->{hidden};
         }
         if ($guard) {

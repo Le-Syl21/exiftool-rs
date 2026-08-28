@@ -3,7 +3,7 @@
 //! Do not edit: regenerate with
 //! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
 //!
-//! 55 tables, 1567 fields. A binary sub-table is a block of
+//! 63 tables, 1591 fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
 //! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
 //! what to read there. What the generator could not express is on its stderr.
@@ -11,6 +11,7 @@
 //! no table happens to need and a cast that happens to be a no-op are both
 //! ordinary here rather than something to tidy away by hand.
 #![allow(dead_code, unused_parens, unused_mut)]
+#![allow(clippy::too_many_arguments)]
 #![allow(
     clippy::too_many_lines,
     clippy::match_same_arms,
@@ -75,6 +76,17 @@ fn u32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u32> {
 }
 fn i32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<i32> { u32_at(d, o, bo).map(|v| v as i32) }
 
+fn f32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f32> {
+    let b = [*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?];
+    Some(if bo == ByteOrder::BigEndian { f32::from_be_bytes(b) } else { f32::from_le_bytes(b) })
+}
+
+fn f64_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
+    let mut b = [0u8; 8];
+    b.copy_from_slice(d.get(o..o + 8)?);
+    Some(if bo == ByteOrder::BigEndian { f64::from_be_bytes(b) } else { f64::from_le_bytes(b) })
+}
+
 /// A 16-bit value stored the other way round from the rest of the block.
 fn u16rev_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u16> {
     let other = if bo == ByteOrder::BigEndian { ByteOrder::LittleEndian } else { ByteOrder::BigEndian };
@@ -118,6 +130,7 @@ fn mk(
     id: u16,
     print_value: String,
     raw: Value,
+    grp0: &'static str,
     grp1: &'static str,
     grp2: &'static str,
     priority: i32,
@@ -127,7 +140,7 @@ fn mk(
         name: name.to_string(),
         description: name.to_string(),
         group: TagGroup {
-            family0: "MakerNotes".into(),
+            family0: grp0.into(),
             family1: grp1.into(),
             family2: grp2.into(),
             family3: crate::tag::MAIN_DOCUMENT.into(),
@@ -243,6 +256,14 @@ pub fn decode(
         "ColorCalib2" => canon_colorcalib2(data, model, bo, file_type, format, dm),
         "PSInfo" => canon_psinfo(data, model, bo, file_type, format, dm),
         "PSInfo2" => canon_psinfo2(data, model, bo, file_type, format, dm),
+        "GainDeadData" => flir_gaindeaddata(data, model, bo, file_type, format, dm),
+        "CoarseData" => flir_coarsedata(data, model, bo, file_type, format, dm),
+        "PaintData" => flir_paintdata(data, model, bo, file_type, format, dm),
+        "SerialNums" => flir_serialnums(data, model, bo, file_type, format, dm),
+        "UnknownUUID" => flir_unknownuuid(data, model, bo, file_type, format, dm),
+        "GPS_UUID" => flir_gps_uuid(data, model, bo, file_type, format, dm),
+        "AFF1" => flir_aff1(data, model, bo, file_type, format, dm),
+        "AFF5" => flir_aff5(data, model, bo, file_type, format, dm),
         "CameraSettings7D" => minolta_camerasettings7d(data, model, bo, file_type, format, dm),
         "CameraInfoA100" => minolta_camerainfoa100(data, model, bo, file_type, format, dm),
         "WBInfoA100" => minolta_wbinfoa100(data, model, bo, file_type, format, dm),
@@ -252,6 +273,7 @@ pub fn decode(
 
 /// `Image::ExifTool::Canon::ColorData1` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -267,12 +289,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x19, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x19, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x3a, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x1d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x1d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -284,12 +306,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x1e, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x1e, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x44, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x22, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x22, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -301,12 +323,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x23, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x23, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x4e, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x27, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x27, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -318,12 +340,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x28, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x28, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x58, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x2c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x2c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -335,12 +357,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x2d, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x2d, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x62, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x31, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x31, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -352,12 +374,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x32, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x32, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x6c, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x36, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x36, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -369,12 +391,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x37, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x37, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x76, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x3b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x3b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -386,12 +408,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0x3c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0x3c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x80, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0x40, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0x40, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -403,12 +425,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCustom1", 0x41, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCustom1", 0x41, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x8a, bo) {
         dm.push(("ColorTempCustom1".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCustom1", 0x45, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCustom1", 0x45, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -420,12 +442,12 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCustom2", 0x46, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCustom2", 0x46, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x94, bo) {
         dm.push(("ColorTempCustom2".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCustom2", 0x4a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCustom2", 0x4a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x96..0x96 + 120) {
         tags.extend(canon_colorcalib(sub, model, bo, file_type, format, dm));
@@ -435,6 +457,7 @@ fn canon_colordata1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData2` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -450,12 +473,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x18, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x18, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x38, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x1c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x1c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -479,12 +502,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x22, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x22, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x4c, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x26, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x26, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -496,12 +519,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x27, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x27, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x56, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x2b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x2b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -513,12 +536,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x2c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x2c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x60, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x30, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x30, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -530,12 +553,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x31, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x31, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x6a, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x35, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x35, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -547,12 +570,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x36, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x36, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x74, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x3a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x3a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -564,12 +587,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x3b, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x3b, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x7e, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x3f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x3f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -581,12 +604,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0x40, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0x40, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x88, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0x44, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0x44, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -598,12 +621,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0x45, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0x45, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x92, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0x49, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0x49, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -783,12 +806,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsPC1", 0x90, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsPC1", 0x90, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x128, bo) {
         dm.push(("ColorTempPC1".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempPC1", 0x94, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempPC1", 0x94, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -800,12 +823,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsPC2", 0x95, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsPC2", 0x95, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x132, bo) {
         dm.push(("ColorTempPC2".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempPC2", 0x99, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempPC2", 0x99, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -817,12 +840,12 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsPC3", 0x9a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsPC3", 0x9a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x13c, bo) {
         dm.push(("ColorTempPC3".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempPC3", 0x9e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempPC3", 0x9e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -850,7 +873,7 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             let mut cv = Conv::Str(s.clone());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::SwapWords($val)", &cv, &ctx) { cv = x; }
             let raw = Value::String(cv.as_string());
-            tags.push(mk("RawMeasuredRGGB", 0x26a, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("RawMeasuredRGGB", 0x26a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(sub) = data.get(0x148..0x148 + 120) {
@@ -861,6 +884,7 @@ fn canon_colordata2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData3` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -872,7 +896,7 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             1 => "1 (1DmkIIN/5D/30D/400D)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -884,12 +908,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x3f, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x3f, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x86, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x43, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x43, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -901,12 +925,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x44, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x44, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x90, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x48, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x48, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -918,12 +942,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0x49, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0x49, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x9a, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0x4d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0x4d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -935,12 +959,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x4e, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x4e, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xa4, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x52, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x52, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -952,12 +976,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x53, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x53, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xae, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x57, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x57, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -969,12 +993,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x58, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x58, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xb8, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x5c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x5c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -986,12 +1010,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x5d, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x5d, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xc2, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x61, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x61, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1003,12 +1027,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x62, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x62, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xcc, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x66, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x66, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1020,12 +1044,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0x67, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0x67, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xd6, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0x6b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0x6b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1037,12 +1061,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0x6c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0x6c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xe0, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0x70, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0x70, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1054,12 +1078,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsPC1", 0x71, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsPC1", 0x71, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xea, bo) {
         dm.push(("ColorTempPC1".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempPC1", 0x75, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempPC1", 0x75, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1071,12 +1095,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsPC2", 0x76, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsPC2", 0x76, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xf4, bo) {
         dm.push(("ColorTempPC2".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempPC2", 0x7a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempPC2", 0x7a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1088,12 +1112,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsPC3", 0x7b, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsPC3", 0x7b, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xfe, bo) {
         dm.push(("ColorTempPC3".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempPC3", 0x7f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempPC3", 0x7f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1105,12 +1129,12 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCustom", 0x80, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCustom", 0x80, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x108, bo) {
         dm.push(("ColorTempCustom".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCustom", 0x84, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCustom", 0x84, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1122,7 +1146,7 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("PerChannelBlackLevel", 0xc4, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("PerChannelBlackLevel", 0xc4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x490, bo) {
@@ -1132,7 +1156,7 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x248, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashOutput", 0x248, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x492, bo) {
         dm.push(("FlashBatteryLevel".to_string(), f64::from(v)));
@@ -1140,7 +1164,7 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%.2fV\", $val * 5 / 186) : \"n/a\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashBatteryLevel", 0x249, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashBatteryLevel", 0x249, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x494, bo) {
         dm.push(("ColorTempFlashData".to_string(), f64::from(v)));
@@ -1149,7 +1173,7 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(mk("ColorTempFlashData", 0x24a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorTempFlashData", 0x24a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -1166,7 +1190,7 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             let mut cv = Conv::Str(s.clone());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::SwapWords($val)", &cv, &ctx) { cv = x; }
             let raw = Value::String(cv.as_string());
-            tags.push(mk("MeasuredRGGBData", 0x287, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MeasuredRGGBData", 0x287, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(sub) = data.get(0x10a..0x10a + 120) {
@@ -1177,6 +1201,7 @@ fn canon_colordata3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData4` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -1199,7 +1224,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
                 9 => "9 (60D/1100D)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -1212,7 +1237,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("AverageBlackLevel", 0xe7, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("AverageBlackLevel", 0xe7, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x4d6, bo) {
@@ -1222,7 +1247,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x26b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashOutput", 0x26b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x4d8, bo) {
         dm.push(("FlashBatteryLevel".to_string(), f64::from(v)));
@@ -1230,7 +1255,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%.2fV\", $val * 5 / 186) : \"n/a\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashBatteryLevel", 0x26c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashBatteryLevel", 0x26c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1246,7 +1271,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             let mut cv = Conv::Str(s.clone());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::SwapWords($val)", &cv, &ctx) { cv = x; }
             let raw = Value::String(cv.as_string());
-            tags.push(mk("RawMeasuredRGGB", 0x280, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("RawMeasuredRGGB", 0x280, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 4.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 5.0)) {
@@ -1260,7 +1285,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x2b4, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x2b4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -1272,20 +1297,20 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(mk("NormalWhiteLevel", 0x2b8, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+                tags.push(mk("NormalWhiteLevel", 0x2b8, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 4.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 5.0)) {
         if let Some(v) = u16_at(data, 0x572, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x2b9, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x2b9, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 4.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 5.0)) {
         if let Some(v) = u16_at(data, 0x574, bo) {
             dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-            tags.push(mk("LinearityUpperMargin", 0x2ba, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LinearityUpperMargin", 0x2ba, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 6.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 7.0)) {
@@ -1299,7 +1324,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x2cb, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x2cb, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -1311,7 +1336,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(mk("NormalWhiteLevel", 0x2cf, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+                tags.push(mk("NormalWhiteLevel", 0x2cf, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -1326,20 +1351,20 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x2cf, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x2cf, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 6.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 7.0)) {
         if let Some(v) = u16_at(data, 0x5a0, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x2d0, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x2d0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 6.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 7.0)) {
         if let Some(v) = u16_at(data, 0x5a2, bo) {
             dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-            tags.push(mk("LinearityUpperMargin", 0x2d1, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LinearityUpperMargin", 0x2d1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 9.0) {
@@ -1350,20 +1375,20 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(mk("NormalWhiteLevel", 0x2d3, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+                tags.push(mk("NormalWhiteLevel", 0x2d3, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 9.0) {
         if let Some(v) = u16_at(data, 0x5a8, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x2d4, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x2d4, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 9.0) {
         if let Some(v) = u16_at(data, 0x5aa, bo) {
             dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-            tags.push(mk("LinearityUpperMargin", 0x2d5, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LinearityUpperMargin", 0x2d5, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(sub) = data.get(0x7e..0x7e + 210) {
@@ -1377,6 +1402,7 @@ fn canon_colordata4(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData5` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata5(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -1394,7 +1420,7 @@ fn canon_colordata5(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
                 -3 => "-3 (M10/M3)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == -3.0) {
@@ -1408,7 +1434,7 @@ fn canon_colordata5(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x108, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x108, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -1423,26 +1449,26 @@ fn canon_colordata5(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x14d, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x14d, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == -3.0) {
         if let Some(v) = u16_at(data, 0x52c, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x296, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x296, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == -4.0) {
         if let Some(v) = u16_at(data, 0xad2, bo) {
             dm.push(("NormalWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("NormalWhiteLevel", 0x569, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("NormalWhiteLevel", 0x569, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == -4.0) {
         if let Some(v) = u16_at(data, 0xad4, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x56a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x56a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == -3.0) {
@@ -1470,6 +1496,7 @@ fn canon_colordata5(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData6` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -1481,7 +1508,7 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             10 => "10 (600D/1200D)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1493,12 +1520,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x3f, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x3f, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x86, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x43, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x43, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1510,12 +1537,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x44, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x44, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x90, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x48, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x48, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1527,12 +1554,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0x49, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0x49, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x9a, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0x4d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0x4d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1604,12 +1631,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x67, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x67, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xd6, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x6b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x6b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1621,12 +1648,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x6c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x6c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xe0, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x70, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x70, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1638,12 +1665,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x71, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x71, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xea, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x75, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x75, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1655,12 +1682,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x76, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x76, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xf4, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x7a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x7a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1672,12 +1699,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x7b, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x7b, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xfe, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x7f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x7f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1689,12 +1716,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0x80, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0x80, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x108, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0x84, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0x84, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1706,12 +1733,12 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0x85, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0x85, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x112, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0x89, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0x89, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1843,7 +1870,7 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("AverageBlackLevel", 0xfb, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("AverageBlackLevel", 0xfb, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -1860,7 +1887,7 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             let mut cv = Conv::Str(s.clone());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::SwapWords($val)", &cv, &ctx) { cv = x; }
             let raw = Value::String(cv.as_string());
-            tags.push(mk("RawMeasuredRGGB", 0x194, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("RawMeasuredRGGB", 0x194, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -1873,7 +1900,7 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("PerChannelBlackLevel", 0x1df, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("PerChannelBlackLevel", 0x1df, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x3c6, bo) {
@@ -1883,16 +1910,16 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(mk("NormalWhiteLevel", 0x1e3, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("NormalWhiteLevel", 0x1e3, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x3c8, bo) {
         dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-        tags.push(mk("SpecularWhiteLevel", 0x1e4, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SpecularWhiteLevel", 0x1e4, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x3ca, bo) {
         dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-        tags.push(mk("LinearityUpperMargin", 0x1e5, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LinearityUpperMargin", 0x1e5, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x178..0x178 + 120) {
         tags.extend(canon_colorcalib(sub, model, bo, file_type, format, dm));
@@ -1902,6 +1929,7 @@ fn canon_colordata6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData7` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -1919,7 +1947,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
                 11 => "11 (7DmkII/750D/760D/8000D)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -1932,12 +1960,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x3f, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x3f, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x86, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x43, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x43, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1949,12 +1977,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x44, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x44, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x90, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x48, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x48, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -1966,12 +1994,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0x49, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0x49, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x9a, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0x4d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0x4d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2103,12 +2131,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x80, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x80, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x108, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x84, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x84, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2120,12 +2148,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x85, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x85, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x112, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x89, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x89, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2137,12 +2165,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x8a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x8a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x11c, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x8e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x8e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2154,12 +2182,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x8f, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x8f, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x126, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x93, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x93, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2171,12 +2199,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x94, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x94, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x130, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x98, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x98, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2188,12 +2216,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0x99, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0x99, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x13a, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0x9d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0x9d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2205,12 +2233,12 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0x9e, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0x9e, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x144, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0xa2, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0xa2, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2342,7 +2370,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("AverageBlackLevel", 0x114, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("AverageBlackLevel", 0x114, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x330, bo) {
@@ -2352,7 +2380,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x198, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashOutput", 0x198, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x332, bo) {
         dm.push(("FlashBatteryLevel".to_string(), f64::from(v)));
@@ -2360,7 +2388,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%.2fV\", $val * 5 / 186) : \"n/a\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashBatteryLevel", 0x199, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashBatteryLevel", 0x199, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 10.0) {
         {
@@ -2377,7 +2405,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
                 let mut cv = Conv::Str(s.clone());
                 if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::SwapWords($val)", &cv, &ctx) { cv = x; }
                 let raw = Value::String(cv.as_string());
-                tags.push(mk("RawMeasuredRGGB", 0x1ad, cv.as_string(), raw, GRP1, GRP2, PRIO));
+                tags.push(mk("RawMeasuredRGGB", 0x1ad, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -2392,7 +2420,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x1f8, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x1f8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -2404,20 +2432,20 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(mk("NormalWhiteLevel", 0x1fc, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+                tags.push(mk("NormalWhiteLevel", 0x1fc, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 10.0) {
         if let Some(v) = u16_at(data, 0x3fa, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x1fd, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x1fd, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 10.0) {
         if let Some(v) = u16_at(data, 0x3fc, bo) {
             dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-            tags.push(mk("LinearityUpperMargin", 0x1fe, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LinearityUpperMargin", 0x1fe, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 11.0) {
@@ -2435,7 +2463,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
                 let mut cv = Conv::Str(s.clone());
                 if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::SwapWords($val)", &cv, &ctx) { cv = x; }
                 let raw = Value::String(cv.as_string());
-                tags.push(mk("RawMeasuredRGGB", 0x26b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+                tags.push(mk("RawMeasuredRGGB", 0x26b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -2450,7 +2478,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x2d8, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x2d8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -2462,20 +2490,20 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(mk("NormalWhiteLevel", 0x2dc, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+                tags.push(mk("NormalWhiteLevel", 0x2dc, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 11.0) {
         if let Some(v) = u16_at(data, 0x5ba, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x2dd, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x2dd, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 11.0) {
         if let Some(v) = u16_at(data, 0x5bc, bo) {
             dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-            tags.push(mk("LinearityUpperMargin", 0x2de, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LinearityUpperMargin", 0x2de, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(sub) = data.get(0x1aa..0x1aa + 120) {
@@ -2486,6 +2514,7 @@ fn canon_colordata7(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData8` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -2505,7 +2534,7 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
                 15 => "15 (6DmkII/77D/200D/800D,9000D)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -2518,12 +2547,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x3f, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x3f, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x86, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x43, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x43, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2535,12 +2564,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x44, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x44, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x90, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x48, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x48, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2552,12 +2581,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0x49, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0x49, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x9a, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0x4d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0x4d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2701,12 +2730,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x85, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x85, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x112, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x89, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x89, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2718,12 +2747,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x8a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x8a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x11c, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x8e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x8e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2735,12 +2764,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x8f, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x8f, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x126, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x93, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x93, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2752,12 +2781,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x94, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x94, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x130, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x98, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x98, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2769,12 +2798,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x99, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x99, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x13a, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x9d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x9d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2786,12 +2815,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0x9e, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0x9e, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x144, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0xa2, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0xa2, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -2803,12 +2832,12 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0xa3, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0xa3, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x14e, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0xa7, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0xa7, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3048,7 +3077,7 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("AverageBlackLevel", 0x146, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("AverageBlackLevel", 0x146, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 14.0) {
@@ -3062,7 +3091,7 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x22c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x22c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -3074,20 +3103,20 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(mk("NormalWhiteLevel", 0x230, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+                tags.push(mk("NormalWhiteLevel", 0x230, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 14.0) {
         if let Some(v) = u16_at(data, 0x462, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x231, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x231, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 14.0) {
         if let Some(v) = u16_at(data, 0x464, bo) {
             dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-            tags.push(mk("LinearityUpperMargin", 0x232, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LinearityUpperMargin", 0x232, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v < 14.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 15.0)) {
@@ -3101,7 +3130,7 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             }
             if !parts.is_empty() {
                 let s = parts.join(" ");
-                tags.push(mk("PerChannelBlackLevel", 0x30a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+                tags.push(mk("PerChannelBlackLevel", 0x30a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -3113,20 +3142,20 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
             if rc.as_ref() != Some(&Conv::Undef) {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let v = rc.map_or(v, |x| x.as_num() as _);
-                tags.push(mk("NormalWhiteLevel", 0x30e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+                tags.push(mk("NormalWhiteLevel", 0x30e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v < 14.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 15.0)) {
         if let Some(v) = u16_at(data, 0x61e, bo) {
             dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-            tags.push(mk("SpecularWhiteLevel", 0x30f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SpecularWhiteLevel", 0x30f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if (dm_get(dm, "ColorDataVersion").is_some_and(|v| v < 14.0) || dm_get(dm, "ColorDataVersion").is_some_and(|v| v == 15.0)) {
         if let Some(v) = u16_at(data, 0x620, bo) {
             dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-            tags.push(mk("LinearityUpperMargin", 0x310, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LinearityUpperMargin", 0x310, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(sub) = data.get(0x20e..0x20e + 120) {
@@ -3137,6 +3166,7 @@ fn canon_colordata8(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData9` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -3156,7 +3186,7 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
                 19 => "19 (90D/850D/M6mkII/M200)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -3169,12 +3199,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x47, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x47, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x96, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x4b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x4b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3186,12 +3216,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x4c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x4c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xa0, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x50, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x50, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3203,12 +3233,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0x51, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0x51, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xaa, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0x55, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0x55, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3340,12 +3370,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x88, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x88, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x118, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x8c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x8c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3357,12 +3387,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x8d, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x8d, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x122, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x91, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x91, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3374,12 +3404,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x92, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x92, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x12c, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x96, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x96, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3391,12 +3421,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x97, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x97, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x136, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x9b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x9b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3408,12 +3438,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x9c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x9c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x140, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0xa0, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0xa0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3425,12 +3455,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0xa1, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0xa1, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x14a, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0xa5, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0xa5, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3442,12 +3472,12 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0xa6, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0xa6, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x154, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0xaa, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0xaa, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3687,7 +3717,7 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("PerChannelBlackLevel", 0x149, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("PerChannelBlackLevel", 0x149, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x638, bo) {
@@ -3697,16 +3727,16 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(mk("NormalWhiteLevel", 0x31c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("NormalWhiteLevel", 0x31c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x63a, bo) {
         dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-        tags.push(mk("SpecularWhiteLevel", 0x31d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SpecularWhiteLevel", 0x31d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x63c, bo) {
         dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-        tags.push(mk("LinearityUpperMargin", 0x31e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LinearityUpperMargin", 0x31e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x214..0x214 + 120) {
         tags.extend(canon_colorcalib(sub, model, bo, file_type, format, dm));
@@ -3716,6 +3746,7 @@ fn canon_colordata9(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorData10` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -3733,7 +3764,7 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
                 33 => "33 (R5/R6)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -3746,12 +3777,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x55, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x55, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xb2, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x59, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x59, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3763,12 +3794,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x5a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x5a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xbc, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x5e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x5e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3780,12 +3811,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0x5f, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0x5f, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xc6, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0x63, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0x63, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3917,12 +3948,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x96, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x96, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x134, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x9a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x9a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3934,12 +3965,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x9b, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x9b, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x13e, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x9f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x9f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3951,12 +3982,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0xa0, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0xa0, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x148, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0xa4, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0xa4, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3968,12 +3999,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0xa5, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0xa5, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x152, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0xa9, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0xa9, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -3985,12 +4016,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0xaa, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0xaa, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x15c, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0xae, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0xae, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4002,12 +4033,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0xaf, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0xaf, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x166, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0xb3, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0xb3, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4019,12 +4050,12 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0xb4, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0xb4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x170, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0xb8, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0xb8, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4264,7 +4295,7 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("PerChannelBlackLevel", 0x157, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("PerChannelBlackLevel", 0x157, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x532, bo) {
@@ -4274,7 +4305,7 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x299, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashOutput", 0x299, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x534, bo) {
         dm.push(("FlashBatteryLevel".to_string(), f64::from(v)));
@@ -4282,7 +4313,7 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%.2fV\", $val * 5 / 186) : \"n/a\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashBatteryLevel", 0x29a, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashBatteryLevel", 0x29a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x654, bo) {
         dm.push(("NormalWhiteLevel".to_string(), f64::from(v)));
@@ -4291,16 +4322,16 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(mk("NormalWhiteLevel", 0x32a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("NormalWhiteLevel", 0x32a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x656, bo) {
         dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-        tags.push(mk("SpecularWhiteLevel", 0x32b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SpecularWhiteLevel", 0x32b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x658, bo) {
         dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-        tags.push(mk("LinearityUpperMargin", 0x32c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LinearityUpperMargin", 0x32c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x230..0x230 + 120) {
         tags.extend(canon_colorcalib(sub, model, bo, file_type, format, dm));
@@ -4310,6 +4341,7 @@ fn canon_colordata10(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
 
 /// `Image::ExifTool::Canon::ColorData11` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -4327,7 +4359,7 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
                 48 => "48 (R7/R10/R50/R6mkII)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -4340,12 +4372,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x69, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x69, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xda, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x6d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x6d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4357,12 +4389,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x6e, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x6e, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xe4, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x72, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x72, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4374,12 +4406,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0x73, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0x73, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xee, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0x77, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0x77, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4595,12 +4627,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0xcd, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0xcd, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1a2, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0xd1, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0xd1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4612,12 +4644,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0xd2, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0xd2, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1ac, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0xd6, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0xd6, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4629,12 +4661,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0xd7, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0xd7, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1b6, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0xdb, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0xdb, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4646,12 +4678,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0xdc, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0xdc, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1c0, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0xe0, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0xe0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4663,12 +4695,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0xe1, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0xe1, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1ca, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0xe5, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0xe5, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4680,12 +4712,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0xe6, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0xe6, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1d4, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0xea, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0xea, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4697,12 +4729,12 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0xeb, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0xeb, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1de, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0xef, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0xef, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4846,7 +4878,7 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("PerChannelBlackLevel", 0x16b, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("PerChannelBlackLevel", 0x16b, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x500, bo) {
@@ -4856,16 +4888,16 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(mk("NormalWhiteLevel", 0x280, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("NormalWhiteLevel", 0x280, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x502, bo) {
         dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-        tags.push(mk("SpecularWhiteLevel", 0x281, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SpecularWhiteLevel", 0x281, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x504, bo) {
         dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-        tags.push(mk("LinearityUpperMargin", 0x282, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LinearityUpperMargin", 0x282, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x258..0x258 + 120) {
         tags.extend(canon_colorcalib(sub, model, bo, file_type, format, dm));
@@ -4875,6 +4907,7 @@ fn canon_colordata11(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
 
 /// `Image::ExifTool::Canon::ColorData12` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -4892,7 +4925,7 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
                 65 => "65 (R50V)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorDataVersion", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -4905,12 +4938,12 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x69, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x69, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xda, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x6d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x6d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4922,12 +4955,12 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x6e, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x6e, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xe4, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x72, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x72, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4939,12 +4972,12 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x73, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x73, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xee, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x77, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x77, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4956,12 +4989,12 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x78, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x78, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xf8, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x7c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x7c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4973,12 +5006,12 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x7d, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x7d, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x102, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x81, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x81, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -4990,12 +5023,12 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x82, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x82, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x10c, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x86, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x86, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -5007,12 +5040,12 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0x87, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0x87, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x116, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0x8b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0x8b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -5408,7 +5441,7 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("PerChannelBlackLevel", 0x17f, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("PerChannelBlackLevel", 0x17f, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x406, bo) {
@@ -5418,7 +5451,7 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         if let Some(x) = conv_expr::eval_with("$val >= 255 ? 255 : exp(($val-200)/16*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val == 255 ? \"Strobe or Misfire\" : sprintf(\"%.0f%%\", $val * 100)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashOutput", 0x203, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashOutput", 0x203, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x408, bo) {
         dm.push(("FlashBatteryLevel".to_string(), f64::from(v)));
@@ -5426,7 +5459,7 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%.2fV\", $val * 5 / 186) : \"n/a\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashBatteryLevel", 0x204, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashBatteryLevel", 0x204, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x528, bo) {
         dm.push(("NormalWhiteLevel".to_string(), f64::from(v)));
@@ -5435,16 +5468,16 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(mk("NormalWhiteLevel", 0x294, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("NormalWhiteLevel", 0x294, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x52a, bo) {
         dm.push(("SpecularWhiteLevel".to_string(), f64::from(v)));
-        tags.push(mk("SpecularWhiteLevel", 0x295, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SpecularWhiteLevel", 0x295, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x52c, bo) {
         dm.push(("LinearityUpperMargin".to_string(), f64::from(v)));
-        tags.push(mk("LinearityUpperMargin", 0x296, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LinearityUpperMargin", 0x296, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x280..0x280 + 120) {
         tags.extend(canon_colorcalib(sub, model, bo, file_type, format, dm));
@@ -5454,6 +5487,7 @@ fn canon_colordata12(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
 
 /// `Image::ExifTool::Canon::ColorDataUnknown` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colordataunknown(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -5461,13 +5495,14 @@ fn canon_colordataunknown(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(v) = i16_at(data, 0x0, bo) {
         dm.push(("ColorDataVersion".to_string(), f64::from(v)));
-        tags.push(mk("ColorDataVersion", 0x0, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorDataVersion", 0x0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::ShotInfo` -- FORMAT int16s, FIRST_ENTRY 1.
 fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Image";
     const PRIO: i32 = 0;
@@ -5480,7 +5515,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
         if let Some(x) = conv_expr::eval_with("exp($val/32*log(2))*100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("AutoISO", 0x1, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("AutoISO", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x4, bo) {
         dm.push(("BaseISO".to_string(), f64::from(v)));
@@ -5493,7 +5528,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             if let Some(x) = conv_expr::eval_with("exp($val/32*log(2))*100/32", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("BaseISO", 0x2, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("BaseISO", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x6, bo) {
@@ -5503,7 +5538,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
         if let Some(x) = conv_expr::eval_with("$val / 32 + 5", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.2f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("MeasuredEV", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MeasuredEV", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x8, bo) {
         dm.push(("TargetAperture".to_string(), f64::from(v)));
@@ -5516,7 +5551,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             if let Some(x) = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val)*log(2)/2)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("TargetAperture", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("TargetAperture", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xa, bo) {
@@ -5530,7 +5565,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             if let Some(x) = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("TargetExposureTime", 0x5, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("TargetExposureTime", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xc, bo) {
@@ -5540,7 +5575,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureCompensation", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureCompensation", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0xe, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -5569,7 +5604,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x10, bo) {
         dm.push(("SlowShutter".to_string(), f64::from(v)));
@@ -5581,11 +5616,11 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             3 => "None".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SlowShutter", 0x8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SlowShutter", 0x8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x12, bo) {
         dm.push(("SequenceNumber".to_string(), f64::from(v)));
-        tags.push(mk("SequenceNumber", 0x9, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SequenceNumber", 0x9, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x14, bo) {
         dm.push(("OpticalZoomCode".to_string(), f64::from(v)));
@@ -5593,7 +5628,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val == 8 ? \"n/a\" : $val", &cv, &ctx) { cv = x; }
-        tags.push(mk("OpticalZoomCode", 0xa, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("OpticalZoomCode", 0xa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if (MODEL_RE_0.is_match(model) && !MODEL_RE_1.is_match(model)) {
         if let Some(v) = i16_at(data, 0x18, bo) {
@@ -5607,7 +5642,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
                 if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
                 let raw = Value::F64(cv.as_num());
                 if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-                tags.push(mk("CameraTemperature", 0xc, cv.as_string(), raw, GRP1, GRP2, PRIO));
+                tags.push(mk("CameraTemperature", 0xc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -5621,7 +5656,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val / 32", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("FlashGuideNumber", 0xd, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FlashGuideNumber", 0xd, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1c, bo) {
@@ -5642,7 +5677,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
                 12295 => "All".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("AFPointsInFocus", 0xe, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("AFPointsInFocus", 0xe, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1e, bo) {
@@ -5652,7 +5687,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashExposureComp", 0xf, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashExposureComp", 0xf, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x20, bo) {
         dm.push(("AutoExposureBracketing".to_string(), f64::from(v)));
@@ -5664,7 +5699,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             3 => "On (shot 3)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AutoExposureBracketing", 0x10, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AutoExposureBracketing", 0x10, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x22, bo) {
         dm.push(("AEBBracketValue".to_string(), f64::from(v)));
@@ -5673,7 +5708,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Canon::CanonEv($val)", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("AEBBracketValue", 0x11, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("AEBBracketValue", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x24, bo) {
         dm.push(("ControlMode".to_string(), f64::from(v)));
@@ -5683,7 +5718,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             3 => "Computer Remote Control".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ControlMode", 0x12, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ControlMode", 0x12, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x26, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -5696,7 +5731,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocusDistanceUpper", 0x13, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocusDistanceUpper", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "FocusDistanceUpper").is_some_and(|v| v != 0.0) {
@@ -5707,7 +5742,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocusDistanceLower", 0x14, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocusDistanceLower", 0x14, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x2a, bo) {
@@ -5721,7 +5756,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             if let Some(x) = conv_expr::eval_with("exp(Image::ExifTool::Canon::CanonEv($val)*log(2)/2)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x15, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x15, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_2.is_match(model) {
@@ -5736,7 +5771,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
                 if let Some(x) = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))*1000/32", &cv, &ctx) { cv = x; }
                 let raw = Value::F64(cv.as_num());
                 if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-                tags.push(mk("ExposureTime", 0x16, cv.as_string(), raw, GRP1, GRP2, PRIO));
+                tags.push(mk("ExposureTime", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -5752,7 +5787,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
                 if let Some(x) = conv_expr::eval_with("exp(-Image::ExifTool::Canon::CanonEv($val)*log(2))", &cv, &ctx) { cv = x; }
                 let raw = Value::F64(cv.as_num());
                 if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-                tags.push(mk("ExposureTime", 0x16, cv.as_string(), raw, GRP1, GRP2, PRIO));
+                tags.push(mk("ExposureTime", 0x16, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -5766,7 +5801,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV2", 0x17, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MeasuredEV2", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x30, bo) {
@@ -5775,7 +5810,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("BulbDuration", 0x18, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("BulbDuration", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x34, bo) {
         dm.push(("CameraType".to_string(), f64::from(v)));
@@ -5787,7 +5822,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             255 => "DV Camera".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraType", 0x1a, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraType", 0x1a, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x36, bo) {
         dm.push(("AutoRotate".to_string(), f64::from(v)));
@@ -5804,7 +5839,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
                 3 => "Rotate 270 CW".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("AutoRotate", 0x1b, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("AutoRotate", 0x1b, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x38, bo) {
@@ -5815,7 +5850,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("NDFilter", 0x1c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("NDFilter", 0x1c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x3a, bo) {
         dm.push(("SelfTimer2".to_string(), f64::from(v)));
@@ -5827,7 +5862,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val / 10", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("SelfTimer2", 0x1d, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("SelfTimer2", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x42, bo) {
@@ -5837,7 +5872,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
         if rc.as_ref() != Some(&Conv::Undef) {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let v = rc.map_or(v, |x| x.as_num() as _);
-            tags.push(mk("FlashOutput", 0x21, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("FlashOutput", 0x21, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     tags
@@ -5845,6 +5880,7 @@ fn canon_shotinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, form
 
 /// `Image::ExifTool::Canon::CameraInfo1D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -5861,7 +5897,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0xa, bo) {
@@ -5874,7 +5910,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0xa, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0xa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0xd, bo) {
@@ -6126,7 +6162,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
                 65535 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensType", 0xd, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LensType", 0xd, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0xe, bo) {
@@ -6135,7 +6171,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0xe, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0xe, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x10, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -6143,7 +6179,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x10, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x10, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if MODEL_RE_3.is_match(model) {
         if let Some(v) = u8_at(data, 0x41) {
@@ -6157,13 +6193,13 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
                 5 => "Highest".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("SharpnessFrequency", 0x41, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SharpnessFrequency", 0x41, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_3.is_match(model) {
         if let Some(v) = i8_at(data, 0x42) {
             dm.push(("Sharpness".to_string(), f64::from(v)));
-            tags.push(mk("Sharpness", 0x42, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("Sharpness", 0x42, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_3.is_match(model) {
@@ -6194,7 +6230,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
                 23 => "Auto (ambience priority)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("WhiteBalance", 0x44, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("WhiteBalance", 0x44, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_4.is_match(model) {
@@ -6209,19 +6245,19 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
                 5 => "Highest".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("SharpnessFrequency", 0x47, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("SharpnessFrequency", 0x47, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_3.is_match(model) {
         if let Some(v) = u16_at(data, 0x48, bo) {
             dm.push(("ColorTemperature".to_string(), f64::from(v)));
-            tags.push(mk("ColorTemperature", 0x48, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorTemperature", 0x48, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if !(MODEL_RE_3.is_match(model)) && MODEL_RE_4.is_match(model) {
         if let Some(v) = i8_at(data, 0x48) {
             dm.push(("Sharpness".to_string(), f64::from(v)));
-            tags.push(mk("Sharpness", 0x48, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("Sharpness", 0x48, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_4.is_match(model) {
@@ -6252,7 +6288,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
                 23 => "Auto (ambience priority)".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("WhiteBalance", 0x4a, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("WhiteBalance", 0x4a, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_3.is_match(model) {
@@ -6285,13 +6321,13 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
                 65535 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("PictureStyle", 0x4b, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("PictureStyle", 0x4b, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_4.is_match(model) {
         if let Some(v) = u16_at(data, 0x4e, bo) {
             dm.push(("ColorTemperature".to_string(), f64::from(v)));
-            tags.push(mk("ColorTemperature", 0x4e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorTemperature", 0x4e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_4.is_match(model) {
@@ -6324,7 +6360,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
                 65535 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("PictureStyle", 0x51, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("PictureStyle", 0x51, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     tags
@@ -6332,6 +6368,7 @@ fn canon_camerainfo1d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
 
 /// `Image::ExifTool::Canon::CameraInfo1DmkII` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -6348,7 +6385,7 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x9, bo) {
@@ -6361,7 +6398,7 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x9, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0xc, bo) {
@@ -6613,7 +6650,7 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
                 65535 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensType", 0xc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LensType", 0xc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x11, bo) {
@@ -6622,7 +6659,7 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x11, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x13, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -6630,7 +6667,7 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x13, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2d) {
         dm.push(("FocalType".to_string(), f64::from(v)));
@@ -6639,7 +6676,7 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             2 => "Zoom".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FocalType", 0x2d, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FocalType", 0x2d, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x36) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -6668,11 +6705,11 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x36, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x36, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x37, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x37, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x37, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x39, bo) {
         dm.push(("CanonImageSize".to_string(), f64::from(v)));
@@ -6698,11 +6735,11 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             143 => "4096x2160 Movie".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CanonImageSize", 0x39, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CanonImageSize", 0x39, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x66) {
         dm.push(("JPEGQuality".to_string(), f64::from(v)));
-        tags.push(mk("JPEGQuality", 0x66, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("JPEGQuality", 0x66, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x6c) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -6733,32 +6770,33 @@ fn canon_camerainfo1dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0x6c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0x6c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x6e) {
         dm.push(("Saturation".to_string(), f64::from(v)));
-        tags.push(mk("Saturation", 0x6e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Saturation", 0x6e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x6f) {
         dm.push(("ColorTone".to_string(), f64::from(v)));
-        tags.push(mk("ColorTone", 0x6f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTone", 0x6f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x72) {
         dm.push(("Sharpness".to_string(), f64::from(v)));
-        tags.push(mk("Sharpness", 0x72, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Sharpness", 0x72, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x73) {
         dm.push(("Contrast".to_string(), f64::from(v)));
-        tags.push(mk("Contrast", 0x73, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Contrast", 0x73, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x75, 5, true) {
-        tags.push(mk("ISO", 0x75, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x75, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::CameraInfo1DmkIIN` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo1dmkiin(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -6775,7 +6813,7 @@ fn canon_camerainfo1dmkiin(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x9, bo) {
@@ -6788,7 +6826,7 @@ fn canon_camerainfo1dmkiin(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x9, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0xc, bo) {
@@ -7040,7 +7078,7 @@ fn canon_camerainfo1dmkiin(data: &[u8], model: &str, bo: ByteOrder, file_type: &
                 65535 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensType", 0xc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LensType", 0xc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x11, bo) {
@@ -7049,7 +7087,7 @@ fn canon_camerainfo1dmkiin(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x11, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x11, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x13, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -7057,7 +7095,7 @@ fn canon_camerainfo1dmkiin(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x13, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x13, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x36) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -7086,11 +7124,11 @@ fn canon_camerainfo1dmkiin(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x36, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x36, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x37, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x37, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x37, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x73) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -7121,32 +7159,33 @@ fn canon_camerainfo1dmkiin(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0x73, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0x73, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x74) {
         dm.push(("Sharpness".to_string(), f64::from(v)));
-        tags.push(mk("Sharpness", 0x74, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Sharpness", 0x74, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x75) {
         dm.push(("Contrast".to_string(), f64::from(v)));
-        tags.push(mk("Contrast", 0x75, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Contrast", 0x75, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x76) {
         dm.push(("Saturation".to_string(), f64::from(v)));
-        tags.push(mk("Saturation", 0x76, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Saturation", 0x76, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x77) {
         dm.push(("ColorTone".to_string(), f64::from(v)));
-        tags.push(mk("ColorTone", 0x77, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTone", 0x77, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x79, 5, true) {
-        tags.push(mk("ISO", 0x79, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x79, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::CameraInfo1DmkIII` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -7163,7 +7202,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -7177,7 +7216,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -7187,7 +7226,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -7196,7 +7235,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if (dm_get(dm, "LensType").is_some_and(|v| v != 0.0) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -7206,7 +7245,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x1d, bo) {
@@ -7219,7 +7258,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1d, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x30) {
@@ -7230,7 +7269,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x30, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x30, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x43, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -7239,7 +7278,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x45, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -7248,7 +7287,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x5e, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -7277,11 +7316,11 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x5e, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x5e, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x62, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x62, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x62, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x86) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -7312,7 +7351,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0x86, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0x86, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x111, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -7558,7 +7597,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x111, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x111, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x113, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -7566,7 +7605,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x113, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x113, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x115, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -7574,10 +7613,10 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x115, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x115, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x136, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x136, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x136, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x172, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -7585,7 +7624,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x172, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x172, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x176, bo) {
         dm.push(("ShutterCount".to_string(), f64::from(v)));
@@ -7593,7 +7632,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("ShutterCount", 0x176, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ShutterCount", 0x176, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x17e, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -7601,7 +7640,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x17e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x17e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if MODEL_RE_5.is_match(model) {
         if let Some(v) = u32_at(data, 0x45a, bo) {
@@ -7615,7 +7654,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
                 if let Some(x) = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx) { cv = x; }
                 let raw = Value::F64(cv.as_num());
                 if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
-                tags.push(mk("TimeStamp1", 0x45a, cv.as_string(), raw, GRP1, GRP2, PRIO));
+                tags.push(mk("TimeStamp1", 0x45a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
             }
         }
     }
@@ -7630,7 +7669,7 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             if let Some(x) = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("TimeStamp", 0x45e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("TimeStamp", 0x45e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(sub) = data.get(0x2aa..) {
@@ -7641,13 +7680,14 @@ fn canon_camerainfo1dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
 
 /// `Image::ExifTool::Canon::CameraInfo1DmkIV` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
     let mut tags = Vec::new();
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(text) = text_at(data, 0x0, 509, false) {
-        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x3) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -7660,7 +7700,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -7674,7 +7714,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -7684,7 +7724,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), f64::from(v)));
@@ -7701,7 +7741,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             2684354560 => "Format 2".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x8) {
         dm.push(("MeasuredEV2".to_string(), f64::from(v)));
@@ -7713,7 +7753,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV2", 0x8, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MeasuredEV2", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x9) {
@@ -7726,7 +7766,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV3", 0x9, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MeasuredEV3", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x15) {
@@ -7739,7 +7779,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -7748,7 +7788,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -7760,7 +7800,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x35) {
@@ -7771,7 +7811,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x35, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x35, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x54, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -7780,7 +7820,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x56, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -7789,7 +7829,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x78, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -7818,11 +7858,11 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x78, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x78, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x7c, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x7c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x7c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x14f, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -8068,7 +8108,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x14f, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x14f, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x151, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -8076,7 +8116,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x151, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x151, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x153, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -8084,10 +8124,10 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x153, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x153, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x1ed, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x1ed, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x1ed, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x22c, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -8095,7 +8135,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x22c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x22c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x238, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -8103,7 +8143,7 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x238, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x238, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x368..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -8113,13 +8153,14 @@ fn canon_camerainfo1dmkiv(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
 
 /// `Image::ExifTool::Canon::CameraInfo1DX` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
     let mut tags = Vec::new();
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(text) = text_at(data, 0x0, 651, false) {
-        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x3) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -8132,7 +8173,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -8146,7 +8187,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -8156,7 +8197,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -8165,7 +8206,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -8177,7 +8218,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x7d) {
@@ -8188,7 +8229,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x7d, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x7d, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x8c, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -8197,7 +8238,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x8e, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -8206,7 +8247,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xbc, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -8235,11 +8276,11 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0xbc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0xbc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xc0, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0xc0, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0xc0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xf4) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -8270,7 +8311,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xf4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xf4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1a7, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -8516,7 +8557,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x1a7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x1a7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1a9, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -8524,7 +8565,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x1a9, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x1a9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1ab, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -8532,10 +8573,10 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x1ab, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x1ab, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x280, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x280, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x280, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x2d0, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -8543,7 +8584,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x2d0, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x2d0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x2dc, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -8551,7 +8592,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x2dc, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x2dc, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x3f4..) {
         tags.extend(canon_psinfo2(sub, model, bo, file_type, format, dm));
@@ -8561,6 +8602,7 @@ fn canon_camerainfo1dx(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
 
 /// `Image::ExifTool::Canon::CameraInfo5D` -- FORMAT int8s, FIRST_ENTRY 0.
 fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -8577,7 +8619,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -8591,7 +8633,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -8601,7 +8643,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xc, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -8852,7 +8894,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
                 65535 => "n/a".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("LensType", 0xc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("LensType", 0xc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x17) {
@@ -8862,7 +8904,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x17, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x17, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if (dm_get(dm, "LensType").is_some_and(|v| v != 0.0) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = i8_at(data, 0x1b) {
@@ -8872,7 +8914,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i8_at(data, 0x27) {
@@ -8883,7 +8925,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x27, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x27, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x28, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -8895,7 +8937,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x28, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x28, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x38, bo) {
@@ -8918,7 +8960,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             14 => "AI Servo6".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AFPointsInFocus5D", 0x38, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFPointsInFocus5D", 0x38, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x54, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -8947,11 +8989,11 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x54, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x54, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x58, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x58, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x58, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x6c) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -8982,7 +9024,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0x6c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0x6c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x93, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -8990,7 +9032,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x93, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x93, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x95, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -8998,7 +9040,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x95, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x95, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x97, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -9244,17 +9286,17 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x97, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x97, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0xa4, 8, true) {
-        tags.push(mk("FirmwareRevision", 0xa4, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareRevision", 0xa4, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0xac, 16, true) {
-        tags.push(mk("ShortOwnerName", 0xac, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("ShortOwnerName", 0xac, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0xcc, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
-        tags.push(mk("DirectoryIndex", 0xcc, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0xcc, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xd0, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -9262,99 +9304,99 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0xd0, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0xd0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xe8) {
         dm.push(("ContrastStandard".to_string(), f64::from(v)));
-        tags.push(mk("ContrastStandard", 0xe8, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastStandard", 0xe8, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xe9) {
         dm.push(("ContrastPortrait".to_string(), f64::from(v)));
-        tags.push(mk("ContrastPortrait", 0xe9, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastPortrait", 0xe9, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xea) {
         dm.push(("ContrastLandscape".to_string(), f64::from(v)));
-        tags.push(mk("ContrastLandscape", 0xea, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastLandscape", 0xea, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xeb) {
         dm.push(("ContrastNeutral".to_string(), f64::from(v)));
-        tags.push(mk("ContrastNeutral", 0xeb, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastNeutral", 0xeb, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xec) {
         dm.push(("ContrastFaithful".to_string(), f64::from(v)));
-        tags.push(mk("ContrastFaithful", 0xec, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastFaithful", 0xec, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xed) {
         dm.push(("ContrastMonochrome".to_string(), f64::from(v)));
-        tags.push(mk("ContrastMonochrome", 0xed, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastMonochrome", 0xed, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xee) {
         dm.push(("ContrastUserDef1".to_string(), f64::from(v)));
-        tags.push(mk("ContrastUserDef1", 0xee, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef1", 0xee, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xef) {
         dm.push(("ContrastUserDef2".to_string(), f64::from(v)));
-        tags.push(mk("ContrastUserDef2", 0xef, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef2", 0xef, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf0) {
         dm.push(("ContrastUserDef3".to_string(), f64::from(v)));
-        tags.push(mk("ContrastUserDef3", 0xf0, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef3", 0xf0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf1) {
         dm.push(("SharpnessStandard".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessStandard", 0xf1, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessStandard", 0xf1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf2) {
         dm.push(("SharpnessPortrait".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessPortrait", 0xf2, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessPortrait", 0xf2, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf3) {
         dm.push(("SharpnessLandscape".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessLandscape", 0xf3, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessLandscape", 0xf3, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf4) {
         dm.push(("SharpnessNeutral".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessNeutral", 0xf4, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessNeutral", 0xf4, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf5) {
         dm.push(("SharpnessFaithful".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessFaithful", 0xf5, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessFaithful", 0xf5, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf6) {
         dm.push(("SharpnessMonochrome".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessMonochrome", 0xf6, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessMonochrome", 0xf6, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf7) {
         dm.push(("SharpnessUserDef1".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessUserDef1", 0xf7, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef1", 0xf7, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf8) {
         dm.push(("SharpnessUserDef2".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessUserDef2", 0xf8, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef2", 0xf8, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xf9) {
         dm.push(("SharpnessUserDef3".to_string(), f64::from(v)));
-        tags.push(mk("SharpnessUserDef3", 0xf9, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef3", 0xf9, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xfa) {
         dm.push(("SaturationStandard".to_string(), f64::from(v)));
-        tags.push(mk("SaturationStandard", 0xfa, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationStandard", 0xfa, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xfb) {
         dm.push(("SaturationPortrait".to_string(), f64::from(v)));
-        tags.push(mk("SaturationPortrait", 0xfb, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationPortrait", 0xfb, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xfc) {
         dm.push(("SaturationLandscape".to_string(), f64::from(v)));
-        tags.push(mk("SaturationLandscape", 0xfc, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationLandscape", 0xfc, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xfd) {
         dm.push(("SaturationNeutral".to_string(), f64::from(v)));
-        tags.push(mk("SaturationNeutral", 0xfd, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationNeutral", 0xfd, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xfe) {
         dm.push(("SaturationFaithful".to_string(), f64::from(v)));
-        tags.push(mk("SaturationFaithful", 0xfe, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationFaithful", 0xfe, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0xff) {
         dm.push(("FilterEffectMonochrome".to_string(), f64::from(v)));
@@ -9367,39 +9409,39 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectMonochrome", 0xff, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectMonochrome", 0xff, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x100) {
         dm.push(("SaturationUserDef1".to_string(), f64::from(v)));
-        tags.push(mk("SaturationUserDef1", 0x100, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef1", 0x100, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x101) {
         dm.push(("SaturationUserDef2".to_string(), f64::from(v)));
-        tags.push(mk("SaturationUserDef2", 0x101, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef2", 0x101, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x102) {
         dm.push(("SaturationUserDef3".to_string(), f64::from(v)));
-        tags.push(mk("SaturationUserDef3", 0x102, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef3", 0x102, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x103) {
         dm.push(("ColorToneStandard".to_string(), f64::from(v)));
-        tags.push(mk("ColorToneStandard", 0x103, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneStandard", 0x103, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x104) {
         dm.push(("ColorTonePortrait".to_string(), f64::from(v)));
-        tags.push(mk("ColorTonePortrait", 0x104, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTonePortrait", 0x104, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x105) {
         dm.push(("ColorToneLandscape".to_string(), f64::from(v)));
-        tags.push(mk("ColorToneLandscape", 0x105, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneLandscape", 0x105, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x106) {
         dm.push(("ColorToneNeutral".to_string(), f64::from(v)));
-        tags.push(mk("ColorToneNeutral", 0x106, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneNeutral", 0x106, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x107) {
         dm.push(("ColorToneFaithful".to_string(), f64::from(v)));
-        tags.push(mk("ColorToneFaithful", 0x107, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneFaithful", 0x107, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x108) {
         dm.push(("ToningEffectMonochrome".to_string(), f64::from(v)));
@@ -9412,19 +9454,19 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectMonochrome", 0x108, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectMonochrome", 0x108, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x109) {
         dm.push(("ColorToneUserDef1".to_string(), f64::from(v)));
-        tags.push(mk("ColorToneUserDef1", 0x109, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef1", 0x109, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x10a) {
         dm.push(("ColorToneUserDef2".to_string(), f64::from(v)));
-        tags.push(mk("ColorToneUserDef2", 0x10a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef2", 0x10a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x10b) {
         dm.push(("ColorToneUserDef3".to_string(), f64::from(v)));
-        tags.push(mk("ColorToneUserDef3", 0x10b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef3", 0x10b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x10c, bo) {
         dm.push(("UserDef1PictureStyle".to_string(), f64::from(v)));
@@ -9441,7 +9483,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef1PictureStyle", 0x10c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef1PictureStyle", 0x10c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x10e, bo) {
         dm.push(("UserDef2PictureStyle".to_string(), f64::from(v)));
@@ -9458,7 +9500,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef2PictureStyle", 0x10e, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef2PictureStyle", 0x10e, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x110, bo) {
         dm.push(("UserDef3PictureStyle".to_string(), f64::from(v)));
@@ -9475,7 +9517,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef3PictureStyle", 0x110, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef3PictureStyle", 0x110, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x11c, bo) {
         dm.push(("TimeStamp".to_string(), f64::from(v)));
@@ -9488,7 +9530,7 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("ConvertUnixTime($val)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("$self->ConvertDateTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("TimeStamp", 0x11c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("TimeStamp", 0x11c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     tags
@@ -9496,13 +9538,14 @@ fn canon_camerainfo5d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
 
 /// `Image::ExifTool::Canon::CameraInfo5DmkII` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
     let mut tags = Vec::new();
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(text) = text_at(data, 0x0, 388, false) {
-        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x3) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -9515,7 +9558,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -9529,7 +9572,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -9539,7 +9582,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), f64::from(v)));
@@ -9556,7 +9599,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             2684354560 => "Format 2".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x13) {
         let v = v & 0x7f;
@@ -9581,7 +9624,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             34 => "Speedlite EL-10".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashModel", 0x13, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashModel", 0x13, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), f64::from(v)));
@@ -9593,7 +9636,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -9602,7 +9645,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if (dm_get(dm, "LensType").is_some_and(|v| v != 0.0) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -9612,7 +9655,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
@@ -9625,7 +9668,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
@@ -9636,7 +9679,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x31, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x31, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x50, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -9645,7 +9688,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x52, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -9654,7 +9697,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -9683,11 +9726,11 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x73, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xa7) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -9718,7 +9761,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xa7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xa7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xbd) {
         dm.push(("HighISONoiseReduction".to_string(), f64::from(v)));
@@ -9729,7 +9772,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             3 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighISONoiseReduction", 0xbd, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighISONoiseReduction", 0xbd, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xbf) {
         dm.push(("AutoLightingOptimizer".to_string(), f64::from(v)));
@@ -9740,7 +9783,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             3 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AutoLightingOptimizer", 0xbf, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AutoLightingOptimizer", 0xbf, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xe6, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -9986,7 +10029,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xe6, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xe6, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xe8, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -9994,7 +10037,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0xe8, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0xe8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xea, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -10002,13 +10045,13 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0xea, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0xea, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x17e, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x17e, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x17e, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x18e, 32, true) {
-        tags.push(mk("OwnerName", 0x18e, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("OwnerName", 0x18e, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1bb, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -10016,7 +10059,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1bb, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x1bb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1c7, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -10024,7 +10067,7 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1c7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x1c7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x2f7..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -10034,13 +10077,14 @@ fn canon_camerainfo5dmkii(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
 
 /// `Image::ExifTool::Canon::CameraInfo5DmkIII` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
     let mut tags = Vec::new();
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(text) = text_at(data, 0x0, 589, false) {
-        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x3) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -10053,7 +10097,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -10067,7 +10111,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -10077,7 +10121,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -10086,7 +10130,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -10098,7 +10142,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x7d) {
@@ -10109,7 +10153,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x7d, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x7d, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x8c, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -10118,7 +10162,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x8e, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -10127,7 +10171,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xbc, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -10156,11 +10200,11 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0xbc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0xbc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xc0, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0xc0, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0xc0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xf4) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -10191,7 +10235,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xf4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xf4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x153, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -10437,7 +10481,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x153, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x153, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x155, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -10445,7 +10489,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x155, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x155, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x157, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -10453,13 +10497,13 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x157, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x157, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x164, 5, false) {
-        tags.push(mk("LensSerialNumber", 0x164, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("LensSerialNumber", 0x164, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x23c, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x23c, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x23c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x28c, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -10467,7 +10511,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x28c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x28c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x290, bo) {
         dm.push(("FileIndex2".to_string(), f64::from(v)));
@@ -10475,7 +10519,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex2", 0x290, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex2", 0x290, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x298, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -10483,7 +10527,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x298, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x298, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x29c, bo) {
         dm.push(("DirectoryIndex2".to_string(), f64::from(v)));
@@ -10491,7 +10535,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex2", 0x29c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex2", 0x29c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x3b0..) {
         tags.extend(canon_psinfo2(sub, model, bo, file_type, format, dm));
@@ -10501,6 +10545,7 @@ fn canon_camerainfo5dmkiii(data: &[u8], model: &str, bo: ByteOrder, file_type: &
 
 /// `Image::ExifTool::Canon::CameraInfo6D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -10517,7 +10562,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -10531,7 +10576,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -10541,7 +10586,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -10550,7 +10595,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -10562,7 +10607,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x83) {
@@ -10573,7 +10618,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x83, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x83, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x92, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -10582,7 +10627,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x92, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x92, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x94, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -10591,7 +10636,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x94, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x94, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xc2, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -10620,11 +10665,11 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0xc2, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0xc2, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xc6, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0xc6, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0xc6, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xfa) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -10655,7 +10700,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xfa, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xfa, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x161, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -10901,7 +10946,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x161, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x161, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x163, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -10909,7 +10954,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x163, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x163, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x165, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -10917,10 +10962,10 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x165, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x165, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x256, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x256, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x256, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x2aa, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -10928,7 +10973,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x2aa, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x2aa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x2b6, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -10936,7 +10981,7 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x2b6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x2b6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x3c6..) {
         tags.extend(canon_psinfo2(sub, model, bo, file_type, format, dm));
@@ -10946,13 +10991,14 @@ fn canon_camerainfo6d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
 
 /// `Image::ExifTool::Canon::CameraInfo7D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
     let mut tags = Vec::new();
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(text) = text_at(data, 0x0, 434, false) {
-        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x3) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -10965,7 +11011,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -10979,7 +11025,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -10989,7 +11035,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), f64::from(v)));
@@ -11006,7 +11052,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             2684354560 => "Format 2".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x8) {
         dm.push(("MeasuredEV2".to_string(), f64::from(v)));
@@ -11018,7 +11064,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV2", 0x8, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MeasuredEV2", 0x8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x9) {
@@ -11031,7 +11077,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val / 8 - 6", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("MeasuredEV", 0x9, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MeasuredEV", 0x9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x15) {
@@ -11044,7 +11090,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -11053,7 +11099,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -11065,7 +11111,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x35) {
@@ -11076,7 +11122,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x35, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x35, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x54, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -11085,7 +11131,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x56, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -11094,7 +11140,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x77, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -11123,11 +11169,11 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x77, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x77, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x7b, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x7b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x7b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xaf) {
         dm.push(("CameraPictureStyle".to_string(), f64::from(v)));
@@ -11143,7 +11189,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             134 => "Monochrome".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraPictureStyle", 0xaf, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraPictureStyle", 0xaf, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xc9) {
         dm.push(("HighISONoiseReduction".to_string(), f64::from(v)));
@@ -11154,7 +11200,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             3 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighISONoiseReduction", 0xc9, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighISONoiseReduction", 0xc9, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x112, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -11400,7 +11446,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x112, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x112, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x114, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -11408,7 +11454,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x114, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x114, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x116, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -11416,10 +11462,10 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x116, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x116, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x1ac, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x1ac, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x1ac, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1eb, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -11427,7 +11473,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1eb, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x1eb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1f7, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -11435,7 +11481,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1f7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x1f7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x327..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -11445,6 +11491,7 @@ fn canon_camerainfo7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
 
 /// `Image::ExifTool::Canon::CameraInfo40D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -11461,7 +11508,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -11475,7 +11522,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -11485,7 +11532,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), f64::from(v)));
@@ -11497,7 +11544,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -11506,7 +11553,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if (dm_get(dm, "LensType").is_some_and(|v| v != 0.0) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -11516,7 +11563,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x1d, bo) {
@@ -11529,7 +11576,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1d, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x30) {
@@ -11540,7 +11587,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x30, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x30, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x43, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -11549,7 +11596,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x45, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -11558,7 +11605,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -11587,11 +11634,11 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x73, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xd6, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -11837,7 +11884,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xd6, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xd6, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xd8, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -11845,7 +11892,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0xd8, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0xd8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xda, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -11853,10 +11900,10 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0xda, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0xda, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0xff, 6, true) {
-        tags.push(mk("FirmwareVersion", 0xff, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0xff, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x133, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -11864,7 +11911,7 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x133, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x133, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x13f, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -11872,10 +11919,10 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x13f, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x13f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x92b, 64, true) {
-        tags.push(mk("LensModel", 0x92b, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("LensModel", 0x92b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x25b..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -11885,13 +11932,14 @@ fn canon_camerainfo40d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
 
 /// `Image::ExifTool::Canon::CameraInfo50D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
     let mut tags = Vec::new();
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(text) = text_at(data, 0x0, 356, false) {
-        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersionLookAhead", 0x0, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x3) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -11904,7 +11952,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -11918,7 +11966,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -11928,7 +11976,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), f64::from(v)));
@@ -11945,7 +11993,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             2684354560 => "Format 2".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), f64::from(v)));
@@ -11957,7 +12005,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -11966,7 +12014,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -11978,7 +12026,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
@@ -11989,7 +12037,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x31, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x31, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x50, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -11998,7 +12046,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x52, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -12007,7 +12055,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -12036,11 +12084,11 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x73, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xa7) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -12071,7 +12119,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xa7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xa7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xbd) {
         dm.push(("HighISONoiseReduction".to_string(), f64::from(v)));
@@ -12082,7 +12130,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             3 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighISONoiseReduction", 0xbd, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighISONoiseReduction", 0xbd, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xbf) {
         dm.push(("AutoLightingOptimizer".to_string(), f64::from(v)));
@@ -12093,7 +12141,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             3 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AutoLightingOptimizer", 0xbf, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AutoLightingOptimizer", 0xbf, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xea, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -12339,7 +12387,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xea, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xea, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xec, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -12347,7 +12395,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0xec, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0xec, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xee, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -12355,10 +12403,10 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0xee, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0xee, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x15e, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x15e, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x15e, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x19b, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -12366,7 +12414,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x19b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x19b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1a7, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -12374,7 +12422,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1a7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x1a7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x2d7..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -12384,6 +12432,7 @@ fn canon_camerainfo50d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
 
 /// `Image::ExifTool::Canon::CameraInfo60D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -12400,7 +12449,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -12414,7 +12463,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -12424,7 +12473,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -12433,7 +12482,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -12445,7 +12494,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_6.is_match(model) {
@@ -12457,7 +12506,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
                 2 => "Rotate 270 CW".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("CameraOrientation", 0x36, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("CameraOrientation", 0x36, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_7.is_match(model) {
@@ -12469,7 +12518,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
                 2 => "Rotate 270 CW".to_string(),
                 other => other.to_string(),
             };
-            tags.push(mk("CameraOrientation", 0x3a, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("CameraOrientation", 0x3a, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_6.is_match(model) {
@@ -12480,7 +12529,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocusDistanceUpper", 0x55, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocusDistanceUpper", 0x55, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_6.is_match(model) {
@@ -12491,13 +12540,13 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocusDistanceLower", 0x57, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocusDistanceLower", 0x57, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_6.is_match(model) {
         if let Some(v) = u16_at(data, 0x7d, bo) {
             dm.push(("ColorTemperature".to_string(), f64::from(v)));
-            tags.push(mk("ColorTemperature", 0x7d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ColorTemperature", 0x7d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0xe8, bo) {
@@ -12744,7 +12793,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xe8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xe8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xea, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -12752,7 +12801,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0xea, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0xea, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xec, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -12760,10 +12809,10 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0xec, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0xec, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x199, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x199, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x199, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if MODEL_RE_6.is_match(model) {
         if let Some(v) = u32_at(data, 0x1d9, bo) {
@@ -12772,7 +12821,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("FileIndex", 0x1d9, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FileIndex", 0x1d9, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_6.is_match(model) {
@@ -12782,7 +12831,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("DirectoryIndex", 0x1e5, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("DirectoryIndex", 0x1e5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_7.is_match(model) {
@@ -12800,6 +12849,7 @@ fn canon_camerainfo60d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
 
 /// `Image::ExifTool::Canon::CameraInfo70D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -12816,7 +12866,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -12830,7 +12880,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -12840,7 +12890,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -12849,7 +12899,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -12861,7 +12911,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x84) {
@@ -12872,7 +12922,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x84, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x84, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x93, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -12881,7 +12931,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x93, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x93, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x95, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -12890,11 +12940,11 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x95, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x95, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xc7, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0xc7, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0xc7, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x166, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -13140,7 +13190,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x166, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x166, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x168, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -13148,7 +13198,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x168, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x168, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x16a, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -13156,10 +13206,10 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x16a, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x16a, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x25e, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x25e, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x25e, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x2b3, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -13167,7 +13217,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x2b3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x2b3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x2bf, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -13175,7 +13225,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x2bf, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x2bf, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x3cf..) {
         tags.extend(canon_psinfo2(sub, model, bo, file_type, format, dm));
@@ -13185,6 +13235,7 @@ fn canon_camerainfo70d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
 
 /// `Image::ExifTool::Canon::CameraInfo80D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -13201,7 +13252,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -13215,7 +13266,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -13225,7 +13276,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -13234,7 +13285,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -13246,7 +13297,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x96) {
@@ -13257,7 +13308,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x96, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x96, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xa5, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -13266,7 +13317,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0xa5, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0xa5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xa7, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -13275,11 +13326,11 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0xa7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0xa7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x13a, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x13a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x13a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x189, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -13525,7 +13576,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x189, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x189, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x18b, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -13533,7 +13584,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x18b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x18b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x18d, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -13541,10 +13592,10 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x18d, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x18d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x45a, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x45a, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x45a, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x4ae, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -13552,7 +13603,7 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x4ae, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x4ae, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x4ba, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -13560,13 +13611,14 @@ fn canon_camerainfo80d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str,
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x4ba, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x4ba, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::CameraInfo450D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -13583,7 +13635,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -13597,7 +13649,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -13607,7 +13659,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), f64::from(v)));
@@ -13619,7 +13671,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -13628,7 +13680,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if (dm_get(dm, "LensType").is_some_and(|v| v != 0.0) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -13638,7 +13690,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x1d, bo) {
@@ -13651,7 +13703,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1d, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x30) {
@@ -13662,7 +13714,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x30, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x30, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x43, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -13671,7 +13723,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x45, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -13680,7 +13732,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -13709,11 +13761,11 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x73, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xde, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -13959,17 +14011,17 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xde, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xde, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x107, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x107, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x107, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x10f, 32, true) {
-        tags.push(mk("OwnerName", 0x10f, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("OwnerName", 0x10f, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x133, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
-        tags.push(mk("DirectoryIndex", 0x133, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x133, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x13f, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -13977,10 +14029,10 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x13f, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x13f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x933, 64, true) {
-        tags.push(mk("LensModel", 0x933, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("LensModel", 0x933, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x263..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -13990,6 +14042,7 @@ fn canon_camerainfo450d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
 
 /// `Image::ExifTool::Canon::CameraInfo500D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -14006,7 +14059,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -14020,7 +14073,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -14030,7 +14083,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), f64::from(v)));
@@ -14047,7 +14100,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2684354560 => "Format 2".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), f64::from(v)));
@@ -14059,7 +14112,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -14068,7 +14121,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -14080,7 +14133,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
@@ -14091,7 +14144,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x31, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x31, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x50, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -14100,7 +14153,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x50, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x52, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -14109,7 +14162,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x52, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x73, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -14138,11 +14191,11 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x73, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x73, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x77, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x77, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x77, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xab) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -14173,7 +14226,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xab, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xab, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xbc) {
         dm.push(("HighISONoiseReduction".to_string(), f64::from(v)));
@@ -14184,7 +14237,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             3 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighISONoiseReduction", 0xbc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighISONoiseReduction", 0xbc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xbe) {
         dm.push(("AutoLightingOptimizer".to_string(), f64::from(v)));
@@ -14195,7 +14248,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             3 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AutoLightingOptimizer", 0xbe, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AutoLightingOptimizer", 0xbe, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xf6, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -14441,7 +14494,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xf6, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xf6, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xf8, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -14449,7 +14502,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0xf8, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0xf8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xfa, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -14457,10 +14510,10 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0xfa, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0xfa, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x190, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x190, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x190, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1d3, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -14468,7 +14521,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1d3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x1d3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1df, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -14476,7 +14529,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1df, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x1df, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x30b..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -14486,6 +14539,7 @@ fn canon_camerainfo500d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
 
 /// `Image::ExifTool::Canon::CameraInfo550D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -14502,7 +14556,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -14516,7 +14570,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -14526,7 +14580,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), f64::from(v)));
@@ -14543,7 +14597,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2684354560 => "Format 2".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), f64::from(v)));
@@ -14555,7 +14609,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -14564,7 +14618,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -14576,7 +14630,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x35) {
@@ -14587,7 +14641,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x35, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x35, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x54, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -14596,7 +14650,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x54, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x56, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -14605,7 +14659,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x56, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x78, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -14634,11 +14688,11 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x78, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x78, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x7c, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x7c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x7c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xb0) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -14669,7 +14723,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xb0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xb0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xff, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -14915,7 +14969,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xff, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xff, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x101, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -14923,7 +14977,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x101, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x101, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x103, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -14931,10 +14985,10 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x103, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x103, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x1a4, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x1a4, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x1a4, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1e4, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -14942,7 +14996,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1e4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x1e4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1f0, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -14950,7 +15004,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1f0, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x1f0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x31c..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -14960,6 +15014,7 @@ fn canon_camerainfo550d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
 
 /// `Image::ExifTool::Canon::CameraInfo600D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -14976,7 +15031,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -14990,7 +15045,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -15000,7 +15055,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x7) {
         dm.push(("HighlightTonePriority".to_string(), f64::from(v)));
@@ -15017,7 +15072,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2684354560 => "Format 2".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("HighlightTonePriority", 0x7, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), f64::from(v)));
@@ -15029,7 +15084,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x19) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -15038,7 +15093,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x19, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x1e, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -15050,7 +15105,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x38) {
@@ -15061,7 +15116,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x38, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x38, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x57, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -15070,7 +15125,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x57, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x57, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x59, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -15079,7 +15134,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x59, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x59, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x7b, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -15108,11 +15163,11 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x7b, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x7b, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x7f, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x7f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x7f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xb3) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -15143,7 +15198,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xb3, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xb3, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xea, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -15389,7 +15444,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xea, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xea, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xec, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -15397,7 +15452,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0xec, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0xec, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xee, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -15405,10 +15460,10 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0xee, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0xee, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x19b, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x19b, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x19b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1db, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -15416,7 +15471,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x1db, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x1db, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x1e7, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
@@ -15424,7 +15479,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("DirectoryIndex", 0x1e7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x1e7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x2fb..) {
         tags.extend(canon_psinfo2(sub, model, bo, file_type, format, dm));
@@ -15434,6 +15489,7 @@ fn canon_camerainfo600d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
 
 /// `Image::ExifTool::Canon::CameraInfo650D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -15450,7 +15506,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -15464,7 +15520,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -15474,7 +15530,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -15483,7 +15539,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -15495,7 +15551,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x7d) {
@@ -15506,7 +15562,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x7d, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x7d, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x8c, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -15515,7 +15571,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x8c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x8e, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -15524,7 +15580,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x8e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xbc, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -15553,11 +15609,11 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0xbc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0xbc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xc0, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0xc0, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0xc0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xf4) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -15588,7 +15644,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0xf4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0xf4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x127, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -15834,7 +15890,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x127, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x127, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x129, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -15842,7 +15898,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x129, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x129, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x12b, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -15850,16 +15906,16 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x12b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x12b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if MODEL_RE_8.is_match(model) {
         if let Some(text) = text_at(data, 0x21b, 6, true) {
-            tags.push(mk("FirmwareVersion", 0x21b, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+            tags.push(mk("FirmwareVersion", 0x21b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_9.is_match(model) {
         if let Some(text) = text_at(data, 0x220, 6, true) {
-            tags.push(mk("FirmwareVersion", 0x220, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+            tags.push(mk("FirmwareVersion", 0x220, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_8.is_match(model) {
@@ -15869,7 +15925,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("FileIndex", 0x270, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FileIndex", 0x270, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_9.is_match(model) {
@@ -15879,7 +15935,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("FileIndex", 0x274, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FileIndex", 0x274, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_8.is_match(model) {
@@ -15889,7 +15945,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("DirectoryIndex", 0x27c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("DirectoryIndex", 0x27c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if MODEL_RE_9.is_match(model) {
@@ -15899,7 +15955,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val - 1", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("DirectoryIndex", 0x280, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("DirectoryIndex", 0x280, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(sub) = data.get(0x390..) {
@@ -15910,6 +15966,7 @@ fn canon_camerainfo650d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
 
 /// `Image::ExifTool::Canon::CameraInfo750D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -15926,7 +15983,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -15940,7 +15997,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -15950,7 +16007,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x1b) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -15959,7 +16016,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x23, bo) {
         dm.push(("FocalLength".to_string(), f64::from(v)));
@@ -15971,7 +16028,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x23, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x96) {
@@ -15982,7 +16039,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x96, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x96, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xa5, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -15991,7 +16048,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0xa5, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0xa5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xa7, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -16000,7 +16057,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0xa7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0xa7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x131, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -16029,11 +16086,11 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x131, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x131, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x135, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x135, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x135, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x169) {
         dm.push(("PictureStyle".to_string(), f64::from(v)));
@@ -16064,7 +16121,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("PictureStyle", 0x169, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("PictureStyle", 0x169, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x184, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -16310,7 +16367,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x184, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x184, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x186, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -16318,7 +16375,7 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0x186, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0x186, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x188, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -16326,19 +16383,20 @@ fn canon_camerainfo750d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0x188, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0x188, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x43d, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x43d, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x43d, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x449, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x449, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x449, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::CameraInfo1000D` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -16355,7 +16413,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             if let Some(x) = conv_expr::eval_with("exp(($val-8)/16*log(2))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FNumber", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x4) {
@@ -16369,7 +16427,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             if let Some(x) = conv_expr::eval_with("exp(4*log(2)*(1-Image::ExifTool::Canon::CanonEv($val-24)))", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("ExposureTime", 0x4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x6) {
@@ -16379,7 +16437,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
         if let Some(x) = conv_expr::eval_with("100*exp(($val/8-9)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x13) {
         let v = v & 0x7f;
@@ -16404,7 +16462,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             34 => "Speedlite EL-10".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashModel", 0x13, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashModel", 0x13, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("FlashMeteringMode".to_string(), f64::from(v)));
@@ -16416,7 +16474,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             6 => "Off".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMeteringMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x18) {
         dm.push(("CameraTemperature".to_string(), f64::from(v)));
@@ -16425,7 +16483,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x18, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if (dm_get(dm, "LensType").is_some_and(|v| v != 0.0) && dm_get(dm, "LensType").is_some_and(|v| v == 124.0)) {
         if let Some(v) = u8_at(data, 0x1b) {
@@ -16435,7 +16493,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             if let Some(x) = conv_expr::eval_with("exp((75-$val) * log(2) * 3 / 40)", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("sprintf(\"%.1fx\",$val)", &cv, &ctx) { cv = x; }
-            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("MacroMagnification", 0x1b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16rev_at(data, 0x1d, bo) {
@@ -16448,7 +16506,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("FocalLength", 0x1d, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FocalLength", 0x1d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x30) {
@@ -16459,7 +16517,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             2 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("CameraOrientation", 0x30, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("CameraOrientation", 0x30, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x43, bo) {
         dm.push(("FocusDistanceUpper".to_string(), f64::from(v)));
@@ -16468,7 +16526,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceUpper", 0x43, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x45, bo) {
         dm.push(("FocusDistanceLower".to_string(), f64::from(v)));
@@ -16477,7 +16535,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
         if let Some(x) = conv_expr::eval_with("$val / 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 655.345 ? \"inf\" : \"$val m\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistanceLower", 0x45, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x6f, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -16506,11 +16564,11 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             23 => "Auto (ambience priority)".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x6f, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x73, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
-        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x73, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xe2, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -16756,7 +16814,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             65535 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0xe2, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0xe2, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xe4, bo) {
         dm.push(("MinFocalLength".to_string(), f64::from(v)));
@@ -16764,7 +16822,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MinFocalLength", 0xe4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MinFocalLength", 0xe4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0xe6, bo) {
         dm.push(("MaxFocalLength".to_string(), f64::from(v)));
@@ -16772,14 +16830,14 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
         let mut cv = Conv::Num(f64::from(v));
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val mm\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxFocalLength", 0xe6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxFocalLength", 0xe6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x10b, 6, true) {
-        tags.push(mk("FirmwareVersion", 0x10b, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("FirmwareVersion", 0x10b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x137, bo) {
         dm.push(("DirectoryIndex".to_string(), f64::from(v)));
-        tags.push(mk("DirectoryIndex", 0x137, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("DirectoryIndex", 0x137, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0x143, bo) {
         dm.push(("FileIndex".to_string(), f64::from(v)));
@@ -16787,10 +16845,10 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("FileIndex", 0x143, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FileIndex", 0x143, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x937, 64, true) {
-        tags.push(mk("LensModel", 0x937, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("LensModel", 0x937, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(sub) = data.get(0x267..) {
         tags.extend(canon_psinfo(sub, model, bo, file_type, format, dm));
@@ -16800,6 +16858,7 @@ fn canon_camerainfo1000d(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
 
 /// `Image::ExifTool::Canon::CameraInfoR6` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfor6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -16812,17 +16871,18 @@ fn canon_camerainfor6(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val - 128", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("CameraTemperature", 0x9da, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("CameraTemperature", 0x9da, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u32_at(data, 0xaf1, bo) {
         dm.push(("ShutterCount".to_string(), f64::from(v)));
-        tags.push(mk("ShutterCount", 0xaf1, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ShutterCount", 0xaf1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::CameraInfoR6m2` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfor6m2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -16830,13 +16890,14 @@ fn canon_camerainfor6m2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(v) = u32_at(data, 0xd29, bo) {
         dm.push(("ShutterCount".to_string(), f64::from(v)));
-        tags.push(mk("ShutterCount", 0xd29, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ShutterCount", 0xd29, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::CameraInfoR6m3` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfor6m3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -16844,13 +16905,14 @@ fn canon_camerainfor6m3(data: &[u8], model: &str, bo: ByteOrder, file_type: &str
     let _ = (data, model, bo, file_type, format, &dm);
     if let Some(v) = u16_at(data, 0x86d, bo) {
         dm.push(("ImageCount".to_string(), f64::from(v)));
-        tags.push(mk("ImageCount", 0x86d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ImageCount", 0x86d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::CameraInfoG5XII` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_camerainfog5xii(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -16859,19 +16921,19 @@ fn canon_camerainfog5xii(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
     if file_type == "JPEG" {
         if let Some(v) = u32_at(data, 0x293, bo) {
             dm.push(("ShutterCount".to_string(), f64::from(v)));
-            tags.push(mk("ShutterCount", 0x293, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ShutterCount", 0x293, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if file_type == "CR3" {
         if let Some(v) = u32_at(data, 0xa95, bo) {
             dm.push(("ShutterCount".to_string(), f64::from(v)));
-            tags.push(mk("ShutterCount", 0xa95, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("ShutterCount", 0xa95, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if file_type == "JPEG" {
         if let Some(v) = u32_at(data, 0xb21, bo) {
             dm.push(("DirectoryIndex".to_string(), f64::from(v)));
-            tags.push(mk("DirectoryIndex", 0xb21, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+            tags.push(mk("DirectoryIndex", 0xb21, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if file_type == "JPEG" {
@@ -16881,7 +16943,7 @@ fn canon_camerainfog5xii(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
             let mut cv = Conv::Num(f64::from(v));
             if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
             let raw = Value::F64(cv.as_num());
-            tags.push(mk("FileIndex", 0xb2d, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("FileIndex", 0xb2d, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     tags
@@ -16889,6 +16951,7 @@ fn canon_camerainfog5xii(data: &[u8], model: &str, bo: ByteOrder, file_type: &st
 
 /// `Image::ExifTool::Canon::CameraInfoPowerShot` -- FORMAT int32s, FIRST_ENTRY 0.
 fn canon_camerainfopowershot(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -16901,7 +16964,7 @@ fn canon_camerainfopowershot(data: &[u8], model: &str, bo: ByteOrder, file_type:
         if let Some(x) = conv_expr::eval_with("100*exp((($val-411)/96)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x0, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x14, bo) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -16910,7 +16973,7 @@ fn canon_camerainfopowershot(data: &[u8], model: &str, bo: ByteOrder, file_type:
         if let Some(x) = conv_expr::eval_with("exp($val/192*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x5, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FNumber", 0x5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x18, bo) {
         dm.push(("ExposureTime".to_string(), f64::from(v)));
@@ -16919,11 +16982,11 @@ fn canon_camerainfopowershot(data: &[u8], model: &str, bo: ByteOrder, file_type:
         if let Some(x) = conv_expr::eval_with("exp(-$val/96*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureTime", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x5c, bo) {
         dm.push(("Rotation".to_string(), f64::from(v)));
-        tags.push(mk("Rotation", 0x17, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Rotation", 0x17, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 138.0) {
         if let Some(v) = i32_at(data, 0x21c, bo) {
@@ -16932,7 +16995,7 @@ fn canon_camerainfopowershot(data: &[u8], model: &str, bo: ByteOrder, file_type:
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x87, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x87, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 148.0) {
@@ -16942,7 +17005,7 @@ fn canon_camerainfopowershot(data: &[u8], model: &str, bo: ByteOrder, file_type:
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x91, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x91, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     tags
@@ -16950,6 +17013,7 @@ fn canon_camerainfopowershot(data: &[u8], model: &str, bo: ByteOrder, file_type:
 
 /// `Image::ExifTool::Canon::CameraInfoPowerShot2` -- FORMAT int32s, FIRST_ENTRY 0.
 fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -16962,7 +17026,7 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
         if let Some(x) = conv_expr::eval_with("100*exp((($val-411)/96)*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.0f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x1, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x18, bo) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -16971,7 +17035,7 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
         if let Some(x) = conv_expr::eval_with("exp($val/192*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.2g\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x6, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FNumber", 0x6, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x1c, bo) {
         dm.push(("ExposureTime".to_string(), f64::from(v)));
@@ -16980,11 +17044,11 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
         if let Some(x) = conv_expr::eval_with("exp(-$val/96*log(2))", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureTime", 0x7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x60, bo) {
         dm.push(("Rotation".to_string(), f64::from(v)));
-        tags.push(mk("Rotation", 0x18, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Rotation", 0x18, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 156.0) {
         if let Some(v) = i32_at(data, 0x264, bo) {
@@ -16993,7 +17057,7 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x99, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x99, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 162.0) {
@@ -17003,7 +17067,7 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x9f, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x9f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 167.0) {
@@ -17013,7 +17077,7 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0xa4, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0xa4, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 171.0) {
@@ -17023,7 +17087,7 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0xa8, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0xa8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 264.0) {
@@ -17033,7 +17097,7 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x105, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x105, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     tags
@@ -17041,6 +17105,7 @@ fn canon_camerainfopowershot2(data: &[u8], model: &str, bo: ByteOrder, file_type
 
 /// `Image::ExifTool::Canon::CameraInfoUnknown32` -- FORMAT int32s, FIRST_ENTRY 0.
 fn canon_camerainfounknown32(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -17053,7 +17118,7 @@ fn canon_camerainfounknown32(data: &[u8], model: &str, bo: ByteOrder, file_type:
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x47, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x47, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 85.0) {
@@ -17063,7 +17128,7 @@ fn canon_camerainfounknown32(data: &[u8], model: &str, bo: ByteOrder, file_type:
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x53, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x53, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if (dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 93.0) || dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 94.0)) {
@@ -17073,7 +17138,7 @@ fn canon_camerainfounknown32(data: &[u8], model: &str, bo: ByteOrder, file_type:
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x5b, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x5b, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 96.0) {
@@ -17083,7 +17148,7 @@ fn canon_camerainfounknown32(data: &[u8], model: &str, bo: ByteOrder, file_type:
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x5c, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x5c, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     if dm_get(dm, "CameraInfoCount").is_some_and(|v| v == 104.0) {
@@ -17093,7 +17158,7 @@ fn canon_camerainfounknown32(data: &[u8], model: &str, bo: ByteOrder, file_type:
             let mut cv = Conv::Num(f64::from(v));
             let raw = Value::F64(cv.as_num());
             if let Some(x) = conv_expr::eval_with("\"$val C\"", &cv, &ctx) { cv = x; }
-            tags.push(mk("CameraTemperature", 0x64, cv.as_string(), raw, GRP1, GRP2, PRIO));
+            tags.push(mk("CameraTemperature", 0x64, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
         }
     }
     tags
@@ -17101,6 +17166,7 @@ fn canon_camerainfounknown32(data: &[u8], model: &str, bo: ByteOrder, file_type:
 
 /// `Image::ExifTool::Canon::CameraInfoUnknown16` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_camerainfounknown16(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -17111,6 +17177,7 @@ fn canon_camerainfounknown16(data: &[u8], model: &str, bo: ByteOrder, file_type:
 
 /// `Image::ExifTool::Canon::CameraInfoUnknown` -- FORMAT int8s, FIRST_ENTRY 0.
 fn canon_camerainfounknown(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -17118,12 +17185,12 @@ fn canon_camerainfounknown(data: &[u8], model: &str, bo: ByteOrder, file_type: &
     let _ = (data, model, bo, file_type, format, &dm);
     if MODEL_RE_10.is_match(model) {
         if let Some(text) = text_at(data, 0x16b, 5, false) {
-            tags.push(mk("LensSerialNumber", 0x16b, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+            tags.push(mk("LensSerialNumber", 0x16b, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if prefix_matches(data.get(0x5c1..).unwrap_or(&[]), &[Some((0x30, 0x39)), Some((46, 46)), Some((0x30, 0x39)), Some((46, 46)), Some((0x30, 0x39)), Some((0, 0))]) {
         if let Some(text) = text_at(data, 0x5c1, 6, true) {
-            tags.push(mk("FirmwareVersion", 0x5c1, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+            tags.push(mk("FirmwareVersion", 0x5c1, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
         }
     }
     tags
@@ -17131,6 +17198,7 @@ fn canon_camerainfounknown(data: &[u8], model: &str, bo: ByteOrder, file_type: &
 
 /// `Image::ExifTool::Canon::ColorCalib` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colorcalib(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -17276,6 +17344,7 @@ fn canon_colorcalib(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorCoefs` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -17291,12 +17360,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x0, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x0, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x8, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x4, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x4, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17308,12 +17377,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x5, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x5, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x12, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0x9, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0x9, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17325,12 +17394,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0xa, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0xa, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1c, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0xe, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0xe, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17354,12 +17423,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x14, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x14, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x30, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x18, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x18, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17371,12 +17440,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x19, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x19, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x3a, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x1d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x1d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17388,12 +17457,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x1e, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x1e, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x44, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x22, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x22, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17405,12 +17474,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x23, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x23, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x4e, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x27, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x27, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17422,12 +17491,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x28, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x28, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x58, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x2c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x2c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17439,12 +17508,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0x2d, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0x2d, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x62, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0x31, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0x31, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17456,12 +17525,12 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0x32, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0x32, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x6c, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0x36, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0x36, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17612,6 +17681,7 @@ fn canon_colorcoefs(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, fo
 
 /// `Image::ExifTool::Canon::ColorCoefs2` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -17627,12 +17697,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAsShot", 0x0, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAsShot", 0x0, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xe, bo) {
         dm.push(("ColorTempAsShot".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAsShot", 0x7, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAsShot", 0x7, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17644,12 +17714,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsAuto", 0x8, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsAuto", 0x8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x1e, bo) {
         dm.push(("ColorTempAuto".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempAuto", 0xf, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempAuto", 0xf, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17661,12 +17731,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsMeasured", 0x10, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsMeasured", 0x10, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x2e, bo) {
         dm.push(("ColorTempMeasured".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempMeasured", 0x17, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempMeasured", 0x17, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17690,12 +17760,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsDaylight", 0x20, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsDaylight", 0x20, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x4e, bo) {
         dm.push(("ColorTempDaylight".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempDaylight", 0x27, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempDaylight", 0x27, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17707,12 +17777,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsShade", 0x28, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsShade", 0x28, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x5e, bo) {
         dm.push(("ColorTempShade".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempShade", 0x2f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempShade", 0x2f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17724,12 +17794,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsCloudy", 0x30, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsCloudy", 0x30, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x6e, bo) {
         dm.push(("ColorTempCloudy".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempCloudy", 0x37, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempCloudy", 0x37, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17741,12 +17811,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsTungsten", 0x38, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsTungsten", 0x38, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x7e, bo) {
         dm.push(("ColorTempTungsten".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempTungsten", 0x3f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempTungsten", 0x3f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17758,12 +17828,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFluorescent", 0x40, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFluorescent", 0x40, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x8e, bo) {
         dm.push(("ColorTempFluorescent".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFluorescent", 0x47, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFluorescent", 0x47, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17775,12 +17845,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsKelvin", 0x48, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsKelvin", 0x48, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0x9e, bo) {
         dm.push(("ColorTempKelvin".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempKelvin", 0x4f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempKelvin", 0x4f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17792,12 +17862,12 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGGBLevelsFlash", 0x50, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGGBLevelsFlash", 0x50, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = i16_at(data, 0xae, bo) {
         dm.push(("ColorTempFlash".to_string(), f64::from(v)));
-        tags.push(mk("ColorTempFlash", 0x57, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTempFlash", 0x57, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -17948,6 +18018,7 @@ fn canon_colorcoefs2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
 
 /// `Image::ExifTool::Canon::ColorCalib2` -- FORMAT int16s, FIRST_ENTRY 0.
 fn canon_colorcalib2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = 0;
@@ -18093,6 +18164,7 @@ fn canon_colorcalib2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, f
 
 /// `Image::ExifTool::Canon::PSInfo` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -18104,7 +18176,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastStandard", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastStandard", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x4, bo) {
         dm.push(("SharpnessStandard".to_string(), f64::from(v)));
@@ -18112,7 +18184,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessStandard", 0x4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessStandard", 0x4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x8, bo) {
         dm.push(("SaturationStandard".to_string(), f64::from(v)));
@@ -18120,7 +18192,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationStandard", 0x8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationStandard", 0x8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xc, bo) {
         dm.push(("ColorToneStandard".to_string(), f64::from(v)));
@@ -18128,7 +18200,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneStandard", 0xc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneStandard", 0xc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x10, bo) {
         dm.push(("FilterEffectStandard".to_string(), f64::from(v)));
@@ -18142,7 +18214,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastPortrait", 0x18, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastPortrait", 0x18, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x1c, bo) {
         dm.push(("SharpnessPortrait".to_string(), f64::from(v)));
@@ -18150,7 +18222,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessPortrait", 0x1c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessPortrait", 0x1c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x20, bo) {
         dm.push(("SaturationPortrait".to_string(), f64::from(v)));
@@ -18158,7 +18230,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationPortrait", 0x20, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationPortrait", 0x20, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x24, bo) {
         dm.push(("ColorTonePortrait".to_string(), f64::from(v)));
@@ -18166,7 +18238,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorTonePortrait", 0x24, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTonePortrait", 0x24, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x28, bo) {
         dm.push(("FilterEffectPortrait".to_string(), f64::from(v)));
@@ -18180,7 +18252,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastLandscape", 0x30, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastLandscape", 0x30, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x34, bo) {
         dm.push(("SharpnessLandscape".to_string(), f64::from(v)));
@@ -18188,7 +18260,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessLandscape", 0x34, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessLandscape", 0x34, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x38, bo) {
         dm.push(("SaturationLandscape".to_string(), f64::from(v)));
@@ -18196,7 +18268,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationLandscape", 0x38, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationLandscape", 0x38, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x3c, bo) {
         dm.push(("ColorToneLandscape".to_string(), f64::from(v)));
@@ -18204,7 +18276,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneLandscape", 0x3c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneLandscape", 0x3c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x40, bo) {
         dm.push(("FilterEffectLandscape".to_string(), f64::from(v)));
@@ -18218,7 +18290,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastNeutral", 0x48, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastNeutral", 0x48, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x4c, bo) {
         dm.push(("SharpnessNeutral".to_string(), f64::from(v)));
@@ -18226,7 +18298,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessNeutral", 0x4c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessNeutral", 0x4c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x50, bo) {
         dm.push(("SaturationNeutral".to_string(), f64::from(v)));
@@ -18234,7 +18306,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationNeutral", 0x50, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationNeutral", 0x50, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x54, bo) {
         dm.push(("ColorToneNeutral".to_string(), f64::from(v)));
@@ -18242,7 +18314,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneNeutral", 0x54, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneNeutral", 0x54, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x58, bo) {
         dm.push(("FilterEffectNeutral".to_string(), f64::from(v)));
@@ -18256,7 +18328,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastFaithful", 0x60, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastFaithful", 0x60, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x64, bo) {
         dm.push(("SharpnessFaithful".to_string(), f64::from(v)));
@@ -18264,7 +18336,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessFaithful", 0x64, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessFaithful", 0x64, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x68, bo) {
         dm.push(("SaturationFaithful".to_string(), f64::from(v)));
@@ -18272,7 +18344,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationFaithful", 0x68, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationFaithful", 0x68, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x6c, bo) {
         dm.push(("ColorToneFaithful".to_string(), f64::from(v)));
@@ -18280,7 +18352,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneFaithful", 0x6c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneFaithful", 0x6c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x70, bo) {
         dm.push(("FilterEffectFaithful".to_string(), f64::from(v)));
@@ -18294,7 +18366,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastMonochrome", 0x78, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastMonochrome", 0x78, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x7c, bo) {
         dm.push(("SharpnessMonochrome".to_string(), f64::from(v)));
@@ -18302,7 +18374,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessMonochrome", 0x7c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessMonochrome", 0x7c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x80, bo) {
         dm.push(("SaturationMonochrome".to_string(), f64::from(v)));
@@ -18321,7 +18393,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectMonochrome", 0x88, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectMonochrome", 0x88, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x8c, bo) {
         dm.push(("ToningEffectMonochrome".to_string(), f64::from(v)));
@@ -18334,7 +18406,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectMonochrome", 0x8c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectMonochrome", 0x8c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x90, bo) {
         dm.push(("ContrastUserDef1".to_string(), f64::from(v)));
@@ -18342,7 +18414,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastUserDef1", 0x90, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef1", 0x90, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x94, bo) {
         dm.push(("SharpnessUserDef1".to_string(), f64::from(v)));
@@ -18350,7 +18422,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessUserDef1", 0x94, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef1", 0x94, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x98, bo) {
         dm.push(("SaturationUserDef1".to_string(), f64::from(v)));
@@ -18358,7 +18430,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationUserDef1", 0x98, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef1", 0x98, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x9c, bo) {
         dm.push(("ColorToneUserDef1".to_string(), f64::from(v)));
@@ -18366,7 +18438,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneUserDef1", 0x9c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef1", 0x9c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xa0, bo) {
         dm.push(("FilterEffectUserDef1".to_string(), f64::from(v)));
@@ -18379,7 +18451,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectUserDef1", 0xa0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectUserDef1", 0xa0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xa4, bo) {
         dm.push(("ToningEffectUserDef1".to_string(), f64::from(v)));
@@ -18392,7 +18464,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectUserDef1", 0xa4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectUserDef1", 0xa4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xa8, bo) {
         dm.push(("ContrastUserDef2".to_string(), f64::from(v)));
@@ -18400,7 +18472,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastUserDef2", 0xa8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef2", 0xa8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xac, bo) {
         dm.push(("SharpnessUserDef2".to_string(), f64::from(v)));
@@ -18408,7 +18480,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessUserDef2", 0xac, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef2", 0xac, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xb0, bo) {
         dm.push(("SaturationUserDef2".to_string(), f64::from(v)));
@@ -18416,7 +18488,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationUserDef2", 0xb0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef2", 0xb0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xb4, bo) {
         dm.push(("ColorToneUserDef2".to_string(), f64::from(v)));
@@ -18424,7 +18496,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneUserDef2", 0xb4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef2", 0xb4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xb8, bo) {
         dm.push(("FilterEffectUserDef2".to_string(), f64::from(v)));
@@ -18437,7 +18509,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectUserDef2", 0xb8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectUserDef2", 0xb8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xbc, bo) {
         dm.push(("ToningEffectUserDef2".to_string(), f64::from(v)));
@@ -18450,7 +18522,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectUserDef2", 0xbc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectUserDef2", 0xbc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xc0, bo) {
         dm.push(("ContrastUserDef3".to_string(), f64::from(v)));
@@ -18458,7 +18530,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastUserDef3", 0xc0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef3", 0xc0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xc4, bo) {
         dm.push(("SharpnessUserDef3".to_string(), f64::from(v)));
@@ -18466,7 +18538,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessUserDef3", 0xc4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef3", 0xc4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xc8, bo) {
         dm.push(("SaturationUserDef3".to_string(), f64::from(v)));
@@ -18474,7 +18546,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationUserDef3", 0xc8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef3", 0xc8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xcc, bo) {
         dm.push(("ColorToneUserDef3".to_string(), f64::from(v)));
@@ -18482,7 +18554,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneUserDef3", 0xcc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef3", 0xcc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xd0, bo) {
         dm.push(("FilterEffectUserDef3".to_string(), f64::from(v)));
@@ -18495,7 +18567,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectUserDef3", 0xd0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectUserDef3", 0xd0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xd4, bo) {
         dm.push(("ToningEffectUserDef3".to_string(), f64::from(v)));
@@ -18508,7 +18580,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectUserDef3", 0xd4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectUserDef3", 0xd4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xd8, bo) {
         dm.push(("UserDef1PictureStyle".to_string(), f64::from(v)));
@@ -18525,7 +18597,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef1PictureStyle", 0xd8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef1PictureStyle", 0xd8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xda, bo) {
         dm.push(("UserDef2PictureStyle".to_string(), f64::from(v)));
@@ -18542,7 +18614,7 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef2PictureStyle", 0xda, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef2PictureStyle", 0xda, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xdc, bo) {
         dm.push(("UserDef3PictureStyle".to_string(), f64::from(v)));
@@ -18559,13 +18631,14 @@ fn canon_psinfo(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef3PictureStyle", 0xdc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef3PictureStyle", 0xdc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Canon::PSInfo2` -- FORMAT int8u, FIRST_ENTRY 0.
 fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Canon";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -18577,7 +18650,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastStandard", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastStandard", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x4, bo) {
         dm.push(("SharpnessStandard".to_string(), f64::from(v)));
@@ -18585,7 +18658,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessStandard", 0x4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessStandard", 0x4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x8, bo) {
         dm.push(("SaturationStandard".to_string(), f64::from(v)));
@@ -18593,7 +18666,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationStandard", 0x8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationStandard", 0x8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xc, bo) {
         dm.push(("ColorToneStandard".to_string(), f64::from(v)));
@@ -18601,7 +18674,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneStandard", 0xc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneStandard", 0xc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x10, bo) {
         dm.push(("FilterEffectStandard".to_string(), f64::from(v)));
@@ -18615,7 +18688,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastPortrait", 0x18, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastPortrait", 0x18, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x1c, bo) {
         dm.push(("SharpnessPortrait".to_string(), f64::from(v)));
@@ -18623,7 +18696,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessPortrait", 0x1c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessPortrait", 0x1c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x20, bo) {
         dm.push(("SaturationPortrait".to_string(), f64::from(v)));
@@ -18631,7 +18704,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationPortrait", 0x20, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationPortrait", 0x20, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x24, bo) {
         dm.push(("ColorTonePortrait".to_string(), f64::from(v)));
@@ -18639,7 +18712,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorTonePortrait", 0x24, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTonePortrait", 0x24, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x28, bo) {
         dm.push(("FilterEffectPortrait".to_string(), f64::from(v)));
@@ -18653,7 +18726,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastLandscape", 0x30, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastLandscape", 0x30, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x34, bo) {
         dm.push(("SharpnessLandscape".to_string(), f64::from(v)));
@@ -18661,7 +18734,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessLandscape", 0x34, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessLandscape", 0x34, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x38, bo) {
         dm.push(("SaturationLandscape".to_string(), f64::from(v)));
@@ -18669,7 +18742,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationLandscape", 0x38, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationLandscape", 0x38, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x3c, bo) {
         dm.push(("ColorToneLandscape".to_string(), f64::from(v)));
@@ -18677,7 +18750,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneLandscape", 0x3c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneLandscape", 0x3c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x40, bo) {
         dm.push(("FilterEffectLandscape".to_string(), f64::from(v)));
@@ -18691,7 +18764,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastNeutral", 0x48, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastNeutral", 0x48, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x4c, bo) {
         dm.push(("SharpnessNeutral".to_string(), f64::from(v)));
@@ -18699,7 +18772,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessNeutral", 0x4c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessNeutral", 0x4c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x50, bo) {
         dm.push(("SaturationNeutral".to_string(), f64::from(v)));
@@ -18707,7 +18780,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationNeutral", 0x50, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationNeutral", 0x50, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x54, bo) {
         dm.push(("ColorToneNeutral".to_string(), f64::from(v)));
@@ -18715,7 +18788,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneNeutral", 0x54, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneNeutral", 0x54, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x58, bo) {
         dm.push(("FilterEffectNeutral".to_string(), f64::from(v)));
@@ -18729,7 +18802,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastFaithful", 0x60, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastFaithful", 0x60, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x64, bo) {
         dm.push(("SharpnessFaithful".to_string(), f64::from(v)));
@@ -18737,7 +18810,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessFaithful", 0x64, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessFaithful", 0x64, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x68, bo) {
         dm.push(("SaturationFaithful".to_string(), f64::from(v)));
@@ -18745,7 +18818,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationFaithful", 0x68, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationFaithful", 0x68, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x6c, bo) {
         dm.push(("ColorToneFaithful".to_string(), f64::from(v)));
@@ -18753,7 +18826,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneFaithful", 0x6c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneFaithful", 0x6c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x70, bo) {
         dm.push(("FilterEffectFaithful".to_string(), f64::from(v)));
@@ -18767,7 +18840,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastMonochrome", 0x78, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastMonochrome", 0x78, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x7c, bo) {
         dm.push(("SharpnessMonochrome".to_string(), f64::from(v)));
@@ -18775,7 +18848,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessMonochrome", 0x7c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessMonochrome", 0x7c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x80, bo) {
         dm.push(("SaturationMonochrome".to_string(), f64::from(v)));
@@ -18794,7 +18867,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectMonochrome", 0x88, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectMonochrome", 0x88, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x8c, bo) {
         dm.push(("ToningEffectMonochrome".to_string(), f64::from(v)));
@@ -18807,7 +18880,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectMonochrome", 0x8c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectMonochrome", 0x8c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x90, bo) {
         dm.push(("ContrastAuto".to_string(), f64::from(v)));
@@ -18815,7 +18888,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastAuto", 0x90, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastAuto", 0x90, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x94, bo) {
         dm.push(("SharpnessAuto".to_string(), f64::from(v)));
@@ -18823,7 +18896,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessAuto", 0x94, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessAuto", 0x94, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x98, bo) {
         dm.push(("SaturationAuto".to_string(), f64::from(v)));
@@ -18831,7 +18904,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationAuto", 0x98, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationAuto", 0x98, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0x9c, bo) {
         dm.push(("ColorToneAuto".to_string(), f64::from(v)));
@@ -18839,7 +18912,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneAuto", 0x9c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneAuto", 0x9c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xa0, bo) {
         dm.push(("FilterEffectAuto".to_string(), f64::from(v)));
@@ -18852,7 +18925,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectAuto", 0xa0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectAuto", 0xa0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xa4, bo) {
         dm.push(("ToningEffectAuto".to_string(), f64::from(v)));
@@ -18865,7 +18938,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectAuto", 0xa4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectAuto", 0xa4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xa8, bo) {
         dm.push(("ContrastUserDef1".to_string(), f64::from(v)));
@@ -18873,7 +18946,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastUserDef1", 0xa8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef1", 0xa8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xac, bo) {
         dm.push(("SharpnessUserDef1".to_string(), f64::from(v)));
@@ -18881,7 +18954,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessUserDef1", 0xac, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef1", 0xac, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xb0, bo) {
         dm.push(("SaturationUserDef1".to_string(), f64::from(v)));
@@ -18889,7 +18962,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationUserDef1", 0xb0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef1", 0xb0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xb4, bo) {
         dm.push(("ColorToneUserDef1".to_string(), f64::from(v)));
@@ -18897,7 +18970,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneUserDef1", 0xb4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef1", 0xb4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xb8, bo) {
         dm.push(("FilterEffectUserDef1".to_string(), f64::from(v)));
@@ -18910,7 +18983,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectUserDef1", 0xb8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectUserDef1", 0xb8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xbc, bo) {
         dm.push(("ToningEffectUserDef1".to_string(), f64::from(v)));
@@ -18923,7 +18996,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectUserDef1", 0xbc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectUserDef1", 0xbc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xc0, bo) {
         dm.push(("ContrastUserDef2".to_string(), f64::from(v)));
@@ -18931,7 +19004,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastUserDef2", 0xc0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef2", 0xc0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xc4, bo) {
         dm.push(("SharpnessUserDef2".to_string(), f64::from(v)));
@@ -18939,7 +19012,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessUserDef2", 0xc4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef2", 0xc4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xc8, bo) {
         dm.push(("SaturationUserDef2".to_string(), f64::from(v)));
@@ -18947,7 +19020,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationUserDef2", 0xc8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef2", 0xc8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xcc, bo) {
         dm.push(("ColorToneUserDef2".to_string(), f64::from(v)));
@@ -18955,7 +19028,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneUserDef2", 0xcc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef2", 0xcc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xd0, bo) {
         dm.push(("FilterEffectUserDef2".to_string(), f64::from(v)));
@@ -18968,7 +19041,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectUserDef2", 0xd0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectUserDef2", 0xd0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xd4, bo) {
         dm.push(("ToningEffectUserDef2".to_string(), f64::from(v)));
@@ -18981,7 +19054,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectUserDef2", 0xd4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectUserDef2", 0xd4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xd8, bo) {
         dm.push(("ContrastUserDef3".to_string(), f64::from(v)));
@@ -18989,7 +19062,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ContrastUserDef3", 0xd8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ContrastUserDef3", 0xd8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xdc, bo) {
         dm.push(("SharpnessUserDef3".to_string(), f64::from(v)));
@@ -18997,7 +19070,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SharpnessUserDef3", 0xdc, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SharpnessUserDef3", 0xdc, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xe0, bo) {
         dm.push(("SaturationUserDef3".to_string(), f64::from(v)));
@@ -19005,7 +19078,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("SaturationUserDef3", 0xe0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("SaturationUserDef3", 0xe0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xe4, bo) {
         dm.push(("ColorToneUserDef3".to_string(), f64::from(v)));
@@ -19013,7 +19086,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             -559038737 => "n/a".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorToneUserDef3", 0xe4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorToneUserDef3", 0xe4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xe8, bo) {
         dm.push(("FilterEffectUserDef3".to_string(), f64::from(v)));
@@ -19026,7 +19099,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FilterEffectUserDef3", 0xe8, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FilterEffectUserDef3", 0xe8, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i32_at(data, 0xec, bo) {
         dm.push(("ToningEffectUserDef3".to_string(), f64::from(v)));
@@ -19039,7 +19112,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             4 => "Green".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ToningEffectUserDef3", 0xec, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ToningEffectUserDef3", 0xec, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xf0, bo) {
         dm.push(("UserDef1PictureStyle".to_string(), f64::from(v)));
@@ -19056,7 +19129,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef1PictureStyle", 0xf0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef1PictureStyle", 0xf0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xf2, bo) {
         dm.push(("UserDef2PictureStyle".to_string(), f64::from(v)));
@@ -19073,7 +19146,7 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef2PictureStyle", 0xf2, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef2PictureStyle", 0xf2, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xf4, bo) {
         dm.push(("UserDef3PictureStyle".to_string(), f64::from(v)));
@@ -19090,13 +19163,261 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             135 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("UserDef3PictureStyle", 0xf4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("UserDef3PictureStyle", 0xf4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::GainDeadData` -- FORMAT int16u, FIRST_ENTRY 0.
+/// Incomplete: a field of variable length moves every entry after
+/// it, and this reads them where they would be without it.
+fn flir_gaindeaddata(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP1";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("GainDeadMapByteOrder".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("ToggleByteOrder() if $val >= 0x0100; undef", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("GainDeadMapByteOrder", 0x0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("GainDeadMapImageWidth".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("$val", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("GainDeadMapImageWidth", 0x1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x4, bo) {
+        dm.push(("GainDeadMapImageHeight".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("$val", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("GainDeadMapImageHeight", 0x2, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::CoarseData` -- FORMAT int16u, FIRST_ENTRY 0.
+/// Incomplete: a field of variable length moves every entry after
+/// it, and this reads them where they would be without it.
+fn flir_coarsedata(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP1";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("CoarseMapByteOrder".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("ToggleByteOrder() if $val >= 0x0100; undef", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("CoarseMapByteOrder", 0x0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("CoarseMapImageWidth".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("$val", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("CoarseMapImageWidth", 0x1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x4, bo) {
+        dm.push(("CoarseMapImageHeight".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("$val", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("CoarseMapImageHeight", 0x2, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::PaintData` -- FORMAT int16u, FIRST_ENTRY 0.
+/// Incomplete: a field of variable length moves every entry after
+/// it, and this reads them where they would be without it.
+fn flir_paintdata(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "APP1";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Image";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("PaintByteOrder".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("ToggleByteOrder() if $val >= 0x0100; undef", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("PaintByteOrder", 0x1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0xa, bo) {
+        dm.push(("PaintImageWidth".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("$val", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("PaintImageWidth", 0x5, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0xc, bo) {
+        dm.push(("PaintImageHeight".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("$val", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("PaintImageHeight", 0x6, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::SerialNums` -- FORMAT int8u, FIRST_ENTRY 0.
+fn flir_serialnums(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(text) = text_at(data, 0x7e, 9, true) {
+        tags.push(mk("CameraSerialNumber", 0x7e, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::UnknownUUID` -- FORMAT float, FIRST_ENTRY 0.
+fn flir_unknownuuid(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    tags
+}
+
+/// `Image::ExifTool::FLIR::GPS_UUID` -- FORMAT float, FIRST_ENTRY 0.
+fn flir_gps_uuid(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Location";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = f32_at(data, 0x4, bo) {
+        dm.push(("GPSLatitude".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"N\")", &cv, &ctx) { cv = x; }
+        tags.push(mk("GPSLatitude", 0x1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0x8, bo) {
+        dm.push(("GPSLongitude".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"E\")", &cv, &ctx) { cv = x; }
+        tags.push(mk("GPSLongitude", 0x2, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = f32_at(data, 0xc, bo) {
+        dm.push(("GPSAltitude".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val=int($val*100+0.5)/100;\"$val m\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("GPSAltitude", 0x3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::AFF1` -- FORMAT int16u, FIRST_ENTRY 0.
+fn flir_aff1(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "FLIR";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("RawDataByteOrder".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("ToggleByteOrder() if $val >= 0x0100; undef", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("RawDataByteOrder", 0x0, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x2, bo) {
+        dm.push(("SensorWidth".to_string(), f64::from(v)));
+        tags.push(mk("SensorWidth", 0x1, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4, bo) {
+        dm.push(("SensorHeight".to_string(), f64::from(v)));
+        tags.push(mk("SensorHeight", 0x2, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::FLIR::AFF5` -- FORMAT int16u, FIRST_ENTRY 0.
+fn flir_aff5(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "FLIR";
+    const GRP1: &str = "FLIR";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = 0;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x24, bo) {
+        dm.push(("RawDataByteOrder".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let rc = conv_expr::eval_with("ToggleByteOrder() if $val >= 0x0100; undef", &Conv::Num(f64::from(v)), &ctx);
+        if rc.as_ref() != Some(&Conv::Undef) {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let v = rc.map_or(v, |x| x.as_num() as _);
+            tags.push(mk("RawDataByteOrder", 0x12, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x26, bo) {
+        dm.push(("SensorWidth".to_string(), f64::from(v)));
+        tags.push(mk("SensorWidth", 0x13, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x28, bo) {
+        dm.push(("SensorHeight".to_string(), f64::from(v)));
+        tags.push(mk("SensorHeight", 0x14, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Minolta::CameraSettings7D` -- FORMAT int16u, FIRST_ENTRY 0.
 fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Minolta";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -19114,7 +19435,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             6 => "Program-shift S".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ExposureMode", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureMode", 0x0, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x4, bo) {
         dm.push(("MinoltaImageSize".to_string(), f64::from(v)));
@@ -19124,7 +19445,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             2 => "Small".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("MinoltaImageSize", 0x2, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("MinoltaImageSize", 0x2, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x6, bo) {
         dm.push(("MinoltaQuality".to_string(), f64::from(v)));
@@ -19136,7 +19457,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             48 => "Economy".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("MinoltaQuality", 0x3, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("MinoltaQuality", 0x3, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x8, bo) {
         dm.push(("WhiteBalance".to_string(), f64::from(v)));
@@ -19151,7 +19472,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             512 => "Manual".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalance", 0x4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalance", 0x4, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x1c, bo) {
         dm.push(("FocusMode".to_string(), f64::from(v)));
@@ -19162,7 +19483,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             4 => "AF-A".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FocusMode", 0xe, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FocusMode", 0xe, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x20, bo) {
         dm.push(("AFPoints".to_string(), f64::from(v)));
@@ -19178,7 +19499,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             8 => "Top-left".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AFPoints", 0x10, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFPoints", 0x10, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x2a, bo) {
         dm.push(("Flash".to_string(), f64::from(v)));
@@ -19187,7 +19508,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("Flash", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Flash", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x2c, bo) {
         dm.push(("FlashMode".to_string(), f64::from(v)));
@@ -19197,7 +19518,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             2 => "Rear flash sync".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashMode", 0x16, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashMode", 0x16, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x38, bo) {
         dm.push(("ISOSetting".to_string(), f64::from(v)));
@@ -19205,7 +19526,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             0 => "Auto".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ISOSetting", 0x1c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ISOSetting", 0x1c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x3c, bo) {
         dm.push(("ExposureCompensation".to_string(), f64::from(v)));
@@ -19214,7 +19535,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         if let Some(x) = conv_expr::eval_with("$val / 24", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureCompensation", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureCompensation", 0x1e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x4a, bo) {
         dm.push(("ColorSpace".to_string(), f64::from(v)));
@@ -19224,7 +19545,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             4 => "Adobe RGB".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorSpace", 0x25, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorSpace", 0x25, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x4c, bo) {
         dm.push(("Sharpness".to_string(), f64::from(v)));
@@ -19232,7 +19553,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("Sharpness", 0x26, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("Sharpness", 0x26, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x4e, bo) {
         dm.push(("Contrast".to_string(), f64::from(v)));
@@ -19240,7 +19561,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("Contrast", 0x27, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("Contrast", 0x27, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x50, bo) {
         dm.push(("Saturation".to_string(), f64::from(v)));
@@ -19248,11 +19569,11 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("Saturation", 0x28, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("Saturation", 0x28, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x5a, bo) {
         dm.push(("FreeMemoryCardImages".to_string(), f64::from(v)));
-        tags.push(mk("FreeMemoryCardImages", 0x2d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FreeMemoryCardImages", 0x2d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i16_at(data, 0x7e, bo) {
         dm.push(("ColorTemperature".to_string(), f64::from(v)));
@@ -19260,7 +19581,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("ColorTemperature", 0x3f, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ColorTemperature", 0x3f, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x80, bo) {
         dm.push(("HueAdjustment".to_string(), f64::from(v)));
@@ -19268,7 +19589,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("HueAdjustment", 0x40, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("HueAdjustment", 0x40, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x8c, bo) {
         dm.push(("Rotation".to_string(), f64::from(v)));
@@ -19278,7 +19599,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             82 => "Rotate 270 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("Rotation", 0x46, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Rotation", 0x46, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x8e, bo) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -19287,7 +19608,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x47, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FNumber", 0x47, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x90, bo) {
         dm.push(("ExposureTime".to_string(), f64::from(v)));
@@ -19296,11 +19617,11 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         if let Some(x) = conv_expr::eval_with("2 ** ((48-$val)/8)", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x48, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureTime", 0x48, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x94, bo) {
         dm.push(("FreeMemoryCardImages".to_string(), f64::from(v)));
-        tags.push(mk("FreeMemoryCardImages", 0x4a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FreeMemoryCardImages", 0x4a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xbc, bo) {
         dm.push(("ImageNumber".to_string(), f64::from(v)));
@@ -19308,7 +19629,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("ImageNumber", 0x5e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ImageNumber", 0x5e, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xc0, bo) {
         dm.push(("NoiseReduction".to_string(), f64::from(v)));
@@ -19317,7 +19638,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("NoiseReduction", 0x60, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("NoiseReduction", 0x60, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xc4, bo) {
         dm.push(("ImageNumber2".to_string(), f64::from(v)));
@@ -19325,7 +19646,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("ImageNumber2", 0x62, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ImageNumber2", 0x62, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xe2, bo) {
         dm.push(("ImageStabilization".to_string(), f64::from(v)));
@@ -19334,7 +19655,7 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ImageStabilization", 0x71, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ImageStabilization", 0x71, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0xea, bo) {
         dm.push(("ZoneMatchingOn".to_string(), f64::from(v)));
@@ -19343,13 +19664,14 @@ fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: 
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ZoneMatchingOn", 0x75, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ZoneMatchingOn", 0x75, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Minolta::CameraInfoA100` -- FORMAT int8u, FIRST_ENTRY 0.
 fn minolta_camerainfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Minolta";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -19368,43 +19690,43 @@ fn minolta_camerainfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             7 => "Bottom-left".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AFSensorActive", 0x1, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFSensorActive", 0x1, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2) {
         dm.push(("AFStatusActiveSensor".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusActiveSensor", 0x2, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusActiveSensor", 0x2, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x4) {
         dm.push(("AFStatusTop-right".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusTop-right", 0x4, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusTop-right", 0x4, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x6) {
         dm.push(("AFStatusBottom-right".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusBottom-right", 0x6, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusBottom-right", 0x6, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x8) {
         dm.push(("AFStatusBottom".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusBottom", 0x8, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusBottom", 0x8, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xa) {
         dm.push(("AFStatusMiddleHorizontal".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusMiddleHorizontal", 0xa, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusMiddleHorizontal", 0xa, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xc) {
         dm.push(("AFStatusCenterVertical".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusCenterVertical", 0xc, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusCenterVertical", 0xc, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0xe) {
         dm.push(("AFStatusTop".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusTop", 0xe, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusTop", 0xe, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x10) {
         dm.push(("AFStatusTop-left".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusTop-left", 0x10, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusTop-left", 0x10, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x12) {
         dm.push(("AFStatusBottom-left".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusBottom-left", 0x12, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusBottom-left", 0x12, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x14) {
         dm.push(("FocusLocked".to_string(), f64::from(v)));
@@ -19415,7 +19737,7 @@ fn minolta_camerainfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             64 => "Yes".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FocusLocked", 0x14, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FocusLocked", 0x14, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("AFPoint".to_string(), f64::from(v)));
@@ -19432,7 +19754,7 @@ fn minolta_camerainfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             9 => "Top-left".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AFPoint", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFPoint", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x16) {
         dm.push(("AFMode".to_string(), f64::from(v)));
@@ -19443,19 +19765,19 @@ fn minolta_camerainfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             3 => "AF-A".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AFMode", 0x16, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFMode", 0x16, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2d) {
         dm.push(("AFStatusLeft".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusLeft", 0x2d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusLeft", 0x2d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2f) {
         dm.push(("AFStatusCenterHorizontal".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusCenterHorizontal", 0x2f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusCenterHorizontal", 0x2f, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x31) {
         dm.push(("AFStatusRight".to_string(), f64::from(v)));
-        tags.push(mk("AFStatusRight", 0x31, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFStatusRight", 0x31, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x33) {
         dm.push(("AFAreaMode".to_string(), f64::from(v)));
@@ -19465,13 +19787,14 @@ fn minolta_camerainfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &s
             2 => "Spot".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("AFAreaMode", 0x33, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("AFAreaMode", 0x33, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
 
 /// `Image::ExifTool::Minolta::WBInfoA100` -- FORMAT int8u, FIRST_ENTRY 0.
 fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP0: &str = "MakerNotes";
     const GRP1: &str = "Minolta";
     const GRP2: &str = "Camera";
     const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
@@ -19490,7 +19813,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             9 => "White Balance Bracketing High".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("DriveMode", 0xe, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("DriveMode", 0xe, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x10) {
         dm.push(("Rotation".to_string(), f64::from(v)));
@@ -19500,7 +19823,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             2 => "Rotate 90 CW".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("Rotation", 0x10, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("Rotation", 0x10, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x14) {
         dm.push(("ImageStabilizationSetting".to_string(), f64::from(v)));
@@ -19509,7 +19832,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ImageStabilizationSetting", 0x14, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ImageStabilizationSetting", 0x14, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x15) {
         dm.push(("DynamicRangeOptimizerMode".to_string(), f64::from(v)));
@@ -19519,7 +19842,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             2 => "Advanced".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("DynamicRangeOptimizerMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("DynamicRangeOptimizerMode", 0x15, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2a) {
         dm.push(("ExposureCompensationMode".to_string(), f64::from(v)));
@@ -19528,11 +19851,11 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             1 => "Ambient Only".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ExposureCompensationMode", 0x2a, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureCompensationMode", 0x2a, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2b) {
         dm.push(("WBBracketShotNumber".to_string(), f64::from(v)));
-        tags.push(mk("WBBracketShotNumber", 0x2b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WBBracketShotNumber", 0x2b, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2c) {
         dm.push(("WhiteBalanceBracketing".to_string(), f64::from(v)));
@@ -19542,11 +19865,11 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             2 => "High".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("WhiteBalanceBracketing", 0x2c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WhiteBalanceBracketing", 0x2c, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x2d) {
         dm.push(("ExposureBracketShotNumber".to_string(), f64::from(v)));
-        tags.push(mk("ExposureBracketShotNumber", 0x2d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureBracketShotNumber", 0x2d, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x31, bo) {
         dm.push(("FlashFunction".to_string(), f64::from(v)));
@@ -19563,7 +19886,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             6030 => "HSS".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("FlashFunction", 0x31, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FlashFunction", 0x31, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x34, bo) {
         dm.push(("ExposureMode".to_string(), f64::from(v)));
@@ -19583,7 +19906,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             4227 => "Macro".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ExposureMode", 0x34, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureMode", 0x34, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x36, bo) {
         dm.push(("ColorMode".to_string(), f64::from(v)));
@@ -19598,7 +19921,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             8 => "Adobe RGB".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ColorMode", 0x36, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ColorMode", 0x36, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x38, bo) {
         dm.push(("AverageLV".to_string(), f64::from(v)));
@@ -19606,11 +19929,11 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("AverageLV", 0x38, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("AverageLV", 0x38, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x3c) {
         dm.push(("FrameNumber".to_string(), f64::from(v)));
-        tags.push(mk("FrameNumber", 0x3c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("FrameNumber", 0x3c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -19622,7 +19945,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGBLevels", 0x96, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGBLevels", 0x96, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19635,7 +19958,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_GBRGLevels", 0xae, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_GBRGLevels", 0xae, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19648,7 +19971,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RedLevelsTungsten", 0xc0, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RedLevelsTungsten", 0xc0, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19661,7 +19984,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_BlueLevelsTungsten", 0xce, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_BlueLevelsTungsten", 0xce, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19674,7 +19997,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RedLevelsDaylight", 0xdc, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RedLevelsDaylight", 0xdc, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19687,7 +20010,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_BlueLevelsDaylight", 0xea, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_BlueLevelsDaylight", 0xea, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19700,7 +20023,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RedLevelsCloudy", 0xf8, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RedLevelsCloudy", 0xf8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19713,7 +20036,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_BlueLevelsCloudy", 0x106, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_BlueLevelsCloudy", 0x106, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19726,7 +20049,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RedLevelsFlash", 0x114, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RedLevelsFlash", 0x114, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19739,7 +20062,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_BlueLevelsFlash", 0x122, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_BlueLevelsFlash", 0x122, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19752,7 +20075,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RedLevelsFluorescent", 0x14c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RedLevelsFluorescent", 0x14c, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19765,7 +20088,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_BlueLevelsFluorescent", 0x15a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_BlueLevelsFluorescent", 0x15a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19778,7 +20101,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RedLevelsShade", 0x168, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RedLevelsShade", 0x168, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19791,32 +20114,32 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_BlueLevelsShade", 0x176, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_BlueLevelsShade", 0x176, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u16_at(data, 0x188, bo) {
         dm.push(("WB_RedLevel6500K".to_string(), f64::from(v)));
-        tags.push(mk("WB_RedLevel6500K", 0x188, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WB_RedLevel6500K", 0x188, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x18a, bo) {
         dm.push(("WB_BlueLevel6500K".to_string(), f64::from(v)));
-        tags.push(mk("WB_BlueLevel6500K", 0x18a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WB_BlueLevel6500K", 0x18a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x18c, bo) {
         dm.push(("WB_RedLevelCustom".to_string(), f64::from(v)));
-        tags.push(mk("WB_RedLevelCustom", 0x18c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WB_RedLevelCustom", 0x18c, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x18e, bo) {
         dm.push(("WB_BlueLevelCustom".to_string(), f64::from(v)));
-        tags.push(mk("WB_BlueLevelCustom", 0x18e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WB_BlueLevelCustom", 0x18e, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x198, bo) {
         dm.push(("WB_RedLevel3500K".to_string(), f64::from(v)));
-        tags.push(mk("WB_RedLevel3500K", 0x198, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WB_RedLevel3500K", 0x198, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16_at(data, 0x19a, bo) {
         dm.push(("WB_BlueLevel3500K".to_string(), f64::from(v)));
-        tags.push(mk("WB_BlueLevel3500K", 0x19a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("WB_BlueLevel3500K", 0x19a, v.to_string(), Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     {
         let mut parts = Vec::new();
@@ -19828,7 +20151,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RedLevelsKelvin", 0x1be, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RedLevelsKelvin", 0x1be, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19841,7 +20164,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_BlueLevelsKelvin", 0x254, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_BlueLevelsKelvin", 0x254, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19854,7 +20177,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsFlash", 0x304, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsFlash", 0x304, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19867,7 +20190,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsCoolWhiteF", 0x308, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsCoolWhiteF", 0x308, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19880,7 +20203,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsTungsten", 0x3e8, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsTungsten", 0x3e8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19893,7 +20216,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsDaylight", 0x3ec, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsDaylight", 0x3ec, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19906,7 +20229,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsCloudy", 0x3f0, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsCloudy", 0x3f0, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19919,7 +20242,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsFlash", 0x3f4, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsFlash", 0x3f4, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19932,7 +20255,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RedLevelsFluorescent", 0x3fc, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RedLevelsFluorescent", 0x3fc, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19945,7 +20268,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_BlueLevelsFluorescent", 0x40a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_BlueLevelsFluorescent", 0x40a, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19958,7 +20281,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsShade", 0x418, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsShade", 0x418, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19971,7 +20294,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevels6500K", 0x420, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevels6500K", 0x420, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19984,7 +20307,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsCustom", 0x424, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsCustom", 0x424, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -19997,7 +20320,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevels3500K", 0x430, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevels3500K", 0x430, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -20010,7 +20333,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RBLevelsDaylight", 0x528, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RBLevelsDaylight", 0x528, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -20023,7 +20346,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("WB_RGBLevels", 0x546, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("WB_RGBLevels", 0x546, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     {
@@ -20036,7 +20359,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("AEMeteringSegments", 0x628, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+            tags.push(mk("AEMeteringSegments", 0x628, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x690) {
@@ -20045,7 +20368,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("MeasuredLV", 0x690, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MeasuredLV", 0x690, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x691) {
         dm.push(("BrightnessValue".to_string(), f64::from(v)));
@@ -20053,10 +20376,10 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("BrightnessValue", 0x691, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("BrightnessValue", 0x691, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x104c, 9600, false) {
-        tags.push(mk("TiffMeteringImage", 0x104c, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("TiffMeteringImage", 0x104c, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x49b8) {
         dm.push(("ExposureTime".to_string(), f64::from(v)));
@@ -20065,7 +20388,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureTime", 0x49b8, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureTime", 0x49b8, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x49ba) {
         dm.push(("ISO".to_string(), f64::from(v)));
@@ -20074,7 +20397,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("2 ** (($val-48)/8) * 100", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
-        tags.push(mk("ISO", 0x49ba, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ISO", 0x49ba, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x49bb) {
         dm.push(("FocusDistance".to_string(), f64::from(v)));
@@ -20083,7 +20406,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("2**(($val-126)/16)", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val > 266 ? \"inf\" : sprintf(\"%.2f m\", $val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FocusDistance", 0x49bb, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FocusDistance", 0x49bb, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u16rev_at(data, 0x49bd, bo) {
         dm.push(("LensType".to_string(), f64::from(v)));
@@ -20257,7 +20580,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             65535 => "E-Mount, T-Mount, Other Lens or no lens".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("LensType", 0x49bd, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("LensType", 0x49bd, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x49c0) {
         dm.push(("ExposureCompensation".to_string(), f64::from(v)));
@@ -20266,7 +20589,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val / 8", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("ExposureCompensation", 0x49c0, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("ExposureCompensation", 0x49c0, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = i8_at(data, 0x49c1) {
         dm.push(("FlashExposureComp".to_string(), f64::from(v)));
@@ -20275,7 +20598,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("$val / 8", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
-        tags.push(mk("FlashExposureComp", 0x49c1, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FlashExposureComp", 0x49c1, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x49c2) {
         dm.push(("ImageStabilization".to_string(), f64::from(v)));
@@ -20284,7 +20607,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
             1 => "On".to_string(),
             other => other.to_string(),
         };
-        tags.push(mk("ImageStabilization", 0x49c2, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+        tags.push(mk("ImageStabilization", 0x49c2, s, Value::I32(v as i32), GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x49c3) {
         dm.push(("BrightnessValue".to_string(), f64::from(v)));
@@ -20292,7 +20615,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         let mut cv = Conv::Num(f64::from(v));
         if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
-        tags.push(mk("BrightnessValue", 0x49c3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("BrightnessValue", 0x49c3, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x49c5) {
         dm.push(("MaxAperture".to_string(), f64::from(v)));
@@ -20301,7 +20624,7 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("MaxAperture", 0x49c5, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("MaxAperture", 0x49c5, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(v) = u8_at(data, 0x49c7) {
         dm.push(("FNumber".to_string(), f64::from(v)));
@@ -20310,10 +20633,10 @@ fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, 
         if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
         let raw = Value::F64(cv.as_num());
         if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
-        tags.push(mk("FNumber", 0x49c7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+        tags.push(mk("FNumber", 0x49c7, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));
     }
     if let Some(text) = text_at(data, 0x49dc, 12, true) {
-        tags.push(mk("InternalSerialNumber", 0x49dc, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+        tags.push(mk("InternalSerialNumber", 0x49dc, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));
     }
     tags
 }
