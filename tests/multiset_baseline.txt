@@ -14,12 +14,9 @@ Real.ra	default	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	default	missing	0	Copyright	** institut f�r universelle zusammenh�nge
 Real.ra	ee	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	ee	missing	0	Copyright	** institut f�r universelle zusammenh�nge
-SonyILCE9.arw	default	extra	0	LensID	Unknown 50-300mm
-SonyILCE9.arw	default	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	ee	extra	0	BrightnessValue	5.286718749999999
 SonyILCE9.arw	ee	extra	0	Contrast	Normal
 SonyILCE9.arw	ee	extra	0	FocusMode	131
-SonyILCE9.arw	ee	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
 SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
@@ -50,7 +47,6 @@ SonyILCE9.arw	ee	missing	0	ExposureTime	1/20
 SonyILCE9.arw	ee	missing	0	FocusMode	AF-C
 SonyILCE9.arw	ee	missing	0	LensFormat	Full-frame
 SonyILCE9.arw	ee	missing	1	LensFormat	Full-frame
-SonyILCE9.arw	ee	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	ee	missing	0	LensMount	E-mount
 SonyILCE9.arw	ee	missing	1	LensMount	E-mount
 SonyILCE9.arw	ee	missing	0	LensSpecFeatures	E

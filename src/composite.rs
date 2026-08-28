@@ -282,6 +282,24 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
+    // The Composite LensID's print conversion prefers LensType2 over LensType
+    // when it is there and valid -- "0x8000 or greater; 0 for several
+    // older/3rd-party E-mount lenses" (Exif.pm) -- which is how a Sony E-mount
+    // body names the lens its LensType of 65535 cannot. It is the same tag, so
+    // this replaces whatever the LensType route worked out.
+    if let Some(t2) = tags.iter().find(|t| t.name == "LensType2") {
+        let raw = t2.raw_value.as_u64().unwrap_or(0);
+        let named = t2.print_value != t2.raw_value.to_display_string();
+        if named && (raw & 0x8000 != 0 || raw == 0) {
+            composite.retain(|t| t.name != "LensID");
+            composite.push(mk_composite(
+                "LensID",
+                "Lens ID",
+                Value::String(t2.print_value.clone()),
+            ));
+        }
+    }
+
     // LensID fallback: use LensModel, Lens, or LensType if no LensID computed by 35efl
     // Only create when the value looks like a real camera lens (contains "mm" or "f/")
     if !composite.iter().any(|t| t.name == "LensID") {
