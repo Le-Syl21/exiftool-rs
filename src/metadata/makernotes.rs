@@ -7111,6 +7111,35 @@ fn read_makernote_ifd_with_base(
                         &mut dm,
                     )
                 }
+                // Two makers whose notes are a plain IFD this reader walks
+                // without knowing the maker: Kodak's Processing block, which
+                // is that table only at a count of 72 (Kodak.pm:1437), and
+                // Nintendo's CameraInfo (Nintendo.pm:27).
+                (_, 0x03FD) | (_, 0x1101)
+                    if (tag_id == 0x03FD
+                        && count == 72
+                        && crate::metadata::exif::make()
+                            .to_lowercase()
+                            .contains("kodak"))
+                        || (tag_id == 0x1101 && crate::metadata::exif::make() == "Nintendo") =>
+                {
+                    let (table, bo) = if tag_id == 0x03FD {
+                        ("Kodak::Processing", byte_order)
+                    } else {
+                        ("Nintendo::CameraInfo", ByteOrderMark::LittleEndian)
+                    };
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        table,
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        bo,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
+                }
                 // Casio writes two face-detection layouts at one id, told
                 // apart by the bytes the block opens with (Casio.pm:497-510).
                 (Manufacturer::Casio, 0x2089) | (Manufacturer::CasioType2, 0x2089) => {
