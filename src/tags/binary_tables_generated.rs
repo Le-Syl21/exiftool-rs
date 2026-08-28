@@ -6776,7 +6776,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face1Position", 0x8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 1 ? undef: $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face1Position", 0x8, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -6789,7 +6793,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face2Position", 0xa, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 2 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face2Position", 0xa, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -6802,7 +6810,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face3Position", 0xc, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 3 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face3Position", 0xc, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -6815,7 +6827,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face4Position", 0xe, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 4 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face4Position", 0xe, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -6828,7 +6844,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face5Position", 0x10, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 5 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face5Position", 0x10, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -6841,7 +6861,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face6Position", 0x12, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 6 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face6Position", 0x12, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -6854,7 +6878,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face7Position", 0x14, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 7 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face7Position", 0x14, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -6867,7 +6895,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face8Position", 0x16, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 8 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face8Position", 0x16, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -6880,7 +6912,11 @@ fn canon_facedetect1(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_t
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face9Position", 0x18, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesDetected} < 9 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face9Position", 0x18, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     tags
@@ -58764,7 +58800,11 @@ fn panasonic_facedetinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face1Position", 0x1, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{NumFacePositions} < 1 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face1Position", 0x1, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -58777,7 +58817,11 @@ fn panasonic_facedetinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face2Position", 0x5, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{NumFacePositions} < 2 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face2Position", 0x5, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -58790,7 +58834,11 @@ fn panasonic_facedetinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face3Position", 0x9, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{NumFacePositions} < 3 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face3Position", 0x9, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -58803,7 +58851,11 @@ fn panasonic_facedetinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face4Position", 0xd, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{NumFacePositions} < 4 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face4Position", 0xd, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     {
@@ -58816,7 +58868,11 @@ fn panasonic_facedetinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("Face5Position", 0x11, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{NumFacePositions} < 5 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("Face5Position", 0x11, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     tags
@@ -58861,7 +58917,11 @@ fn panasonic_facerecinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("RecognizedFace1Position", 0x18, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesRecognized} < 1 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("RecognizedFace1Position", 0x18, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(text) = text_at(data, 0x20, 20, true) {
@@ -58894,7 +58954,11 @@ fn panasonic_facerecinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("RecognizedFace2Position", 0x48, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesRecognized} < 2 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("RecognizedFace2Position", 0x48, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(text) = text_at(data, 0x50, 20, true) {
@@ -58927,7 +58991,11 @@ fn panasonic_facerecinfo(data: &[u8], make: &str, model: &str, bo: ByteOrder, fi
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk("RecognizedFace3Position", 0x78, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            let ctx = Ctx { make, model, file_type, dm };
+            let rc = conv_expr::eval_with("$$self{FacesRecognized} < 3 ? undef : $val", &Conv::Str(s.clone()), &ctx);
+            if rc.as_ref() != Some(&Conv::Undef) {
+                tags.push(mk("RecognizedFace3Position", 0x78, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));
+            }
         }
     }
     if let Some(text) = text_at(data, 0x80, 20, true) {

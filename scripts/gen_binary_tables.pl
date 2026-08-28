@@ -1329,6 +1329,19 @@ for my $t (@tables) {
             }
             printf "%s    if !parts.is_empty() {\n", $ind;
             printf "%s        let s = parts.join(\" \");\n", $ind;
+            # An array is ruled out by a RawConv as much as a scalar is:
+            # Panasonic's Face2Position is `$$self{NumFacePositions} < 2 ?
+            # undef : $val`, and emitting it regardless reported five face
+            # positions of zeros that ExifTool does not have.
+            my $arr_guard = 0;
+            if (defined $f->{rconv}) {
+                printf "%s        let ctx = Ctx { make, model, file_type, dm };\n", $ind;
+                printf "%s        let rc = conv_expr::eval_with(\"%s\", &Conv::Str(s.clone()), &ctx);\n",
+                    $ind, esc($f->{rconv});
+                printf "%s        if rc.as_ref() != Some(&Conv::Undef) {\n", $ind;
+                $arr_guard = 1;
+                $ind .= "    ";
+            }
             # An array carries its conversions as much as a scalar does:
             # RawMeasuredRGGB is four int32u read back with their halves
             # exchanged, and joining them without that gives four other
@@ -1346,6 +1359,10 @@ for my $t (@tables) {
             } else {
                 printf "%s        tags.push(mk(\"%s\", 0x%x, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));\n",
                     $ind, $f->{name}, $f->{off} unless $f->{hidden};
+            }
+            if ($arr_guard) {
+                $ind = substr($ind, 4);
+                printf "%s        }\n", $ind;
             }
             printf "%s    }\n%s}\n", $ind, $ind;
             print  "    }\n" if defined $f->{cond};

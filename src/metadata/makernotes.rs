@@ -7172,60 +7172,37 @@ fn read_makernote_ifd_with_base(
                     }
                     decoded
                 }
-                // Panasonic FaceDetInfo (tag 0x004e): binary subdirectory
-                // FORMAT=int16u, FIRST_ENTRY=0
-                // 0=NumFacePositions, 1=Face1Position[4], 5=Face2Position[4], ...
-                (Manufacturer::Panasonic, 0x004e) => {
-                    let mut t = Vec::new();
-                    if value_data.len() >= 2 {
-                        let num = read_u16(value_data, 0, byte_order);
-                        t.push(Tag {
-                            id: TagId::Text("NumFacePositions".into()),
-                            name: "NumFacePositions".into(),
-                            description: "Num Face Positions".into(),
-                            group: TagGroup {
-                                family0: "MakerNotes".into(),
-                                family1: "Panasonic".into(),
-                                family2: "Image".into(),
-                                family3: "Main".into(),
-                            },
-                            raw_value: Value::U16(num),
-                            print_value: num.to_string(),
-                            priority: 0,
-                        });
-                        // Only emit FaceNPosition if NumFacePositions >= n
-                        for i in 0..5usize {
-                            if (i as u16) < num {
-                                let base = (1 + i * 4) * 2;
-                                if base + 8 <= value_data.len() {
-                                    let x = read_u16(value_data, base, byte_order);
-                                    let y = read_u16(value_data, base + 2, byte_order);
-                                    let w = read_u16(value_data, base + 4, byte_order);
-                                    let h = read_u16(value_data, base + 6, byte_order);
-                                    t.push(Tag {
-                                        id: TagId::Text(format!("Face{}Position", i + 1)),
-                                        name: format!("Face{}Position", i + 1),
-                                        description: format!("Face {} Position", i + 1),
-                                        group: TagGroup {
-                                            family0: "MakerNotes".into(),
-                                            family1: "Panasonic".into(),
-                                            family2: "Image".into(),
-                                            family3: "Main".into(),
-                                        },
-                                        raw_value: Value::List(vec![
-                                            Value::U16(x),
-                                            Value::U16(y),
-                                            Value::U16(w),
-                                            Value::U16(h),
-                                        ]),
-                                        print_value: format!("{} {} {} {}", x, y, w, h),
-                                        priority: 0,
-                                    });
-                                }
-                            }
-                        }
-                    }
-                    t
+                // Every Panasonic block whose layout Panasonic.pm gives as a
+                // binary table, by the id its Main table declares.
+                (Manufacturer::Panasonic, 0x000B)
+                | (Manufacturer::Panasonic, 0x004E)
+                | (Manufacturer::Panasonic, 0x0061)
+                | (Manufacturer::Panasonic, 0x040A)
+                | (Manufacturer::Panasonic, 0x0410)
+                | (Manufacturer::Panasonic, 0x2003)
+                | (Manufacturer::Panasonic, 0x3901)
+                | (Manufacturer::Panasonic, 0x3902) => {
+                    let table = match tag_id {
+                        0x000B => "Panasonic::SerialInfo",
+                        0x004E => "Panasonic::FaceDetInfo",
+                        0x0061 => "Panasonic::FaceRecInfo",
+                        0x040A => "Panasonic::FocusInfo",
+                        0x0410 => "Panasonic::ShotInfo",
+                        0x2003 => "Panasonic::TimeInfo",
+                        0x3901 => "Panasonic::Data1",
+                        _ => "Panasonic::Data2",
+                    };
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    crate::tags::binary_tables_generated::decode(
+                        table,
+                        value_data,
+                        &crate::metadata::exif::make(),
+                        model_name,
+                        byte_order,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    )
                 }
                 _ => Vec::new(),
             };

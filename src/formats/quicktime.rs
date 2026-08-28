@@ -984,6 +984,12 @@ fn parse_atoms(
                         b"\x7f\x2e\x21\x00\x8b\x46\x49\x18\xaf\xb1\xde\x70\x9a\x74\xf6\xf5" => {
                             Some("FLIR::GPS_UUID")
                         }
+                        b"\x41\xe5\xdc\xf9\xe8\x0a\x41\xce\xad\xfe\x7f\x0c\x58\x08\x2c\x19" => {
+                            Some("FLIR::Params")
+                        }
+                        b"\x2b\x45\x2f\xdc\x74\x35\x40\x94\xba\xee\x22\xa6\xb2\x3a\x7c\xf8" => {
+                            Some("FLIR::MoreInfo")
+                        }
                         _ => None,
                     } {
                         let mut dm = crate::tags::binary_tables_generated::State::new();

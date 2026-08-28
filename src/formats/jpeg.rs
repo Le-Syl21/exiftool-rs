@@ -2507,7 +2507,21 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
     // An AFF file carries the same record structure as an FFF one but numbers
     // its record types differently (FLIR.pm:1256-1272).
     let is_aff = data.starts_with(b"AFF\0");
-    let mut tags = Vec::new();
+    // The FFF header itself is a table: `"_header"` of FLIR::Main
+    // (FLIR.pm:105-108).
+    let mut tags = {
+        let mut dm = crate::tags::binary_tables_generated::State::new();
+        crate::tags::binary_tables_generated::decode(
+            "FLIR::Header",
+            data,
+            "",
+            "",
+            crate::metadata::exif::ByteOrderMark::BigEndian,
+            "",
+            "",
+            &mut dm,
+        )
+    };
     if data.len() < 0x40 {
         return tags;
     }
@@ -2889,21 +2903,30 @@ fn decode_flir_fff(data: &[u8]) -> Vec<crate::tag::Tag> {
             // one -- type 1 is AFF1 where an FFF's is RawData, and type 5 is
             // AFF5 where an FFF's is the gain/dead calibration map -- so the
             // magic the block opened with decides.
-            0x01 | 0x05 | 0x06 | 0x28 if is_aff || rec_type != 0x01 => {
+            0x01 | 0x05 | 0x06 | 0x0e | 0x28 | 0x2a | 0x2b | 0x2c
+                if is_aff || rec_type != 0x01 =>
+            {
                 let table = match (is_aff, rec_type) {
                     (true, 0x01) => "FLIR::AFF1",
                     (true, 0x05) => "FLIR::AFF5",
                     (_, 0x05) => "FLIR::GainDeadData",
                     (_, 0x06) => "FLIR::CoarseData",
+                    (_, 0x0e) => "FLIR::EmbeddedImage",
+                    (_, 0x2a) => "FLIR::PiP",
+                    (_, 0x2b) => "FLIR::GPSInfo",
+                    (_, 0x2c) => "FLIR::MeterLink",
                     _ => "FLIR::PaintData",
                 };
+                // PiP, GPSInfo and MeterLink are `ByteOrder => 'LittleEndian'`
+                // (FLIR.pm:167-180); the rest follow the block's own order.
+                let rec_le = le || matches!(rec_type, 0x2a | 0x2b | 0x2c);
                 let mut dm = crate::tags::binary_tables_generated::State::new();
                 tags.extend(crate::tags::binary_tables_generated::decode(
                     table,
                     rec,
                     "",
                     "",
-                    if le {
+                    if rec_le {
                         crate::metadata::exif::ByteOrderMark::LittleEndian
                     } else {
                         crate::metadata::exif::ByteOrderMark::BigEndian
