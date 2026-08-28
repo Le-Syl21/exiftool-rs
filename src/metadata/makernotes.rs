@@ -5793,7 +5793,48 @@ fn read_makernote_ifd_with_base(
         };
 
         // Decode value
-        let mut value = decode_mn_value(value_data, data_type, count as usize, byte_order);
+        let mut value = {
+            // A tag can declare a format of its own, and ExifTool reads the
+            // entry that way whatever type the file gives it: Sony's HDR is an
+            // int32u entry read as two 16-bit values.
+            let group = manufacturer_group_name(manufacturer);
+            match crate::tags::makernote_conv_generated::format_override(group, tag_id) {
+                Some((fmt, n)) => {
+                    let ty = match fmt {
+                        "int8u" => 1,
+                        "string" => 2,
+                        "int16u" => 3,
+                        "int32u" => 4,
+                        "rational64u" => 5,
+                        "int8s" => 6,
+                        "undef" => 7,
+                        "int16s" => 8,
+                        "int32s" => 9,
+                        "rational64s" => 10,
+                        "float" => 11,
+                        "double" => 12,
+                        _ => 0,
+                    };
+                    let width = match ty {
+                        1 | 2 | 6 | 7 => 1,
+                        3 | 8 => 2,
+                        4 | 9 | 11 => 4,
+                        5 | 10 | 12 => 8,
+                        _ => 0,
+                    };
+                    // A `string` or `undef` with no count of its own is the
+                    // whole entry: taking one byte of it left Olympus's
+                    // CameraID as the number 79.
+                    let n = if matches!(ty, 2 | 7) && n <= 1 { value_data.len() } else { n };
+                    if ty != 0 && width * n <= value_data.len() {
+                        decode_mn_value(value_data, ty, n, byte_order)
+                    } else {
+                        decode_mn_value(value_data, data_type, count as usize, byte_order)
+                    }
+                }
+                None => decode_mn_value(value_data, data_type, count as usize, byte_order),
+            }
+        };
 
         // Casio FirmwareDate (0x2001) is Format=>'undef' in ExifTool (the "string"
         // contains embedded nulls), so keep the raw bytes rather than truncating.

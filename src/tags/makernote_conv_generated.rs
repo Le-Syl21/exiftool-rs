@@ -201,3 +201,81 @@ pub fn print_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
     })
 }
 
+/// The format a MakerNote Main tag declares for itself, and how many
+/// elements of it: ExifTool reads the entry that way whatever type the
+/// file gives it.
+#[must_use]
+pub fn format_override(maker: &str, tag: u16) -> Option<(&'static str, usize)> {
+    Some(match (maker, tag) {
+        ("Canon", 0x0023) => ("int32u", 2), // Categories
+        ("Canon", 0x0028) => ("undef", 1), // ImageUniqueID
+        ("Canon", 0x4002) => ("undef", 1), // CRWParam
+        ("Casio", 0x0015) => ("undef", 18), // FirmwareDate
+        ("FujiFilm", 0x1049) => ("int8s", 1), // BWAdjustment
+        ("FujiFilm", 0x104b) => ("int8s", 1), // BWMagentaGreen
+        ("Minolta", 0x0112) => ("int32s", 1), // WhiteBalanceFineTune
+        ("Olympus", 0x0209) => ("string", 1), // CameraID
+        ("Olympus", 0x0280) => ("undef", 1), // PreviewImage
+        ("Olympus", 0x0400) => ("int16u", 4), // SensorArea
+        ("Olympus", 0x1011) => ("int16s", 9), // ColorMatrix
+        ("Panasonic", 0x0023) => ("int16s", 1), // WhiteBalanceBias
+        ("Panasonic", 0x0024) => ("int16s", 1), // FlashBias
+        ("Panasonic", 0x0039) => ("int16s", 1), // Contrast
+        ("Panasonic", 0x0040) => ("int16s", 1), // Saturation
+        ("Panasonic", 0x0041) => ("int16s", 1), // Sharpness
+        ("Panasonic", 0x0044) => ("int16u", 1), // ColorTempKelvin
+        ("Panasonic", 0x0046) => ("int16s", 1), // WBShiftAB
+        ("Panasonic", 0x0047) => ("int16s", 1), // WBShiftGM
+        ("Panasonic", 0x0059) => ("int16s", 2), // Transform
+        ("Panasonic", 0x0060) => ("int8u", 4), // LensFirmwareVersion
+        ("Panasonic", 0x0063) => ("int8u", 4), // RecognizedFaceFlags
+        ("Panasonic", 0x0065) => ("string", 1), // Title
+        ("Panasonic", 0x0066) => ("string", 1), // BabyName
+        ("Panasonic", 0x0067) => ("string", 1), // Location
+        ("Panasonic", 0x0069) => ("string", 1), // Country
+        ("Panasonic", 0x006b) => ("string", 1), // State
+        ("Panasonic", 0x006d) => ("string", 1), // City
+        ("Panasonic", 0x006f) => ("string", 1), // Landmark
+        ("Panasonic", 0x0080) => ("string", 1), // City2
+        ("Panasonic", 0x008b) => ("int16s", 1), // WBShiftIntelligentAuto
+        ("Panasonic", 0x008c) => ("int16s", 1), // AccelerometerZ
+        ("Panasonic", 0x008d) => ("int16s", 1), // AccelerometerX
+        ("Panasonic", 0x008e) => ("int16s", 1), // AccelerometerY
+        ("Panasonic", 0x0090) => ("int16s", 1), // RollAngle
+        ("Panasonic", 0x0091) => ("int16s", 1), // PitchAngle
+        ("Panasonic", 0x0092) => ("int8s", 1), // WBShiftCreativeControl
+        ("Panasonic", 0x00a1) => ("int32u", 1), // FilterEffect
+        ("Panasonic", 0x00ad) => ("int16s", 2), // HighlightShadow
+        ("Panasonic", 0x00bd) => ("int16s", 1), // FocusBracket
+        ("Panasonic", 0x00bf) => ("int32u", 2), // PostFocusMerging
+        ("Panasonic", 0x8000) => ("undef", 1), // MakerNoteVersion
+        ("Panasonic", 0x8012) => ("int16s", 2), // Transform
+        ("Pentax", 0x0015) => ("int16s", 1), // LightReading
+        ("Pentax", 0x0032) => ("int8u", 4), // ImageEditing
+        ("Pentax", 0x0035) => ("int16u", 2), // SensorSize
+        ("Pentax", 0x003c) => ("int32u", 1), // AFPointsInFocus
+        ("Pentax", 0x005c) => ("undef", 1), // ShakeReductionInfo
+        ("Pentax", 0x0060) => ("undef", 1), // FaceInfo
+        ("Pentax", 0x0068) => ("undef", 1), // AWBInfo
+        ("Pentax", 0x0069) => ("int8u", 4), // DynamicRangeExpansion
+        ("Pentax", 0x006b) => ("undef", 1), // TimeInfo
+        ("Pentax", 0x0071) => ("int8u", 1), // HighISONoiseReduction
+        ("Pentax", 0x007d) => ("undef", 1), // LensCorr
+        ("Pentax", 0x0085) => ("int8u", 4), // HDR
+        ("Pentax", 0x0215) => ("undef", 1), // CameraInfo
+        ("Pentax", 0x021c) => ("int16s", 9), // ColorMatrixA2
+        ("Pentax", 0x021d) => ("int16s", 9), // ColorMatrixB2
+        ("Pentax", 0x0235) => ("int8u", 10), // CrossProcessParams
+        ("Ricoh", 0x1004) => ("int16s", 1), // WhiteBalanceFineTune
+        ("Ricoh", 0x1012) => ("int32s", 1), // Contrast
+        ("Samsung", 000000) => ("undef", 8), // MakerNoteVersion
+        ("Sony", 0x0112) => ("int32s", 1), // WhiteBalanceFineTune
+        ("Sony", 0x1000) => ("int8u", 1), // MultiBurstMode
+        ("Sony", 0x200a) => ("int16u", 2), // HDR
+        ("Sony", 0x2037) => ("int16u", 3), // FocusFrameSize
+        ("Sony", 0xb022) => ("int32s", 1), // ColorCompensationFilter
+        ("Sony", 0xb02a) => ("undef", 8), // LensSpec
+        _ => return None,
+    })
+}
+

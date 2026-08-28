@@ -26,7 +26,7 @@ require Image::ExifTool;
 my @MAKERS = qw(Sony Canon Nikon Olympus Panasonic Pentax FujiFilm Casio Ricoh
                 Sigma Samsung Sanyo Minolta Apple DJI);
 
-my (@rows, @skipped);
+my (@rows, @formats, @skipped);
 for my $maker (@MAKERS) {
     my $tbl = eval { Image::ExifTool::GetTagTable("Image::ExifTool::${maker}::Main") } or next;
     for my $id (Image::ExifTool::TagTableKeys($tbl)) {
@@ -53,6 +53,22 @@ for my $maker (@MAKERS) {
         for my $ti (@infos) {
             next unless ref $ti eq 'HASH';
             my $name = $$ti{Name} // next;
+            # A tag can declare a format of its own, which ExifTool reads the
+            # entry with whatever the file says: Sony's HDR is an int32u entry
+            # `Format => 'int16u', Count => 2`, read as two 16-bit values.
+            my $fmt = $$ti{Format};
+            if (defined $fmt and not ref $fmt) {
+                my ($base, $n) = $fmt =~ /^(\w+?)(?:\[(\d+)\])?$/;
+                $n //= $$ti{Count};
+                # A Count of -1 means "as many as fit", which a fixed number
+                # cannot express: those are reported, not guessed at.
+                if (defined $base and defined $n and $n < 0) {
+                    push @skipped, sprintf("%s 0x%04x %s: Format %s with Count %d (variable)",
+                                           $maker, $id, $name, $base, $n);
+                } elsif (defined $base) {
+                    push @formats, [$maker, $id, $base, $n // 1, $name];
+                }
+            }
             for my $kind ('ValueConv', 'PrintConv') {
                 my $c = $$ti{$kind};
                 next unless defined $c and not ref $c;   # a hash or code ref is not ours
@@ -96,7 +112,24 @@ for my $kind ('ValueConv', 'PrintConv') {
     print  "        _ => return None,\n    })\n}\n\n";
 }
 
-printf STDERR "%d expression(s) over %d makers\n", scalar @rows, scalar @MAKERS;
+print "/// The format a MakerNote Main tag declares for itself, and how many\n";
+print "/// elements of it: ExifTool reads the entry that way whatever type the\n";
+print "/// file gives it.\n";
+print "#[must_use]\n";
+print "pub fn format_override(maker: &str, tag: u16) -> Option<(&'static str, usize)> {\n";
+print "    Some(match (maker, tag) {\n";
+{
+    my %seen;
+    for my $f (sort { $a->[0] cmp $b->[0] or $a->[1] <=> $b->[1] } @formats) {
+        my ($maker, $id, $base, $n, $name) = @$f;
+        next if $seen{"$maker/$id"}++;
+        printf "        (\"%s\", %#06x) => (\"%s\", %d), // %s\n", $maker, $id, $base, $n, $name;
+    }
+}
+print "        _ => return None,\n    })\n}\n\n";
+
+printf STDERR "%d expression(s) and %d format override(s) over %d makers\n",
+    scalar @rows, scalar @formats, scalar @MAKERS;
 if (@skipped) {
     printf STDERR "\n%d id(s) NOT emitted:\n", scalar @skipped;
     print STDERR "  $_\n" for @skipped;

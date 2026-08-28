@@ -16,15 +16,13 @@ Real.ra	ee	extra	0	Copyright	** institut für universelle zusammenhänge
 Real.ra	ee	missing	0	Copyright	** institut f�r universelle zusammenh�nge
 SonyILCE9.arw	default	extra	0	AFPointSelected	0
 SonyILCE9.arw	default	extra	0	AFPointsUsed	0 0 0 0 0 0 0 0 0 0
-SonyILCE9.arw	default	extra	0	HDR	Off
 SonyILCE9.arw	default	extra	0	LensID	Unknown 50-300mm
-SonyILCE9.arw	default	extra	0	LensSpec	3 0 80 3 0 69 99 0
+SonyILCE9.arw	default	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	LensSpecFeatures	.
 SonyILCE9.arw	default	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	default	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	default	missing	0	AFPointsUsed	(none)
-SonyILCE9.arw	default	missing	0	HDR	Off; Uncorrected image
 SonyILCE9.arw	default	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	default	missing	0	LensSpec	E 50-300mm F4.5-6.3
 SonyILCE9.arw	default	missing	0	LensSpecFeatures	E
@@ -35,9 +33,8 @@ SonyILCE9.arw	ee	extra	0	AFPointsUsed	0 0 0 0 0 0 0 0 0 0
 SonyILCE9.arw	ee	extra	0	BrightnessValue	5.286718749999999
 SonyILCE9.arw	ee	extra	0	Contrast	Normal
 SonyILCE9.arw	ee	extra	0	FocusMode	131
-SonyILCE9.arw	ee	extra	0	HDR	Off
 SonyILCE9.arw	ee	extra	0	LensID	Unknown 50-300mm
-SonyILCE9.arw	ee	extra	0	LensSpec	3 0 80 3 0 69 99 0
+SonyILCE9.arw	ee	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	LensSpecFeatures	.
 SonyILCE9.arw	ee	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Saturation	Low
@@ -71,7 +68,6 @@ SonyILCE9.arw	ee	missing	0	ExposureProgram	Manual
 SonyILCE9.arw	ee	missing	1	ExposureProgram	Manual
 SonyILCE9.arw	ee	missing	0	ExposureTime	1/20
 SonyILCE9.arw	ee	missing	0	FocusMode	AF-C
-SonyILCE9.arw	ee	missing	0	HDR	Off; Uncorrected image
 SonyILCE9.arw	ee	missing	0	LensFormat	Full-frame
 SonyILCE9.arw	ee	missing	1	LensFormat	Full-frame
 SonyILCE9.arw	ee	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
