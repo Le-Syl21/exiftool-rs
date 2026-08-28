@@ -870,6 +870,26 @@ fn parse_atoms(
                     parse_hvcc(data, content_start, content_end, tags);
                 }
             }
+            // AV1 configuration and content light level, from the tables
+            // QuickTime.pm gives them (3079-3086). Both big-endian, like
+            // every atom.
+            b"av1C" | b"clli" => {
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                tags.extend(crate::tags::binary_tables_generated::decode(
+                    if atom_type == b"av1C" {
+                        "QuickTime::AV1Config"
+                    } else {
+                        "QuickTime::ContentLightLevel"
+                    },
+                    &data[content_start..content_end],
+                    "",
+                    "",
+                    crate::metadata::exif::ByteOrderMark::BigEndian,
+                    "",
+                    "",
+                    &mut dm,
+                ));
+            }
             // Image spatial extent (width/height for HEIF) - only process first one
             b"ispe" => {
                 if !state.ispe_done {
@@ -986,6 +1006,10 @@ fn parse_atoms(
                         }
                         b"\x41\xe5\xdc\xf9\xe8\x0a\x41\xce\xad\xfe\x7f\x0c\x58\x08\x2c\x19" => {
                             Some("FLIR::Params")
+                        }
+                        // Flip MP4 files (QuickTime.pm:722-726).
+                        b"\x4a\xb0\x3b\x0f\x61\x8d\x40\x75\x82\xb2\xd9\xfa\xce\xd3\x5f\xf5" => {
+                            Some("QuickTime::Flip")
                         }
                         b"\x2b\x45\x2f\xdc\x74\x35\x40\x94\xba\xee\x22\xa6\xb2\x3a\x7c\xf8" => {
                             Some("FLIR::MoreInfo")

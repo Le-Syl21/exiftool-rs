@@ -434,250 +434,7 @@ fn rw2_read_value(
     })
 }
 
-/// Parse WBInfo2 binary subdirectory from PanasonicRaw.pm::WBInfo2.
-/// Format: int16u (every 2 bytes), FIRST_ENTRY=0
-/// Indices: 0=NumWBEntries, 1=WBType1, 2..4=WB_RGBLevels1, 5=WBType2, ...
-fn parse_wb_info2(data: &[u8], le: bool) -> Vec<Tag> {
-    if data.len() < 2 {
-        return vec![];
-    }
-    let mut tags = Vec::new();
-    // First value: NumWBEntries
-    let num = rw2_u16(data, 0, le) as usize;
-    tags.push(Tag {
-        id: TagId::Text("NumWBEntries".into()),
-        name: "NumWBEntries".into(),
-        description: "Num WB Entries".into(),
-        group: TagGroup {
-            family0: "PanasonicRaw".into(),
-            family1: "PanasonicRaw".into(),
-            family2: "Image".into(),
-            family3: "Main".into(),
-        },
-        raw_value: Value::U16(num as u16),
-        print_value: num.to_string(),
-        priority: 0,
-    });
-    // Each WB entry: WBType (1 int16u) + WB_RGBLevels (3 int16u) = 4 int16u = 8 bytes
-    // But they're spread at fixed byte offsets in the WBInfo2 binary data:
-    // Entry i: WBType at byte_offset = (i*5+1)*2, WB_RGBLevels at byte_offset = (i*5+2)*2
-    // From WBInfo2: 0=NumWBEntries, 1=WBType1, 2-4=WB_RGBLevels1, 5=WBType2, 6-8=WB_RGBLevels2...
-    static WB_TYPE_NAMES: &[(&str, &str)] = &[
-        ("0", "Unknown"),
-        ("1", "Daylight"),
-        ("2", "Cloudy"),
-        ("3", "Tungsten"),
-        ("4", "Flash (FZ7)"),
-        ("5", "Flash"),
-        ("6", "n/a"),
-        ("7", "n/a"),
-        ("8", "Custom"),
-        ("9", "Fine Weather"),
-        ("10", "Cloudy"),
-        ("11", "Shade"),
-        ("12", "Kelvin"),
-        ("16", "AWBc"),
-        ("20", "D55"),
-        ("24", "ISO Studio Tungsten"),
-    ];
-    let wb_type_print_conv = |v: u16| -> String {
-        // Use ExifTool's LightSource table (Panasonic WBInfo2 uses it)
-        match v {
-            0 => "Unknown".to_string(),
-            1 => "Daylight".to_string(),
-            2 => "Fluorescent".to_string(),
-            3 => "Tungsten (Incandescent)".to_string(),
-            4 => "Flash".to_string(),
-            9 => "Fine Weather".to_string(),
-            10 => "Cloudy".to_string(),
-            11 => "Shade".to_string(),
-            12 => "Daylight Fluorescent".to_string(),
-            13 => "Day White Fluorescent".to_string(),
-            14 => "Cool White Fluorescent".to_string(),
-            15 => "White Fluorescent".to_string(),
-            17 => "Standard Light A".to_string(),
-            18 => "Standard Light B".to_string(),
-            19 => "Standard Light C".to_string(),
-            20 => "D55".to_string(),
-            21 => "D65".to_string(),
-            22 => "D75".to_string(),
-            23 => "D50".to_string(),
-            24 => "ISO Studio Tungsten".to_string(),
-            255 => "Other".to_string(),
-            _ => v.to_string(),
-        }
-    };
-    let _ = WB_TYPE_NAMES; // avoid unused warning
 
-    for i in 0..num.min(7) {
-        // WBInfo2: indices: 0=NumWBEntries, then for each entry: WBType at idx=1+i*4, WB_RGBLevels[3] at idx=2+i*4..4+i*4
-        // Wait, looking at Perl:
-        // 0 => NumWBEntries, 1 => WBType1, 2 => WB_RGBLevels1 (int16u[3]),
-        // 5 => WBType2, 6 => WB_RGBLevels2 (int16u[3]), ...
-        // So entry i uses: WBType at byte=2*(1 + i*4), WB_RGBLevels at bytes starting at 2*(2+i*4)
-        let type_off = 2 * (1 + i * 4);
-        let rgb_off = 2 * (2 + i * 4);
-        if type_off + 2 > data.len() || rgb_off + 6 > data.len() {
-            break;
-        }
-        let wbt = rw2_u16(data, type_off, le);
-        let r = rw2_u16(data, rgb_off, le);
-        let g = rw2_u16(data, rgb_off + 2, le);
-        let b = rw2_u16(data, rgb_off + 4, le);
-        let n = i + 1;
-        let wbt_s = wb_type_print_conv(wbt);
-        tags.push(Tag {
-            id: TagId::Text(format!("WBType{}", n)),
-            name: format!("WBType{}", n),
-            description: format!("WB Type {}", n),
-            group: TagGroup {
-                family0: "PanasonicRaw".into(),
-                family1: "PanasonicRaw".into(),
-                family2: "Image".into(),
-                family3: "Main".into(),
-            },
-            raw_value: Value::U16(wbt),
-            print_value: wbt_s,
-            priority: 0,
-        });
-        tags.push(Tag {
-            id: TagId::Text(format!("WB_RGBLevels{}", n)),
-            name: format!("WB_RGBLevels{}", n),
-            description: format!("WB RGB Levels {}", n),
-            group: TagGroup {
-                family0: "PanasonicRaw".into(),
-                family1: "PanasonicRaw".into(),
-                family2: "Image".into(),
-                family3: "Main".into(),
-            },
-            raw_value: Value::List(vec![Value::U16(r), Value::U16(g), Value::U16(b)]),
-            print_value: format!("{} {} {}", r, g, b),
-            priority: 0,
-        });
-    }
-    tags
-}
-
-/// Parse DistortionInfo binary subdirectory from PanasonicRaw.pm::DistortionInfo.
-/// FORMAT = 'int16s', FIRST_ENTRY=0.
-/// DistortionParam02 at index 2, DistortionParam04 at 4, DistortionScale at 5,
-/// DistortionCorrection at 7 (masked), DistortionParam08 at 8, etc.
-fn parse_distortion_info(data: &[u8], le: bool) -> Vec<Tag> {
-    let read_i16 = |idx: usize| -> i16 {
-        let off = idx * 2;
-        if off + 2 > data.len() {
-            return 0;
-        }
-        rw2_i16(data, off, le)
-    };
-    let mk = |name: &'static str, desc: &'static str, raw: Value, print: String| -> Tag {
-        Tag {
-            id: TagId::Text(name.into()),
-            name: name.into(),
-            description: desc.into(),
-            group: TagGroup {
-                family0: "PanasonicRaw".into(),
-                family1: "PanasonicRaw".into(),
-                family2: "Image".into(),
-                family3: "Main".into(),
-            },
-            raw_value: raw,
-            print_value: print,
-            priority: 0,
-        }
-    };
-    let mut tags = Vec::new();
-    if data.len() < 6 {
-        return tags;
-    }
-
-    // Index 2: DistortionParam02 = val / 32768
-    let v2 = read_i16(2);
-    let f2 = v2 as f64 / 32768.0;
-    tags.push(mk(
-        "DistortionParam02",
-        "Distortion Param 02",
-        Value::F64(f2),
-        crate::value::format_g15(f2),
-    ));
-
-    // Index 4: DistortionParam04 = val / 32768
-    if data.len() >= 10 {
-        let v4 = read_i16(4);
-        let f4 = v4 as f64 / 32768.0;
-        tags.push(mk(
-            "DistortionParam04",
-            "Distortion Param 04",
-            Value::F64(f4),
-            crate::value::format_g15(f4),
-        ));
-
-        // Index 5: DistortionScale = 1 / (1 + val/32768)
-        let v5 = read_i16(5);
-        let f5 = 1.0 / (1.0 + v5 as f64 / 32768.0);
-        tags.push(mk(
-            "DistortionScale",
-            "Distortion Scale",
-            Value::F64(f5),
-            crate::value::format_g15(f5),
-        ));
-    }
-
-    // Index 7: DistortionCorrection — masked (low nibble), byte index = 7*2 = 14
-    if data.len() >= 16 {
-        let v7 = read_i16(7);
-        let masked = (v7 & 0x0f) as i64;
-        let pv = match masked {
-            0 => "Off",
-            1 => "On",
-            _ => "Unknown",
-        };
-        tags.push(mk(
-            "DistortionCorrection",
-            "Distortion Correction",
-            Value::I32(masked as i32),
-            pv.to_string(),
-        ));
-
-        // Index 8: DistortionParam08 = val / 32768
-        if data.len() >= 18 {
-            let v8 = read_i16(8);
-            let f8 = v8 as f64 / 32768.0;
-            tags.push(mk(
-                "DistortionParam08",
-                "Distortion Param 08",
-                Value::F64(f8),
-                crate::value::format_g15(f8),
-            ));
-        }
-
-        // Index 9: DistortionParam09 = val / 32768
-        if data.len() >= 20 {
-            let v9 = read_i16(9);
-            let f9 = v9 as f64 / 32768.0;
-            tags.push(mk(
-                "DistortionParam09",
-                "Distortion Param 09",
-                Value::F64(f9),
-                crate::value::format_g15(f9),
-            ));
-        }
-
-        // Index 11: DistortionParam11 = val / 32768
-        if data.len() >= 24 {
-            let v11 = read_i16(11);
-            let f11 = v11 as f64 / 32768.0;
-            tags.push(mk(
-                "DistortionParam11",
-                "Distortion Param 11",
-                Value::F64(f11),
-                crate::value::format_g15(f11),
-            ));
-        }
-    }
-
-    tags
-}
 
 /// Read an IFD entry (12 bytes starting at off) and return tag_id, dtype, count, offset, inline.
 struct RW2IfdEntry {
@@ -757,6 +514,7 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
     // Collect JpgFromRaw data, WBInfo2 data, DistortionInfo data
     let mut jpg_from_raw: Option<Vec<u8>> = None;
     let mut jpg_from_raw_offset: u64 = 0; // file position of the embedded JPEG
+    let mut wb_info_data: Option<Vec<u8>> = None;
     let mut wb_info2_data: Option<Vec<u8>> = None;
     let mut distortion_data: Option<Vec<u8>> = None;
     // Offset of the RW2's own ExifIFD (IFD0 tag 0x8769).
@@ -799,8 +557,8 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                 });
                 continue;
             }
-            0x0027 => {
-                // WBInfo2: binary subdirectory
+            0x0013 | 0x0027 => {
+                // WBInfo (0x13) and WBInfo2 (0x27): binary sub-directories
                 let dtype = e.dtype;
                 let count = e.count as usize;
                 let elem = match dtype { 1|2|6|7 => 1, 3|8 => 2, 4|9|11|13 => 4, 5|10|12 => 8, _ => 1 };
@@ -813,7 +571,11 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
                         data[off..off+total].to_vec()
                     } else { continue; }
                 };
-                wb_info2_data = Some(bytes);
+                if e.tag == 0x0013 {
+                    wb_info_data = Some(bytes);
+                } else {
+                    wb_info2_data = Some(bytes);
+                }
                 continue;
             }
             0x0119 => {
@@ -927,14 +689,23 @@ fn read_rw2(data: &[u8], le: bool) -> crate::error::Result<Vec<Tag>> {
         });
     }
 
-    // Parse WBInfo2 binary subdirectory
-    if let Some(wb_data) = wb_info2_data {
-        tags.extend(parse_wb_info2(&wb_data, le));
-    }
-
-    // Parse DistortionInfo binary subdirectory
-    if let Some(dist_data) = distortion_data {
-        tags.extend(parse_distortion_info(&dist_data, le));
+    // WBInfo2 and DistortionInfo, from the tables PanasonicRaw.pm gives.
+    let bo = if le {
+        crate::metadata::exif::ByteOrderMark::LittleEndian
+    } else {
+        crate::metadata::exif::ByteOrderMark::BigEndian
+    };
+    for (block, table) in [
+        (wb_info_data.as_ref(), "PanasonicRaw::WBInfo"),
+        (wb_info2_data.as_ref(), "PanasonicRaw::WBInfo2"),
+        (distortion_data.as_ref(), "PanasonicRaw::DistortionInfo"),
+    ] {
+        if let Some(block) = block {
+            let mut dm = crate::tags::binary_tables_generated::State::new();
+            tags.extend(crate::tags::binary_tables_generated::decode(
+                table, block, "", "", bo, "", "", &mut dm,
+            ));
+        }
     }
 
     // Process embedded JpgFromRaw: extract all metadata from the embedded JPEG.
