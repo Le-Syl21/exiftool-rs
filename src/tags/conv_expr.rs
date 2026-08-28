@@ -1196,10 +1196,23 @@ impl<'a> Parser<'a> {
         }
         if self.eat("(") {
             let v = self.expr()?;
+            if self.eat(")") {
+                return Some(v);
+            }
+            // A comma inside brackets makes a list: `my ($a,$b,$c) = (Get32u(...),
+            // Get8u(...), Get8u(...))` builds one on the right as well as the left.
+            let mut items = vec![v];
+            while self.eat(",") {
+                self.skip_ws();
+                if self.peek(")") {
+                    break;
+                }
+                items.push(self.expr()?);
+            }
             if !self.eat(")") {
                 return None;
             }
-            return Some(v);
+            return Some(Val::List(items));
         }
         // A Composite tag is handed the list of the values it is built from,
         // and reads them as `@val` and `$val[0]`.
@@ -2910,12 +2923,31 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
         // Exif.pm RedBlueBalance: the level of one channel over green, with
         // the component order given by the table it was found in.
         "RedBlueBalance" => red_blue_balance(args)?,
-        // ExifTool.pm Get8u: one byte, through a reference.
-        "Get8u" => {
+        // ExifTool.pm Get8u and its siblings: a value at an offset, through a
+        // reference. The byte order is the file's, and these conversions are
+        // written for the order their own maker note is read in.
+        "Get8u" | "Get8s" | "Get16u" | "Get16s" | "Get32u" | "Get32s" => {
             let bytes = perl_bytes(first)?;
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let off = args.get(1)?.as_num() as usize;
-            Val::Num(f64::from(*bytes.get(off)?))
+            let big = state.byte_order().unwrap_or("II") == "MM";
+            let take = |n: usize| -> Option<u64> {
+                let b = bytes.get(off..off + n)?;
+                Some(if big {
+                    b.iter().fold(0u64, |acc, x| (acc << 8) | u64::from(*x))
+                } else {
+                    b.iter().rev().fold(0u64, |acc, x| (acc << 8) | u64::from(*x))
+                })
+            };
+            #[allow(clippy::cast_precision_loss, clippy::cast_possible_wrap)]
+            match name {
+                "Get8u" => Val::Num(f64::from(*bytes.get(off)?)),
+                "Get8s" => Val::Num(f64::from(*bytes.get(off)? as i8)),
+                "Get16u" => Val::Num(take(2)? as f64),
+                "Get16s" => Val::Num(f64::from(take(2)? as u16 as i16)),
+                "Get32u" => Val::Num(take(4)? as f64),
+                _ => Val::Num(f64::from(take(4)? as u32 as i32)),
+            }
         }
         // Photoshop.pm ConvertPascalString: a run of length-prefixed strings.
         "ConvertPascalString" => {
@@ -3268,6 +3300,26 @@ fn call_helper(name: &str, args: &[Val], state: &dyn ParseState, method: bool) -
         "CalcScaleFactor35efl" => scale_factor_35efl(args, state)?,
         // TNEF.pm DecompressRTF: the compressed RTF body of a mail message.
         "DecompressRTF" => Val::Binary(decompress_rtf(&perl_bytes(first)?)?),
+        // Pentax.pm CryptShutterCount: the count is exclusive-ored with the
+        // date and time the shot was taken, both of which the reader must have
+        // kept -- without them ExifTool returns nothing at all.
+        "CryptShutterCount" => {
+            let date = perl_bytes(&state.member("PentaxDate")?)?;
+            let time = perl_bytes(&state.member("PentaxTime")?)?;
+            if date.len() != 4 || time.len() < 3 {
+                return Some(Val::Undef);
+            }
+            let be32 = |b: &[u8]| -> u32 {
+                let mut v = [0u8; 4];
+                for (i, x) in b.iter().take(4).enumerate() {
+                    v[i] = *x;
+                }
+                u32::from_be_bytes(v)
+            };
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let raw = first.as_num() as u32;
+            Val::Num(f64::from(raw ^ be32(&date) ^ (0xffff_ffff - be32(&time))))
+        }
         // Sony.pm ConvLensSpec: eight bytes into the six numbers a lens
         // specification is made of.
         "ConvLensSpec" => {

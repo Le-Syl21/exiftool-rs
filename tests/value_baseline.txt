@@ -5,4 +5,3 @@ PSP.psp	Copyright
 Real.ra	Copyright
 SonyILCE9.arw	AFPointSelected
 SonyILCE9.arw	LensID
-SonyILCE9.arw	PixelShiftInfo

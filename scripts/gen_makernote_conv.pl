@@ -27,7 +27,7 @@ require Image::ExifTool;
 my @MAKERS = qw(Sony Canon Nikon Olympus Panasonic Pentax FujiFilm Casio Ricoh
                 Sigma Samsung Sanyo Minolta Apple DJI);
 
-my (@rows, @formats, @bitmasks, @skipped);
+my (@rows, @formats, @bitmasks, @members, @skipped);
 for my $maker (@MAKERS) {
     my $tbl = eval { Image::ExifTool::GetTagTable("Image::ExifTool::${maker}::Main") } or next;
     for my $id (Image::ExifTool::TagTableKeys($tbl)) {
@@ -40,7 +40,7 @@ for my $maker (@MAKERS) {
             my %seen;
             for my $ti (@infos) {
                 next unless ref $ti eq 'HASH';
-                for my $k ('ValueConv', 'PrintConv') {
+                for my $k ('RawConv', 'ValueConv', 'PrintConv') {
                     my $c = $$ti{$k};
                     $seen{"$k:$c"} = 1 if defined $c and not ref $c;
                 }
@@ -54,6 +54,12 @@ for my $maker (@MAKERS) {
         for my $ti (@infos) {
             next unless ref $ti eq 'HASH';
             my $name = $$ti{Name} // next;
+            # A tag can store its value on the object for a later conversion
+            # to read: Pentax's ShutterCount is decrypted with the date and
+            # time of the shot, which two other tags recorded.
+            if (my $dm = $$ti{DataMember}) {
+                push @members, [$maker, $id, $dm, $name] unless ref $dm;
+            }
             # A tag can declare a format of its own, which ExifTool reads the
             # entry with whatever the file says: Sony's HDR is an int32u entry
             # `Format => 'int16u', Count => 2`, read as two 16-bit values.
@@ -79,7 +85,7 @@ for my $maker (@MAKERS) {
                 my $zero = $$pc{0};
                 push @bitmasks, [$maker, $id, $bits, $zero, $$pc{BITMASK}, $name];
             }
-            for my $kind ('ValueConv', 'PrintConv') {
+            for my $kind ('RawConv', 'ValueConv', 'PrintConv') {
                 my $c = $$ti{$kind};
                 # A conversion can be a named subroutine rather than an
                 # expression. Emitting the call lets tags::conv_expr dispatch
@@ -118,8 +124,8 @@ print <<"HEADER";
 
 HEADER
 
-for my $kind ('ValueConv', 'PrintConv') {
-    my $fn = $kind eq 'ValueConv' ? 'value_conv' : 'print_conv';
+for my $kind ('RawConv', 'ValueConv', 'PrintConv') {
+    my $fn = { RawConv => 'raw_conv', ValueConv => 'value_conv', PrintConv => 'print_conv' }->{$kind};
     printf "/// The %s expression ExifTool applies to a MakerNote Main tag.\n", $kind;
     print  "#[must_use]\n";
     printf "pub fn %s_expr(maker: &str, tag: u16) -> Option<&'static str> {\n", $fn;
@@ -162,6 +168,21 @@ BITHEAD
             printf "            (%d, \"%s\"),\n", $k, $v;
         }
         print  "        ]),\n";
+    }
+}
+print "        _ => return None,\n    })\n}\n\n";
+
+print "/// The name a MakerNote Main tag stores its value under, for a later\n";
+print "/// conversion to read.\n";
+print "#[must_use]\n";
+print "pub fn data_member(maker: &str, tag: u16) -> Option<&'static str> {\n";
+print "    Some(match (maker, tag) {\n";
+{
+    my %seen;
+    for my $m (sort { $a->[0] cmp $b->[0] or $a->[1] <=> $b->[1] } @members) {
+        my ($maker, $id, $dm, $name) = @$m;
+        next if $seen{"$maker/$id"}++;
+        printf "        (\"%s\", %#06x) => \"%s\", // %s\n", $maker, $id, $dm, $name;
     }
 }
 print "        _ => return None,\n    })\n}\n\n";

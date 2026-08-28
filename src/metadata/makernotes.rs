@@ -5712,6 +5712,12 @@ fn read_makernote_ifd_with_base(
     // Tag940c decides whether it has a LensE-mountVersion to report by it.
     let mut sony_state = crate::tags::sony_ciphered_generated::State::new();
 
+    // What the Main table has stored for a later conversion to read: Pentax
+    // decrypts its ShutterCount with the date and time two other tags carry.
+    // ExifTool keeps these on the object, under the name the tag declares.
+    let mut main_state: std::collections::HashMap<String, crate::tags::conv_expr::Val> =
+        std::collections::HashMap::new();
+
     let mut pentax_preview_start: Option<usize> = None;
     let mut pentax_preview_length: Option<usize> = None;
     // Pentax ShutterCount (0x00A7) is encrypted with Date (0x0006) and Time (0x0007).
@@ -5894,6 +5900,28 @@ fn read_makernote_ifd_with_base(
         }
 
         // Pentax special tag handling: complex conversions for multi-byte/undefined tags
+        // What this tag stores on the object for a later conversion to read:
+        // Pentax decrypts its ShutterCount with the date and time two other
+        // tags carry. Stored before any of the special paths below, several of
+        // which report their tag and move on.
+        if let Some(dm) = crate::tags::makernote_conv_generated::data_member(
+            manufacturer_group_name(manufacturer),
+            tag_id,
+        ) {
+            let raw = match &value {
+                Value::String(t) => crate::tags::conv_expr::Val::Str(t.clone()),
+                Value::Binary(b) | Value::Undefined(b, ..) => {
+                    crate::tags::conv_expr::Val::Str(b.iter().map(|c| *c as char).collect())
+                }
+                other => other.as_f64().map_or_else(
+                    || crate::tags::conv_expr::Val::Str(other.to_display_string()),
+                    crate::tags::conv_expr::Val::Num,
+                ),
+            };
+            main_state.insert(dm.to_string(), raw);
+        }
+
+
         if manufacturer == Manufacturer::Pentax {
             // Capture raw Date (0x0006) / Time (0x0007) bytes for ShutterCount decryption.
             if tag_id == 0x0006 && value_data.len() >= 4 {
@@ -8299,14 +8327,16 @@ fn read_makernote_ifd_with_base(
                 })
         };
 
-        // The ValueConv and PrintConv ExifTool writes as Perl expressions on
-        // the maker's Main table. The hash-shaped ones are already applied
-        // above; these were not applied at all, so `ColorTemperature` printed 0
-        // where ExifTool prints Auto. `conv_expr` declines anything outside its
-        // grammar, and a declined conversion leaves the value exactly as it was.
+        // The conversions ExifTool writes as Perl expressions on the maker's
+        // Main table, in the order it applies them: RawConv, then ValueConv,
+        // then the print conversion. The hash-shaped ones are applied above;
+        // these were not applied at all, so `ColorTemperature` printed 0 where
+        // ExifTool prints Auto. `conv_expr` declines anything outside its
+        // grammar, and a declined conversion leaves the value as it was.
         let (value, print_value) = {
-            use crate::tags::conv_expr::{eval, Val};
+            use crate::tags::conv_expr::{eval_with, Val};
             use crate::tags::makernote_conv_generated as mn_conv;
+            use crate::tags::print_conv_generated as pc;
 
             let maker = group_name;
             let mut val = value;
@@ -8316,83 +8346,7 @@ fn read_makernote_ifd_with_base(
             // Olympus's CameraType is a string-keyed lookup, Panasonic's
             // TimeSincePowerOn a duration -- and running an expression over
             // that phrase would undo it.
-            let untouched = printed == val.to_display_string();
-            // A BITMASK conversion: each word of the value contributes its
-            // own bits, numbered from that word's start, and a value with no
-            // bit set prints the table's entry for zero (ExifTool's DecodeBits).
-            if untouched {
-                if let Some((bits, zero, names)) =
-                    crate::tags::makernote_conv_generated::bitmask(maker, tag_id)
-                {
-                    let mut set: Vec<String> = Vec::new();
-                    let mut ok = true;
-                    for (word, part) in printed.split(' ').enumerate() {
-                        match part.parse::<u64>() {
-                            Ok(v) => {
-                                for bit in 0..bits.min(64) {
-                                    if v & (1u64 << bit) != 0 {
-                                        let n = (word * bits + bit) as u32;
-                                        set.push(
-                                            names
-                                                .iter()
-                                                .find(|(k, _)| *k == n)
-                                                .map_or_else(|| format!("[{n}]"), |(_, t)| (*t).to_string()),
-                                        );
-                                    }
-                                }
-                            }
-                            Err(_) => ok = false,
-                        }
-                    }
-                    if ok {
-                        printed = if set.is_empty() {
-                            zero.to_string()
-                        } else {
-                            set.join(", ")
-                        };
-                    }
-                }
-            }
-            // One conversion per element: ExifTool splits the value on
-            // spaces, converts each with its own hash and joins with "; ".
-            // Sony's HDR is `[{ 0 => 'Off' },{ 0 => 'Uncorrected image' }]`.
-            if untouched {
-                if let Some(n) =
-                    crate::tags::print_conv_generated::print_conv_list_len(maker, tag_id)
-                {
-                    let parts: Vec<&str> = printed.split(' ').collect();
-                    if parts.len() == n {
-                        let mapped: Option<Vec<String>> = parts
-                            .iter()
-                            .enumerate()
-                            .map(|(i, p)| {
-                                p.parse::<i64>().ok().and_then(|v| {
-                                    crate::tags::print_conv_generated::print_conv_list(
-                                        maker, tag_id, i, v,
-                                    )
-                                })
-                                .map(str::to_string)
-                            })
-                            .collect();
-                        if let Some(m) = mapped {
-                            printed = m.join("; ");
-                        }
-                    }
-                }
-            }
-            // A conversion keyed by the whole value as text: Sony's
-            // VariableLowPassFilter is `{ '0 0' => 'n/a' }` over a two-element
-            // tag, and no number keys it.
-            if untouched {
-                if let Some(t) = crate::tags::print_conv_generated::print_conv_str(
-                    maker,
-                    tag_id,
-                    &printed,
-                ) {
-                    printed = t.to_string();
-                }
-            }
-            if untouched {
+            if printed == val.to_display_string() {
                 // What ExifTool would put in `$val`. For an `undef` tag that
                 // is the raw byte string -- Nikon's ExposureDifference is
                 // `unpack("c3",$val)` and needs the bytes, not the words
@@ -8408,8 +8362,15 @@ fn read_makernote_ifd_with_base(
                         None => Val::Str(other.to_display_string()),
                     },
                 };
-                if let Some(expr) = mn_conv::value_conv_expr(maker, tag_id) {
-                    if let Some(v) = eval(expr, &as_conv(&val)) {
+                // RawConv first, on the value as it was read, then ValueConv.
+                for expr in [
+                    mn_conv::raw_conv_expr(maker, tag_id),
+                    mn_conv::value_conv_expr(maker, tag_id),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    if let Some(v) = eval_with(expr, &as_conv(&val), &main_state) {
                         let text = v.as_string();
                         val = match v {
                             Val::Num(n) => Value::F64(n),
@@ -8418,8 +8379,64 @@ fn read_makernote_ifd_with_base(
                         printed = text;
                     }
                 }
+
+                // A BITMASK conversion: each word of the value contributes its
+                // own bits, numbered from that word's start, and a value with
+                // no bit set prints the table's entry for zero (DecodeBits).
+                if let Some((bits, zero, names)) = mn_conv::bitmask(maker, tag_id) {
+                    let mut set: Vec<String> = Vec::new();
+                    let mut ok = true;
+                    for (word, part) in printed.split(' ').enumerate() {
+                        match part.parse::<u64>() {
+                            Ok(v) => {
+                                for bit in 0..bits.min(64) {
+                                    if v & (1u64 << bit) != 0 {
+                                        let n = (word * bits + bit) as u32;
+                                        set.push(names.iter().find(|(k, _)| *k == n).map_or_else(
+                                            || format!("[{n}]"),
+                                            |(_, t)| (*t).to_string(),
+                                        ));
+                                    }
+                                }
+                            }
+                            Err(_) => ok = false,
+                        }
+                    }
+                    if ok {
+                        printed = if set.is_empty() { zero.to_string() } else { set.join(", ") };
+                    }
+                }
+
+                // One conversion per element: ExifTool splits the value on
+                // spaces, converts each with its own hash and joins with "; ".
+                if let Some(n) = pc::print_conv_list_len(maker, tag_id) {
+                    let parts: Vec<&str> = printed.split(' ').collect();
+                    if parts.len() == n {
+                        let mapped: Option<Vec<String>> = parts
+                            .iter()
+                            .enumerate()
+                            .map(|(i, p)| {
+                                p.parse::<i64>()
+                                    .ok()
+                                    .and_then(|v| pc::print_conv_list(maker, tag_id, i, v))
+                                    .map(str::to_string)
+                            })
+                            .collect();
+                        if let Some(m) = mapped {
+                            printed = m.join("; ");
+                        }
+                    }
+                }
+
+                // A conversion keyed by the whole value as text: Sony's
+                // VariableLowPassFilter is `{ '0 0' => 'n/a' }` over a
+                // two-element tag, and no number keys it.
+                if let Some(t) = pc::print_conv_str(maker, tag_id, &printed) {
+                    printed = t.to_string();
+                }
+
                 if let Some(expr) = mn_conv::print_conv_expr(maker, tag_id) {
-                    if let Some(v) = eval(expr, &as_conv(&val)) {
+                    if let Some(v) = eval_with(expr, &as_conv(&val), &main_state) {
                         printed = v.as_string();
                     }
                 }

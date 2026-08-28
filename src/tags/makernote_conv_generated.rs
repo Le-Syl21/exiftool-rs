@@ -5,6 +5,48 @@
 // its grammar, which leaves the raw value -- the same answer a reader that knew
 // nothing of the conversion would give.
 
+/// The RawConv expression ExifTool applies to a MakerNote Main tag.
+#[must_use]
+pub fn raw_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
+    Some(match (maker, tag) {
+        ("Canon", 0x0028) => "$val eq \"\\0\" x 16 ? undef : $val", // ImageUniqueID
+        ("Canon", 0x0038) => "$val=~/^.{4}([^\\0]+)/s ? $1 : undef", // BatteryType
+        ("FujiFilm", 0x100b) => "$val == 0x100 ? undef : $val", // NoiseReduction
+        ("Minolta", 0x0081) => "$self->ValidateImage(ref $val ? $val : \\$val, $tag)", // PreviewImage
+        ("Nikon", 0x0002) => "$val eq \"\\0\\0\\0\\0\" ? undef : $val", // ISO
+        ("Nikon", 0x0007) => "$$self{FocusMode} = $val", // FocusMode
+        ("Nikon", 0x0034) => "$$self{ShutterMode} = $val", // ShutterMode
+        ("Nikon", 0x0044) => "($val) ? $val : undef", // JPGCompression
+        ("Olympus", 0x0207) => "$self->{CameraType} = $val", // CameraType
+        ("Olympus", 0x0280) => "$self->ValidateImage(ref $val ? $val : \\$val, $tag)", // PreviewImage
+        ("Panasonic", 0x0086) => "$val==65535 ? undef : $val", // ManometerPressure
+        ("Panasonic", 0x00c5) => "return undef unless $val; require Image::ExifTool::Olympus; # (to load Composite LensID) return $val;", // LensTypeModel
+        ("Panasonic", 0x00d1) => "$val > 0xfffffff0 ? undef : $val", // ISO
+        ("Panasonic", 0x00e4) => "return undef unless $val; require Image::ExifTool::Olympus; # (to load Composite LensID) return $val;", // LensTypeModel
+        ("Pentax", 0x0005) => "$$self{PentaxModelID} = $val", // PentaxModelID
+        ("Pentax", 0x0006) => "$$self{PentaxDate} = $val", // Date
+        ("Pentax", 0x0007) => "$$self{PentaxTime} = $val", // Time
+        ("Pentax", 0x0050) => "$val ? $val : undef", // ColorTemperature
+        ("Pentax", 0x005d) => "length($val) == 4 ? unpack(\"N\",$val) : undef", // ShutterCount
+        ("Pentax", 0x0076) => "$val =~ / (\\d+)/ and $$self{FacesDetected} = $1; $val", // FaceDetect
+        ("Sanyo", 0x0100) => "$self->ValidateImage(\\$val,$tag)", // SanyoThumbnail
+        ("Sony", 0x2001) => "return \\$val if $val =~ /^Binary/; $val = substr($val,0x20) if length($val) > 0x20; # return \\$val if $val =~ s/^.(\\xd8\\xff\\xdb)/\\xff$1/s; return \\$val if $val =~ s/^.(\\xd8\\xff[\\xdb\\xe1])/\\xff$1/s; $$self{PreviewError} = 1 unless $val eq 'none' or $val eq ''; return undef;", // PreviewImage
+        ("Sony", 0x202f) => "my ($a,$b,$c) = (Get32u(\\$val,0), Get8u(\\$val,4), Get8u(\\$val,5)); sprintf(\"%.2d%.2d%.2d%.2d %d %d 0x%x\",($a>>17)&0x1f,($a>>12)&0x1f,($a>>6)&0x3f,$a&0x3f,$b,$c,$a>>22);", // PixelShiftInfo
+        ("Sony", 0xb000) => "$self->OverrideFileType($$self{TIFF_TYPE} = 'SR2') if $val eq '1 0 0 0'; return $val;", // FileFormat
+        ("Sony", 0xb040) => "$val == 65535 ? undef : $val", // Macro
+        ("Sony", 0xb041) => "$val == 65535 ? undef : $val", // ExposureMode
+        ("Sony", 0xb042) => "$val == 65535 ? undef : $val", // FocusMode
+        ("Sony", 0xb043) => "$val == 65535 ? undef : $val", // AFAreaMode
+        ("Sony", 0xb044) => "$val == 65535 ? undef : $val", // AFIlluminator
+        ("Sony", 0xb047) => "$val == 65535 ? undef : $val", // JPEGQuality
+        ("Sony", 0xb048) => "($val == -1 and $$self{Model} =~ /DSLR-A100\\b/) ? undef : $val", // FlashLevel
+        ("Sony", 0xb049) => "$val == 65535 ? undef : $val", // ReleaseMode
+        ("Sony", 0xb04a) => "$val == 65535 ? undef : $val", // SequenceNumber
+        ("Sony", 0xb04b) => "$val == 65535 ? undef : $val", // Anti-Blur
+        _ => return None,
+    })
+}
+
 /// The ValueConv expression ExifTool applies to a MakerNote Main tag.
 #[must_use]
 pub fn value_conv_expr(maker: &str, tag: u16) -> Option<&'static str> {
@@ -307,6 +349,21 @@ pub fn bitmask(maker: &str, tag: u16) -> Option<(usize, &'static str, &'static [
         ]),
         ("Sony", 0x2022) => (8, "(none)", &[ // FocalPlaneAFPointsUsed
         ]),
+        _ => return None,
+    })
+}
+
+/// The name a MakerNote Main tag stores its value under, for a later
+/// conversion to read.
+#[must_use]
+pub fn data_member(maker: &str, tag: u16) -> Option<&'static str> {
+    Some(match (maker, tag) {
+        ("Nikon", 0x0034) => "ShutterMode", // ShutterMode
+        ("Olympus", 0x0207) => "CameraType", // CameraType
+        ("Pentax", 0x0005) => "PentaxModelID", // PentaxModelID
+        ("Pentax", 0x0006) => "PentaxDate", // Date
+        ("Pentax", 0x0007) => "PentaxTime", // Time
+        ("Pentax", 0x0076) => "FacesDetected", // FaceDetect
         _ => return None,
     })
 }
