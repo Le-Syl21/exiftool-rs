@@ -312,6 +312,13 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             # here, which is what ExifTool shows.
             $conv_src = $shared{$1};
         }
+        # A conversion table can carry an `OTHER => sub {...}` fallback for
+        # every value it does not name -- Shutter turns anything but '0 0 0'
+        # into "Mechanical ($val)" -- and a hash of pairs cannot express it.
+        if (defined $conv_src and $conv_src =~ /\bOTHER\s*=>/) {
+            push @skipped, sprintf("%s 0x%04x %s: PrintConv has an OTHER fallback",
+                                   $table, $off, $name);
+        }
         if (defined $conv_src) {
             my $cs = $conv_src;
             # A value is quoted text or a bare number: %isoSetting2010 maps
