@@ -20,14 +20,12 @@ SonyILCE9.arw	default	extra	0	LensID	Unknown 50-300mm
 SonyILCE9.arw	default	extra	0	LensSpec	(Binary data 8 bytes, use -b option to extract)
 SonyILCE9.arw	default	extra	0	LensSpecFeatures	.
 SonyILCE9.arw	default	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
-SonyILCE9.arw	default	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	default	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	default	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	default	missing	0	LensID	Tamron 50-300mm F4.5-6.3 Di III VC VXD
 SonyILCE9.arw	default	missing	0	LensSpec	E 50-300mm F4.5-6.3
 SonyILCE9.arw	default	missing	0	LensSpecFeatures	E
 SonyILCE9.arw	default	missing	0	PixelShiftInfo	n/a
-SonyILCE9.arw	default	missing	0	Shutter	Mechanical (2858 5239 6643)
 SonyILCE9.arw	ee	extra	0	AFPointSelected	0
 SonyILCE9.arw	ee	extra	0	AFPointsUsed	0 0 0 0 0 0 0 0 0 0
 SonyILCE9.arw	ee	extra	0	BrightnessValue	5.286718749999999
@@ -39,7 +37,6 @@ SonyILCE9.arw	ee	extra	0	LensSpecFeatures	.
 SonyILCE9.arw	ee	extra	0	PixelShiftInfo	(Binary data 6 bytes, use -b option to extract)
 SonyILCE9.arw	ee	extra	0	Saturation	Low
 SonyILCE9.arw	ee	extra	0	Sharpness	Normal
-SonyILCE9.arw	ee	extra	0	Shutter	2858 5239 6643
 SonyILCE9.arw	ee	missing	0	AFPointSelected	n/a
 SonyILCE9.arw	ee	missing	0	AFPointsUsed	(none)
 SonyILCE9.arw	ee	missing	0	APS-CSizeCapture	Off
@@ -91,7 +88,6 @@ SonyILCE9.arw	ee	missing	0	Saturation	0
 SonyILCE9.arw	ee	missing	0	SequenceImageNumber	1
 SonyILCE9.arw	ee	missing	0	SequenceLength	1 shot
 SonyILCE9.arw	ee	missing	0	Sharpness	0
-SonyILCE9.arw	ee	missing	0	Shutter	Mechanical (2858 5239 6643)
 SonyILCE9.arw	ee	missing	0	SonyFNumber	8.0
 SonyILCE9.arw	ee	missing	0	SonyISO	252
 SonyILCE9.arw	ee	missing	0	StopsAboveBaseISO	1.3

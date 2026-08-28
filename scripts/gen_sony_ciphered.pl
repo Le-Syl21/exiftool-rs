@@ -313,11 +313,35 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             $conv_src = $shared{$1};
         }
         # A conversion table can carry an `OTHER => sub {...}` fallback for
-        # every value it does not name -- Shutter turns anything but '0 0 0'
-        # into "Mechanical ($val)" -- and a hash of pairs cannot express it.
-        if (defined $conv_src and $conv_src =~ /\bOTHER\s*=>/) {
-            push @skipped, sprintf("%s 0x%04x %s: PrintConv has an OTHER fallback",
-                                   $table, $off, $name);
+        # every value it does not name. `sub { shift }` passes the value
+        # through, which is what an unmatched arm already does; anything else
+        # is a conversion of its own, and the read direction of a one-line
+        # `return $inv ? ... : EXPR` is an expression the evaluator can run.
+        my $other_expr;
+        # The captured block can end inside the sub -- its own `},` closes the
+        # first line that is only a brace -- so the body is taken to the end of
+        # whatever was captured rather than to a closing bracket.
+        if (defined $conv_src and $conv_src =~ /\bOTHER\s*=>\s*sub\s*\{(.*)$/s) {
+            my $sub = $1;
+            if ($sub =~ /^\s*shift\s*\}?,?\s*$/) {
+                # pass-through: nothing to do
+            } elsif ($sub =~ /return\s+\$inv\s*\?(?:.*):\s*(.+?);/s) {
+                $other_expr = $1;
+                $other_expr =~ s/\s+/ /g;
+            } else {
+                push @skipped, sprintf("%s 0x%04x %s: PrintConv OTHER is more than one expression",
+                                       $table, $off, $name);
+            }
+        }
+        # Keys that are whole strings rather than numbers: Shutter's table is
+        # `{ '0 0 0' => 'Silent / Electronic (0 0 0)' }` over three values.
+        my %sconv;
+        if (defined $conv_src) {
+            my $cs = $conv_src;
+            while ($cs =~ /'([^']*\s[^']*)'\s*=>\s*'([^']*)'/g) {
+                my ($k, $v) = ($1, $2);
+                $sconv{$k} = $v;
+            }
         }
         if (defined $conv_src) {
             my $cs = $conv_src;
@@ -344,9 +368,9 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
 
         push @fields, {
             off => $off, name => $name, fmt => $ffmt, n => $count_n,
-            re => $re, neg => $neg, conv => \%conv,
+            re => $re, neg => $neg, conv => \%conv, sconv => \%sconv,
             vconv => $vconv, pconv => $pconv, hidden => $hidden, rconv => $rconv,
-            dmname => $dmname, grp2 => $fgrp2,
+            dmname => $dmname, grp2 => $fgrp2, other => $other_expr,
         };
     }
 
@@ -969,8 +993,33 @@ for my $t (@tables) {
                     unless $f->{hidden};
             } else {
                 printf "%s        let s = %s;\n", $ind, $joined;
-                printf "%s        tags.push(mk_prio(\"%s\", s.clone(), Value::String(s), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
-                    unless $f->{hidden};
+                my %sc = %{$f->{sconv} || {}};
+                if (%sc or defined $f->{other}) {
+                    # The whole value keys this table -- Shutter's is
+                    # `{ '0 0 0' => 'Silent / Electronic (0 0 0)' }` -- and
+                    # anything it does not name goes through the OTHER
+                    # conversion, if there is one.
+                    printf "%s        let printed = match s.as_str() {\n", $ind;
+                    for my $k (sort keys %sc) {
+                        my $v = $sc{$k};
+                        $v =~ s/\\/\\\\/g; $v =~ s/"/\\"/g;
+                        printf "%s            \"%s\" => \"%s\".to_string(),\n", $ind, $k, $v;
+                    }
+                    if (defined $f->{other}) {
+                        my $e = $f->{other};
+                        $e =~ s/\\/\\\\/g; $e =~ s/"/\\"/g;
+                        printf "%s            _ => conv_expr::eval(\"%s\", &Conv::Str(s.clone()))\n", $ind, $e;
+                        printf "%s                .map_or_else(|| s.clone(), |v| v.as_string()),\n", $ind;
+                    } else {
+                        printf "%s            _ => s.clone(),\n", $ind;
+                    }
+                    printf "%s        };\n", $ind;
+                    printf "%s        tags.push(mk_prio(\"%s\", printed, Value::String(s), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+                        unless $f->{hidden};
+                } else {
+                    printf "%s        tags.push(mk_prio(\"%s\", s.clone(), Value::String(s), %s, PRIO));\n", $ind, $f->{name}, grp2_of($f)
+                        unless $f->{hidden};
+                }
             }
             printf "%s    }\n%s}\n", $ind, $ind;
             print  "    }\n" if defined $f->{re};

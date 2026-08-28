@@ -9,4 +9,3 @@ SonyILCE9.arw	LensID
 SonyILCE9.arw	LensSpec
 SonyILCE9.arw	LensSpecFeatures
 SonyILCE9.arw	PixelShiftInfo
-SonyILCE9.arw	Shutter

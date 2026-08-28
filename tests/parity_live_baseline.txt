@@ -6,4 +6,3 @@ SonyILCE9.arw::Sony:AFPointsUsed
 SonyILCE9.arw::Sony:LensSpec
 SonyILCE9.arw::Sony:LensSpecFeatures
 SonyILCE9.arw::Sony:PixelShiftInfo
-SonyILCE9.arw::Sony:Shutter

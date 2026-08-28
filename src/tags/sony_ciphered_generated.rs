@@ -9847,7 +9847,12 @@ fn tag9050a(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk_prio("Shutter", s.clone(), Value::String(s), GRP2, PRIO));
+            let printed = match s.as_str() {
+                "0 0 0" => "Silent / Electronic (0 0 0)".to_string(),
+                _ => conv_expr::eval("\"Mechanical ($val)\"", &Conv::Str(s.clone()))
+                    .map_or_else(|| s.clone(), |v| v.as_string()),
+            };
+            tags.push(mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x31) {
@@ -10428,7 +10433,12 @@ fn tag9050b(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk_prio("Shutter", s.clone(), Value::String(s), GRP2, PRIO));
+            let printed = match s.as_str() {
+                "0 0 0" => "Silent / Electronic (0 0 0)".to_string(),
+                _ => conv_expr::eval("\"Mechanical ($val)\"", &Conv::Str(s.clone()))
+                    .map_or_else(|| s.clone(), |v| v.as_string()),
+            };
+            tags.push(mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
@@ -11099,7 +11109,12 @@ fn tag9050c(data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
         }
         if !parts.is_empty() {
             let s = parts.join(" ");
-            tags.push(mk_prio("Shutter", s.clone(), Value::String(s), GRP2, PRIO));
+            let printed = match s.as_str() {
+                "0 0 0" => "Silent / Electronic (0 0 0)".to_string(),
+                _ => conv_expr::eval("\"Mechanical ($val)\"", &Conv::Str(s.clone()))
+                    .map_or_else(|| s.clone(), |v| v.as_string()),
+            };
+            tags.push(mk_prio("Shutter", printed, Value::String(s), GRP2, PRIO));
         }
     }
     if let Some(v) = u8_at(data, 0x39) {
