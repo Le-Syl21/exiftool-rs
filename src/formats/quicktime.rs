@@ -347,15 +347,20 @@ pub(super) fn process_ctmd(sample: &[u8], main_tags: &[Tag], out: &mut Vec<Tag>)
                 }
             }
             4 => {
-                // FocalInfo (Canon.pm line 9855): binary data, FORMAT int32u, so
-                // entry 0 sits at byte 0 and holds a rational32u (two int16u).
-                if let Some(v) = rational32u(rec_data, 0) {
-                    out.push(mk_ctmd(
-                        "FocalLength",
-                        "Focal Length",
-                        "Image",
-                        Value::String(format!("{:.1} mm", v)),
-                    ));
+                // FocalInfo (Canon.pm:9855), from the table itself.
+                let mut dm = crate::tags::binary_tables_generated::State::new();
+                for mut t in crate::tags::binary_tables_generated::decode(
+                    "Canon::FocalInfo",
+                    rec_data,
+                    "Canon",
+                    "",
+                    crate::metadata::exif::ByteOrderMark::LittleEndian,
+                    "",
+                    "",
+                    &mut dm,
+                ) {
+                    t.group.family1 = "Canon".into();
+                    out.push(t);
                 }
             }
             5 => {
@@ -1181,6 +1186,12 @@ fn find_atom<'a>(d: &'a [u8], from: usize, want: &[u8; 4]) -> Option<&'a [u8]> {
 /// layouts under one prefix: the first is marked by a 1 at offset 32, and the
 /// second is everything else that is not the shape ExifTool excludes there.
 fn mov_tags_table(cd: &[u8]) -> Option<&'static str> {
+    if cd.starts_with(b"FUJIFILM DIGITAL CAMERA\0") {
+        return Some("FujiFilm::MOV");
+    }
+    if cd.starts_with(b"EASTMAN KODAK COMPANY") {
+        return Some("Kodak::MOV");
+    }
     if cd.starts_with(b"KONICA MINOLTA DIGITAL CAMERA") {
         return Some("Minolta::MOV1");
     }

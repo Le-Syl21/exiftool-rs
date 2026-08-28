@@ -232,6 +232,22 @@ pub fn parse_makernotes_exif_base(
         return decode_jvc_text(mn_data);
     }
 
+    // Panasonic's second maker-note layout, which opens with MKE
+    // (MakerNotes.pm:743-745).
+    if make.starts_with("Panasonic") && mn_data.starts_with(b"MKE") {
+        let mut dm = crate::tags::binary_tables_generated::State::new();
+        return crate::tags::binary_tables_generated::decode(
+            "Panasonic::Type2",
+            mn_data,
+            make,
+            model,
+            ByteOrderMark::LittleEndian,
+            "",
+            "",
+            &mut dm,
+        );
+    }
+
     // Reconyx trail cameras: five layouts, each named by the string the
     // block opens with, and the oldest by a two-byte version instead
     // (MakerNotes.pm:853-895). All little-endian.
