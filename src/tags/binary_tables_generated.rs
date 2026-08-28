@@ -3,7 +3,7 @@
 //! Do not edit: regenerate with
 //! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
 //!
-//! 52 tables, 1460 fields. A binary sub-table is a block of
+//! 55 tables, 1567 fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
 //! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
 //! what to read there. What the generator could not express is on its stderr.
@@ -243,6 +243,9 @@ pub fn decode(
         "ColorCalib2" => canon_colorcalib2(data, model, bo, file_type, format, dm),
         "PSInfo" => canon_psinfo(data, model, bo, file_type, format, dm),
         "PSInfo2" => canon_psinfo2(data, model, bo, file_type, format, dm),
+        "CameraSettings7D" => minolta_camerasettings7d(data, model, bo, file_type, format, dm),
+        "CameraInfoA100" => minolta_camerainfoa100(data, model, bo, file_type, format, dm),
+        "WBInfoA100" => minolta_wbinfoa100(data, model, bo, file_type, format, dm),
         _ => Vec::new(),
     }
 }
@@ -19088,6 +19091,1229 @@ fn canon_psinfo2(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, forma
             other => other.to_string(),
         };
         tags.push(mk("UserDef3PictureStyle", 0xf4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Minolta::CameraSettings7D` -- FORMAT int16u, FIRST_ENTRY 0.
+fn minolta_camerasettings7d(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP1: &str = "Minolta";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = u16_at(data, 0x0, bo) {
+        dm.push(("ExposureMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Program".to_string(),
+            1 => "Aperture Priority".to_string(),
+            2 => "Shutter Priority".to_string(),
+            3 => "Manual".to_string(),
+            4 => "Auto".to_string(),
+            5 => "Program-shift A".to_string(),
+            6 => "Program-shift S".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ExposureMode", 0x0, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4, bo) {
+        dm.push(("MinoltaImageSize".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Large".to_string(),
+            1 => "Medium".to_string(),
+            2 => "Small".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("MinoltaImageSize", 0x2, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x6, bo) {
+        dm.push(("MinoltaQuality".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "RAW".to_string(),
+            16 => "Fine".to_string(),
+            32 => "Normal".to_string(),
+            34 => "RAW+JPEG".to_string(),
+            48 => "Economy".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("MinoltaQuality", 0x3, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x8, bo) {
+        dm.push(("WhiteBalance".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Auto".to_string(),
+            1 => "Daylight".to_string(),
+            2 => "Shade".to_string(),
+            3 => "Cloudy".to_string(),
+            4 => "Tungsten".to_string(),
+            5 => "Fluorescent".to_string(),
+            256 => "Kelvin".to_string(),
+            512 => "Manual".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("WhiteBalance", 0x4, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x1c, bo) {
+        dm.push(("FocusMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "AF-S".to_string(),
+            1 => "AF-C".to_string(),
+            3 => "Manual".to_string(),
+            4 => "AF-A".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("FocusMode", 0xe, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x20, bo) {
+        dm.push(("AFPoints".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Center".to_string(),
+            1 => "Top".to_string(),
+            2 => "Top-right".to_string(),
+            3 => "Right".to_string(),
+            4 => "Bottom-right".to_string(),
+            5 => "Bottom".to_string(),
+            6 => "Bottom-left".to_string(),
+            7 => "Left".to_string(),
+            8 => "Top-left".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("AFPoints", 0x10, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2a, bo) {
+        dm.push(("Flash".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("Flash", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x2c, bo) {
+        dm.push(("FlashMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Normal".to_string(),
+            1 => "Red-eye reduction".to_string(),
+            2 => "Rear flash sync".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("FlashMode", 0x16, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x38, bo) {
+        dm.push(("ISOSetting".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Auto".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ISOSetting", 0x1c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x3c, bo) {
+        dm.push(("ExposureCompensation".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val / 24", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintFraction($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x1e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4a, bo) {
+        dm.push(("ColorSpace".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Natural sRGB".to_string(),
+            1 => "Natural+ sRGB".to_string(),
+            4 => "Adobe RGB".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ColorSpace", 0x25, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4c, bo) {
+        dm.push(("Sharpness".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Sharpness", 0x26, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x4e, bo) {
+        dm.push(("Contrast".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Contrast", 0x27, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x50, bo) {
+        dm.push(("Saturation".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("Saturation", 0x28, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x5a, bo) {
+        dm.push(("FreeMemoryCardImages".to_string(), f64::from(v)));
+        tags.push(mk("FreeMemoryCardImages", 0x2d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i16_at(data, 0x7e, bo) {
+        dm.push(("ColorTemperature".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val * 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ColorTemperature", 0x3f, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x80, bo) {
+        dm.push(("HueAdjustment".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val - 10", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("HueAdjustment", 0x40, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x8c, bo) {
+        dm.push(("Rotation".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            72 => "Horizontal (normal)".to_string(),
+            76 => "Rotate 90 CW".to_string(),
+            82 => "Rotate 270 CW".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("Rotation", 0x46, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x8e, bo) {
+        dm.push(("FNumber".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x47, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x90, bo) {
+        dm.push(("ExposureTime".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("2 ** ((48-$val)/8)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("Image::ExifTool::Exif::PrintExposureTime($val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x48, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x94, bo) {
+        dm.push(("FreeMemoryCardImages".to_string(), f64::from(v)));
+        tags.push(mk("FreeMemoryCardImages", 0x4a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xbc, bo) {
+        dm.push(("ImageNumber".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ImageNumber", 0x5e, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xc0, bo) {
+        dm.push(("NoiseReduction".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("NoiseReduction", 0x60, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xc4, bo) {
+        dm.push(("ImageNumber2".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val + 1", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("ImageNumber2", 0x62, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xe2, bo) {
+        dm.push(("ImageStabilization".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ImageStabilization", 0x71, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0xea, bo) {
+        dm.push(("ZoneMatchingOn".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ZoneMatchingOn", 0x75, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Minolta::CameraInfoA100` -- FORMAT int8u, FIRST_ENTRY 0.
+fn minolta_camerainfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP1: &str = "Minolta";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0x1) {
+        dm.push(("AFSensorActive".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Top-right".to_string(),
+            1 => "Bottom-right".to_string(),
+            2 => "Bottom".to_string(),
+            3 => "Middle Horizontal".to_string(),
+            4 => "Center Vertical".to_string(),
+            5 => "Top".to_string(),
+            6 => "Top-left".to_string(),
+            7 => "Bottom-left".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("AFSensorActive", 0x1, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2) {
+        dm.push(("AFStatusActiveSensor".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusActiveSensor", 0x2, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x4) {
+        dm.push(("AFStatusTop-right".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusTop-right", 0x4, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x6) {
+        dm.push(("AFStatusBottom-right".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusBottom-right", 0x6, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x8) {
+        dm.push(("AFStatusBottom".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusBottom", 0x8, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0xa) {
+        dm.push(("AFStatusMiddleHorizontal".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusMiddleHorizontal", 0xa, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0xc) {
+        dm.push(("AFStatusCenterVertical".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusCenterVertical", 0xc, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0xe) {
+        dm.push(("AFStatusTop".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusTop", 0xe, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x10) {
+        dm.push(("AFStatusTop-left".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusTop-left", 0x10, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x12) {
+        dm.push(("AFStatusBottom-left".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusBottom-left", 0x12, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x14) {
+        dm.push(("FocusLocked".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Manual Focus".to_string(),
+            4 => "No".to_string(),
+            16 => "Continuous Focus".to_string(),
+            64 => "Yes".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("FocusLocked", 0x14, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x15) {
+        dm.push(("AFPoint".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Auto".to_string(),
+            1 => "Center".to_string(),
+            2 => "Top".to_string(),
+            3 => "Top-right".to_string(),
+            4 => "Right".to_string(),
+            5 => "Bottom-right".to_string(),
+            6 => "Bottom".to_string(),
+            7 => "Bottom-left".to_string(),
+            8 => "Left".to_string(),
+            9 => "Top-left".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("AFPoint", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x16) {
+        dm.push(("AFMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "DMF".to_string(),
+            1 => "AF-S".to_string(),
+            2 => "AF-C".to_string(),
+            3 => "AF-A".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("AFMode", 0x16, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2d) {
+        dm.push(("AFStatusLeft".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusLeft", 0x2d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2f) {
+        dm.push(("AFStatusCenterHorizontal".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusCenterHorizontal", 0x2f, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x31) {
+        dm.push(("AFStatusRight".to_string(), f64::from(v)));
+        tags.push(mk("AFStatusRight", 0x31, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x33) {
+        dm.push(("AFAreaMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Wide".to_string(),
+            1 => "Local".to_string(),
+            2 => "Spot".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("AFAreaMode", 0x33, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    tags
+}
+
+/// `Image::ExifTool::Minolta::WBInfoA100` -- FORMAT int8u, FIRST_ENTRY 0.
+fn minolta_wbinfoa100(data: &[u8], model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {
+    const GRP1: &str = "Minolta";
+    const GRP2: &str = "Camera";
+    const PRIO: i32 = crate::tag::PRIORITY_EXPLICIT_ZERO;
+    let mut tags = Vec::new();
+    let _ = (data, model, bo, file_type, format, &dm);
+    if let Some(v) = u8_at(data, 0xe) {
+        dm.push(("DriveMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Self-timer 10 sec".to_string(),
+            1 => "Continuous".to_string(),
+            2 => "Single-frame Exposure Bracketing".to_string(),
+            3 => "Continuous Exposure Bracketing".to_string(),
+            4 => "Self-Timer 2 sec".to_string(),
+            5 => "Single Frame".to_string(),
+            8 => "White Balance Bracketing Low".to_string(),
+            9 => "White Balance Bracketing High".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("DriveMode", 0xe, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x10) {
+        dm.push(("Rotation".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Horizontal (normal)".to_string(),
+            1 => "Rotate 270 CW".to_string(),
+            2 => "Rotate 90 CW".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("Rotation", 0x10, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x14) {
+        dm.push(("ImageStabilizationSetting".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ImageStabilizationSetting", 0x14, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x15) {
+        dm.push(("DynamicRangeOptimizerMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Off".to_string(),
+            1 => "Standard".to_string(),
+            2 => "Advanced".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("DynamicRangeOptimizerMode", 0x15, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2a) {
+        dm.push(("ExposureCompensationMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Ambient and Flash".to_string(),
+            1 => "Ambient Only".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ExposureCompensationMode", 0x2a, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2b) {
+        dm.push(("WBBracketShotNumber".to_string(), f64::from(v)));
+        tags.push(mk("WBBracketShotNumber", 0x2b, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2c) {
+        dm.push(("WhiteBalanceBracketing".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Off".to_string(),
+            1 => "Low".to_string(),
+            2 => "High".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("WhiteBalanceBracketing", 0x2c, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x2d) {
+        dm.push(("ExposureBracketShotNumber".to_string(), f64::from(v)));
+        tags.push(mk("ExposureBracketShotNumber", 0x2d, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x31, bo) {
+        dm.push(("FlashFunction".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "No flash".to_string(),
+            768 => "Built-in flash".to_string(),
+            4613 => "Manual".to_string(),
+            4622 => "Strobe".to_string(),
+            4750 => "Fill flash, Pre-flash TTL".to_string(),
+            4782 => "Bounce flash".to_string(),
+            5134 => "Rear sync, ADI".to_string(),
+            5262 => "Fill flash, ADI".to_string(),
+            5504 => "Wireless".to_string(),
+            6030 => "HSS".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("FlashFunction", 0x31, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x34, bo) {
+        dm.push(("ExposureMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Program".to_string(),
+            1 => "Aperture Priority".to_string(),
+            2 => "Shutter Priority".to_string(),
+            3 => "Manual".to_string(),
+            4 => "Auto".to_string(),
+            5 => "Program Shift A".to_string(),
+            6 => "Program Shift S".to_string(),
+            4115 => "Portrait".to_string(),
+            4131 => "Sports".to_string(),
+            4147 => "Sunset".to_string(),
+            4163 => "Night View/Portrait".to_string(),
+            4179 => "Landscape".to_string(),
+            4227 => "Macro".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ExposureMode", 0x34, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x36, bo) {
+        dm.push(("ColorMode".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Standard".to_string(),
+            1 => "Vivid".to_string(),
+            2 => "Portrait".to_string(),
+            3 => "Landscape".to_string(),
+            4 => "Sunset".to_string(),
+            5 => "Night View".to_string(),
+            7 => "B&W".to_string(),
+            8 => "Adobe RGB".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ColorMode", 0x36, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x38, bo) {
+        dm.push(("AverageLV".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("AverageLV", 0x38, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x3c) {
+        dm.push(("FrameNumber".to_string(), f64::from(v)));
+        tags.push(mk("FrameNumber", 0x3c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x96 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels", 0x96, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..4 {
+            match u16_at(data, 0xae + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_GBRGLevels", 0xae, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0xc0 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RedLevelsTungsten", 0xc0, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0xce + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_BlueLevelsTungsten", 0xce, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0xdc + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RedLevelsDaylight", 0xdc, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0xea + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_BlueLevelsDaylight", 0xea, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0xf8 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RedLevelsCloudy", 0xf8, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x106 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_BlueLevelsCloudy", 0x106, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x114 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RedLevelsFlash", 0x114, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x122 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_BlueLevelsFlash", 0x122, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x14c + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RedLevelsFluorescent", 0x14c, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x15a + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_BlueLevelsFluorescent", 0x15a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x168 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RedLevelsShade", 0x168, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x176 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_BlueLevelsShade", 0x176, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u16_at(data, 0x188, bo) {
+        dm.push(("WB_RedLevel6500K".to_string(), f64::from(v)));
+        tags.push(mk("WB_RedLevel6500K", 0x188, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x18a, bo) {
+        dm.push(("WB_BlueLevel6500K".to_string(), f64::from(v)));
+        tags.push(mk("WB_BlueLevel6500K", 0x18a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x18c, bo) {
+        dm.push(("WB_RedLevelCustom".to_string(), f64::from(v)));
+        tags.push(mk("WB_RedLevelCustom", 0x18c, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x18e, bo) {
+        dm.push(("WB_BlueLevelCustom".to_string(), f64::from(v)));
+        tags.push(mk("WB_BlueLevelCustom", 0x18e, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x198, bo) {
+        dm.push(("WB_RedLevel3500K".to_string(), f64::from(v)));
+        tags.push(mk("WB_RedLevel3500K", 0x198, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16_at(data, 0x19a, bo) {
+        dm.push(("WB_BlueLevel3500K".to_string(), f64::from(v)));
+        tags.push(mk("WB_BlueLevel3500K", 0x19a, v.to_string(), Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..75 {
+            match u16_at(data, 0x1be + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RedLevelsKelvin", 0x1be, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..75 {
+            match u16_at(data, 0x254 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_BlueLevelsKelvin", 0x254, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x304 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsFlash", 0x304, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x308 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsCoolWhiteF", 0x308, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x3e8 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsTungsten", 0x3e8, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x3ec + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsDaylight", 0x3ec, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x3f0 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsCloudy", 0x3f0, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x3f4 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsFlash", 0x3f4, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x3fc + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RedLevelsFluorescent", 0x3fc, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..7 {
+            match u16_at(data, 0x40a + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_BlueLevelsFluorescent", 0x40a, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x418 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsShade", 0x418, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x420 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels6500K", 0x420, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x424 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsCustom", 0x424, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x430 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevels3500K", 0x430, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..2 {
+            match u16_at(data, 0x528 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RBLevelsDaylight", 0x528, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..3 {
+            match u16_at(data, 0x546 + k * 2, bo) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("WB_RGBLevels", 0x546, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    {
+        let mut parts = Vec::new();
+        for k in 0..40 {
+            match u8_at(data, 0x628 + k * 1) {
+                Some(x) => parts.push(x.to_string()),
+                None => { parts.clear(); break }
+            }
+        }
+        if !parts.is_empty() {
+            let s = parts.join(" ");
+            tags.push(mk("AEMeteringSegments", 0x628, s.clone(), Value::String(s), GRP1, GRP2, PRIO));
+        }
+    }
+    if let Some(v) = u8_at(data, 0x690) {
+        dm.push(("MeasuredLV".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("MeasuredLV", 0x690, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x691) {
+        dm.push(("BrightnessValue".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BrightnessValue", 0x691, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x104c, 9600, false) {
+        tags.push(mk("TiffMeteringImage", 0x104c, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x49b8) {
+        dm.push(("ExposureTime".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val ? 2 ** (6 - $val/8) : 0", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val ? Image::ExifTool::Exif::PrintExposureTime($val) : \"Bulb\"", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureTime", 0x49b8, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x49ba) {
+        dm.push(("ISO".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("2 ** (($val-48)/8) * 100", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("int($val + 0.5)", &cv, &ctx) { cv = x; }
+        tags.push(mk("ISO", 0x49ba, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x49bb) {
+        dm.push(("FocusDistance".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("2**(($val-126)/16)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val > 266 ? \"inf\" : sprintf(\"%.2f m\", $val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FocusDistance", 0x49bb, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u16rev_at(data, 0x49bd, bo) {
+        dm.push(("LensType".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Minolta AF 28-85mm F3.5-4.5 New".to_string(),
+            1 => "Minolta AF 80-200mm F2.8 HS-APO G".to_string(),
+            2 => "Minolta AF 28-70mm F2.8 G".to_string(),
+            3 => "Minolta AF 28-80mm F4-5.6".to_string(),
+            4 => "Minolta AF 85mm F1.4G".to_string(),
+            5 => "Minolta AF 35-70mm F3.5-4.5 [II]".to_string(),
+            6 => "Minolta AF 24-85mm F3.5-4.5 [New]".to_string(),
+            7 => "Minolta AF 100-300mm F4.5-5.6 APO [New] or 100-400mm or Sigma Lens".to_string(),
+            8 => "Minolta AF 70-210mm F4.5-5.6 [II]".to_string(),
+            9 => "Minolta AF 50mm F3.5 Macro".to_string(),
+            10 => "Minolta AF 28-105mm F3.5-4.5 [New]".to_string(),
+            11 => "Minolta AF 300mm F4 HS-APO G".to_string(),
+            12 => "Minolta AF 100mm F2.8 Soft Focus".to_string(),
+            13 => "Minolta AF 75-300mm F4.5-5.6 (New or II)".to_string(),
+            14 => "Minolta AF 100-400mm F4.5-6.7 APO".to_string(),
+            15 => "Minolta AF 400mm F4.5 HS-APO G".to_string(),
+            16 => "Minolta AF 17-35mm F3.5 G".to_string(),
+            17 => "Minolta AF 20-35mm F3.5-4.5".to_string(),
+            18 => "Minolta AF 28-80mm F3.5-5.6 II".to_string(),
+            19 => "Minolta AF 35mm F1.4 G".to_string(),
+            20 => "Minolta/Sony 135mm F2.8 [T4.5] STF".to_string(),
+            22 => "Minolta AF 35-80mm F4-5.6 II".to_string(),
+            23 => "Minolta AF 200mm F4 Macro APO G".to_string(),
+            24 => "Minolta/Sony AF 24-105mm F3.5-4.5 (D) or Sigma or Tamron Lens".to_string(),
+            25 => "Minolta AF 100-300mm F4.5-5.6 APO (D) or Sigma Lens".to_string(),
+            27 => "Minolta AF 85mm F1.4 G (D)".to_string(),
+            28 => "Minolta/Sony AF 100mm F2.8 Macro (D) or Tamron Lens".to_string(),
+            29 => "Minolta/Sony AF 75-300mm F4.5-5.6 (D)".to_string(),
+            30 => "Minolta AF 28-80mm F3.5-5.6 (D) or Sigma Lens".to_string(),
+            31 => "Minolta/Sony AF 50mm F2.8 Macro (D) or F3.5".to_string(),
+            32 => "Minolta/Sony AF 300mm F2.8 G or 1.5x Teleconverter".to_string(),
+            33 => "Minolta/Sony AF 70-200mm F2.8 G".to_string(),
+            35 => "Minolta AF 85mm F1.4 G (D) Limited".to_string(),
+            36 => "Minolta AF 28-100mm F3.5-5.6 (D)".to_string(),
+            38 => "Minolta AF 17-35mm F2.8-4 (D)".to_string(),
+            39 => "Minolta AF 28-75mm F2.8 (D)".to_string(),
+            40 => "Minolta/Sony AF DT 18-70mm F3.5-5.6 (D)".to_string(),
+            41 => "Minolta/Sony AF DT 11-18mm F4.5-5.6 (D) or Tamron Lens".to_string(),
+            42 => "Minolta/Sony AF DT 18-200mm F3.5-6.3 (D)".to_string(),
+            43 => "Sony 35mm F1.4 G (SAL35F14G)".to_string(),
+            44 => "Sony 50mm F1.4 (SAL50F14)".to_string(),
+            45 => "Carl Zeiss Planar T* 85mm F1.4 ZA (SAL85F14Z)".to_string(),
+            46 => "Carl Zeiss Vario-Sonnar T* DT 16-80mm F3.5-4.5 ZA (SAL1680Z)".to_string(),
+            47 => "Carl Zeiss Sonnar T* 135mm F1.8 ZA (SAL135F18Z)".to_string(),
+            48 => "Carl Zeiss Vario-Sonnar T* 24-70mm F2.8 ZA SSM (SAL2470Z) or Other Lens".to_string(),
+            49 => "Sony DT 55-200mm F4-5.6 (SAL55200)".to_string(),
+            50 => "Sony DT 18-250mm F3.5-6.3 (SAL18250)".to_string(),
+            51 => "Sony DT 16-105mm F3.5-5.6 (SAL16105)".to_string(),
+            52 => "Sony 70-300mm F4.5-5.6 G SSM (SAL70300G) or G SSM II or Tamron Lens".to_string(),
+            53 => "Sony 70-400mm F4-5.6 G SSM (SAL70400G)".to_string(),
+            54 => "Carl Zeiss Vario-Sonnar T* 16-35mm F2.8 ZA SSM (SAL1635Z) or ZA SSM II".to_string(),
+            55 => "Sony DT 18-55mm F3.5-5.6 SAM (SAL1855) or SAM II".to_string(),
+            56 => "Sony DT 55-200mm F4-5.6 SAM (SAL55200-2)".to_string(),
+            57 => "Sony DT 50mm F1.8 SAM (SAL50F18) or Tamron Lens or Commlite CM-EF-NEX adapter".to_string(),
+            58 => "Sony DT 30mm F2.8 Macro SAM (SAL30M28)".to_string(),
+            59 => "Sony 28-75mm F2.8 SAM (SAL2875)".to_string(),
+            60 => "Carl Zeiss Distagon T* 24mm F2 ZA SSM (SAL24F20Z)".to_string(),
+            61 => "Sony 85mm F2.8 SAM (SAL85F28)".to_string(),
+            62 => "Sony DT 35mm F1.8 SAM (SAL35F18)".to_string(),
+            63 => "Sony DT 16-50mm F2.8 SSM (SAL1650)".to_string(),
+            64 => "Sony 500mm F4 G SSM (SAL500F40G)".to_string(),
+            65 => "Sony DT 18-135mm F3.5-5.6 SAM (SAL18135)".to_string(),
+            66 => "Sony 300mm F2.8 G SSM II (SAL300F28G2)".to_string(),
+            67 => "Sony 70-200mm F2.8 G SSM II (SAL70200G2)".to_string(),
+            68 => "Sony DT 55-300mm F4.5-5.6 SAM (SAL55300)".to_string(),
+            69 => "Sony 70-400mm F4-5.6 G SSM II (SAL70400G2)".to_string(),
+            70 => "Carl Zeiss Planar T* 50mm F1.4 ZA SSM (SAL50F14Z)".to_string(),
+            128 => "Tamron or Sigma Lens (128)".to_string(),
+            129 => "Tamron Lens (129)".to_string(),
+            131 => "Tamron 20-40mm F2.7-3.5 SP Aspherical IF".to_string(),
+            135 => "Vivitar 28-210mm F3.5-5.6".to_string(),
+            136 => "Tokina EMZ M100 AF 100mm F3.5".to_string(),
+            137 => "Cosina 70-210mm F2.8-4 AF".to_string(),
+            138 => "Soligor 19-35mm F3.5-4.5".to_string(),
+            139 => "Tokina AF 28-300mm F4-6.3".to_string(),
+            142 => "Cosina AF 70-300mm F4.5-5.6 MC".to_string(),
+            146 => "Voigtlander Macro APO-Lanthar 125mm F2.5 SL".to_string(),
+            194 => "Tamron SP AF 17-50mm F2.8 XR Di II LD Aspherical [IF]".to_string(),
+            202 => "Tamron SP AF 70-200mm F2.8 Di LD [IF] Macro".to_string(),
+            203 => "Tamron SP 70-200mm F2.8 Di USD".to_string(),
+            204 => "Tamron SP 24-70mm F2.8 Di USD".to_string(),
+            212 => "Tamron 28-300mm F3.5-6.3 Di PZD".to_string(),
+            213 => "Tamron 16-300mm F3.5-6.3 Di II PZD Macro".to_string(),
+            214 => "Tamron SP 150-600mm F5-6.3 Di USD".to_string(),
+            215 => "Tamron SP 15-30mm F2.8 Di USD".to_string(),
+            216 => "Tamron SP 45mm F1.8 Di USD".to_string(),
+            217 => "Tamron SP 35mm F1.8 Di USD".to_string(),
+            218 => "Tamron SP 90mm F2.8 Di Macro 1:1 USD (F017)".to_string(),
+            220 => "Tamron SP 150-600mm F5-6.3 Di USD G2".to_string(),
+            224 => "Tamron SP 90mm F2.8 Di Macro 1:1 USD (F004)".to_string(),
+            255 => "Tamron Lens (255)".to_string(),
+            18688 => "Sigma MC-11 SA-E Mount Converter with not-supported Sigma lens".to_string(),
+            25501 => "Minolta AF 50mm F1.7".to_string(),
+            25511 => "Minolta AF 35-70mm F4 or Other Lens".to_string(),
+            25521 => "Minolta AF 28-85mm F3.5-4.5 or Other Lens".to_string(),
+            25531 => "Minolta AF 28-135mm F4-4.5 or Other Lens".to_string(),
+            25541 => "Minolta AF 35-105mm F3.5-4.5".to_string(),
+            25551 => "Minolta AF 70-210mm F4 Macro or Sigma Lens".to_string(),
+            25561 => "Minolta AF 135mm F2.8".to_string(),
+            25571 => "Minolta/Sony AF 28mm F2.8".to_string(),
+            25581 => "Minolta AF 24-50mm F4".to_string(),
+            25601 => "Minolta AF 100-200mm F4.5".to_string(),
+            25611 => "Minolta AF 75-300mm F4.5-5.6 or Sigma Lens".to_string(),
+            25621 => "Minolta AF 50mm F1.4 [New]".to_string(),
+            25631 => "Minolta AF 300mm F2.8 APO or Sigma Lens".to_string(),
+            25641 => "Minolta AF 50mm F2.8 Macro or Sigma Lens".to_string(),
+            25651 => "Minolta AF 600mm F4 APO".to_string(),
+            25661 => "Minolta AF 24mm F2.8 or Sigma Lens".to_string(),
+            25721 => "Minolta/Sony AF 500mm F8 Reflex".to_string(),
+            25781 => "Minolta/Sony AF 16mm F2.8 Fisheye or Sigma Lens".to_string(),
+            25791 => "Minolta/Sony AF 20mm F2.8 or Tokina Lens".to_string(),
+            25811 => "Minolta AF 100mm F2.8 Macro [New] or Sigma or Tamron Lens".to_string(),
+            25851 => "Beroflex 35-135mm F3.5-4.5".to_string(),
+            25858 => "Minolta AF 35-105mm F3.5-4.5 New or Tamron Lens".to_string(),
+            25881 => "Minolta AF 70-210mm F3.5-4.5".to_string(),
+            25891 => "Minolta AF 80-200mm F2.8 APO or Tokina Lens".to_string(),
+            25901 => "Minolta AF 200mm F2.8 G APO + Minolta AF 1.4x APO or Other Lens + 1.4x".to_string(),
+            25911 => "Minolta AF 35mm F1.4".to_string(),
+            25921 => "Minolta AF 85mm F1.4 G (D)".to_string(),
+            25931 => "Minolta AF 200mm F2.8 APO".to_string(),
+            25941 => "Minolta AF 3x-1x F1.7-2.8 Macro".to_string(),
+            25961 => "Minolta AF 28mm F2".to_string(),
+            25971 => "Minolta AF 35mm F2 [New]".to_string(),
+            25981 => "Minolta AF 100mm F2".to_string(),
+            26011 => "Minolta AF 200mm F2.8 G APO + Minolta AF 2x APO or Other Lens + 2x".to_string(),
+            26041 => "Minolta AF 80-200mm F4.5-5.6".to_string(),
+            26051 => "Minolta AF 35-80mm F4-5.6".to_string(),
+            26061 => "Minolta AF 100-300mm F4.5-5.6".to_string(),
+            26071 => "Minolta AF 35-80mm F4-5.6".to_string(),
+            26081 => "Minolta AF 300mm F2.8 HS-APO G".to_string(),
+            26091 => "Minolta AF 600mm F4 HS-APO G".to_string(),
+            26121 => "Minolta AF 200mm F2.8 HS-APO G".to_string(),
+            26131 => "Minolta AF 50mm F1.7 New".to_string(),
+            26151 => "Minolta AF 28-105mm F3.5-4.5 xi".to_string(),
+            26161 => "Minolta AF 35-200mm F4.5-5.6 xi".to_string(),
+            26181 => "Minolta AF 28-80mm F4-5.6 xi".to_string(),
+            26191 => "Minolta AF 80-200mm F4.5-5.6 xi".to_string(),
+            26201 => "Minolta AF 28-70mm F2.8 G".to_string(),
+            26211 => "Minolta AF 100-300mm F4.5-5.6 xi".to_string(),
+            26241 => "Minolta AF 35-80mm F4-5.6 Power Zoom".to_string(),
+            26281 => "Minolta AF 80-200mm F2.8 HS-APO G".to_string(),
+            26291 => "Minolta AF 85mm F1.4 New".to_string(),
+            26311 => "Minolta AF 100-300mm F4.5-5.6 APO".to_string(),
+            26321 => "Minolta AF 24-50mm F4 New".to_string(),
+            26381 => "Minolta AF 50mm F2.8 Macro New".to_string(),
+            26391 => "Minolta AF 100mm F2.8 Macro".to_string(),
+            26411 => "Minolta/Sony AF 20mm F2.8 New".to_string(),
+            26421 => "Minolta AF 24mm F2.8 New".to_string(),
+            26441 => "Minolta AF 100-400mm F4.5-6.7 APO".to_string(),
+            26621 => "Minolta AF 50mm F1.4 New".to_string(),
+            26671 => "Minolta AF 35mm F2 New".to_string(),
+            26681 => "Minolta AF 28mm F2 New".to_string(),
+            26721 => "Minolta AF 24-105mm F3.5-4.5 (D)".to_string(),
+            30464 => "Metabones Canon EF Speed Booster".to_string(),
+            45671 => "Tokina 70-210mm F4-5.6".to_string(),
+            45681 => "Tokina AF 35-200mm F4-5.6 Zoom SD".to_string(),
+            45701 => "Tamron AF 35-135mm F3.5-4.5".to_string(),
+            45711 => "Vivitar 70-210mm F4.5-5.6".to_string(),
+            45741 => "2x Teleconverter or Tamron or Tokina Lens".to_string(),
+            45751 => "1.4x Teleconverter".to_string(),
+            45851 => "Tamron SP AF 300mm F2.8 LD IF".to_string(),
+            45861 => "Tamron SP AF 35-105mm F2.8 LD Aspherical IF".to_string(),
+            45871 => "Tamron AF 70-210mm F2.8 SP LD".to_string(),
+            48128 => "Metabones Canon EF Speed Booster Ultra".to_string(),
+            61184 => "Canon EF Adapter".to_string(),
+            65280 => "Sigma 16mm F2.8 Filtermatic Fisheye".to_string(),
+            65535 => "E-Mount, T-Mount, Other Lens or no lens".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("LensType", 0x49bd, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i8_at(data, 0x49c0) {
+        dm.push(("ExposureCompensation".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val / 8", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+        tags.push(mk("ExposureCompensation", 0x49c0, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = i8_at(data, 0x49c1) {
+        dm.push(("FlashExposureComp".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("$val / 8", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("$val ? sprintf(\"%+.1f\",$val) : 0", &cv, &ctx) { cv = x; }
+        tags.push(mk("FlashExposureComp", 0x49c1, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x49c2) {
+        dm.push(("ImageStabilization".to_string(), f64::from(v)));
+        let s = match v as i64 {
+            0 => "Off".to_string(),
+            1 => "On".to_string(),
+            other => other.to_string(),
+        };
+        tags.push(mk("ImageStabilization", 0x49c2, s, Value::I32(v as i32), GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x49c3) {
+        dm.push(("BrightnessValue".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("($val-106)/8", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        tags.push(mk("BrightnessValue", 0x49c3, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x49c5) {
+        dm.push(("MaxAperture".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("MaxAperture", 0x49c5, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(v) = u8_at(data, 0x49c7) {
+        dm.push(("FNumber".to_string(), f64::from(v)));
+        let ctx = Ctx { model, file_type, dm };
+        let mut cv = Conv::Num(f64::from(v));
+        if let Some(x) = conv_expr::eval_with("2 ** (($val-8)/16)", &cv, &ctx) { cv = x; }
+        let raw = Value::F64(cv.as_num());
+        if let Some(x) = conv_expr::eval_with("sprintf(\"%.1f\",$val)", &cv, &ctx) { cv = x; }
+        tags.push(mk("FNumber", 0x49c7, cv.as_string(), raw, GRP1, GRP2, PRIO));
+    }
+    if let Some(text) = text_at(data, 0x49dc, 12, true) {
+        tags.push(mk("InternalSerialNumber", 0x49dc, text.clone(), Value::String(text), GRP1, GRP2, PRIO));
     }
     tags
 }

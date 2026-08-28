@@ -34,6 +34,9 @@ my %WANTED = (
         ColorDataUnknown
         ShotInfo
     )],
+    Minolta => [qw(
+        CameraSettings7D CameraInfoA100 WBInfoA100
+    )],
 );
 
 # Main-table ids whose sub-table is chosen by a chain of conditions. The arms
@@ -77,6 +80,11 @@ sub shared_hashes {
     my %shared;
     while ($src =~ /^my %(\w+)\s*=\s*\((.*?)\n\);/gms) {
         $shared{$1} = $2;
+    }
+    # `my %offOn = ( 0 => 'Off', 1 => 'On' );` is one line, which the pattern
+    # above -- anchored on a closing `\n);` -- never sees.
+    while ($src =~ /^my %(\w+)\s*=\s*\(([^()\n]*)\);\s*$/gm) {
+        $shared{$1} = $2 unless exists $shared{$1};
     }
     return %shared;
 }
@@ -481,10 +489,8 @@ sub parse_table {
             note("$module\::$table $off_s $name: format '$ffmt'");
             next;
         }
-        if ($count > 64) {
-            note("$module\::$table $off_s $name: array of $count, likely a sub-structure");
-            next;
-        }
+        # However many the Format says: ExifTool joins them all, and
+        # WB_RedLevelsKelvin really is seventy-five numbers.
 
         my ($mask) = $fb =~ /Mask\s*=>\s*(0x[0-9a-fA-F]+|\d+)/;
         $mask = hex($mask) if defined $mask and $mask =~ /^0x/;

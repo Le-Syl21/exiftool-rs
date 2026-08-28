@@ -6751,6 +6751,34 @@ fn read_makernote_ifd_with_base(
                 (Manufacturer::Minolta, 0x0001) | (Manufacturer::Minolta, 0x0003) => {
                     decode_minolta_camera_settings(value_data, byte_order, model_name)
                 }
+                // Three blocks Minolta writes with a byte order of their own,
+                // declared on the SubDirectory rather than inherited from the
+                // file (Minolta.pm:717-760). The last two are the A100's alone.
+                (Manufacturer::Minolta, 0x0004)
+                | (Manufacturer::Minolta, 0x0010)
+                | (Manufacturer::Minolta, 0x0020)
+                    if tag_id == 0x0004 || model_name == "DSLR-A100" =>
+                {
+                    let (table, bo) = match tag_id {
+                        0x0004 => ("CameraSettings7D", ByteOrderMark::BigEndian),
+                        0x0010 => ("CameraInfoA100", ByteOrderMark::LittleEndian),
+                        _ => ("WBInfoA100", ByteOrderMark::BigEndian),
+                    };
+                    let mut dm = crate::tags::binary_tables_generated::State::new();
+                    let mut t = crate::tags::binary_tables_generated::decode(
+                        table,
+                        value_data,
+                        model_name,
+                        bo,
+                        &crate::metadata::exif::tiff_type(),
+                        crate::tags::sub_tables_generated::tiff_format_name(data_type),
+                        &mut dm,
+                    );
+                    for tag in &mut t {
+                        tag.group.family1 = "Minolta".into();
+                    }
+                    t
+                }
                 // Minolta ImageStabilization (tag 0x0018): exists only when IS is enabled for DiMAGE A1/A2/X1
                 (Manufacturer::Minolta, 0x0018) => {
                     // Condition: model =~ /^DiMAGE (A1|A2|X1)$/
@@ -7655,6 +7683,9 @@ fn read_makernote_ifd_with_base(
             (Manufacturer::Nikon, 0x0E22) | // NikonICCProfile (SubDirectory)
             (Manufacturer::Minolta, 0x0001) | // CameraSettings
             (Manufacturer::Minolta, 0x0003) | // CameraSettings
+            (Manufacturer::Minolta, 0x0004) | // CameraSettings7D
+            (Manufacturer::Minolta, 0x0010) | // CameraInfoA100
+            (Manufacturer::Minolta, 0x0020) | // WBInfoA100
             (Manufacturer::Apple, 0x0003) |  // RunTime
             (Manufacturer::Sony, 0x2000) |   // SonyIDC
             // Pentax: these are SubDirectory container tags decoded above
