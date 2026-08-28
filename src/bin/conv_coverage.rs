@@ -195,8 +195,14 @@ fn collect(lib: &PathBuf) -> (Vec<(usize, String)>, HashMap<String, Vec<String>>
 }
 
 fn main() {
-    let lib = std::env::args()
-        .nth(1)
+    // `--check` makes this a gate rather than a report: it exits non-zero
+    // unless every occurrence is accounted for, so a release cannot carry a
+    // conversion this evaluator has stopped understanding.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let check = args.iter().any(|a| a == "--check");
+    let lib = args
+        .iter()
+        .find(|a| !a.starts_with("--"))
         .map_or_else(|| PathBuf::from("/home/sylvain/dev/exiftool/lib"), PathBuf::from);
 
     let (exprs, sites) = collect(&lib);
@@ -302,5 +308,20 @@ fn main() {
     }
     if misses.len() > 80 {
         println!("  … and {} more distinct expressions", misses.len() - 80);
+    }
+
+    if check {
+        println!();
+        if ok_o == total_o && ok_d == total_d {
+            println!("COUNTER ONE OK — {ok_o} / {total_o} occurrences, {ok_d} / {total_d} distinct.");
+        } else {
+            println!(
+                "COUNTER ONE FAILED — {ok_o} / {total_o} occurrences, {ok_d} / {total_d} distinct; \
+                 {} occurrence(s) in {} expression(s) are not accounted for.",
+                total_o - ok_o,
+                total_d - ok_d
+            );
+            std::process::exit(1);
+        }
     }
 }

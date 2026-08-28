@@ -61,3 +61,15 @@ jobs:
           else
             cargo run --release --features parity --bin parity
           fi
+
+      # The two counters, reported rather than enforced. Pointed at a NEWER
+      # ExifTool this is the other half of the drift question: how much ground
+      # a version bump would open. The blocking copies are in ci.yml, which
+      # runs them against the pinned version at every tag.
+      - name: Counters against that version
+        if: always()
+        run: |
+          lib=$(echo target/parity/exiftool-*/lib)
+          test -d "$lib" || exit 0
+          cargo run --release --features parity --bin conv_coverage -- "$lib" | head -20
+          perl scripts/coverage_report.pl "$lib" src | tail -30

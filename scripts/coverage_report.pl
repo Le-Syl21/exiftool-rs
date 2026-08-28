@@ -11,8 +11,13 @@
 use strict;
 use warnings;
 
-my $lib = $ARGV[0] || '../exiftool/lib';
-my $src = $ARGV[1] || 'src';
+# `--check` makes this a gate rather than a report: it exits non-zero unless
+# every table a reader can get to is reached, so a release cannot quietly lose
+# one.
+my $check = grep { $_ eq '--check' } @ARGV;
+my @paths = grep { !/^--/ } @ARGV;
+my $lib = $paths[0] || '../exiftool/lib';
+my $src = $paths[1] || 'src';
 die "Cannot find $lib\n" unless -d $lib;
 
 # Everything our crate mentions, in one blob.
@@ -232,4 +237,27 @@ if (%orphan) {
 print "\nNOT REACHED:\n";
 for my $mod (sort keys %missing) {
     printf "  %-14s %s\n", $mod, join ' ', sort @{$missing{$mod}};
+}
+
+if ($check) {
+    # A table nothing points at is not something a reader can fail to reach,
+    # so it is not counted against this gate -- it is named above instead.
+    my $orphans = 0;
+    $orphans += scalar @{$orphan{$_}} for keys %orphan;
+    my $unreached = 0;
+    for my $mod (keys %missing) {
+        for my $t (@{$missing{$mod}}) {
+            $unreached++ unless grep { $_ eq $t } @{$orphan{$mod} || []};
+        }
+    }
+    my $reachable = $t - $orphans;
+    print "\n";
+    if ($unreached == 0) {
+        printf "COUNTER THREE OK — %d / %d reachable sub-tables are reached.\n",
+            $reachable, $reachable;
+    } else {
+        printf "COUNTER THREE FAILED — %d of %d reachable sub-tables are not reached.\n",
+            $unreached, $reachable;
+        exit 1;
+    }
 }

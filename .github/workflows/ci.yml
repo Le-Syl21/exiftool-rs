@@ -191,6 +191,22 @@ jobs:
       - name: Live parity vs pinned Perl ExifTool
         run: cargo run --release --features parity --bin parity
 
+      # The three counters the ISO goal is stated in. Parity above says the
+      # output matches over the corpus; these say the crate still covers
+      # ExifTool itself, which a corpus can only measure where it has samples.
+      # Both read the pinned ExifTool the parity run just unpacked, never the
+      # distro copy, so they answer about the version this crate targets.
+      - name: Counter one — every conversion expression is accounted for
+        run: |
+          lib=$(echo target/parity/exiftool-*/lib)
+          test -d "$lib" || { echo "pinned ExifTool source not found under target/parity"; exit 1; }
+          cargo run --release --features parity --bin conv_coverage -- "$lib" --check
+
+      - name: Counter three — every reachable binary sub-table is reached
+        run: |
+          lib=$(echo target/parity/exiftool-*/lib)
+          perl scripts/coverage_report.pl "$lib" src --check
+
   # Signature + notarisation Apple du CLI et de la GUI. Derrière `signing` au même
   # titre que Windows : les secrets Apple sont désormais des secrets d'environnement
   # (illisibles depuis le job `build`, qui ne déclare aucun environnement), et une
