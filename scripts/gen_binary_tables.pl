@@ -42,6 +42,7 @@ my %WANTED = (
     CanonVRD => [qw(DustInfo)],
     Kodak => [qw(Type9)],
     Nikon => [qw(LensDataUnknown)],
+    NikonCustom => [qw(SettingsD40 SettingsD810 SettingsD850)],
     NikonCapture => [qw(
         DLightingHQ DLightingHS HighlightData PictureCtrl UnsharpData WBAdjData
     )],
@@ -152,13 +153,13 @@ sub scan_fields {
     my @lines = split /\n/, $body;
     for (my $i = 0; $i <= $#lines; ++$i) {
         # `0x43 => 'ColorTempAsShot'`: a name and nothing else.
-        if ($lines[$i] =~ /^\s{4}(0x[0-9a-fA-F]+|\d+)\s*=>\s*'([^']+)'\s*,/) {
+        if ($lines[$i] =~ /^\s{4}(0x[0-9a-fA-F]+|\d+(?:\.\d+)?)\s*=>\s*'([^']+)'\s*,/) {
             push @out, [$1, "Name => '$2',", 0];
             next;
         }
         # `0x47 => [{...},{...}]`: alternatives, the first whose condition
         # holds being the one ExifTool takes.
-        if ($lines[$i] =~ /^\s{4}(0x[0-9a-fA-F]+|\d+)\s*=>\s*\[/) {
+        if ($lines[$i] =~ /^\s{4}(0x[0-9a-fA-F]+|\d+(?:\.\d+)?)\s*=>\s*\[/) {
             my $off_s = $1;
             my ($depth, $text, $seen) = (0, '', 0);
             for (my $j = $i; $j <= $#lines; ++$j) {
@@ -180,7 +181,7 @@ sub scan_fields {
             push @out, [$off_s, $_, 1] for @arms;
             next;
         }
-        next unless $lines[$i] =~ /^\s{4}(0x[0-9a-fA-F]+|\d+)\s*=>\s*\{/;
+        next unless $lines[$i] =~ /^\s{4}(0x[0-9a-fA-F]+|\d+(?:\.\d+)?)\s*=>\s*\{/;
         my $off_s = $1;
         my ($depth, $text) = (0, '');
         for (my $j = $i; $j <= $#lines; ++$j) {
@@ -250,7 +251,7 @@ sub field_cond {
 # table writes 0x4001.
 sub main_arms {
     my ($main, $tag) = @_;
-    while ($main =~ /^\s{4}(0x[0-9a-fA-F]+|\d+)\s*=>\s*\[/gms) {
+    while ($main =~ /^\s{4}(0x[0-9a-fA-F]+|\d+(?:\.\d+)?)\s*=>\s*\[/gms) {
         # Capture before testing: `$1 =~ /^0x/` is itself a match, and it
         # clears $1 before hex() ever sees it.
         my $id_s = $1;
@@ -457,6 +458,10 @@ sub parse_table {
     my (%arm_prev, %arm_dead);
     for my $rf (scan_fields($body)) {
         my ($off_s, $fb, $is_arm) = @$rf;
+        # `0.1`, `0.2`, `0.3`: three bit-fields of the same byte, told apart
+        # by their Mask. The fraction only makes the key unique -- the entry
+        # is the integer part -- and matching integers alone dropped every one
+        # of them, and every table made of them, in silence.
         my $off = $off_s =~ /^0x/ ? hex($off_s) : int($off_s);
 
         # A whole field can be one splice: `0x0210 => { %selfTimerB2010 }`.

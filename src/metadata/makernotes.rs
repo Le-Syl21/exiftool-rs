@@ -5104,8 +5104,42 @@ fn decrypt_nikon_subtables(
                     std::str::from_utf8(&data[value_offset..value_offset + 4]).unwrap_or("");
                 tags.push(mk_nikon_str("ShotInfoVersion", version));
 
-                // Decrypt reveals ShotInfo fields depending on version
-                // For now, extract what we can
+                // The custom-settings block each body hides inside its
+                // ShotInfo. The D40 keeps it at a fixed offset; the D810 and
+                // D850 keep a four-byte offset to it (Nikon.pm:7950-7957,
+                // `Start => '$val'`), and read their ShotInfo little-endian
+                // where the D40 reads it big-endian.
+                let custom: Option<(&str, usize, ByteOrderMark)> = match version {
+                    "0209" => Some(("NikonCustom::SettingsD40", 729, ByteOrderMark::BigEndian)),
+                    "0233" | "0243" => {
+                        let at = if version == "0233" { 0x40 } else { 0x58 };
+                        let off = decrypted
+                            .get(at..at + 4)
+                            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize);
+                        let table = if version == "0233" {
+                            "NikonCustom::SettingsD810"
+                        } else {
+                            "NikonCustom::SettingsD850"
+                        };
+                        off.map(|o| (table, o, ByteOrderMark::LittleEndian))
+                    }
+                    _ => None,
+                };
+                if let Some((table, off, bo)) = custom {
+                    if let Some(block) = decrypted.get(off..) {
+                        let mut dm = crate::tags::binary_tables_generated::State::new();
+                        tags.extend(crate::tags::binary_tables_generated::decode(
+                            table,
+                            block,
+                            "",
+                            "",
+                            bo,
+                            "",
+                            "",
+                            &mut dm,
+                        ));
+                    }
+                }
             }
             // 0x00A8 FlashInfo is NOT encrypted — handled (raw) by decode_nikon_flashinfo
             // in read_makernote_ifd_with_base. Decrypting it here produced garbage.
