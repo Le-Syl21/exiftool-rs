@@ -487,6 +487,29 @@ pub fn parse_makernotes_exif_base(
         }
     }
 
+    // MakerNotes.pm's last Kodak arm: a Kodak note that is not an AOC one
+    // and that nothing else has read -- neither a binary layout nor the IFD
+    // path -- is Kodak::Unknown (474-478). It is here rather than beside the
+    // binary layouts because that is where ExifTool has it: after every arm
+    // that reads an IFD.
+    if tags.is_empty()
+        && make.to_lowercase().contains("kodak")
+        && !mn_data.starts_with(b"AOC\0")
+    {
+        let mut dm = crate::tags::binary_tables_generated::State::new();
+        return crate::tags::binary_tables_generated::decode(
+            "Kodak::Unknown",
+            mn_data,
+            make,
+            model,
+            parent_byte_order,
+            "",
+            "",
+            &mut dm,
+        );
+    }
+
+
     tags
 }
 
