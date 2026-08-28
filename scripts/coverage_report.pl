@@ -16,10 +16,39 @@ my $src = $ARGV[1] || 'src';
 die "Cannot find $lib\n" unless -d $lib;
 
 # Everything our crate mentions, in one blob.
+# Our source, file by file. Which ExifTool module a file decodes matters:
+# a file whose header names `Sony.pm` may call its tables `Tag9050b` without
+# repeating the module, and requiring the qualified form everywhere would
+# report those as unreached when they are decoded.
+my %ours_by_file;
 my $ours = '';
 open my $find, '-|', 'find', $src, '-name', '*.rs' or die $!;
-while (my $f = <$find>) { chomp $f; open my $h, '<', $f or next; local $/; $ours .= <$h>; close $h; }
+while (my $f = <$find>) {
+    chomp $f;
+    open my $h, '<', $f or next;
+    local $/;
+    my $body = <$h>;
+    close $h;
+    $ours .= $body;
+    $ours_by_file{$f} = $body;
+}
 close $find;
+
+# The modules a file declares it decodes, from `Image::ExifTool::Mod` or
+# `Mod.pm` anywhere in it.
+# A file's HEADER says which module it decodes -- the body is full of
+# `Image::ExifTool::Exif::PrintFNumber` and the like, which say nothing about
+# the file. Only a header naming exactly one `<Module>.pm` makes a file that
+# module's, and only then may its tables be named bare.
+my %file_module;
+for my $f (keys %ours_by_file) {
+    my @head = (split /\n/, $ours_by_file{$f})[0 .. 19];
+    my %m;
+    for my $line (grep { defined } @head) {
+        $m{$1} = 1 while $line =~ /\b(\w+)\.pm\b/g;
+    }
+    $file_module{$f} = (keys %m) == 1 ? (keys %m)[0] : undef;
+}
 
 # Everything ExifTool itself points at. A table nothing names is one no
 # reader can reach -- ExifTool's own included -- so counting it against us
@@ -61,7 +90,22 @@ for my $pm (sort grep { /\.pm$/ } readdir $dh) {
         $total{$module}++;
         # A table we can reach is one whose name appears somewhere in our source,
         # whether in a generated file or a hand-written dispatcher.
-        push @{$missing{$module}}, $table unless $ours =~ /\Q$table\E/;
+        # Named the way a reader has to name it -- `Module::Table`, the key
+        # our own dispatcher uses -- or on a line that names the module too.
+        # A bare substring is not a mention: "Thumbnail" occurs in thousands
+        # of places, and matching it counted Samsung::Thumbnail as reached
+        # when nothing decodes it.
+        my $reached = $ours =~ /\Q$module\E::\Q$table\E/;
+        unless ($reached) {
+            # Or named on its own in a file that says which module it decodes.
+            for my $f (keys %ours_by_file) {
+                next unless defined $file_module{$f} and $file_module{$f} eq $module;
+                next unless $ours_by_file{$f} =~ /\b\Q$table\E\b/;
+                $reached = 1;
+                last;
+            }
+        }
+        push @{$missing{$module}}, $table unless $reached;
     }
 }
 closedir $dh;
