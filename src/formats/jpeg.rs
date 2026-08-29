@@ -4614,23 +4614,6 @@ fn parse_vrd1(d: &[u8], mk: &impl Fn(&str, String) -> crate::tag::Tag) -> Vec<cr
 
 // ── GoPro GPMF parser ─────────────────────────────────────────────────────────
 
-/// GPMF data type sizes (from GoPro.pm %goProFmt).
-#[allow(dead_code)]
-fn gpmf_format_size(fmt: u8) -> usize {
-    match fmt {
-        0x62 | 0x42 => 1,        // int8s / int8u ('b'/'B')
-        0x63 => 1,               // string ('c')
-        0x73 | 0x53 => 2,        // int16s / int16u ('s'/'S')
-        0x6c | 0x4c | 0x66 => 4, // int32s / int32u / float ('l'/'L'/'f')
-        0x64 => 8,               // double ('d')
-        0x46 => 4,               // 4-char ID ('F')
-        0x47 | 0x55 => 16,       // 16-byte uuid / date ('G'/'U')
-        0x6a | 0x4a => 8,        // int64s / int64u ('j'/'J')
-        0x71 | 0x51 => 4,        // fixed32s / fixed64s ('q'/'Q')
-        _ => 0,
-    }
-}
-
 /// GPMF tag name lookup (from GoPro.pm %GPMF tag table).
 fn gpmf_tag_name(tag: &[u8; 4]) -> &'static str {
     match tag {
@@ -5435,8 +5418,6 @@ fn decode_infray_sensor(data: &[u8]) -> Vec<crate::tag::Tag> {
 /// FPXR contents entry.
 struct FpxrEntry {
     name: String,
-    #[allow(dead_code)]
-    size: u32,
     stream: Vec<u8>,
 }
 
@@ -5506,7 +5487,6 @@ fn accumulate_fpxr(seg_data: &[u8], contents: &mut Vec<FpxrEntry>) {
 
             contents.push(FpxrEntry {
                 name,
-                size,
                 stream: Vec::new(),
             });
         }

@@ -7,8 +7,6 @@
 //! - ExifTool Google.pm ProcessHDRP (Perl source)
 //! - <https://github.com/jakiki6/ruminant/blob/master/ruminant/modules/images.py>
 
-#![allow(dead_code)]
-
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
@@ -1016,38 +1014,6 @@ fn format_unix_time_ms(secs: i64, ms: u32) -> String {
     }
     format!("{}.{:03}", local, ms)
 }
-
-fn unix_to_datetime(secs: i64) -> (i32, u32, u32, u32, u32, u32) {
-    // Compute date from Unix timestamp (seconds since 1970-01-01 00:00:00 UTC)
-    let sec = (secs % 60) as u32;
-    let min_total = secs / 60;
-    let min = (min_total % 60) as u32;
-    let hour_total = min_total / 60;
-    let hour = (hour_total % 24) as u32;
-    let days = hour_total / 24;
-
-    // Convert days since epoch to year/month/day
-    // Algorithm from https://howardhinnant.github.io/date_algorithms.html
-    let z = days + 719468;
-    let era = if z >= 0 { z } else { z - 146096 } / 146097;
-    let doe = z - era * 146097;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-
-    (y as i32, m as u32, d as u32, hour, min, sec)
-}
-
-// ============================================================================
-// Value enum extensions needed
-// ============================================================================
-
-// We need Value::U64 and Value::F64 - check if they exist
-// If not, we'll use Value::String as fallback
 
 #[cfg(test)]
 mod tests {
