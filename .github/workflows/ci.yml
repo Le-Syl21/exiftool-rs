@@ -1,8 +1,8 @@
 name: CI
 
-# Aucun build sur push `main` : le travail arrive en direct sur main, donc un
-# build par commit ne ferait que du bruit. Les gates tournent sur PR, sur tag
-# (avant toute signature/publication) et à la demande.
+# Nothing builds on a push to `main`: work lands directly on main, so a build
+# per commit would only be noise. The gates run on pull requests, at a tag
+# (before anything is signed or published) and on demand.
 on:
   push:
     tags: ['v*']
@@ -25,25 +25,25 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      # Garde-fou posé au tout début du pipeline : le tag doit correspondre à la
-      # version du crate. Sans lui, un tag v0.6.2 a déjà publié une release
-      # GitHub alors que Cargo.toml était resté en 0.6.1 — crates.io n'a jamais
-      # reçu la version, et comme le publish tolère « already exists », le run
-      # est resté vert et personne n'a rien vu.
+      # First thing in the pipeline: the tag has to match the crate version.
+      # Without it a v0.6.2 tag once published a GitHub release while Cargo.toml
+      # still said 0.6.1 — crates.io never received the version, and since the
+      # publish step tolerates "already exists", the run stayed green and
+      # nobody saw a thing.
       - name: Check that the tag matches the crate version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           tag="${GITHUB_REF_NAME#v}"
           tag="${tag%%-*}"                  # v1.2.3-rc1 → 1.2.3
-          # `cargo pkgid` lit la version que le crate publié utilise vraiment,
-          # sans supposer où se trouve le champ dans Cargo.toml.
+          # `cargo pkgid` reports the version the published crate actually
+          # uses, without assuming where the field sits in Cargo.toml.
           crate=$(cargo pkgid -p exiftool-rs)
           crate="${crate##*[@#]}"
           if [ "$tag" != "$crate" ]; then
-            echo "::error::tag $GITHUB_REF_NAME mais Cargo.toml en $crate — mets Cargo.toml à jour puis retague"
+            echo "::error::tag $GITHUB_REF_NAME but Cargo.toml says $crate — update Cargo.toml, then re-tag"
             exit 1
           fi
-          echo "tag $GITHUB_REF_NAME ↔ Cargo.toml $crate : OK"
+          echo "tag $GITHUB_REF_NAME <-> Cargo.toml $crate: OK"
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
 
@@ -96,8 +96,8 @@ jobs:
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
         with:
           toolchain: stable
-          # Sans cette ligne, `--target` échouerait sur la compilation croisée
-          # macOS x86_64 (le runner macos-latest est arm64).
+          # Without this line, `--target` would fail on the macOS x86_64
+          # cross-build (the macos-latest runner is arm64).
           targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
@@ -120,8 +120,8 @@ jobs:
         # generated (debug panics on arithmetic overflow, skewing the parity corpus).
         run: cargo test --release
 
-      # --- Empaquetage (binaires non signés ; la signature Apple est faite plus
-      # bas, dans un job dédié derrière l'environnement `signing`). ---
+      # --- Packaging (unsigned binaries; Apple signing happens further down,
+      # in a job of its own behind the `signing` environment). ---
 
       # --- Package CLI ---
       - name: Package CLI (Unix)
@@ -153,14 +153,14 @@ jobs:
           name: exiftool-rs-gui-${{ matrix.label }}
           path: exiftool-rs-gui-${{ matrix.label }}.*
 
-  # Gate de parité différentielle live, avant toute signature : on lance le Perl
-  # ExifTool épinglé (EXIFTOOL_VERSION, PAS la dernière version — sinon un tag
-  # amont en avance bloquerait la release) et exiftool-rs sur le corpus, et on
-  # diffe la sortie. Un delta lecture nouveau ou un écart d'écriture fait échouer
-  # le job, donc rien n'est signé ni publié. Le bin télécharge ExifTool lui-même ;
-  # ubuntu-latest fournit perl/curl/tar, et on installe les modules Perl optionnels
-  # dont le corpus a besoin (sinon ExifTool décode moins → faux deltas ; le bin
-  # vérifie aussi leur présence et échoue proprement si l'un manque).
+  # Live differential parity gate, ahead of any signing: run the pinned Perl
+  # ExifTool (EXIFTOOL_VERSION, NOT the latest — an upstream tag running ahead
+  # would otherwise block the release) and exiftool-rs over the corpus, and diff
+  # the output. A new read delta or a write mismatch fails the job, so nothing
+  # gets signed or published. The binary downloads ExifTool itself; ubuntu-latest
+  # provides perl/curl/tar, and we install the optional Perl modules the corpus
+  # needs (without them ExifTool decodes less -> false deltas; the binary also
+  # checks they are present and fails cleanly if one is missing).
   parity:
     needs: lint
     if: startsWith(github.ref, 'refs/tags/v')
@@ -210,11 +210,10 @@ jobs:
           lib=$(echo target/parity/exiftool-*/lib)
           perl scripts/coverage_report.pl "$lib" src --check
 
-  # Signature + notarisation Apple du CLI et de la GUI. Derrière `signing` au même
-  # titre que Windows : les secrets Apple sont désormais des secrets d'environnement
-  # (illisibles depuis le job `build`, qui ne déclare aucun environnement), et une
-  # signature Developer ID engage l'identité du propriétaire — elle ne doit jamais
-  # partir sans approbation explicite.
+  # Apple signing + notarization of the CLI and the GUI. Behind `signing` for the
+  # same reason as Windows: the Apple secrets are environment secrets now (unreadable
+  # from the `build` job, which declares no environment), and a Developer ID signature
+  # commits the owner's identity — it must never go out without explicit approval.
   sign-apple:
     needs: [build, parity]
     if: startsWith(github.ref, 'refs/tags/v')
@@ -311,8 +310,8 @@ jobs:
 
           SIGN_ID="Developer ID Application: Sylvain Gargasson ($APPLE_TEAM_ID)"
 
-          # Les quatre artefacts macOS : CLI + GUI, pour chaque architecture. Le
-          # nom du binaire dans l'archive dépend de la variante, pas du label.
+          # The four macOS artifacts: CLI + GUI, for each architecture. The
+          # binary's name inside the archive depends on the variant, not the label.
           artifacts=(
             "exiftool-rs-cli-macos-arm64:exiftool-rs"
             "exiftool-rs-gui-macos-arm64:exiftool-rs-gui"
@@ -320,7 +319,7 @@ jobs:
             "exiftool-rs-gui-macos-x86_64:exiftool-rs-gui"
           )
 
-          # 1) Signature + vérification, puis zip destiné à la notarisation.
+          # 1) Sign and verify, then zip for notarization.
           for entry in "${artifacts[@]}"; do
             art="${entry%%:*}"
             bin="${entry##*:}"
@@ -338,8 +337,8 @@ jobs:
             echo "::endgroup::"
           done
 
-          # 2) Notarisation en parallèle (chaque soumission passe des minutes à
-          # attendre Apple), puis on collecte les codes de retour un par un.
+          # 2) Notarize in parallel (each submission spends minutes waiting on
+          # Apple), then collect the exit codes one by one.
           pids=()
           for entry in "${artifacts[@]}"; do
             art="${entry%%:*}"
@@ -348,11 +347,11 @@ jobs:
           done
           failed=0
           for i in "${!pids[@]}"; do
-            wait "${pids[$i]}" || { echo "::error::${artifacts[$i]%%:*} : notarisation échouée"; failed=1; }
+            wait "${pids[$i]}" || { echo "::error::${artifacts[$i]%%:*}: notarization failed"; failed=1; }
           done
           [ $failed -eq 0 ] || exit 1
 
-          # 3) Ré-empaquetage des binaires signés, sous leur nom d'origine.
+          # 3) Repackage the signed binaries under their original names.
           for entry in "${artifacts[@]}"; do
             art="${entry%%:*}"
             bin="${entry##*:}"
@@ -425,25 +424,25 @@ jobs:
             -n "exiftool-rs" -u "https://github.com/${{ github.repository }}" \
             exiftool-rs.exe exiftool-rs-gui.exe
           sudo apt-get update -qq && sudo apt-get install -y osslsigncode
-          # Vérifie les faits, pas la présence d'une phrase. « Calculated message
-          # digest » apparaît AUSSI quand le digest ne correspond pas, et ne dit
-          # rien de l'horodatage : ce contrôle laissait donc passer une signature
-          # que Windows aurait rejetée, et des binaires non horodatés — donc
-          # invalides dès l'expiration du certificat.
+          # Check the facts, not the presence of a sentence. "Calculated message
+          # digest" appears just as much when the digest does NOT match, and says
+          # nothing about timestamping: this check therefore used to let through a
+          # signature Windows would have rejected, and untimestamped binaries —
+          # invalid the moment the certificate expires.
           verify_signature() {
             local out
             out=$(osslsigncode verify "$1" 2>&1) || true
             echo "$out"
             if echo "$out" | grep -q "MISMATCH"; then
-              echo "::error::$1 : digest Authenticode invalide (Windows le verrait comme falsifié)"
+              echo "::error::$1: invalid Authenticode digest (Windows would see it as tampered with)"
               return 1
             fi
             if echo "$out" | grep -q "Timestamp is not available"; then
-              echo "::error::$1 : signature non horodatée (invalide dès l'expiration du certificat)"
+              echo "::error::$1: signature is not timestamped (invalid as soon as the certificate expires)"
               return 1
             fi
             if ! echo "$out" | grep -q "Signature verification: ok"; then
-              echo "::error::$1 : vérification de signature échouée"
+              echo "::error::$1: signature verification failed"
               return 1
             fi
           }
@@ -490,15 +489,15 @@ jobs:
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
         with:
           generate_release_notes: true
-          # Tags pré-release (v*-rc/-beta) marqués « pre-release » dans l'UI GitHub.
+          # Pre-release tags (v*-rc/-beta) are marked "pre-release" in the GitHub UI.
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: ${{ runner.temp }}/artifacts/**/*
 
-  # Publication crates.io — seul geste irréversible du pipeline (« yank » ne
-  # supprime rien) : elle passe donc APRÈS la release GitHub, qui est révocable,
-  # et uniquement sur les tags finaux. Trusted Publishing : aucun secret longue
-  # durée, GitHub atteste l'identité du workflow (repo + fichier + environnement)
-  # et crates.io émet un jeton éphémère, révoqué en fin de job.
+  # crates.io publish — the one irreversible step in the pipeline ("yank" deletes
+  # nothing): it therefore runs AFTER the GitHub release, which can be revoked, and
+  # only on final tags. Trusted Publishing: no long-lived secret, GitHub attests the
+  # workflow's identity (repo + file + environment) and crates.io issues an ephemeral
+  # token, revoked when the job ends.
   publish-crates:
     needs: [build, release]
     if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
@@ -506,7 +505,7 @@ jobs:
     environment: crates-io
     permissions:
       contents: read
-      id-token: write        # nécessaire pour demander le jeton OIDC à GitHub
+      id-token: write        # needed to request the OIDC token from GitHub
 
     steps:
       - uses: actions/checkout@v7

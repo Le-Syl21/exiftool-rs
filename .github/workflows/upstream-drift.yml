@@ -1,23 +1,23 @@
 name: Upstream drift
 
-# Détecte ce qu'ExifTool amont a gagné et que ce port n'a pas. Motivation : le
-# support Garmin FIT est arrivé en 13.56 (avril 2026) et n'a été remarqué que
-# six versions plus tard, par hasard. Rien ne le signalait.
+# Detects what upstream ExifTool has gained and this port has not. Why: Garmin
+# FIT support landed in 13.56 (April 2026) and went unnoticed for six releases,
+# then turned up by accident. Nothing flagged it.
 #
-# Deux signaux, volontairement distincts :
+# Two signals, deliberately kept apart:
 #
-#  1. Corpus de test — un fichier apparu dans t/images/ amont. Signal FORT :
-#     quand ExifTool gagne un format, il ajoute son fichier de test. C'est
-#     aussi le seul qui aurait attrapé Garmin FIT, car le signal par extension
-#     y est aveugle : ce port associe déjà .fit à FITS (un format d'astronomie
-#     sans rapport), donc l'extension figurait des deux côtés.
+#  1. Test corpus — a file that appeared in upstream t/images/. STRONG signal:
+#     when ExifTool gains a format, it adds that format's test file. It is also
+#     the only one that would have caught Garmin FIT, because the extension
+#     signal is blind there: this port already maps .fit to FITS (an unrelated
+#     astronomy format), so the extension was present on both sides.
 #
-#  2. Extensions — diff de `exiftool -listf` contre `exiftool-rs -listf`.
-#     Signal FAIBLE et bruyant : liste aussi tout ce qu'on ne portera jamais.
-#     Utile seulement pour repérer un format sans fichier de test.
+#  2. Extensions — a diff of `exiftool -listf` against `exiftool-rs -listf`.
+#     WEAK and noisy signal: it also lists everything we will never port.
+#     Useful only for spotting a format that came without a test file.
 on:
   schedule:
-    - cron: '0 6 1 * *'      # le 1er de chaque mois
+    - cron: '0 6 1 * *'      # the 1st of every month
   workflow_dispatch:
 
 permissions:
@@ -36,10 +36,10 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
 
-      - name: Checkout ExifTool amont
+      - name: Check out upstream ExifTool
         run: git clone -q --depth 1 https://github.com/exiftool/exiftool.git /tmp/exiftool
 
-      - name: Comparer
+      - name: Compare
         id: diff
         run: |
           set -euo pipefail
@@ -58,24 +58,24 @@ jobs:
           comm -23 /tmp/up-ext.txt /tmp/my-ext.txt > /tmp/new-ext.txt || true
 
           {
-            echo "## ExifTool amont : \`$upstream_ver\` — porté ici : \`$ported_ver\`"
+            echo "## Upstream ExifTool: \`$upstream_ver\` — ported here: \`$ported_ver\`"
             echo
             if [ -s /tmp/new-files.txt ]; then
-              echo "### 🔴 Fichiers de test présents en amont, absents ici"
+              echo "### 🔴 Test files present upstream, missing here"
               echo
-              echo "Quand ExifTool gagne un format, il ajoute son fichier de test."
-              echo "Chaque ligne est probablement une couverture nouvelle à porter."
+              echo "When ExifTool gains a format, it adds that format's test file."
+              echo "Each line here is most likely new coverage to port."
               echo
               echo '```'
               cat /tmp/new-files.txt
               echo '```'
             else
-              echo "### ✅ Corpus de test aligné sur l'amont"
+              echo "### ✅ Test corpus is in step with upstream"
             fi
             echo
-            echo "<details><summary>Extensions déclarées en amont et pas ici ($(wc -l < /tmp/new-ext.txt))</summary>"
+            echo "<details><summary>Extensions declared upstream and not here ($(wc -l < /tmp/new-ext.txt))</summary>"
             echo
-            echo "Signal secondaire et bruyant : contient aussi les formats qu'on ne portera pas."
+            echo "Secondary, noisy signal: it also contains the formats we will not port."
             echo
             echo '```'
             tr '\n' ' ' < /tmp/new-ext.txt | fold -sw 76
@@ -85,13 +85,13 @@ jobs:
 
           if [ -s /tmp/new-files.txt ]; then echo "drift=yes" >> "$GITHUB_OUTPUT"; else echo "drift=no" >> "$GITHUB_OUTPUT"; fi
 
-      - name: Ouvrir ou mettre à jour l'issue
+      - name: Open or update the issue
         if: steps.diff.outputs.drift == 'yes'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          title="Dérive amont : de nouveaux fichiers de test ExifTool ne sont pas couverts"
+          title="Upstream drift: new ExifTool test files are not covered here"
           existing=$(gh issue list --state open --search "$title in:title" --json number -q '.[0].number' || true)
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body-file /tmp/report.md
@@ -99,5 +99,5 @@ jobs:
             gh issue create --title "$title" --body-file /tmp/report.md
           fi
 
-      - name: Résumé
+      - name: Summary
         run: cat /tmp/report.md >> "$GITHUB_STEP_SUMMARY"
