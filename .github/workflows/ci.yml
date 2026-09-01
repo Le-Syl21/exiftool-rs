@@ -45,7 +45,7 @@ jobs:
           fi
           echo "tag $GITHUB_REF_NAME <-> Cargo.toml $crate: OK"
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16  # v2
 
       - name: Install GUI dependencies
         run: |
@@ -100,7 +100,7 @@ jobs:
           # cross-build (the macos-latest runner is arm64).
           targets: ${{ matrix.target }}
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16  # v2
 
       - name: Install GUI dependencies (Linux)
         if: runner.os == 'Linux'
@@ -173,7 +173,7 @@ jobs:
         with:
           toolchain: stable
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16  # v2
 
       # Pull ExifTool's full optional Perl-module set (Archive::Zip, LZMA, Brotli,
       # Unicode::LineBreak from Recommends, POSIX::strptime from Suggests) via the
@@ -486,7 +486,7 @@ jobs:
           path: ${{ runner.temp }}/artifacts
 
       - name: Create release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
         with:
           generate_release_notes: true
           # Pre-release tags (v*-rc/-beta) are marked "pre-release" in the GitHub UI.
