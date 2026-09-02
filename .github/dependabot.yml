@@ -6,6 +6,27 @@ version: 2
 # reçoit plus les correctifs automatiquement — c'est le rôle de Dependabot, qui
 # sait mettre à jour un SHA épinglé et garder le commentaire de version à jour.
 updates:
+  # Crates: one grouped PR a month for the routine bumps, and a separate PR
+  # per major, so a breaking change never holds the rest of them hostage.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      # egui and its satellites move in lockstep: eframe, egui_glow, egui-winit
+      # and egui_inspection each require an exact egui minor, so a PR bumping
+      # one of them alone cannot build. One group, one PR — and it takes every
+      # update type, because for a 0.x crate Dependabot calls 0.36 -> 0.37 a
+      # *minor* update while Cargo treats it as breaking.
+      egui:
+        patterns: ["egui", "egui-*", "egui_*", "eframe"]
+      crates:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: chore
+
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
