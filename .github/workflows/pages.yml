@@ -48,6 +48,12 @@ jobs:
           cargo run --release --features parity --bin parity -- --dump \
             | python3 scripts/parity_report.py > _site/index.html
           test -s _site/index.html
+          cat > _site/sitemap.xml <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://le-syl21.github.io/exiftool-rs/</loc></url>
+          </urlset>
+          EOF
 
       - uses: actions/upload-pages-artifact@v5
         with:
