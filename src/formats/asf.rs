@@ -77,7 +77,7 @@ fn parse_asf_objects(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>)
             data[pos + 23],
         ]) as usize;
 
-        if obj_size < 24 || pos + obj_size > end {
+        if obj_size < 24 || obj_size > end.saturating_sub(pos) {
             break;
         }
 

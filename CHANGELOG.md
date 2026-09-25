@@ -2,6 +2,44 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.8.1] - 2026-09-25
+
+A robustness release. No tag, value or group changes: the parity audit still
+reads 196 / 196 files identical to ExifTool 13.59.
+
+### Fixed
+
+Corrupt, truncated or hostile files could abort the process (stack overflow),
+panic, allocate gigabytes or loop forever. Found by fuzzing every supported
+extension (`fuzz/`), each case now returns partial tags or an error:
+
+- EXIF: a SubIFD or ExifIFD pointer back to an IFD already being read
+  recursed until the stack overflowed. IFD nesting is capped at 32 and no IFD
+  is read twice.
+- Lytro (`.lfp`): the JSON reader looped forever on a stray character inside
+  an array, and slowed quadratically on deep nesting (now capped at 64).
+- JPEG extended XMP: the buffer was sized from the total the segment
+  declares, so a 1 KB file could ask for 3 GB.
+- FlashPix / OLE2 (`.fpx`, `.ppt`, `.doc`, ...): cyclic sector chains copied
+  up to 655 MB per stream; oversized sector shifts overflowed.
+- TNEF: a multi-value property declaring billions of empty values spun.
+- Sony SR2: a value count was reserved before checking it fits.
+- Binary plist reference cycles; RIFF, DSS and PostScript truncation (the
+  four readers fixed first, in `196ebb2`).
+- Text cut inside a UTF-8 character: vCard/iCalendar dates, HTML dates,
+  GeoTIFF ASCII parameters, composite SubSec dates, RIFF dates, GoPro GPSU
+  time, SVG `rdf:RDF` blocks.
+- Arithmetic overflow in PICT and PCX dimensions (now signed, as in
+  ExifTool), TNEF and LNK FILETIMEs, ASF object sizes, MXF BER lengths and
+  the Google HDR+ bit reader.
+- LNK: a shell item shorter than its type byte.
+
+### Added
+
+- `fuzz/`, a cargo-fuzz harness over the whole reader (the first input byte
+  picks the extension), and `tests/malformed/`, one regression input per
+  format and failure kind.
+
 ## [0.8.0] - 2026-08-29
 
 Three numbers this release is measured by, each printed by a tool in the
