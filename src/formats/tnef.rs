@@ -81,7 +81,7 @@ fn filetime_to_datetime(ft: u64) -> Option<String> {
     }
     // Unix time = (ft / 10_000_000) - 11644473600, rounded to the nearest second
     // (ExifTool rounds the fractional FILETIME).
-    let secs = ((ft + 5_000_000) / 10_000_000) as i64 - 11644473600;
+    let secs = (ft.checked_add(5_000_000)? / 10_000_000) as i64 - 11644473600;
     if secs < 0 {
         return None;
     }
@@ -254,12 +254,18 @@ fn process_props(data: &[u8], tags: &mut Vec<Tag>) {
             1
         };
 
-        for _j in 0..count {
+        for j in 0..count {
+            let before = pos;
             let result = read_prop_value_ex(data, &mut pos, eff_prop_type, is_multi);
             let val = match result {
                 Some(v) => v,
                 None => break,
             };
+            // A declared count of billions over values that consume no bytes
+            // would spin forever: stop once the data stops advancing.
+            if j > 0 && pos == before {
+                break;
+            }
 
             // Determine tag name from either named key or numeric tag
             let tag_name: Option<(&'static str, String)> = if let Some(ref key) = named_key {

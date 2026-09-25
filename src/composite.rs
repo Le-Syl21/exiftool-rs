@@ -1413,7 +1413,10 @@ fn make_subsec_date(
         modified = true;
     }
     // Only add offset if date doesn't already have timezone (contains '+' or '-' after time part)
-    if !(offset.is_empty() || dt.contains('+') || dt.len() > 10 && dt[10..].contains('-')) {
+    if !(offset.is_empty()
+        || dt.contains('+')
+        || dt.as_bytes().get(10..).is_some_and(|t| t.contains(&b'-')))
+    {
         result = format!("{}{}", result, offset.trim());
         modified = true;
     }

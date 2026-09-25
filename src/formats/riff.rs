@@ -1108,7 +1108,7 @@ fn parse_bext(
         if !dt_str.is_empty() {
             // Convert YYYY-MM-DD to YYYY:MM:DD
             let converted = dt_str.replace('-', ":");
-            let converted = if converted.len() >= 10 {
+            let converted = if converted.len() >= 10 && converted.is_char_boundary(10) {
                 format!("{} {}", &converted[..10], converted[10..].trim())
             } else {
                 converted

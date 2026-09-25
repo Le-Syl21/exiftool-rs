@@ -67,7 +67,7 @@ fn convert_datetime(val: &str) -> String {
     let mut s = val.to_string();
     // YYYYMMDDTHHMMSSZ -> YYYY:MM:DD HH:MM:SSZ
     let s_bytes = s.as_bytes();
-    if s_bytes.len() >= 15 && s_bytes[8] == b'T' {
+    if s_bytes.len() >= 15 && s_bytes[..15].is_ascii() && s_bytes[8] == b'T' {
         let year = &s[0..4];
         let month = &s[4..6];
         let day = &s[6..8];
@@ -84,7 +84,8 @@ fn convert_datetime(val: &str) -> String {
         s = format!("{}:{}:{}", year, month, day);
     }
     // YYYY-MM-DD -> YYYY:MM:DD
-    if s.len() >= 10 && s.as_bytes()[4] == b'-' && s.as_bytes()[7] == b'-' {
+    if s.len() >= 10 && s.is_char_boundary(10) && s.as_bytes()[4] == b'-' && s.as_bytes()[7] == b'-'
+    {
         s = format!("{}:{}:{}{}", &s[0..4], &s[5..7], &s[8..10], &s[10..]);
     }
     s
@@ -428,7 +429,7 @@ fn parse_vcard_line(line: &str) -> Option<ParsedLine> {
             }
         } else {
             // Bare parameter (old vCard 2.x style) - treat as TYPE
-            if !param_name.is_empty() && bytes[pos] != b':' {
+            if !param_name.is_empty() && bytes.get(pos) != Some(&b':') {
                 types.push(ucfirst_lower(param_name));
             } else if !param_name.is_empty() {
                 // Check if it's a known encoding

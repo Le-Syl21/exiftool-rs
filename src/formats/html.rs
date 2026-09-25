@@ -472,11 +472,15 @@ fn extract_between(s: &str, open: &str, close: &str) -> Option<String> {
 /// Convert XMP/ISO 8601 date format to ExifTool format.
 fn convert_xmp_date(s: &str) -> String {
     // e.g. "2010-06-28T23:52:00Z" -> "2010:06:28 23:52:00Z"
-    if s.len() >= 19 && s.chars().nth(4) == Some('-') {
+    if s.len() >= 19
+        && s.is_char_boundary(10)
+        && s.is_char_boundary(11)
+        && s.chars().nth(4) == Some('-')
+    {
         let date = s[..10].replace('-', ":");
         let time_part = &s[11..];
         format!("{} {}", date, time_part)
-    } else if s.len() >= 10 && s.chars().nth(4) == Some('-') {
+    } else if s.len() >= 10 && s.is_char_boundary(10) && s.chars().nth(4) == Some('-') {
         s[..10].replace('-', ":")
     } else {
         s.to_string()

@@ -809,7 +809,7 @@ fn process_item_id(data: &[u8], tags: &mut Vec<Tag>) {
         if size == 0 {
             break;
         }
-        if size < 4 {
+        if size < 4 || pos + 3 > data.len() {
             break;
         }
         let actual_size = if pos + size > data.len() {

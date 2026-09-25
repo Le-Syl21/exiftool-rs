@@ -320,7 +320,7 @@ fn huffman_decode(br: &mut BitReader, table: &[(u16, u8)], max_bits: u8) -> Opti
     }
     let peeked = br.bits & ((1 << max_bits) - 1);
     let (sym, len) = table[peeked as usize];
-    if len == 0 || sym == 0xffff {
+    if len == 0 || sym == 0xffff || len as u32 > br.nbits {
         return None;
     }
     br.bits >>= len;

@@ -47,7 +47,6 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
     let mut pos = 2;
     // Extended XMP chunk accumulator: (total_size, chunks sorted by offset)
     let mut ext_xmp_chunks: Vec<(u32, Vec<u8>)> = Vec::new();
-    let mut ext_xmp_total: u32 = 0;
     // FLIR FFF chunk accumulator: indexed by chunk number
     let mut flir_chunks: Vec<Option<Vec<u8>>> = Vec::new();
     let mut flir_count: usize = 0;
@@ -484,10 +483,8 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                 {
                     let rest = &seg_data[35..];
                     if rest.len() >= 40 {
-                        let total = u32::from_be_bytes([rest[32], rest[33], rest[34], rest[35]]);
                         let offset = u32::from_be_bytes([rest[36], rest[37], rest[38], rest[39]]);
                         let chunk = &rest[40..];
-                        ext_xmp_total = total;
                         ext_xmp_chunks.push((offset, chunk.to_vec()));
                     }
                 }
@@ -822,7 +819,8 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
     // Assemble and parse Extended XMP chunks (Perl: after SOS, reassemble by offset)
     if !ext_xmp_chunks.is_empty() {
         ext_xmp_chunks.sort_by_key(|(off, _)| *off);
-        let mut assembled = Vec::with_capacity(ext_xmp_total as usize);
+        // Size from the chunks actually present, never the declared total.
+        let mut assembled = Vec::with_capacity(ext_xmp_chunks.iter().map(|(_, c)| c.len()).sum());
         for (_, chunk) in &ext_xmp_chunks {
             assembled.extend_from_slice(chunk);
         }

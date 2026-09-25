@@ -125,14 +125,28 @@ fn extract_tags_from_json(json: &str, tags: &mut Vec<Tag>) {
     if pos >= chars.len() {
         return;
     }
-    extract_object(&chars, &mut pos, "", tags);
+    extract_object(&chars, &mut pos, "", tags, 0);
 }
 
 /// Parse a JSON object at the current position (which must point to '{').
 /// For each key-value pair, build a tag path and emit tags.
 /// `parent` is the accumulated tag path so far (CamelCase).
-fn extract_object(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<Tag>) {
+/// Nesting limit: real Lytro metadata is a few levels deep, and each level
+/// lengthens the accumulated tag path, so unbounded nesting is quadratic.
+const MAX_JSON_DEPTH: usize = 64;
+
+fn extract_object(
+    chars: &[char],
+    pos: &mut usize,
+    parent: &str,
+    tags: &mut Vec<Tag>,
+    depth: usize,
+) {
     if *pos >= chars.len() || chars[*pos] != '{' {
+        return;
+    }
+    if depth >= MAX_JSON_DEPTH {
+        *pos = find_matching(chars, *pos, '{', '}') + 1;
         return;
     }
     *pos += 1; // skip '{'
@@ -178,11 +192,11 @@ fn extract_object(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<
         match chars[*pos] {
             '{' => {
                 // Nested object: recurse
-                extract_object(chars, pos, &tag_path, tags);
+                extract_object(chars, pos, &tag_path, tags, depth + 1);
             }
             '[' => {
                 // Array: iterate elements
-                extract_array(chars, pos, &tag_path, tags);
+                extract_array(chars, pos, &tag_path, tags, depth + 1);
             }
             '"' => {
                 let val = read_json_string(chars, pos);
@@ -215,8 +229,12 @@ fn extract_object(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<
 }
 
 /// Parse a JSON array at the current position (which must point to '[').
-fn extract_array(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<Tag>) {
+fn extract_array(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<Tag>, depth: usize) {
     if *pos >= chars.len() || chars[*pos] != '[' {
+        return;
+    }
+    if depth >= MAX_JSON_DEPTH {
+        *pos = find_matching(chars, *pos, '[', ']') + 1;
         return;
     }
     *pos += 1; // skip '['
@@ -236,7 +254,7 @@ fn extract_array(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<T
         match chars[*pos] {
             '{' => {
                 // Array of objects: recurse into each object with same parent
-                extract_object(chars, pos, parent, tags);
+                extract_object(chars, pos, parent, tags, depth + 1);
             }
             '[' => {
                 // Nested array: skip
@@ -259,7 +277,10 @@ fn extract_array(chars: &[char], pos: &mut usize, parent: &str, tags: &mut Vec<T
             }
             _ => {
                 let num = read_number(chars, pos);
-                if !num.is_empty() {
+                if num.is_empty() {
+                    // Not a JSON value: step over it instead of spinning on it.
+                    *pos += 1;
+                } else {
                     scalars.push(num);
                 }
             }

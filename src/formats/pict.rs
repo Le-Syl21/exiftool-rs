@@ -30,8 +30,8 @@ pub fn read_pict(data: &[u8]) -> Result<Vec<Tag>> {
     // Version 2 opcode: 0x0011 at bytes 10-11
     let mut h_res: Option<f64> = None;
     let mut v_res: Option<f64> = None;
-    let mut w = (right - left) as i32;
-    let mut h = (bottom - top) as i32;
+    let mut w = right as i32 - left as i32;
+    let mut h = bottom as i32 - top as i32;
 
     if d.len() >= 40 && d[10] == 0x00 && d[11] == 0x11 {
         // Version 2: next 2 bytes are 0x02ff, then check for extended

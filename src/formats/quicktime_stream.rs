@@ -1080,7 +1080,7 @@ fn process_gpmf_klv(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) 
             // GPS UTC time: "yymmddhhmmss.sss"
             if let Ok(s) = std::str::from_utf8(&data[data_start..data_start + total_data.min(16)]) {
                 let s = s.trim_end_matches('\0');
-                if s.len() >= 12 {
+                if s.len() >= 12 && s.as_bytes()[..12].is_ascii() {
                     let dt = format!(
                         "20{}:{}:{} {}:{}:{}Z",
                         &s[0..2],

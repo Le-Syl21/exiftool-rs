@@ -152,7 +152,8 @@ fn read_sector_chain(data: &[u8], fat: &[u32], start_sector: u32, sector_size: u
 
     while sector != END_OF_CHAIN && sector != FREESECT && count < 10000 {
         let offset = HDR_SIZE + sector as usize * sector_size;
-        if offset + sector_size > data.len() {
+        // A real chain never holds more than the file itself; a cyclic FAT would.
+        if offset + sector_size > data.len() || result.len() + sector_size > data.len() {
             break;
         }
         result.extend_from_slice(&data[offset..offset + sector_size]);
@@ -1200,7 +1201,7 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
     let sector_size = if sector_size_exp == 0 {
         512
     } else {
-        1 << sector_size_exp
+        1usize.checked_shl(sector_size_exp).unwrap_or(0)
     };
     if !(64..=65536).contains(&sector_size) {
         return Err(Error::InvalidData("invalid OLE sector size".into()));
@@ -1212,7 +1213,7 @@ pub fn read_fpx(data: &[u8]) -> Result<Vec<Tag>> {
     let mini_sector_size = if mini_sector_size_exp == 0 {
         64
     } else {
-        (1u32 << mini_sector_size_exp) as usize
+        1usize.checked_shl(mini_sector_size_exp).unwrap_or(0)
     };
     let mini_stream_cutoff = r32(data, 56);
     let first_mini_fat_sector = r32(data, 60);

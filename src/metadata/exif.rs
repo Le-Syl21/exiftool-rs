@@ -32,6 +32,56 @@ thread_local! {
     /// binary sub-table can be conditioned on it, and Kodak's Type9 reads four
     /// of its fields only when the file says Kodak wrote it.
     static MAKE: RefCell<String> = const { RefCell::new(String::new()) };
+    /// The IFDs of the TIFF block being read, and how deep the reader is: see
+    /// [`IfdVisit`].
+    static IFD_WALK: RefCell<IfdWalk> = RefCell::new(IfdWalk::default());
+}
+
+/// Deepest nesting of sub-IFDs followed. Real files stop at a handful of
+/// levels (IFD0, ExifIFD, InteropIFD, a MakerNote's own); this only guards
+/// against the forged ones.
+const MAX_IFD_DEPTH: usize = 32;
+
+#[derive(Default)]
+struct IfdWalk {
+    depth: usize,
+    /// IFDs already read, by (TIFF block address, offset in it). ExifTool keeps
+    /// the same record in `$$self{PROCESSED}` and skips a directory it has
+    /// already processed.
+    seen: std::collections::HashSet<(usize, u32)>,
+}
+
+/// One IFD being read. Entering refuses an IFD already read in this TIFF block
+/// and a nesting deeper than [`MAX_IFD_DEPTH`]: a pointer back to an ancestor
+/// otherwise recursed until the stack overflowed, which aborts the whole
+/// process, and an IFD referenced many times over expanded exponentially.
+/// The record is cleared when the outermost IFD is done, so every top-level
+/// read starts afresh.
+struct IfdVisit;
+
+impl IfdVisit {
+    fn enter(data: &[u8], offset: u32) -> Option<Self> {
+        IFD_WALK.with(|walk| {
+            let mut walk = walk.borrow_mut();
+            if walk.depth >= MAX_IFD_DEPTH || !walk.seen.insert((data.as_ptr() as usize, offset)) {
+                return None;
+            }
+            walk.depth += 1;
+            Some(IfdVisit)
+        })
+    }
+}
+
+impl Drop for IfdVisit {
+    fn drop(&mut self) {
+        IFD_WALK.with(|walk| {
+            let mut walk = walk.borrow_mut();
+            walk.depth -= 1;
+            if walk.depth == 0 {
+                walk.seen.clear();
+            }
+        })
+    }
 }
 
 /// Set the Software string the file declares (ExifTool's `$$self{Software}`).
@@ -996,6 +1046,10 @@ impl ExifReader {
         ifd_name: &str,
         tags: &mut Vec<Tag>,
     ) -> Result<Option<u32>> {
+        // Already read, or nested too deep: nothing more to find here.
+        let Some(_visit) = IfdVisit::enter(data, offset) else {
+            return Ok(None);
+        };
         let offset = offset as usize;
         if offset + 2 > data.len() {
             return Err(Error::InvalidExif(format!(
@@ -1980,8 +2034,7 @@ fn process_geotiff_keys(tags: &mut Vec<Tag>) {
                 if let Some(ref ascii) = ascii_params {
                     let off = value_or_offset as usize;
                     let end = (off + count).min(ascii.len());
-                    if off <= end {
-                        let s = &ascii[off..end];
+                    if let Some(s) = ascii.get(off..end) {
                         // Remove trailing '|' separators
                         let s = s.trim_end_matches('|').trim().to_string();
                         Some(s)

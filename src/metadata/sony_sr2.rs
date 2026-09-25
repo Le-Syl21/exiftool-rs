@@ -85,6 +85,10 @@ fn read_values(
     } else {
         base.checked_add(0)? + voff.checked_sub(0)?
     };
+    // Check the whole run fits before reserving room for a declared count.
+    if start.checked_add(total)? > block.len() {
+        return None;
+    }
     let mut out = Vec::with_capacity(count);
     for i in 0..count {
         let o = start + i * w;

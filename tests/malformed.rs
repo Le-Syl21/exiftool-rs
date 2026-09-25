@@ -40,3 +40,21 @@ fn riff_truncated_chunks() {
     survives("riff-truncated.avi");
     survives("riff-truncated.wav");
 }
+
+/// One input per format and failure kind from the first cargo-fuzz campaign
+/// (`fuzz/`): stack overflows through looping EXIF IFDs, slices cut inside a
+/// character, arithmetic overflows, a declared 3 GB extended-XMP buffer, and
+/// parsers that spun without advancing (Lytro JSON, TNEF, cyclic OLE2 FATs).
+#[test]
+fn fuzz_campaign_1() {
+    let mut names: Vec<_> = std::fs::read_dir("tests/malformed")
+        .unwrap()
+        .filter_map(|e| e.ok()?.file_name().into_string().ok())
+        .filter(|n| n.starts_with("fuzz-"))
+        .collect();
+    names.sort();
+    assert!(!names.is_empty());
+    for name in &names {
+        survives(name);
+    }
+}

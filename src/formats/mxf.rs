@@ -412,7 +412,7 @@ pub fn read_mxf(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
             (l, 1 + n)
         };
         let val_start = pos + 16 + ber_size;
-        if val_start + val_len > data.len() {
+        if val_start > data.len() || val_len > data.len() - val_start {
             break;
         }
         let val = &data[val_start..val_start + val_len];

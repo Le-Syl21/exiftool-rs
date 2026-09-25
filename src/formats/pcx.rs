@@ -74,13 +74,13 @@ pub fn read_pcx(data: &[u8]) -> Result<Vec<Tag>> {
         "File",
         "ImageWidth",
         "Image Width",
-        Value::U16(xmax - xmin + 1),
+        Value::I32(xmax as i32 - xmin as i32 + 1),
     ));
     tags.push(mktag(
         "File",
         "ImageHeight",
         "Image Height",
-        Value::U16(ymax - ymin + 1),
+        Value::I32(ymax as i32 - ymin as i32 + 1),
     ));
     tags.push(mktag(
         "File",

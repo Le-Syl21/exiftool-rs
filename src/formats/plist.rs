@@ -254,7 +254,9 @@ fn parse_object(
             let mut arr = Vec::new();
             for i in 0..count {
                 let elem_ref = read_int(data, refs_start + i * ref_size, ref_size)?;
-                if let Some(val) = parse_object(data, offsets, ref_size, elem_ref, depth + 1, budget) {
+                if let Some(val) =
+                    parse_object(data, offsets, ref_size, elem_ref, depth + 1, budget)
+                {
                     arr.push(val);
                 }
             }
@@ -278,7 +280,9 @@ fn parse_object(
                 if let Some(PlistValue::String(key)) =
                     parse_object(data, offsets, ref_size, key_ref, depth + 1, budget)
                 {
-                    if let Some(val) = parse_object(data, offsets, ref_size, val_ref, depth + 1, budget) {
+                    if let Some(val) =
+                        parse_object(data, offsets, ref_size, val_ref, depth + 1, budget)
+                    {
                         map.insert(key, val);
                     }
                 }

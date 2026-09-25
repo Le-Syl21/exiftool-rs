@@ -309,7 +309,7 @@ pub fn read_svg(data: &[u8]) -> Result<Vec<Tag>> {
     // We look for the rdf:RDF section in the original text and pass it to XmpReader.
     // XmpReader handles rdf:RDF as a valid XMP envelope.
     if let Some(rdf_start) = text.find("<rdf:RDF") {
-        if let Some(rdf_end) = text.find("</rdf:RDF>") {
+        if let Some(rdf_end) = text[rdf_start..].find("</rdf:RDF>").map(|e| rdf_start + e) {
             let rdf_section = &text[rdf_start..rdf_end + "</rdf:RDF>".len()];
             if let Ok(xmp_tags) = XmpReader::read(rdf_section.as_bytes()) {
                 tags.extend(xmp_tags);

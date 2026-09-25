@@ -206,7 +206,10 @@ fn match_begin(line: &str) -> Option<(&str, &str, &str)> {
     // get() rather than indexing: a corrupt line may hold non-ASCII bytes, and
     // slicing a &str inside a character panics. Once get(..5) succeeds, byte 5
     // is a character boundary, so the slices below are safe.
-    if !rest.get(..5).is_some_and(|b| b.eq_ignore_ascii_case("Begin")) {
+    if !rest
+        .get(..5)
+        .is_some_and(|b| b.eq_ignore_ascii_case("Begin"))
+    {
         return None;
     }
     let after = &rest[5..];
@@ -217,7 +220,10 @@ fn match_begin(line: &str) -> Option<(&str, &str, &str)> {
         "Document",
         "Binary",
     ] {
-        if after.get(..kw.len()).is_some_and(|a| a.eq_ignore_ascii_case(kw)) {
+        if after
+            .get(..kw.len())
+            .is_some_and(|a| a.eq_ignore_ascii_case(kw))
+        {
             return Some((&line[..pct_len], &rest[..5], &after[..kw.len()]));
         }
     }

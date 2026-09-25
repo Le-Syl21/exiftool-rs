@@ -1,0 +1,26 @@
+[package]
+name = "exiftool-rs-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.exiftool-rs]
+path = ".."
+
+# Its own workspace, so the fuzz crate and its nightly-only build never touch
+# the library's.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "extract"
+path = "fuzz_targets/extract.rs"
+test = false
+doc = false
+bench = false

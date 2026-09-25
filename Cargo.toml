@@ -16,6 +16,8 @@ exclude = [
     ".github/",
     "tests/images/",
     "tests/expected/",
+    "tests/malformed/",
+    "fuzz/",
     "assets/fonts/",
     "assets/screenshot.png",
 ]
