@@ -33,7 +33,17 @@ pub fn read_crw(data: &[u8]) -> Result<Vec<Tag>> {
     let mut tags = Vec::new();
 
     // The root directory starts after the header and spans the rest of the file
-    parse_ciff_dir(data, hlen, data.len(), is_le, &mut tags, 0, false);
+    let mut seen = std::collections::HashSet::new();
+    parse_ciff_dir(
+        data,
+        hlen,
+        data.len(),
+        is_le,
+        &mut tags,
+        0,
+        false,
+        &mut seen,
+    );
 
     // CanonRaw.pm:248-269 — CIFF tag 0x180b is a three-way conditional list:
     // SerialNumber when `$$self{Model} =~ /EOS D30\b/`, SerialNumber again when
@@ -104,6 +114,7 @@ fn find_xmp_end(data: &[u8], xmp_start: usize) -> Option<usize> {
 /// `CanonRaw::Main` table (family-1 group `CanonRaw`); the binary sub-directories
 /// it points at are the ordinary Canon maker-note tables, so
 /// [`parse_ciff_binary_subdir`] groups those under `Canon`.
+#[allow(clippy::too_many_arguments)]
 fn parse_ciff_dir(
     data: &[u8],
     block_start: usize,
@@ -112,6 +123,7 @@ fn parse_ciff_dir(
     tags: &mut Vec<Tag>,
     depth: u32,
     in_image_description: bool,
+    seen: &mut std::collections::HashSet<usize>,
 ) {
     if depth > 10 || block_end <= block_start || block_end > data.len() {
         return;
@@ -124,6 +136,11 @@ fn parse_ciff_dir(
     let dir_offset = read_u32(data, block_end - 4, is_le) as usize + block_start;
 
     if dir_offset + 2 > block_end {
+        return;
+    }
+    // Like ExifTool's $$self{PROCESSED}: a directory is read once. Sibling
+    // entries pointing at the same block otherwise multiply at every level.
+    if !seen.insert(dir_offset) {
         return;
     }
 
@@ -167,6 +184,7 @@ fn parse_ciff_dir(
                     tags,
                     depth + 1,
                     is_image_desc,
+                    seen,
                 );
             }
             continue;

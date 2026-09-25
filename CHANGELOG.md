@@ -2,6 +2,20 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [0.8.2] - 2026-09-26
+
+A fifth fuzzing round, run before 0.8.1 reached crates.io, found three more
+cases. 0.8.1 was published on GitHub only; this release supersedes it. The
+parity audit still reads 196 / 196 files identical to ExifTool 13.59.
+
+### Fixed
+
+- CRW (Canon RAW): sibling entries pointing at the same sub-directory were
+  read again at every level, so a 54 KB file grew past 2 GB of tags. A
+  directory is now read once, as ExifTool's `PROCESSED` check does.
+- PDF: an octal escape above `\377` in a string overflowed a byte; the high
+  bit is dropped, as the PDF specification says.
+
 ## [0.8.1] - 2026-09-25
 
 A robustness release. No tag, value or group changes: the parity audit still
