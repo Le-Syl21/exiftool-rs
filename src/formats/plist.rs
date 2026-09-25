@@ -68,7 +68,8 @@ pub fn parse_binary_plist(data: &[u8]) -> Option<HashMap<String, PlistValue>> {
     }
 
     // Parse objects recursively starting from top_obj
-    let result = parse_object(data, &offsets, ref_size, top_obj)?;
+    let mut budget = MAX_VISITS;
+    let result = parse_object(data, &offsets, ref_size, top_obj, 0, &mut budget)?;
 
     // Convert to HashMap if it's a dict
     if let PlistValue::Dict(map) = result {
@@ -92,7 +93,28 @@ pub enum PlistValue {
     Null,
 }
 
-fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> Option<PlistValue> {
+/// Deepest nesting followed in a binary plist. Real files nest a handful of
+/// levels; a reference that points back at an ancestor would otherwise recurse
+/// until the stack overflows, which aborts the whole process.
+const MAX_DEPTH: usize = 128;
+
+/// Objects visited in one binary plist. The depth cap alone does not bound the
+/// work: an array that references the same child twice at every level expands
+/// exponentially without ever getting deep.
+const MAX_VISITS: usize = 100_000;
+
+fn parse_object(
+    data: &[u8],
+    offsets: &[usize],
+    ref_size: usize,
+    idx: usize,
+    depth: usize,
+    budget: &mut usize,
+) -> Option<PlistValue> {
+    if depth > MAX_DEPTH || *budget == 0 {
+        return None;
+    }
+    *budget -= 1;
     if idx >= offsets.len() {
         return None;
     }
@@ -232,7 +254,7 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
             let mut arr = Vec::new();
             for i in 0..count {
                 let elem_ref = read_int(data, refs_start + i * ref_size, ref_size)?;
-                if let Some(val) = parse_object(data, offsets, ref_size, elem_ref) {
+                if let Some(val) = parse_object(data, offsets, ref_size, elem_ref, depth + 1, budget) {
                     arr.push(val);
                 }
             }
@@ -254,9 +276,9 @@ fn parse_object(data: &[u8], offsets: &[usize], ref_size: usize, idx: usize) -> 
                 let key_ref = read_int(data, keys_start + i * ref_size, ref_size)?;
                 let val_ref = read_int(data, vals_start + i * ref_size, ref_size)?;
                 if let Some(PlistValue::String(key)) =
-                    parse_object(data, offsets, ref_size, key_ref)
+                    parse_object(data, offsets, ref_size, key_ref, depth + 1, budget)
                 {
-                    if let Some(val) = parse_object(data, offsets, ref_size, val_ref) {
+                    if let Some(val) = parse_object(data, offsets, ref_size, val_ref, depth + 1, budget) {
                         map.insert(key, val);
                     }
                 }

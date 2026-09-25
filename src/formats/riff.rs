@@ -405,6 +405,10 @@ fn read_riff_chunks(
                 as usize;
         let chunk_data_start = pos + 8;
         let chunk_data_end = (chunk_data_start + chunk_size).min(end);
+        // What is really there. `chunk_size` is what the file claims, and on a
+        // truncated file the two differ: every field read below is guarded on
+        // `avail`, never on the declared size.
+        let avail = chunk_data_end.saturating_sub(chunk_data_start);
 
         if chunk_data_start > end {
             break;
@@ -573,7 +577,7 @@ fn read_riff_chunks(
                 // value, so the two the reader keeps are taken from the tags
                 // rather than computed a second time.
                 let cd = &data[chunk_data_start..chunk_data_end];
-                if chunk_size >= 40 {
+                if avail >= 40 {
                     state.us_per_frame = u32::from_le_bytes([cd[0], cd[1], cd[2], cd[3]]);
                     state.total_frames = u32::from_le_bytes([cd[16], cd[17], cd[18], cd[19]]);
                 }
@@ -591,7 +595,7 @@ fn read_riff_chunks(
             }
             // Stream Header (strh)
             b"strh" => {
-                if chunk_size >= 4 {
+                if avail >= 4 {
                     let cd = &data[chunk_data_start..chunk_data_end];
                     let fcc_type = crate::encoding::decode_utf8_or_latin1(&cd[0..4]).to_string();
                     state.current_stream_type = Some(fcc_type.clone());
@@ -612,7 +616,7 @@ fn read_riff_chunks(
                         Value::String(stream_type_str.to_string()),
                     ));
 
-                    if chunk_size >= 8 {
+                    if avail >= 8 {
                         let fcc_handler = crate::encoding::decode_utf8_or_latin1(&cd[4..8])
                             .trim_end_matches('\0')
                             .to_string();
@@ -634,7 +638,7 @@ fn read_riff_chunks(
                     }
 
                     // Scale (offset 20) and Rate (offset 24) for frame rate (both int32u)
-                    if chunk_size >= 28 {
+                    if avail >= 28 {
                         let scale = u32::from_le_bytes([cd[20], cd[21], cd[22], cd[23]]);
                         let rate = u32::from_le_bytes([cd[24], cd[25], cd[26], cd[27]]);
 
@@ -663,7 +667,7 @@ fn read_riff_chunks(
                     }
 
                     // Length (offset 32) = sample count / frame count
-                    if chunk_size >= 36 {
+                    if avail >= 36 {
                         let length = u32::from_le_bytes([cd[32], cd[33], cd[34], cd[35]]);
                         if fcc_type == "auds" {
                             tags.push(mk_strh(
@@ -684,7 +688,7 @@ fn read_riff_chunks(
                     }
 
                     // Quality (offset 40) and SampleSize (offset 44)
-                    if chunk_size >= 48 {
+                    if avail >= 48 {
                         let quality = u32::from_le_bytes([cd[40], cd[41], cd[42], cd[43]]);
                         let sample_size = u32::from_le_bytes([cd[44], cd[45], cd[46], cd[47]]);
 
@@ -747,7 +751,7 @@ fn read_riff_chunks(
             }
             // OpenDML extended AVI header (dmlh)
             b"dmlh" => {
-                if chunk_size >= 4 {
+                if avail >= 4 {
                     let cd = &data[chunk_data_start..chunk_data_end];
                     let total_frame_count = u32::from_le_bytes([cd[0], cd[1], cd[2], cd[3]]);
                     tags.push(mk_riff(
@@ -762,7 +766,7 @@ fn read_riff_chunks(
             b"fmt " => {
                 parse_wave_format(data, chunk_data_start, chunk_data_end, tags, family);
                 // Also capture AvgBytesPerSec for WAV duration calculation
-                if chunk_size >= 12 {
+                if avail >= 12 {
                     let cd = &data[chunk_data_start..chunk_data_end];
                     state.avg_bytes_per_sec = u32::from_le_bytes([cd[8], cd[9], cd[10], cd[11]]);
                 }

@@ -96,12 +96,14 @@ fn parse_dss_time(s: &str) -> Option<String> {
     if s.len() < 12 {
         return None;
     }
-    let yy = &s[0..2];
-    let mm = &s[2..4];
-    let dd = &s[4..6];
-    let hh = &s[6..8];
-    let mi = &s[8..10];
-    let ss = &s[10..12];
+    // get() rather than indexing: a corrupt time string may hold non-ASCII
+    // bytes, and slicing a &str inside a character panics.
+    let yy = s.get(0..2)?;
+    let mm = s.get(2..4)?;
+    let dd = s.get(4..6)?;
+    let hh = s.get(6..8)?;
+    let mi = s.get(8..10)?;
+    let ss = s.get(10..12)?;
     // Validate digits
     if !yy.chars().all(|c| c.is_ascii_digit()) {
         return None;
