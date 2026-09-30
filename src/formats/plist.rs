@@ -8,6 +8,18 @@ use std::collections::HashMap;
 
 /// Parse a binary plist and return key-value pairs.
 pub fn parse_binary_plist(data: &[u8]) -> Option<HashMap<String, PlistValue>> {
+    let entries = parse_binary_plist_entries(data)?;
+    Some(
+        entries
+            .into_iter()
+            .map(|(key, val)| (key, val.into_value()))
+            .collect(),
+    )
+}
+
+/// Parse a binary plist whose top-level object is a dict, keeping its entries
+/// in document order.
+fn parse_binary_plist_entries(data: &[u8]) -> Option<Vec<(String, Node)>> {
     if data.len() < 40 {
         return None;
     }
@@ -71,9 +83,9 @@ pub fn parse_binary_plist(data: &[u8]) -> Option<HashMap<String, PlistValue>> {
     let mut budget = MAX_VISITS;
     let result = parse_object(data, &offsets, ref_size, top_obj, 0, &mut budget)?;
 
-    // Convert to HashMap if it's a dict
-    if let PlistValue::Dict(map) = result {
-        Some(map)
+    // Keep the top-level object only if it's a dict
+    if let Node::Dict(entries) = result {
+        Some(entries)
     } else {
         None
     }
@@ -93,6 +105,52 @@ pub enum PlistValue {
     Null,
 }
 
+/// A parsed plist object whose dicts keep their entries in document order.
+/// ExifTool emits PLIST tags in the order the keys appear in the file, so the
+/// tag readers walk this form; `PlistValue` is derived from it for
+/// `parse_binary_plist`, whose dicts are keyed maps.
+#[derive(Debug, Clone)]
+enum Node {
+    /// Any value other than a dict or an array.
+    Leaf(PlistValue),
+    Dict(Vec<(String, Node)>),
+    Array(Vec<Node>),
+}
+
+impl Node {
+    fn into_value(self) -> PlistValue {
+        match self {
+            Node::Leaf(val) => val,
+            Node::Dict(entries) => PlistValue::Dict(
+                entries
+                    .into_iter()
+                    .map(|(key, val)| (key, val.into_value()))
+                    .collect(),
+            ),
+            Node::Array(items) => {
+                PlistValue::Array(items.into_iter().map(Node::into_value).collect())
+            }
+        }
+    }
+}
+
+/// Add a dict entry in document order. A repeated key keeps the position of
+/// its first occurrence and takes the value of its last, as a map would.
+fn push_entry(
+    entries: &mut Vec<(String, Node)>,
+    seen: &mut HashMap<String, usize>,
+    key: String,
+    val: Node,
+) {
+    match seen.get(&key) {
+        Some(&i) => entries[i].1 = val,
+        None => {
+            seen.insert(key.clone(), entries.len());
+            entries.push((key, val));
+        }
+    }
+}
+
 /// Deepest nesting followed in a binary plist. Real files nest a handful of
 /// levels; a reference that points back at an ancestor would otherwise recurse
 /// until the stack overflows, which aborts the whole process.
@@ -110,7 +168,7 @@ fn parse_object(
     idx: usize,
     depth: usize,
     budget: &mut usize,
-) -> Option<PlistValue> {
+) -> Option<Node> {
     if depth > MAX_DEPTH || *budget == 0 {
         return None;
     }
@@ -127,7 +185,7 @@ fn parse_object(
     let obj_type = marker >> 4;
     let obj_info = (marker & 0x0F) as usize;
 
-    match obj_type {
+    let leaf = match obj_type {
         0x0 => {
             // Singleton: null, bool, fill. NOTE: ExifTool's PLIST.pm maps 0x08 => 'True'
             // and 0x09 => 'False' (inverted from the binary-plist spec); follow ExifTool.
@@ -260,7 +318,7 @@ fn parse_object(
                     arr.push(val);
                 }
             }
-            Some(PlistValue::Array(arr))
+            return Some(Node::Array(arr));
         }
         0xD => {
             // Dict
@@ -273,24 +331,26 @@ fn parse_object(
             let keys_start = if obj_info == 0x0F { off + 3 } else { off + 1 };
             let vals_start = keys_start + count * ref_size;
 
-            let mut map = HashMap::new();
+            let mut entries = Vec::new();
+            let mut seen = HashMap::new();
             for i in 0..count {
                 let key_ref = read_int(data, keys_start + i * ref_size, ref_size)?;
                 let val_ref = read_int(data, vals_start + i * ref_size, ref_size)?;
-                if let Some(PlistValue::String(key)) =
+                if let Some(Node::Leaf(PlistValue::String(key))) =
                     parse_object(data, offsets, ref_size, key_ref, depth + 1, budget)
                 {
                     if let Some(val) =
                         parse_object(data, offsets, ref_size, val_ref, depth + 1, budget)
                     {
-                        map.insert(key, val);
+                        push_entry(&mut entries, &mut seen, key, val);
                     }
                 }
             }
-            Some(PlistValue::Dict(map))
+            return Some(Node::Dict(entries));
         }
         _ => None,
-    }
+    };
+    leaf.map(Node::Leaf)
 }
 
 fn read_int(data: &[u8], off: usize, size: usize) -> Option<usize> {
@@ -331,8 +391,8 @@ fn read_length(data: &[u8], off: usize) -> Option<(usize, usize)> {
 
 /// Read a binary plist file and return ExifTool-compatible tags.
 pub fn read_binary_plist_tags(data: &[u8]) -> Result<Vec<Tag>> {
-    let map = match parse_binary_plist(data) {
-        Some(m) => m,
+    let entries = match parse_binary_plist_entries(data) {
+        Some(e) => e,
         None => return Ok(Vec::new()),
     };
 
@@ -344,19 +404,19 @@ pub fn read_binary_plist_tags(data: &[u8]) -> Result<Vec<Tag>> {
         family3: "Main".into(),
     };
 
-    flatten_plist_dict(&map, &[], &group, &mut tags);
+    flatten_plist_dict(&entries, &[], &group, &mut tags);
     Ok(tags)
 }
 
-/// Flatten a plist dict (potentially nested) into tags.
+/// Flatten a plist dict (potentially nested) into tags, in document order.
 /// `key_path` is the slice of ancestor keys leading to this dict.
 fn flatten_plist_dict(
-    map: &HashMap<String, PlistValue>,
+    entries: &[(String, Node)],
     key_path: &[String],
     group: &TagGroup,
     tags: &mut Vec<Tag>,
 ) {
-    for (key, val) in map {
+    for (key, val) in entries {
         let mut path = key_path.to_vec();
         path.push(key.clone());
         flatten_plist_value(&path, val, group, tags);
@@ -376,17 +436,12 @@ fn mk_plist_tag(name: String, raw_value: Value, group: &TagGroup) -> Tag {
     }
 }
 
-fn flatten_plist_value(
-    key_path: &[String],
-    val: &PlistValue,
-    group: &TagGroup,
-    tags: &mut Vec<Tag>,
-) {
+fn flatten_plist_value(key_path: &[String], val: &Node, group: &TagGroup, tags: &mut Vec<Tag>) {
     match val {
-        PlistValue::Dict(inner) => {
+        Node::Dict(inner) => {
             flatten_plist_dict(inner, key_path, group, tags);
         }
-        PlistValue::Array(arr) => {
+        Node::Array(arr) => {
             // A plist array is List=>1: keep the per-element print strings so JSON
             // emits an array. to_display_string re-joins with ", " for text output.
             let parts: Vec<String> = arr.iter().map(plist_value_to_string).collect();
@@ -397,18 +452,18 @@ fn flatten_plist_value(
                 group,
             ));
         }
-        PlistValue::Bool(b) => {
+        Node::Leaf(PlistValue::Bool(b)) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
             // ExifTool maps binary-plist 0x08 => 'True', 0x09 => 'False' (the parser
             // above already follows that inversion), so display the bool directly.
             let s = if *b { "True" } else { "False" };
             tags.push(mk_plist_tag(tag_name, Value::String(s.to_string()), group));
         }
-        PlistValue::Int(i) => {
+        Node::Leaf(PlistValue::Int(i)) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
             tags.push(mk_plist_tag(tag_name, Value::String(i.to_string()), group));
         }
-        PlistValue::Real(r) => {
+        Node::Leaf(PlistValue::Real(r)) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
             tags.push(mk_plist_tag(
                 tag_name,
@@ -416,11 +471,11 @@ fn flatten_plist_value(
                 group,
             ));
         }
-        PlistValue::String(s) => {
+        Node::Leaf(PlistValue::String(s)) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
             tags.push(mk_plist_tag(tag_name, Value::String(s.clone()), group));
         }
-        PlistValue::Date(s) => {
+        Node::Leaf(PlistValue::Date(s)) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
             // ExifTool's ProcessPLIST forces group 2 to Time for any <date>
             // element (PLIST.pm line 214: `$$tagInfo{Groups}{2} = 'Time'`),
@@ -429,23 +484,23 @@ fn flatten_plist_value(
             t.group.family2 = "Time".into();
             tags.push(t);
         }
-        PlistValue::Data(bytes) => {
+        Node::Leaf(PlistValue::Data(bytes)) => {
             let tag_name = plist_key_path_to_tag_name(key_path);
             tags.push(mk_plist_tag(tag_name, Value::Binary(bytes.clone()), group));
         }
-        PlistValue::Null => {
-            // Don't emit null values
+        Node::Leaf(PlistValue::Null | PlistValue::Dict(_) | PlistValue::Array(_)) => {
+            // Don't emit null values (a leaf never holds a dict or an array)
         }
     }
 }
 
-fn plist_value_to_string(val: &PlistValue) -> String {
+fn plist_value_to_string(val: &Node) -> String {
     match val {
-        PlistValue::String(s) => s.clone(),
-        PlistValue::Int(i) => i.to_string(),
-        PlistValue::Real(r) => format_real(*r),
-        PlistValue::Bool(b) => (if *b { "True" } else { "False" }).to_string(),
-        PlistValue::Date(s) => s.clone(),
+        Node::Leaf(PlistValue::String(s)) => s.clone(),
+        Node::Leaf(PlistValue::Int(i)) => i.to_string(),
+        Node::Leaf(PlistValue::Real(r)) => format_real(*r),
+        Node::Leaf(PlistValue::Bool(b)) => (if *b { "True" } else { "False" }).to_string(),
+        Node::Leaf(PlistValue::Date(s)) => s.clone(),
         _ => String::new(),
     }
 }
@@ -523,16 +578,17 @@ pub fn read_xml_plist(data: &[u8]) -> Result<Vec<Tag>> {
     Ok(tags)
 }
 
-/// Simple XML plist parser. Returns a dict (HashMap) representing the root dict.
-fn parse_xml_plist_root(text: &str, pos: &mut usize) -> Option<HashMap<String, PlistValue>> {
+/// Simple XML plist parser. Returns the entries of the root dict, in document order.
+fn parse_xml_plist_root(text: &str, pos: &mut usize) -> Option<Vec<(String, Node)>> {
     // Find the root <dict> element
     let dict_start = text.find("<dict>")?;
     *pos = dict_start + 6;
     Some(parse_xml_dict(text, pos))
 }
 
-fn parse_xml_dict(text: &str, pos: &mut usize) -> HashMap<String, PlistValue> {
-    let mut map = HashMap::new();
+fn parse_xml_dict(text: &str, pos: &mut usize) -> Vec<(String, Node)> {
+    let mut entries = Vec::new();
+    let mut seen = HashMap::new();
 
     loop {
         skip_xml_whitespace(text, pos);
@@ -571,14 +627,14 @@ fn parse_xml_dict(text: &str, pos: &mut usize) -> HashMap<String, PlistValue> {
 
         // Parse value element
         if let Some(val) = parse_xml_value(text, pos) {
-            map.insert(key, val);
+            push_entry(&mut entries, &mut seen, key, val);
         }
     }
 
-    map
+    entries
 }
 
-fn parse_xml_array(text: &str, pos: &mut usize) -> Vec<PlistValue> {
+fn parse_xml_array(text: &str, pos: &mut usize) -> Vec<Node> {
     let mut arr = Vec::new();
 
     loop {
@@ -602,7 +658,7 @@ fn parse_xml_array(text: &str, pos: &mut usize) -> Vec<PlistValue> {
     arr
 }
 
-fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
+fn parse_xml_value(text: &str, pos: &mut usize) -> Option<Node> {
     skip_xml_whitespace(text, pos);
     if *pos >= text.len() {
         return None;
@@ -612,18 +668,18 @@ fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
 
     if rest.starts_with("<dict>") {
         *pos += 6;
-        return Some(PlistValue::Dict(parse_xml_dict(text, pos)));
+        return Some(Node::Dict(parse_xml_dict(text, pos)));
     }
     if rest.starts_with("<array>") {
         *pos += 7;
-        return Some(PlistValue::Array(parse_xml_array(text, pos)));
+        return Some(Node::Array(parse_xml_array(text, pos)));
     }
     if rest.starts_with("<string>") {
         *pos += 8;
         let end = text[*pos..].find("</string>")?;
         let s = xml_unescape(&text[*pos..*pos + end]);
         *pos += end + 9;
-        return Some(PlistValue::String(s));
+        return Some(Node::Leaf(PlistValue::String(s)));
     }
     if rest.starts_with("<integer>") {
         *pos += 9;
@@ -631,7 +687,7 @@ fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
         let s = text[*pos..*pos + end].trim();
         let val = s.parse::<i64>().ok()?;
         *pos += end + 10;
-        return Some(PlistValue::Int(val));
+        return Some(Node::Leaf(PlistValue::Int(val)));
     }
     if rest.starts_with("<real>") {
         *pos += 6;
@@ -639,15 +695,15 @@ fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
         let s = text[*pos..*pos + end].trim();
         let val = s.parse::<f64>().ok()?;
         *pos += end + 7;
-        return Some(PlistValue::Real(val));
+        return Some(Node::Leaf(PlistValue::Real(val)));
     }
     if rest.starts_with("<true/>") {
         *pos += 7;
-        return Some(PlistValue::Bool(true));
+        return Some(Node::Leaf(PlistValue::Bool(true)));
     }
     if rest.starts_with("<false/>") {
         *pos += 8;
-        return Some(PlistValue::Bool(false));
+        return Some(Node::Leaf(PlistValue::Bool(false)));
     }
     if rest.starts_with("<date>") {
         *pos += 6;
@@ -656,7 +712,7 @@ fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
         // Convert ISO 8601 date to ExifTool format
         let date_str = convert_plist_date(s);
         *pos += end + 7;
-        return Some(PlistValue::Date(date_str));
+        return Some(Node::Leaf(PlistValue::Date(date_str)));
     }
     if rest.starts_with("<data>") {
         *pos += 6;
@@ -666,7 +722,7 @@ fn parse_xml_value(text: &str, pos: &mut usize) -> Option<PlistValue> {
             .collect::<String>();
         *pos += end + 7;
         let bytes = base64_decode_simple(&b64);
-        return Some(PlistValue::Data(bytes));
+        return Some(Node::Leaf(PlistValue::Data(bytes)));
     }
 
     // Skip unknown element
@@ -785,10 +841,10 @@ fn aae_flags_print_conv(val: i64) -> String {
 }
 
 /// Flatten a binary plist value recursively, collecting (path, value) pairs.
-fn flatten_bplist_to_paths(val: &PlistValue, path: &str, out: &mut Vec<(String, PlistValue)>) {
+fn flatten_bplist_to_paths(val: &Node, path: &str, out: &mut Vec<(String, Node)>) {
     match val {
-        PlistValue::Dict(map) => {
-            for (k, v) in map {
+        Node::Dict(entries) => {
+            for (k, v) in entries {
                 let child_path = if path.is_empty() {
                     k.clone()
                 } else {
@@ -797,7 +853,7 @@ fn flatten_bplist_to_paths(val: &PlistValue, path: &str, out: &mut Vec<(String, 
                 flatten_bplist_to_paths(v, &child_path, out);
             }
         }
-        PlistValue::Array(arr) => {
+        Node::Array(arr) => {
             // For arrays, flatten each element at the same path (like Perl's List => 1)
             // But also record the array at this path level
             out.push((path.to_string(), val.clone()));
@@ -838,11 +894,10 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
     };
 
     // Process keys — for most keys flatten normally, but for adjustmentData decode binary plist
-    let mut sorted_keys: Vec<&String> = root.keys().collect();
-    sorted_keys.sort();
+    let mut sorted_entries: Vec<&(String, Node)> = root.iter().collect();
+    sorted_entries.sort_by(|a, b| a.0.cmp(&b.0));
 
-    for key in &sorted_keys {
-        let val = &root[*key];
+    for (key, val) in sorted_entries {
         if key.as_str() == "adjustmentData" {
             // Parse adjustmentData as binary plist, extract nested tags.
             // ExifTool switches the family-1 group to PLIST while it reads a
@@ -852,16 +907,16 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
                 family1: "PLIST".into(),
                 ..group.clone()
             };
-            if let PlistValue::Data(ref bytes) = val {
+            if let Node::Leaf(PlistValue::Data(bytes)) = val {
                 let bplist_data = if bytes.starts_with(b"bplist") {
                     bytes.as_slice()
                 } else {
                     continue;
                 };
-                if let Some(nested_map) = parse_binary_plist(bplist_data) {
+                if let Some(nested) = parse_binary_plist_entries(bplist_data) {
                     // Flatten binary plist to path → value pairs
-                    let mut paths: Vec<(String, PlistValue)> = Vec::new();
-                    for (k, v) in &nested_map {
+                    let mut paths: Vec<(String, Node)> = Vec::new();
+                    for (k, v) in &nested {
                         flatten_bplist_to_paths(v, k, &mut paths);
                     }
                     // Emit paths that match aae_known_tag_name
@@ -879,24 +934,26 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
                         "slowMotion/rate",
                     ];
                     // Build a lookup map from the paths we got
-                    let path_map: HashMap<String, PlistValue> = paths.into_iter().collect();
+                    let path_map: HashMap<String, Node> = paths.into_iter().collect();
                     for &ordered_key in &order {
                         if let Some(nv) = path_map.get(ordered_key) {
                             if let Some(tag_name) = aae_known_tag_name(ordered_key) {
                                 let raw_val = match nv {
-                                    PlistValue::Int(i) => {
+                                    Node::Leaf(PlistValue::Int(i)) => {
                                         if tag_name.ends_with("Flags") {
                                             Value::String(aae_flags_print_conv(*i))
                                         } else {
                                             Value::String(i.to_string())
                                         }
                                     }
-                                    PlistValue::Real(r) => Value::String(format!("{}", r)),
-                                    PlistValue::String(s) => Value::String(s.clone()),
-                                    PlistValue::Bool(b) => {
+                                    Node::Leaf(PlistValue::Real(r)) => {
+                                        Value::String(format!("{}", r))
+                                    }
+                                    Node::Leaf(PlistValue::String(s)) => Value::String(s.clone()),
+                                    Node::Leaf(PlistValue::Bool(b)) => {
                                         Value::String(if *b { "True" } else { "False" }.to_string())
                                     }
-                                    PlistValue::Array(arr) => Value::List(
+                                    Node::Array(arr) => Value::List(
                                         arr.iter()
                                             .map(plist_value_to_string)
                                             .filter(|s| !s.is_empty())
@@ -913,7 +970,7 @@ pub fn read_aae_plist(data: &[u8]) -> Result<Vec<Tag>> {
             }
             // Do NOT output AdjustmentData as a raw binary tag
         } else {
-            let path = vec![(*key).clone()];
+            let path = vec![key.clone()];
             flatten_plist_value(&path, val, &group, &mut tags);
         }
     }

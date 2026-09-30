@@ -953,3 +953,66 @@ fn fit_default_parity() {
 fn fit_extract_embedded_parity() {
     assert_fit_parity(1, "tests/expected_values/Garmin.fit.ee.vals", "-ee");
 }
+
+/// Tag order for the readers that once walked a `HashMap`, and so reordered
+/// their tags from one run to the next: the binary and XML PLIST readers and
+/// the XMP GContainer directory. The suites above compare sets and multisets,
+/// which cannot see order; these lists are ExifTool 13.59's `-a -u -G1 -s`
+/// output for the same files.
+#[test]
+fn plist_and_gcontainer_tags_keep_exiftool_order() {
+    let cases: &[(&str, &str, &[&str])] = &[
+        (
+            "PLIST-bin.plist",
+            "PLIST",
+            &[
+                "TestReal",
+                "TestDictWhen",
+                "TestDictAuthor",
+                "TestString",
+                "TestArray",
+                "TestInteger",
+                "TestUnicode",
+                "TestDate",
+                "TestData",
+                "TestBoolean",
+            ],
+        ),
+        (
+            "PLIST-xml.plist",
+            "XML",
+            &[
+                "TestArray",
+                "TestBoolean",
+                "TestData",
+                "TestDate",
+                "TestDictAuthor",
+                "TestDictWhen",
+                "TestInteger",
+                "TestReal",
+                "TestString",
+                "TestUnicode",
+            ],
+        ),
+        (
+            "Google.jpg",
+            "XMP-GContainer",
+            &[
+                "DirectoryItemMime",
+                "DirectoryItemSemantic",
+                "DirectoryItemLength",
+            ],
+        ),
+    ];
+    for (file, group1, want) in cases {
+        let tags = ExifTool::new()
+            .extract_info(Path::new("tests/images").join(file))
+            .unwrap_or_else(|e| panic!("{file}: {e}"));
+        let got: Vec<&str> = tags
+            .iter()
+            .filter(|t| t.group.family1 == *group1)
+            .map(|t| t.name.as_str())
+            .collect();
+        assert_eq!(got, *want, "{file}: order of the {group1} tags");
+    }
+}

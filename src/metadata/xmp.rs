@@ -330,9 +330,10 @@ impl XmpReader {
         let mut suppress_direct_emit_depth: Option<usize> = None;
 
         // GContainer struct: collect per-field lists for DirectoryItemMime/Semantic/Length.
-        // Key: flat field name (e.g. "Mime", "Semantic", "Length"), Values: collected per li.
-        let mut gcontainer_fields: std::collections::HashMap<String, Vec<String>> =
-            std::collections::HashMap::new();
+        // Entry: flat field name (e.g. "Mime", "Semantic", "Length") and its values
+        // collected per li. Fields stay in the order they first appear, which is
+        // the order ExifTool emits the flattened tags in.
+        let mut gcontainer_fields: Vec<(String, Vec<String>)> = Vec::new();
         // Whether we're currently inside a GContainer:Directory/Seq context.
         let mut in_gcontainer_seq = false;
         // Whether we're inside a GContainer:Directory/Seq/li (struct li).
@@ -1044,26 +1045,31 @@ impl XmpReader {
                         && name.namespace.as_deref()
                             == Some("http://ns.google.com/photos/1.0/container/")
                     {
-                        // Collect Item:Mime, Item:Semantic, Item:Length for this li entry
-                        let mut found: std::collections::HashMap<String, String> =
-                            std::collections::HashMap::new();
+                        // Collect Item:Mime, Item:Semantic, Item:Length for this li entry,
+                        // in attribute order (a field given twice keeps its last value)
+                        let known = ["Mime", "Semantic", "Length"];
+                        let mut found: Vec<(String, String)> = Vec::new();
                         for attr in &attributes {
                             if attr.name.namespace.as_deref()
-                                == Some("http://ns.google.com/photos/1.0/container/item/")
+                                != Some("http://ns.google.com/photos/1.0/container/item/")
                             {
-                                let field = ucfirst(&attr.name.local_name);
-                                found.insert(field, attr.value.clone());
+                                continue;
+                            }
+                            let field = ucfirst(&attr.name.local_name);
+                            if !known.contains(&field.as_str()) {
+                                continue;
+                            }
+                            match found.iter_mut().find(|(f, _)| *f == field) {
+                                Some(slot) => slot.1 = attr.value.clone(),
+                                None => found.push((field, attr.value.clone())),
                             }
                         }
-                        // Accumulate: for each known field, push value or empty string
-                        // (so all lists stay aligned)
-                        let known = ["Mime", "Semantic", "Length"];
-                        for k in &known {
-                            if let Some(v) = found.get(*k) {
-                                gcontainer_fields
-                                    .entry(k.to_string())
-                                    .or_default()
-                                    .push(v.clone());
+                        // Accumulate; a field seen for the first time goes after the
+                        // ones already collected
+                        for (field, value) in found {
+                            match gcontainer_fields.iter_mut().find(|(f, _)| *f == field) {
+                                Some((_, values)) => values.push(value),
+                                None => gcontainer_fields.push((field, vec![value])),
                             }
                         }
                     }
@@ -3747,5 +3753,71 @@ mod attribute_whitespace_tests {
             })
             .expect("start element");
         assert_eq!(value, "http://x/1 http://y/2\n     http://z/3");
+    }
+}
+
+#[cfg(test)]
+mod gcontainer_order_tests {
+    use super::XmpReader;
+
+    fn directory(items: &str) -> Vec<(String, String)> {
+        let xmp = format!(
+            "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">\
+             <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\
+             <rdf:Description rdf:about=\"\" \
+             xmlns:Container=\"http://ns.google.com/photos/1.0/container/\" \
+             xmlns:Item=\"http://ns.google.com/photos/1.0/container/item/\">\
+             <Container:Directory><rdf:Seq>{items}</rdf:Seq></Container:Directory>\
+             </rdf:Description></rdf:RDF></x:xmpmeta>"
+        );
+        XmpReader::read(xmp.as_bytes())
+            .expect("valid XMP")
+            .into_iter()
+            .filter(|t| t.group.family1 == "XMP-GContainer")
+            .map(|t| (t.name, t.print_value))
+            .collect()
+    }
+
+    fn li(attrs: &str) -> String {
+        format!("<rdf:li rdf:parseType=\"Resource\"><Container:Item {attrs}/></rdf:li>")
+    }
+
+    // ExifTool 13.59 emits the flattened fields in the order they first appear:
+    // attribute order within an item, then items in sequence.
+    #[test]
+    fn fields_follow_their_first_appearance() {
+        let tags = directory(&format!(
+            "{}{}",
+            li("Item:Semantic=\"Primary\" Item:Mime=\"image/jpeg\""),
+            li("Item:Length=\"5\" Item:Mime=\"image/png\" Item:Semantic=\"GainMap\""),
+        ));
+        let want = [
+            ("DirectoryItemSemantic", "Primary, GainMap"),
+            ("DirectoryItemMime", "image/jpeg, image/png"),
+            ("DirectoryItemLength", "5"),
+        ];
+        let want: Vec<(String, String)> = want
+            .iter()
+            .map(|(n, v)| (n.to_string(), v.to_string()))
+            .collect();
+        assert_eq!(tags, want);
+    }
+
+    #[test]
+    fn a_field_first_seen_in_a_later_item_comes_last() {
+        let tags = directory(&format!(
+            "{}{}",
+            li("Item:Length=\"7\""),
+            li("Item:Length=\"5\" Item:Mime=\"image/png\" Item:Semantic=\"GainMap\""),
+        ));
+        let names: Vec<&str> = tags.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "DirectoryItemLength",
+                "DirectoryItemMime",
+                "DirectoryItemSemantic"
+            ]
+        );
     }
 }
