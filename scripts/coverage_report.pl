@@ -93,8 +93,9 @@ if (open my $h, '<', $gen) {
     # under it: `("Mod::Table", &MOD_TABLE)` in TABLES. `table_byte_order` is
     # keyed by the same strings, but maps them to `Some(...)`, not to a table.
     # Written whitespace-insensitively: rustfmt breaks a pair that does not
-    # fit on one line.
-    while ($body =~ /\(\s*"(\w+)::(\w+)"\s*,\s*&(\w+)\s*\)/g) {
+    # fit on one line, and then ends it with a comma of its own --
+    # CanonCustom::PersonalFuncValues is one.
+    while ($body =~ /\(\s*"(\w+)::(\w+)"\s*,\s*&(\w+)\s*,?\s*\)/g) {
         $static_of_table{"$1\::$2"} = $3;
         $table_of_static{$3} = "$1\::$2";
     }
