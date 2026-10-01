@@ -1244,6 +1244,20 @@ impl ExifReader {
                 }
                 // SubIFD pointer (0x014A): follow to read SubIFD entries
                 0x014A if ifd_name == "IFD0" => {
+                    // ExifTool skips an out-of-line value whose offset points
+                    // into the TIFF header or back into this very directory
+                    // (Exif.pm:6537-6549, :6673-6677). Following such a list
+                    // re-reads the directory once per entry: thousands of
+                    // SubIFDs from a 100 KB file.
+                    let size = type_size(entry.data_type).map_or(0, |sz| sz * entry.count as usize);
+                    let ptr = entry.value_offset as usize;
+                    if size > 4 && (ptr < 8 || (ptr < entries_end && ptr + size > offset)) {
+                        tags.push(crate::tag::warning_tag(format!(
+                            "Suspicious {ifd_name} offset for tag 0x{:04x}",
+                            entry.tag
+                        )));
+                        continue;
+                    }
                     // Read SubIFD offset(s) — may be a single uint32 or array
                     if let Some(val) = read_ifd_value(data, &entry, header.byte_order) {
                         let offsets: Vec<u32> = match &val {
