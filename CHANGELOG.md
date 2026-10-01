@@ -2,12 +2,17 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
-## [Unreleased]
+## [0.9.0] - 2026-10-01
+
+Faster to build and smaller, with no tag, value or group change on valid
+files: the parity audit still reads 196 / 196 files identical to ExifTool
+13.59. Six more fuzzing rounds (about seven hours over every supported
+extension) found the cases listed under Fixed.
 
 ### Changed
 
 - A release build of the crate takes about a third of the time it did, and
-  the released CLI is 40 % smaller (#13). Three generated modules — the
+  the released Linux CLI is 40 % smaller (#13). Three generated modules — the
   print conversions, the 283 binary sub-tables and Sony's 59 ciphered
   tables — unrolled every table into code of its own, and that code was
   most of the build and of the binary. Their generators now write the
@@ -40,11 +45,47 @@ All notable changes to `exiftool-rs` are documented here.
   takes 50 s instead of 336 s on the machine above. The binaries CI ships
   are still built with thin LTO.
 
+- The published crate no longer carries `tests/`: Cargo never builds a
+  dependency's tests, and ours need `tests/images/`, which was already left
+  out. The download loses about 800 files.
+- Dependencies: brotli 9 (JPEG XL / JPEG 2000 brotli boxes), egui and
+  eframe 0.36.2 (GUI only), thiserror 2.0.21, encoding_rs 0.8.42. The
+  lockfile's encoding_rs needs Rust 1.88; a crate depending on this one
+  resolves its own.
+
 ### Fixed
 
 - PLIST (binary and XML) and XMP GContainer tags came out in a different
   order from one run to the next. They now follow the document, as in
   ExifTool.
+
+Corrupt or hostile files could still panic, allocate gigabytes or take
+seconds per kilobyte. Each case now returns, with a regression input under
+`tests/malformed/`:
+
+- EXIF: an IFD0 SubIFDs list pointing back into IFD0 re-read it once per
+  entry (110 KB in, 42 MB of tags and 1 GB of memory out). ExifTool skips
+  such an offset as suspicious, and follows at most ten SubIFDs; both rules
+  are now applied, with ExifTool's warnings.
+- Composite ThumbnailTIFF: the strip was padded to the declared
+  StripByteCounts, so a 6 KB NEF asked for 4 GB. ExifTool drops the
+  composite when the strip is not in the file; a strip longer than the
+  file never is.
+- QuickTime: a constant-size `stsz` expanded its declared sample count
+  (up to 16 GB).
+- Dates in MRC, QuickTime, gzip, AIFF and FLV were found by walking one
+  year at a time; a timestamp billions of years away hung the reader. Whole
+  400-year cycles are now skipped first, which gives the same dates.
+- JSON: nested arrays were copied at every level (quadratic on unmatched
+  `[`); arrays deeper than 64 levels are skipped.
+- XMP: flattening a long struct field name was quadratic (1.4 s for 60 KB);
+  the output is unchanged.
+- Allocations and bounds tests that could overflow on sizes read from the
+  file: binary plist offset tables (also in macOS `._` sidecars), CZI
+  metadata offsets, BigTIFF value offsets, RealMedia RJMD sub-directories,
+  MRC OLE dates.
+- Text sliced inside a multi-byte character: PostScript comments, Internet
+  shortcut (`.URL`) dates, plist dates, RED dates and times.
 
 ## [0.8.2] - 2026-09-26
 

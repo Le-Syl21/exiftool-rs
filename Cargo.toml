@@ -1,6 +1,6 @@
 [package]
 name = "exiftool-rs"
-version = "0.8.2"
+version = "0.9.0"
 edition = "2021"
 rust-version = "1.82"
 description = "Read, write, and edit metadata in 93 file formats — a pure Rust reimplementation of ExifTool 13.59 with tag-name and value parity across the test corpus"
@@ -14,9 +14,9 @@ categories = ["multimedia::images", "parser-implementations"]
 exclude = [
     "scripts/",
     ".github/",
-    "tests/images/",
-    "tests/expected/",
-    "tests/malformed/",
+    # Cargo never builds a dependency's tests, and ours read
+    # `tests/images/`, which is too large to ship.
+    "tests/",
     "fuzz/",
     "assets/fonts/",
     "assets/screenshot.png",
@@ -69,7 +69,7 @@ memmap2 = "0.9"
 xml = "1"
 encoding_rs = "0.8"
 flate2 = "1"
-brotli = "8"
+brotli = "9"
 unicode-width = "0.2"
 
 # GUI dependencies (optional)
