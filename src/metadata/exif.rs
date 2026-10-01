@@ -12,6 +12,9 @@ use crate::tag::{Tag, TagGroup, TagId};
 use crate::tags::exif as exif_tags;
 use crate::value::Value;
 
+/// How many SubIFDs ExifTool follows from one IFD0 SubIFDs list.
+const MAX_SUBIFDS: usize = 10;
+
 thread_local! {
     static SHOW_UNKNOWN: Cell<u8> = const { Cell::new(0) };
     /// Whether every instance of a tag name must be reported. ExifTool's CLI turns
@@ -1274,6 +1277,16 @@ impl ExifReader {
                                 .collect(),
                             _ => vec![],
                         };
+                        // SubIFDs is `MaxSubdirs => 10` (Exif.pm:1025, :6929-6936):
+                        // the rest of a longer list is dropped with a warning.
+                        let mut offsets = offsets;
+                        if offsets.len() > MAX_SUBIFDS {
+                            tags.push(crate::tag::warning_tag(format!(
+                                "Ignoring {} SubIFD directories",
+                                offsets.len() - MAX_SUBIFDS
+                            )));
+                            offsets.truncate(MAX_SUBIFDS);
+                        }
                         for (idx, &off) in offsets.iter().enumerate() {
                             if (off as usize) < data.len() {
                                 // ExifTool leaves the first SubIFD unnumbered and

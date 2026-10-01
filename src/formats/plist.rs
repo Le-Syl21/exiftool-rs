@@ -762,11 +762,11 @@ fn xml_unescape(s: &str) -> String {
 /// Convert ISO 8601 date "2013-02-22T12:49:10Z" to ExifTool format "2013:02:22 12:49:10Z"
 fn convert_plist_date(s: &str) -> String {
     // Format: YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DDTHH:MM:SS+HH:MM
-    if s.len() >= 19 {
-        let date_part = &s[0..10].replace('-', ":");
-        let time_part = &s[11..19];
-        let tz_part = &s[19..];
-        format!("{} {}{}", date_part, time_part, tz_part)
+    // `get`, not indexing: the value comes from the file, and a byte offset
+    // inside a multi-byte character would panic.
+    if let (Some(date), Some(time_part), Some(tz_part)) = (s.get(0..10), s.get(11..19), s.get(19..))
+    {
+        format!("{} {}{}", date.replace('-', ":"), time_part, tz_part)
     } else {
         s.to_string()
     }

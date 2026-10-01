@@ -1629,7 +1629,10 @@ fn read_bigtiff_ifd(data: &[u8], ifd_offset: usize, is_le: bool) -> Result<Vec<T
             raw_offset_bytes[..total_size.min(8)].to_vec()
         } else {
             let offset = btf_read_u64(raw_offset_bytes, 0, is_le) as usize;
-            if offset + total_size > data.len() {
+            if offset
+                .checked_add(total_size)
+                .is_none_or(|end| end > data.len())
+            {
                 continue;
             }
             data[offset..offset + total_size].to_vec()
