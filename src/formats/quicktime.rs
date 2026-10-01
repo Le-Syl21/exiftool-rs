@@ -3578,7 +3578,8 @@ fn mac_epoch_to_string(secs: u64) -> Option<String> {
     let minutes = (time_of_day % 3600) / 60;
     let seconds = time_of_day % 60;
 
-    let mut y = 1970i32;
+    let (skipped, days) = super::skip_gregorian_cycles(days);
+    let mut y = 1970 + skipped;
     let mut remaining_days = days;
 
     loop {
@@ -3620,7 +3621,7 @@ fn mac_epoch_to_string(secs: u64) -> Option<String> {
     ))
 }
 
-fn is_leap_year(y: i32) -> bool {
+fn is_leap_year(y: i64) -> bool {
     (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
 }
 

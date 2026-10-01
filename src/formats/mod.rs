@@ -98,3 +98,18 @@ pub mod wtv;
 pub mod xisf;
 pub mod xmp_file;
 pub mod zip;
+
+/// Whole 400-year Gregorian cycles in a day count since 1970-01-01, as
+/// `(years, days left)`.
+///
+/// The readers that turn a timestamp into a date walk forward one year at a
+/// time; a timestamp from a damaged file can be billions of years away, so
+/// they skip whole cycles first. The calendar repeats every 146 097 days, so
+/// the date they reach is the same.
+pub(crate) fn skip_gregorian_cycles(days: i64) -> (i64, i64) {
+    const CYCLE_DAYS: i64 = 146_097;
+    if days < CYCLE_DAYS {
+        return (0, days);
+    }
+    ((days / CYCLE_DAYS) * 400, days % CYCLE_DAYS)
+}

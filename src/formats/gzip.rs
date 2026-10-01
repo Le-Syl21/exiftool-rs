@@ -166,7 +166,7 @@ pub fn read_gzip(data: &[u8]) -> Result<Vec<Tag>> {
 pub(crate) fn gzip_unix_to_datetime(secs: i64) -> String {
     // Get timezone offset from system (DST-aware for the specific timestamp)
     let tz_offset = get_local_tz_offset_for_timestamp(secs);
-    let local_secs = secs + tz_offset;
+    let local_secs = secs.saturating_add(tz_offset);
     let days = local_secs / 86400;
     let time = local_secs % 86400;
     let (time, days) = if time < 0 {
@@ -177,7 +177,8 @@ pub(crate) fn gzip_unix_to_datetime(secs: i64) -> String {
     let h = time / 3600;
     let m = (time % 3600) / 60;
     let s = time % 60;
-    let mut y = 1970i32;
+    let (skipped, days) = super::skip_gregorian_cycles(days);
+    let mut y = 1970 + skipped;
     let mut rem = days;
     loop {
         let dy: i64 = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {

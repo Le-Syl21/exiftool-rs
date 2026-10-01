@@ -325,6 +325,14 @@ fn parse_simple_bplist(data: &[u8]) -> Option<Value> {
     if offset_int_size == 0 || offset_int_size > 8 || num_objects == 0 {
         return None;
     }
+    // The offset table must be in the file before its declared size is used
+    // for an allocation: both counts come from the trailer.
+    let table_end = num_objects
+        .checked_mul(offset_int_size)
+        .and_then(|n| n.checked_add(offset_table_offset));
+    if table_end.is_none_or(|end| end > data.len()) {
+        return None;
+    }
 
     let mut objects_offset = Vec::with_capacity(num_objects);
     for i in 0..num_objects {

@@ -669,13 +669,14 @@ fn flv_format_date(ms: f64, tz_offset_minutes: i32) -> String {
     // Microseconds from fractional part (6 decimal places)
     let usec = ((unix_secs - unix_secs.floor()) * 1_000_000.0).round() as u64;
 
-    let epoch_to_ymdhms = |ts: i64| -> (i32, u32, u32, u32, u32, u32) {
+    let epoch_to_ymdhms = |ts: i64| -> (i64, u32, u32, u32, u32, u32) {
         let days = ts / 86400;
         let rem_secs = ts % 86400;
         let hours = rem_secs / 3600;
         let mins = (rem_secs % 3600) / 60;
         let secs = rem_secs % 60;
-        let mut year = 1970i32;
+        let (skipped, days) = super::skip_gregorian_cycles(days);
+        let mut year = 1970 + skipped;
         let mut remaining_days = days;
         loop {
             let days_in_year = if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 {

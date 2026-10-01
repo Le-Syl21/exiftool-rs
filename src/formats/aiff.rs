@@ -223,7 +223,8 @@ pub(crate) fn aiff_unix_to_datetime(secs: i64) -> String {
     let h = time / 3600;
     let m = (time % 3600) / 60;
     let s = time % 60;
-    let mut y = 1970i32;
+    let (skipped, days) = super::skip_gregorian_cycles(days);
+    let mut y = 1970 + skipped;
     let mut rem = days;
     loop {
         let dy: i64 = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {

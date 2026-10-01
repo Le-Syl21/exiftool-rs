@@ -84,10 +84,12 @@ fn read_str(data: &[u8], off: usize, len: usize) -> String {
 fn convert_date(val: &str) -> String {
     // "YYYYMM" -> "YYYY:MM" or "YYYYMMDD" -> "YYYY:MM:DD"
     let v = val.replace('_', " ");
-    if v.len() >= 8 {
-        format!("{}:{}:{}", &v[0..4], &v[4..6], &v[6..8])
-    } else if v.len() >= 6 {
-        format!("{}:{}", &v[0..4], &v[4..6])
+    // `get`, not indexing: the value comes from the file, and a byte offset
+    // inside a multi-byte character would panic.
+    if let (Some(y), Some(m), Some(d)) = (v.get(0..4), v.get(4..6), v.get(6..8)) {
+        format!("{y}:{m}:{d}")
+    } else if let (Some(y), Some(m)) = (v.get(0..4), v.get(4..6)) {
+        format!("{y}:{m}")
     } else {
         v
     }
@@ -95,10 +97,10 @@ fn convert_date(val: &str) -> String {
 
 fn convert_time(val: &str) -> String {
     // "HHMMSS" -> "HH:MM:SS" or "HHMM" -> "HH:MM"
-    if val.len() >= 6 {
-        format!("{}:{}:{}", &val[0..2], &val[2..4], &val[4..6])
-    } else if val.len() >= 4 {
-        format!("{}:{}", &val[0..2], &val[2..4])
+    if let (Some(h), Some(m), Some(s)) = (val.get(0..2), val.get(2..4), val.get(4..6)) {
+        format!("{h}:{m}:{s}")
+    } else if let (Some(h), Some(m)) = (val.get(0..2), val.get(2..4)) {
+        format!("{h}:{m}")
     } else {
         val.to_string()
     }
@@ -106,18 +108,13 @@ fn convert_time(val: &str) -> String {
 
 /// Format a datetime from "YYYYMMDDHHMMSS"
 fn convert_datetime(val: &str) -> String {
-    if val.len() >= 14 {
-        format!(
-            "{}:{}:{} {}:{}:{}",
-            &val[0..4],
-            &val[4..6],
-            &val[6..8],
-            &val[8..10],
-            &val[10..12],
-            &val[12..14]
-        )
-    } else {
-        val.to_string()
+    let parts: Option<Vec<&str>> = [0..4, 4..6, 6..8, 8..10, 10..12, 12..14]
+        .into_iter()
+        .map(|r| val.get(r))
+        .collect();
+    match parts.as_deref() {
+        Some([y, mo, d, h, mi, s]) => format!("{y}:{mo}:{d} {h}:{mi}:{s}"),
+        _ => val.to_string(),
     }
 }
 

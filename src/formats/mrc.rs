@@ -149,7 +149,8 @@ fn unix_to_exif_datetime(secs: i64) -> String {
     let h = time_secs / 3600;
     let m = (time_secs % 3600) / 60;
     let s = time_secs % 60;
-    let mut y = 1970i32;
+    let (skipped, days) = super::skip_gregorian_cycles(days);
+    let mut y = 1970 + skipped;
     let mut rem = days;
     loop {
         let dy = if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
@@ -206,7 +207,12 @@ fn ole_date_to_datetime(ole_days: f64) -> String {
     let itime = unix_secs_f.floor() as i64;
     let frac = unix_secs_f - itime as f64;
     // If frac rounds to 1 (i.e., >= 0.5), increment itime
-    let rounded = if frac >= 0.5 { itime + 1 } else { itime };
+    // Saturating: a huge or infinite date from the file casts to i64::MAX.
+    let rounded = if frac >= 0.5 {
+        itime.saturating_add(1)
+    } else {
+        itime
+    };
     unix_to_exif_datetime(rounded)
 }
 
