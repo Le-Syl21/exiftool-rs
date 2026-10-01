@@ -6,6 +6,16 @@
 use crate::tag::{Tag, TagGroup, TagId};
 use crate::value::Value;
 
+thread_local! {
+    /// Length of the file being read, set by `extract_info_from_bytes`.
+    static FILE_LEN: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
+}
+
+/// Record the length of the file whose tags are about to be read.
+pub(crate) fn set_file_len(len: usize) {
+    FILE_LEN.with(|c| c.set(Some(len)));
+}
+
 /// Generate composite tags from existing tags.
 pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     let mut composite = Vec::new();
@@ -562,6 +572,16 @@ fn compute_thumbnail_tiff(tags: &[Tag]) -> Option<(Vec<u8>, String, String)> {
     // Get required tags
     let _strip_off = find_tag(tags, "StripOffsets")?.raw_value.as_u64()? as u32;
     let strip_len = find_tag(tags, "StripByteCounts")?.raw_value.as_u64()? as u32;
+    // RebuildTIFF reads the strips from the file and gives up when it cannot
+    // (Exif.pm:6171-6173). A strip longer than the whole file is never
+    // there, and the zero padding below would otherwise allocate whatever
+    // count the file declares.
+    if FILE_LEN
+        .with(std::cell::Cell::get)
+        .is_some_and(|len| strip_len as usize > len)
+    {
+        return None;
+    }
     let bps_str = find_tag_value(tags, "BitsPerSample").unwrap_or_default();
     let bps_vals: Vec<u16> = bps_str
         .split([',', ' '])

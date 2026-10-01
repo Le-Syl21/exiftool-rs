@@ -1132,6 +1132,7 @@ impl ExifTool {
 
     /// Extract metadata from in-memory data.
     pub fn extract_info_from_bytes(&self, data: &[u8], path: &Path) -> Result<Vec<Tag>> {
+        crate::composite::set_file_len(data.len());
         // Propagate show_unknown to EXIF/MakerNotes parsers via thread-local
         crate::metadata::exif::set_show_unknown(self.options.show_unknown);
         // Propagate the Duplicates option (see `collapse_duplicates` below) to the
