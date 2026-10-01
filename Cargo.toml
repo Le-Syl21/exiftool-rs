@@ -69,7 +69,7 @@ memmap2 = "0.9"
 xml = "1"
 encoding_rs = "0.8"
 flate2 = "1"
-brotli = "8"
+brotli = "9"
 unicode-width = "0.2"
 
 # GUI dependencies (optional)
