@@ -2,6 +2,50 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- A release build of the crate takes about a third of the time it did, and
+  the released CLI is 40 % smaller (#13). Three generated modules — the
+  print conversions, the 283 binary sub-tables and Sony's 59 ciphered
+  tables — unrolled every table into code of its own, and that code was
+  most of the build and of the binary. Their generators now write the
+  tables as static data, read by a few lookup functions and two
+  hand-written interpreters (`tags::binary_tables`,
+  `tags::sony_ciphered`). Nothing moved behind a feature flag, and the
+  output does not change: a dump of the test and fuzz corpora under 25
+  option sets and 15 CLI modes, plus about ten million direct calls into
+  the generated tables, is byte-identical before and after, and the parity
+  audit still reads 196 / 196. Measured on an i7-8700K with `-j 2`, 0.8.2
+  against this tree (CPU is user + system):
+
+  | | 0.8.2 | Now |
+  |---|---|---|
+  | Release build of the library and CLI, wall / CPU | 180 s / 304 s | 59 s / 105 s |
+  | The library built as a dependency (Cargo's default release profile), wall / CPU | 180 s / 294 s | 56 s / 91 s |
+  | Debug build of the library and CLI, wall / CPU | 24 s / 31 s | 14 s / 19 s |
+  | Peak memory of the release build | 2.56 GiB | 1.37 GiB |
+  | LLVM IR of the library (`cargo llvm-lines`) | 3.43 M lines | 1.39 M lines |
+  | CLI binary, Linux x86-64, as released | 27.1 MB | 16.4 MB |
+
+  Of the 10.7 MB the binary loses, 6.2 MB is this change and 4.6 MB the
+  stripped symbol table below.
+- Release builds strip the symbol table (`strip = true`), about a fifth of
+  the binary. A panic still gives its file and line; backtraces lose their
+  function names. The profile applies to builds of this repository only: a
+  crate that depends on this one keeps its own.
+- CI builds the tests with LTO off. Under thin LTO every test executable
+  repeated the library's whole optimisation at its own link; building them
+  takes 50 s instead of 336 s on the machine above. The binaries CI ships
+  are still built with thin LTO.
+
+### Fixed
+
+- PLIST (binary and XML) and XMP GContainer tags came out in a different
+  order from one run to the next. They now follow the document, as in
+  ExifTool.
+
 ## [0.8.2] - 2026-09-26
 
 A fifth fuzzing round, run before 0.8.1 reached crates.io, found three more

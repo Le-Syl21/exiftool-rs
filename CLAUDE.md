@@ -31,7 +31,11 @@ src/
 │   ├── nikon_conv.rs   # Nikon print conversions
 │   ├── sony_conv.rs    # Sony print conversions
 │   ├── generated.rs    # AUTO-GENERATED: 4,286 tag names
-│   └── print_conv_generated.rs  # AUTO-GENERATED: 17,592 print conversions
+│   ├── print_conv_generated.rs  # AUTO-GENERATED: 45,685 print conversions, as static tables
+│   ├── binary_tables.rs         # Interpreter for the binary sub-table descriptions
+│   ├── binary_tables_generated.rs  # AUTO-GENERATED: 283 binary sub-tables, as data
+│   ├── sony_ciphered.rs         # Interpreter for the Sony ciphered table descriptions
+│   └── sony_ciphered_generated.rs  # AUTO-GENERATED: 59 Sony ciphered tables, as data
 ├── writer/             # 15 writer modules
 │   ├── jpeg_writer.rs  # JPEG segment rewriting
 │   ├── exif_writer.rs  # TIFF/EXIF IFD building
@@ -40,7 +44,9 @@ src/
 │   └── ...             # png, tiff, webp, mp4, psd, pdf, matroska, etc.
 └── scripts/
     ├── gen_tags.pl      # Generate tag names from Perl source
-    └── gen_print_conv.pl # Generate print conversions from Perl source
+    ├── gen_print_conv.pl # Generate print conversions from Perl source
+    ├── gen_binary_tables.pl  # Generate the binary sub-table descriptions
+    └── gen_sony_ciphered.pl  # Generate the Sony ciphered table descriptions
 ```
 
 ## Key Commands
@@ -48,7 +54,7 @@ src/
 ```bash
 cargo build --release                    # Build CLI only
 cargo build --release --features gui     # Build CLI + GUI
-cargo test                               # Run tests (22 unit + 3 doc)
+cargo test --release                     # Run tests (227 unit + 16 integration + 10 doc), as CI does
 cargo run -- -s photo.jpg                # Run CLI
 cargo run --features gui --bin exiftool-rs-gui  # Run GUI
 cargo run --features gui --bin exiftool-rs-gui -- -lang fr  # GUI in French
@@ -56,16 +62,31 @@ cargo run --features gui --bin exiftool-rs-gui -- -lang fr  # GUI in French
 # Regenerate from Perl source:
 perl scripts/gen_tags.pl ../exiftool/lib > src/tags/generated.rs
 perl scripts/gen_print_conv.pl ../exiftool/lib > src/tags/print_conv_generated.rs
+perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs
+perl scripts/gen_sony_ciphered.pl ../exiftool/lib > src/tags/sony_ciphered_generated.rs
 
 # Always finish a regeneration with:
-cargo fmt
+cargo fmt        # or, for one file: rustfmt --edition 2021 <file>
 ```
 
-The generators emit readable Rust, not rustfmt's layout — long `match` arms and
-`Regex::new` lines come out on a single line where rustfmt would wrap them. The
+The generators emit readable Rust, not rustfmt's layout — long `Regex::new`
+statics and table rows come out on a single line where rustfmt would wrap
+them, and rustfmt also sorts the `use` lists and aligns trailing comments. The
 committed files are the formatted version, and `cargo fmt --check` is a blocking
 CI gate, so a regeneration that skips `cargo fmt` shows up as a several-thousand
-line diff and a red lint job.
+line diff and a red lint job. Run against ExifTool 13.59's `lib`, the last three
+generators reproduce their committed file byte for byte once formatted;
+`gen_tags.pl` has drifted from `generated.rs`, so read its diff before
+committing one.
+
+`print_conv_generated.rs`, `binary_tables_generated.rs` and
+`sony_ciphered_generated.rs` are data: static tables, the few lookup functions
+that read them, and for the two binary-table modules one small function per
+distinct condition. The binary tables are decoded by hand-written code, in
+`binary_tables.rs` and `sony_ciphered.rs`: change how a table is read there,
+change what a table contains through its generator. Each table used to be
+unrolled into code of its own, which made those three modules most of the
+crate's build time and of the binary's size.
 
 ## Key Design Decisions
 
@@ -88,7 +109,8 @@ line diff and a red lint job.
 
 ## Important Files
 
-- `generated.rs` and `print_conv_generated.rs` are AUTO-GENERATED — don't edit
+- `generated.rs`, `print_conv_generated.rs`, `binary_tables_generated.rs` and
+  `sony_ciphered_generated.rs` are AUTO-GENERATED — don't edit
 - `exiftool.rs` contains both read and write logic — it's the largest file
 - `file_type.rs` has the FileType enum with 115 variants
 - `metadata/exif.rs` is the core EXIF IFD parser, also handles MakerNote dispatch
