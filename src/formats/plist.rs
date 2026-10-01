@@ -68,7 +68,12 @@ fn parse_binary_plist_entries(data: &[u8]) -> Option<Vec<(String, Node)>> {
     if top_obj >= num_obj || int_size == 0 || ref_size == 0 {
         return None;
     }
-    if table_off + int_size * num_obj > data.len() {
+    // Both counts come from the trailer: checked, so a huge one cannot wrap
+    // past the length test.
+    let table_end = int_size
+        .checked_mul(num_obj)
+        .and_then(|n| n.checked_add(table_off));
+    if table_end.is_none_or(|end| end > data.len()) {
         return None;
     }
 

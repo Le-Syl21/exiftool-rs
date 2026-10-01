@@ -151,9 +151,18 @@ fn parse_json_object(json: &str, prefix: &str, out: &mut Vec<(String, PVal)>) {
     }
 }
 
+/// Arrays nested deeper than this are skipped. Each level rescans the rest
+/// of an unclosed array, so a file of unmatched `[` cost quadratic time and
+/// memory; real metadata never nests this far.
+const MAX_ARRAY_DEPTH: usize = 64;
+
 fn parse_json_array(json: &str) -> Vec<String> {
-    let mut results = Vec::new();
     let chars: Vec<char> = json.chars().collect();
+    parse_json_array_chars(&chars, 0)
+}
+
+fn parse_json_array_chars(chars: &[char], depth: usize) -> Vec<String> {
+    let mut results = Vec::new();
     let mut pos = 0;
 
     if pos < chars.len() && chars[pos] == '[' {
@@ -170,18 +179,18 @@ fn parse_json_array(json: &str) -> Vec<String> {
 
         match chars[pos] {
             '"' => {
-                let val = read_json_string(&chars, &mut pos);
+                let val = read_json_string(chars, &mut pos);
                 results.push(val);
             }
             '[' => {
-                let end = find_matching_bracket(&chars, pos, '[', ']');
-                let sub: String = chars[pos..end + 1].iter().collect();
-                let sub_vals = parse_json_array(&sub);
-                results.extend(sub_vals);
+                let end = find_matching_bracket(chars, pos, '[', ']');
+                if depth < MAX_ARRAY_DEPTH {
+                    results.extend(parse_json_array_chars(&chars[pos..=end], depth + 1));
+                }
                 pos = end + 1;
             }
             '{' => {
-                let end = find_matching_bracket(&chars, pos, '{', '}');
+                let end = find_matching_bracket(chars, pos, '{', '}');
                 pos = end + 1;
             }
             'n' => {

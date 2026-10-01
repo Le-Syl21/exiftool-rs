@@ -819,7 +819,9 @@ fn real_parse_rjmd_entries(
             // Process sub-properties
             if num_sub > 0 {
                 let sub_dir_start = value_pos + 4 + value_len + num_sub * 8;
-                let sub_dir_len = pos + entry_size - sub_dir_start;
+                // Sizes come from the file: a sub-directory that starts past
+                // the end of its entry is empty, not a wrapped length.
+                let sub_dir_len = (pos + entry_size).saturating_sub(sub_dir_start);
                 if sub_dir_start + sub_dir_len <= dir_end && sub_dir_len > 0 {
                     real_parse_rjmd_entries(
                         data,

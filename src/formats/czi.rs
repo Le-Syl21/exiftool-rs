@@ -48,7 +48,11 @@ pub fn read_czi(data: &[u8]) -> Result<Vec<Tag>> {
         let meta_off = u64::from_le_bytes([
             data[92], data[93], data[94], data[95], data[96], data[97], data[98], data[99],
         ]) as usize;
-        if meta_off > 0 && meta_off + 288 <= data.len() {
+        if meta_off > 0
+            && meta_off
+                .checked_add(288)
+                .is_some_and(|end| end <= data.len())
+        {
             // Check for ZISRAWMETADATA magic
             if &data[meta_off..meta_off + 16] == b"ZISRAWMETADATA\x00\x00" {
                 // XML length at offset 32 of metadata segment

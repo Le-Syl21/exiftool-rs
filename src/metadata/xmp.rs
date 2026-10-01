@@ -2525,14 +2525,17 @@ fn strip_struct_prefix(parent: &str, field: &str) -> String {
     }
 
     // Next: try progressively shorter suffixes of parent (min 2 chars, must start at word boundary)
-    let parent_chars: Vec<char> = parent.chars().collect();
-    for start in 1..parent_chars.len().saturating_sub(1) {
-        // Only try positions that start with uppercase (word boundary)
-        if !parent_chars[start].is_uppercase() {
+    // Suffixes are slices of `parent`: collecting each one into a new String made a
+    // long element name cost quadratic time.
+    let char_count = parent.chars().count();
+    for (start, (at, c)) in parent.char_indices().enumerate() {
+        // Neither the first nor the last character, and only positions that start
+        // with uppercase (word boundary)
+        if start == 0 || start + 1 >= char_count || !c.is_uppercase() {
             continue;
         }
-        let suffix: String = parent_chars[start..].iter().collect();
-        if field.starts_with(suffix.as_str()) && suffix.len() > 1 {
+        let suffix = &parent[at..];
+        if field.starts_with(suffix) && suffix.len() > 1 {
             let stripped = &field[suffix.len()..];
             if !stripped.is_empty() {
                 return stripped.to_string();
