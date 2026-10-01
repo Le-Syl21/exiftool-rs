@@ -4,8 +4,15 @@
 # A binary sub-table is a block of bytes addressed by index: ExifTool's
 # ProcessBinaryData reads the entry at `($index - FIRST_ENTRY) * sizeof(FORMAT)`
 # and a field's own Format says what to read there. This generator turns those
-# tables into Rust decoders straight from the Perl, so a table is reached
-# because ExifTool defines it and not because someone transcribed it.
+# tables into Rust straight from the Perl, so a table is reached because
+# ExifTool defines it and not because someone transcribed it.
+#
+# What it writes is data: one static description per table, which the
+# hand-written interpreter in src/tags/binary_tables.rs decodes. Only the
+# conditions are code, one small function per distinct expression. Unrolling
+# every table into a function of its own made this the largest share of the
+# crate's build time and of the binary, for decoders that all did the same
+# thing with different numbers.
 #
 # It is the maker-agnostic companion to gen_sony_ciphered.pl, which does the
 # same for Sony's enciphered blocks and carries the Sony-only machinery --
@@ -977,13 +984,178 @@ for my $k (sort keys %count_store) {
 }
 $sel_src .= "        _ => None,\n    }\n}\n\n";
 # ---------------------------------------------------------------- emission
+# Every table is emitted as data: a static `Table` of `Field`s and `Sub`s that
+# the interpreter in src/tags/binary_tables.rs walks. What used to be decided
+# here, table by table -- which reader, which mask, which conversions, which
+# map -- is a field of the descriptor instead. Only the conditions are still
+# code: each distinct one is a small function, the very expression
+# compile_cond made of the Perl.
 sub esc { my $s = shift; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; $s }
 sub fn_name { my $t = shift; lc "$t->{module}_$t->{name}" }
+sub static_name { uc fn_name($_[0]) }
+sub rs_str { sprintf '"%s"', esc($_[0]) }
 
 my $nf = 0; $nf += scalar @{$_->{fields}} for @tables;
 
+my %FMT_VARIANT = (
+    int8u => 'U8', int8s => 'I8', int16u => 'U16', int16s => 'I16',
+    int32u => 'U32', int32s => 'I32', int16uRev => 'U16Rev',
+    rational32u => 'R32U', rational32s => 'R32S',
+    rational64u => 'R64U', rational64s => 'R64S',
+    float => 'F32', double => 'F64', fixed32u => 'Fix32U', fixed32s => 'Fix32S',
+);
+# The formats the interpreter reads as an integer, by their width in bits
+# when they are signed: only an integer can be masked or point somewhere.
+my %INTEGER = (int8u => 0, int16u => 0, int32u => 0, int16uRev => 0,
+               int8s => 8, int16s => 16, int32s => 32);
+
+# One function per distinct condition, the offset of the entry it is written
+# on already filled in.
+my (%cond_id, @cond_src);
+sub cond_ref {
+    my ($c, $byte) = @_;
+    return undef unless defined $c;
+    (my $e = $c) =~ s/__OFF__/sprintf '0x%x', $byte/ge;
+    my $id = $cond_id{$e};
+    unless (defined $id) {
+        push @cond_src, $e;
+        $id = $cond_id{$e} = $#cond_src;
+    }
+    return "cond_$id";
+}
+
+# One static per distinct print map, sorted by key: the interpreter finds a
+# value by binary search, and prints the number itself when it is missing.
+my (%map_id, @map_src);
+sub map_ref {
+    my ($conv) = @_;
+    return undef unless %$conv;
+    my @keys = sort { $a <=> $b } keys %$conv;
+    for my $i (1 .. $#keys) {
+        die "print map keys $keys[$i - 1] and $keys[$i] are not strictly increasing\n"
+            unless $keys[$i - 1] < $keys[$i];
+    }
+    my $body = join '', map { sprintf "    (%d, \"%s\"),\n", $_, esc($conv->{$_}) } @keys;
+    my $id = $map_id{$body};
+    unless (defined $id) {
+        push @map_src, $body;
+        $id = $map_id{$body} = $#map_src;
+    }
+    return "MAP_$id";
+}
+
+my @table_src;
+for my $t (@tables) {
+    my @fl;
+    for my $f (sort { $a->{off} <=> $b->{off} } @{$t->{fields}}) {
+        # `my $entry = int($index) * $increment` (ExifTool.pm:9957): the byte
+        # is the index times the table's format size. FIRST_ENTRY does not
+        # shift it -- it only says where an -U scan starts counting -- and
+        # subtracting it moved every field of a FIRST_ENTRY => 1 table by one.
+        my $byte = $f->{off} * $t->{width};
+        my $where = sprintf "%s::%s 0x%x %s", $t->{module}, $t->{name}, $f->{off}, $f->{name};
+        my @kv = (sprintf('name: %s', rs_str($f->{name})), sprintf('id: 0x%x', $f->{off}),
+                  sprintf('at: 0x%x', $byte));
+        my @conv;
+        push @conv, 'rconv: Some(' . rs_str($f->{rconv}) . ')' if defined $f->{rconv};
+        push @conv, 'vconv: Some(' . rs_str($f->{vconv}) . ')' if defined $f->{vconv};
+        push @conv, 'pconv: Some(' . rs_str($f->{pconv}) . ')' if defined $f->{pconv};
+        # A field `Unknown => 1` keeps its row: it is described as fully as
+        # any other, and the interpreter is what leaves it out of the output.
+        my @hidden = $f->{hidden} ? ('hidden: true') : ();
+        if ($f->{text} and $f->{fmt} eq 'unicode') {
+            # `unicode` is UTF-16 in the block's own byte order, reported as
+            # it is: it has no conversions.
+            push @kv, sprintf('kind: Kind::Unicode(%s)',
+                              defined $f->{n} ? sprintf('Some(%d)', 2 * $f->{n}) : 'None'), @hidden;
+        } elsif ($f->{text}) {
+            push @kv, sprintf('kind: Kind::Text { len: %s, nul: %s }',
+                              defined $f->{n} ? sprintf('Some(%d)', $f->{n}) : 'None',
+                              $f->{fmt} eq 'string' ? 'true' : 'false');
+            # A string stores itself only where ExifTool names it a DataMember.
+            push @kv, 'dm: Some(' . rs_str($f->{dmname}) . ')' if defined $f->{dmname};
+            push @kv, @hidden, @conv;
+        } elsif ($f->{n} > 1) {
+            if ($IS_RATIONAL{$f->{fmt}}) {
+                note("$where: array of rationals");
+                next;
+            }
+            push @kv, "fmt: Fmt::$FMT_VARIANT{$f->{fmt}}", "kind: Kind::Array($f->{n})", @hidden, @conv;
+        } else {
+            push @kv, "fmt: Fmt::$FMT_VARIANT{$f->{fmt}}" unless $f->{fmt} eq 'int8u';
+            if (defined $f->{mask}) {
+                die "$where: a Mask on $f->{fmt}, which is not an integer\n"
+                    unless exists $INTEGER{$f->{fmt}};
+                my ($shift, $m) = (0, $f->{mask});
+                die "$where: Mask 0\n" unless $m;
+                until ($m & 1) { $m >>= 1; ++$shift }
+                # The interpreter masks the value widened to an i64, which is
+                # the same as masking it at its own width only while the mask
+                # leaves the sign bit alone.
+                die "$where: the Mask reaches the sign bit of $f->{fmt}\n"
+                    if $INTEGER{$f->{fmt}} and $f->{mask} >= 2 ** ($INTEGER{$f->{fmt}} - 1);
+                push @kv, sprintf('mask: 0x%x', $f->{mask});
+                push @kv, "shift: $shift" if $shift;
+            }
+            # A number always stores itself: under its DataMember or its name.
+            my $dmn = $f->{dmname} // $f->{name};
+            push @kv, 'dm: Some(' . rs_str($dmn) . ')' if $dmn ne $f->{name};
+            push @kv, @hidden;
+            # A map has already taken the place of the PrintConv expression
+            # (`undef $pconv if %conv`).
+            my $m = map_ref($f->{conv});
+            push @kv, @conv;
+            push @kv, "map: Some($m)" if defined $m;
+        }
+        my $cond = cond_ref($f->{cond}, $byte);
+        push @kv, "cond: Some($cond)" if defined $cond;
+        push @fl, "        Field { " . join(', ', @kv) . ", ..F },\n";
+    }
+    my @sl;
+    for my $sd (@{$t->{subdirs}}) {
+        my $byte = $sd->{off} * $t->{width};
+        my $target = $by_name{"$sd->{mod}::$sd->{sub}"};
+        unless ($target) {
+            note(sprintf("%s::%s 0x%x:", $t->{module}, $t->{name}, $sd->{off}) . " sub-directory into $sd->{sub}, not generated");
+            next;
+        }
+        my $span;
+        if (defined $sd->{pointer}) {
+            die sprintf("%s::%s 0x%x: a sub-directory offset read as %s, which is not an integer\n",
+                        $t->{module}, $t->{name}, $sd->{off}, $sd->{pointer})
+                unless exists $INTEGER{$sd->{pointer}};
+            $span = "Span::Pointer(Fmt::$FMT_VARIANT{$sd->{pointer}})";
+        } else {
+            $span = defined $sd->{len} ? "Span::Len($sd->{len})" : 'Span::ToEnd';
+        }
+        my $cond = cond_ref($sd->{cond}, $byte);
+        push @sl, sprintf "        Sub { at: 0x%x, table: &%s, span: %s, cond: %s },\n",
+            $byte, static_name($target), $span, defined $cond ? "Some($cond)" : 'None';
+    }
+    my $src = sprintf "/// `Image::ExifTool::%s::%s` -- FORMAT %s, FIRST_ENTRY %d.\n",
+        $t->{module}, $t->{name}, $t->{fmt}, $t->{first};
+    if ($t->{variable}) {
+        $src .= "/// Incomplete: a field of variable length moves every entry after\n";
+        $src .= "/// it, and this reads them where they would be without it.\n";
+    }
+    $src .= sprintf "static %s: Table = Table {\n    groups: [\"%s\", \"%s\", \"%s\"],\n    prio: %s,\n",
+        static_name($t), $t->{grp0}, $t->{grp1}, $t->{grp2},
+        $t->{prio0} ? 'crate::tag::PRIORITY_EXPLICIT_ZERO' : '0';
+    $src .= @fl ? "    fields: &[\n" . join('', @fl) . "    ],\n" : "    fields: &[],\n";
+    $src .= @sl ? "    subs: &[\n" . join('', @sl) . "    ],\n" : "    subs: &[],\n";
+    $src .= "};\n\n";
+    push @table_src, $src;
+}
+
+# Keyed by module and table: Minolta and Olympus both call a table MOV1.
+my @by_key = sort { $a->[0] cmp $b->[0] } map { ["$_->{module}::$_->{name}", $_] } @tables;
+for my $i (1 .. $#by_key) {
+    die "table names $by_key[$i - 1][0] and $by_key[$i][0] are not strictly increasing\n"
+        unless $by_key[$i - 1][0] lt $by_key[$i][0];
+}
+
 print <<"HDR";
-//! Auto-generated decoders for ExifTool's binary sub-tables.
+//! Auto-generated descriptions of ExifTool's binary sub-tables.
 //!
 //! Do not edit: regenerate with
 //! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`,
@@ -991,212 +1163,32 @@ print <<"HDR";
 //!
 //! ${\ scalar @tables} tables, $nf fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
-//! `(index - FIRST_ENTRY) * sizeof(FORMAT)`, and a field's own Format says
-//! what to read there. What the generator could not express is on its stderr.
+//! `index * sizeof(FORMAT)`, and a field's own Format says what to read
+//! there. Every table is data here, which `binary_tables` decodes; only the
+//! conditions are code. What the generator could not express is on its
+//! stderr.
 //! Generated code: the shape of a table decides what is written, so a helper
-//! no table happens to need and a cast that happens to be a no-op are both
-//! ordinary here rather than something to tidy away by hand.
-#![allow(dead_code, unused_parens, unused_mut, unused_variables)]
-#![allow(clippy::too_many_arguments, clippy::useless_conversion, clippy::double_parens)]
+//! no table happens to need is ordinary here rather than something to tidy
+//! away by hand.
+#![allow(dead_code, unused_imports, unused_parens)]
+#![allow(clippy::too_many_arguments, clippy::double_parens)]
 #![allow(
     clippy::too_many_lines,
     clippy::match_same_arms,
-    clippy::unreadable_literal,
-    clippy::unnecessary_cast,
-    clippy::identity_op,
-    clippy::cast_lossless
+    clippy::unreadable_literal
 )]
 
 use std::sync::LazyLock;
 
 use regex_lite::Regex;
 
-use crate::tags::conv_expr::{self, Val as Conv};
-use crate::tag::{Tag, TagGroup, TagId};
-use crate::value::Value;
-
-/// Which end the file puts first.
-pub type ByteOrder = crate::metadata::exif::ByteOrderMark;
-
-/// What the fields of this block have read so far, by the name ExifTool
-/// stores them under.
-/// A member is whatever the field read: a Nikon FirmwareVersion is a string,
-/// and the conditions on the Z9's custom settings compare it to one.
-pub type State = Vec<(String, Conv)>;
-
-fn dm_val<'a>(dm: &'a State, name: &str) -> Option<&'a Conv> {
-    dm.iter().rev().find(|(n, _)| n == name).map(|(_, v)| v)
-}
-
-fn dm_get(dm: &State, name: &str) -> Option<f64> {
-    dm_val(dm, name).map(Conv::as_num)
-}
-
-/// What a conversion of this block can ask the file about.
-///
-/// ExifTool keeps these on the object: `\$\$self{Model}` tells one encoding of
-/// TargetExposureTime from another, and `\$\$self{FILE_TYPE} eq "CRW"` decides
-/// whether an ExposureTime of zero means one second or nothing at all.
-struct Ctx<'a> {
-    make: &'a str,
-    model: &'a str,
-    file_type: &'a str,
-    dm: &'a State,
-}
-
-impl conv_expr::ParseState for Ctx<'_> {
-    /// The reader options a conversion asks about. ExifTool's ByteUnit
-    /// defaults to SI, and nothing here can set it to Binary.
-    fn option(&self, name: &str) -> Option<Conv> {
-        match name {
-            "ByteUnit" => Some(Conv::Str("SI".to_string())),
-            _ => None,
-        }
-    }
-
-    fn member(&self, name: &str) -> Option<Conv> {
-        match name {
-            "Make" => Some(Conv::Str(self.make.to_string())),
-            "Model" => Some(Conv::Str(self.model.to_string())),
-            "FILE_TYPE" | "FileType" => Some(Conv::Str(self.file_type.to_string())),
-            _ => dm_val(self.dm, name).cloned(),
-        }
-    }
-}
-
-fn u8_at(d: &[u8], o: usize) -> Option<u8> { d.get(o).copied() }
-fn i8_at(d: &[u8], o: usize) -> Option<i8> { d.get(o).map(|b| *b as i8) }
-
-fn u16_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u16> {
-    let b = [*d.get(o)?, *d.get(o + 1)?];
-    Some(if bo == ByteOrder::BigEndian { u16::from_be_bytes(b) } else { u16::from_le_bytes(b) })
-}
-fn i16_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<i16> { u16_at(d, o, bo).map(|v| v as i16) }
-
-fn u32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u32> {
-    let b = [*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?];
-    Some(if bo == ByteOrder::BigEndian { u32::from_be_bytes(b) } else { u32::from_le_bytes(b) })
-}
-fn i32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<i32> { u32_at(d, o, bo).map(|v| v as i32) }
-
-fn f32_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f32> {
-    let b = [*d.get(o)?, *d.get(o + 1)?, *d.get(o + 2)?, *d.get(o + 3)?];
-    Some(if bo == ByteOrder::BigEndian { f32::from_be_bytes(b) } else { f32::from_le_bytes(b) })
-}
-
-fn f64_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
-    let mut b = [0u8; 8];
-    b.copy_from_slice(d.get(o..o + 8)?);
-    Some(if bo == ByteOrder::BigEndian { f64::from_be_bytes(b) } else { f64::from_le_bytes(b) })
-}
-
-/// A 16-bit value stored the other way round from the rest of the block.
-fn u16rev_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<u16> {
-    let other = if bo == ByteOrder::BigEndian { ByteOrder::LittleEndian } else { ByteOrder::BigEndian };
-    u16_at(d, o, other)
-}
-
-/// ExifTool's rational32 is two 16-bit halves -- four bytes, not the eight of
-/// the rational64 EXIF writes. A zero denominator reads as infinity, and 0/0
-/// as nothing at all.
-fn rat32u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
-    ratio(f64::from(u16_at(d, o, bo)?), f64::from(u16_at(d, o + 2, bo)?))
-}
-fn rat32s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
-    ratio(f64::from(i16_at(d, o, bo)?), f64::from(i16_at(d, o + 2, bo)?))
-}
-/// The eight-byte rational EXIF writes: two 32-bit halves.
-fn rat64u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
-    ratio(f64::from(u32_at(d, o, bo)?), f64::from(u32_at(d, o + 4, bo)?))
-}
-fn rat64s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
-    ratio(f64::from(i32_at(d, o, bo)?), f64::from(i32_at(d, o + 4, bo)?))
-}
-
-/// A 32-bit fixed-point value: the number over 65536.
-fn fix32u_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
-    u32_at(d, o, bo).map(|v| f64::from(v) / 65536.0)
-}
-fn fix32s_at(d: &[u8], o: usize, bo: ByteOrder) -> Option<f64> {
-    i32_at(d, o, bo).map(|v| f64::from(v) / 65536.0)
-}
-
-fn ratio(n: f64, d: f64) -> Option<f64> {
-    if d == 0.0 { return if n == 0.0 { None } else { Some(f64::INFINITY) }; }
-    Some(n / d)
-}
-
-/// N bytes as UTF-16 text, in the block's byte order.
-fn utf16_at(d: &[u8], o: usize, n: usize, bo: ByteOrder) -> Option<String> {
-    let raw = d.get(o..o + n)?;
-    let units: Vec<u16> = raw
-        .chunks_exact(2)
-        .map(|c| {
-            if bo == ByteOrder::BigEndian {
-                u16::from_be_bytes([c[0], c[1]])
-            } else {
-                u16::from_le_bytes([c[0], c[1]])
-            }
-        })
-        .take_while(|u| *u != 0)
-        .collect();
-    Some(String::from_utf16_lossy(&units))
-}
-
-/// N bytes as text. A `string` stops at its first NUL, as ExifTool's reader
-/// does; an `undef` is the bytes as they are.
-fn text_at(d: &[u8], o: usize, n: usize, stop_at_nul: bool) -> Option<String> {
-    let raw = d.get(o..o + n)?;
-    let end = if stop_at_nul {
-        raw.iter().position(|b| *b == 0).unwrap_or(raw.len())
-    } else {
-        raw.len()
-    };
-    Some(raw[..end].iter().map(|b| *b as char).collect())
-}
-
-/// Whether the block opens with these bytes. A position is `None` when the
-/// pattern accepts anything there, and otherwise a set of ranges the byte has
-/// to fall in -- `[\x01\x02\x10\x20]` is four of them.
-type BytePat<'a> = &'a [Option<&'a [(u8, u8)]>];
-
-fn prefix_matches(d: &[u8], pat: BytePat) -> bool {
-    if d.len() < pat.len() { return false; }
-    pat.iter()
-        .zip(d)
-        .all(|(p, b)| p.is_none_or(|set| set.iter().any(|(lo, hi)| *b >= *lo && *b <= *hi)))
-}
-
-/// Whether the block opens the way any one of these patterns says.
-fn prefix_matches_any(d: &[u8], pats: &[BytePat]) -> bool {
-    pats.iter().any(|p| prefix_matches(d, p))
-}
-
-fn mk(
-    name: &str,
-    id: u16,
-    print_value: String,
-    raw: Value,
-    grp0: &'static str,
-    grp1: &'static str,
-    grp2: &'static str,
-    priority: i32,
-) -> Tag {
-    Tag {
-        id: TagId::Numeric(id),
-        name: name.to_string(),
-        description: name.to_string(),
-        group: TagGroup {
-            family0: grp0.into(),
-            family1: grp1.into(),
-            family2: grp2.into(),
-            family3: crate::tag::MAIN_DOCUMENT.into(),
-        },
-        raw_value: raw,
-        print_value,
-        priority,
-    }
-}
+use super::binary_tables::{
+    self, dm_get, dm_val, prefix_matches, prefix_matches_any, Field, FileInfo, Fmt, Kind,
+    PrintMap, Span, Sub, Table,
+};
+pub use super::binary_tables::{ByteOrder, State};
+use crate::tag::Tag;
+use crate::tags::conv_expr;
 
 HDR
 
@@ -1221,313 +1213,30 @@ pub fn decode(
     format: &str,
     dm: &mut State,
 ) -> Vec<Tag> {
-DECODE
-print "    match table {\n";
-# Keyed by module and table: Minolta and Olympus both call a table MOV1.
-printf("        \"%s::%s\" => %s(data, make, model, bo, file_type, format, dm),\n",
-       $_->{module}, $_->{name}, fn_name($_)) for @tables;
-print "        _ => Vec::new(),\n    }\n}\n\n";
-
-for my $t (@tables) {
-    printf "/// `Image::ExifTool::%s::%s` -- FORMAT %s, FIRST_ENTRY %d.\n",
-        $t->{module}, $t->{name}, $t->{fmt}, $t->{first};
-    if ($t->{variable}) {
-        printf "/// Incomplete: a field of variable length moves every entry after\n";
-        printf "/// it, and this reads them where they would be without it.\n";
-    }
-    printf "fn %s(data: &[u8], make: &str, model: &str, bo: ByteOrder, file_type: &str, format: &str, dm: &mut State) -> Vec<Tag> {\n", fn_name($t);
-    printf "    const GRP0: &str = \"%s\";\n", $t->{grp0};
-    printf "    const GRP1: &str = \"%s\";\n", $t->{grp1};
-    printf "    const GRP2: &str = \"%s\";\n", $t->{grp2};
-    printf "    const PRIO: i32 = %s;\n",
-        $t->{prio0} ? 'crate::tag::PRIORITY_EXPLICIT_ZERO' : '0';
-    # A table can be empty of readable fields -- CameraInfoUnknown16 is a
-    # name ExifTool gives a layout it does not describe -- so every argument
-    # has to be spoken for.
-    print  "    let mut tags = Vec::new();\n";
-    print  "    let _ = (data, make, model, bo, file_type, format, &dm);\n";
-
-    for my $f (sort { $a->{off} <=> $b->{off} } @{$t->{fields}}) {
-        # `my $entry = int($index) * $increment` (ExifTool.pm:9957): the byte
-        # is the index times the table's format size. FIRST_ENTRY does not
-        # shift it -- it only says where an -U scan starts counting -- and
-        # subtracting it moved every field of a FIRST_ENTRY => 1 table by one.
-        my $byte = $f->{off} * $t->{width};
-        my $ind = "    ";
-        if (defined $f->{cond}) {
-            (my $c = $f->{cond}) =~ s/__OFF__/sprintf '0x%x', $byte/ge;
-            printf "%sif %s {\n", $ind, $c;
-            $ind .= "    ";
-        }
-        # `unicode` is UTF-16 in the block's own byte order.
-        if ($f->{text} and $f->{fmt} eq 'unicode') {
-            unless ($f->{hidden}) {
-                printf "%sif let Some(text) = utf16_at(data, 0x%x, %s, bo) {\n",
-                    $ind, $byte,
-                    defined $f->{n} ? 2 * $f->{n}
-                                    : sprintf('data.len().saturating_sub(0x%x)', $byte);
-                printf "%s    tags.push(mk(\"%s\", 0x%x, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));\n",
-                    $ind, $f->{name}, $f->{off};
-                printf "%s}\n", $ind;
-            }
-            print  "    }\n" if defined $f->{cond};
-            next;
-        }
-        if ($f->{text}) {
-            if ($f->{hidden}) {
-                # Read but not reported, and nothing else looks at a string
-                # member, so there is nothing to read it for.
-                print  "    }\n" if defined $f->{cond};
-                next;
-            }
-            printf "%sif let Some(text) = text_at(data, 0x%x, %s, %s) {\n",
-                $ind, $byte,
-                defined $f->{n} ? $f->{n} : sprintf('data.len().saturating_sub(0x%x)', $byte),
-                ($f->{fmt} eq 'string' ? 'true' : 'false');
-            # A string field stores itself where ExifTool names it a
-            # DataMember: the Z9's FirmwareVersion decides which of three
-            # menu-settings layouts applies.
-            printf "%s    dm.push((\"%s\".to_string(), Conv::Str(text.clone())));\n",
-                $ind, $f->{dmname} if defined $f->{dmname};
-            # A text field carries its conversions as much as a number does:
-            # SerialInfo's two entries are ruled out by a RawConv unless they
-            # look like a serial number, and emitting them regardless reported
-            # an empty tag ExifTool never has.
-            if (defined $f->{rconv} or defined $f->{vconv} or defined $f->{pconv}) {
-                printf "%s    let ctx = Ctx { make, model, file_type, dm };\n", $ind;
-                printf "%s    let mut cv = Conv::Str(text);\n", $ind;
-                if (defined $f->{rconv}) {
-                    printf "%s    let rc = conv_expr::eval_with(\"%s\", &cv, &ctx);\n",
-                        $ind, esc($f->{rconv});
-                    printf "%s    if rc.as_ref() != Some(&Conv::Undef) {\n", $ind;
-                    printf "%s        if let Some(x) = rc { cv = x; }\n", $ind;
-                    $ind .= "    ";
-                }
-                printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
-                    $ind, esc($f->{vconv}) if defined $f->{vconv};
-                printf "%s    let raw = Value::String(cv.as_string());\n", $ind;
-                printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
-                    $ind, esc($f->{pconv}) if defined $f->{pconv};
-                printf "%s    tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));\n",
-                    $ind, $f->{name}, $f->{off} unless $f->{hidden};
-                if (defined $f->{rconv}) {
-                    $ind = substr($ind, 4);
-                    printf "%s    }\n", $ind;
-                }
-            } else {
-                printf "%s    tags.push(mk(\"%s\", 0x%x, text.clone(), Value::String(text), GRP0, GRP1, GRP2, PRIO));\n",
-                    $ind, $f->{name}, $f->{off} unless $f->{hidden};
-            }
-            printf "%s}\n", $ind;
-            print  "    }\n" if defined $f->{cond};
-            next;
-        }
-        my $reader = {
-            int8u => 'u8_at', int8s => 'i8_at',
-            int16u => 'u16_at', int16s => 'i16_at',
-            int32u => 'u32_at', int32s => 'i32_at',
-            rational32u => 'rat32u_at', rational32s => 'rat32s_at',
-            int16uRev => 'u16rev_at',
-            float => 'f32_at', double => 'f64_at',
-            rational64u => 'rat64u_at', rational64s => 'rat64s_at',
-            fixed32u => 'fix32u_at', fixed32s => 'fix32s_at',
-        }->{$f->{fmt}};
-        my $args = $f->{fmt} =~ /^int8/ ? '' : ', bo';
-        my $w = $WIDTH{$f->{fmt}};
-
-        if ($f->{n} > 1) {
-            if ($IS_RATIONAL{$f->{fmt}}) {
-                note(sprintf("%s::%s 0x%x", $t->{module}, $t->{name}, $f->{off}) . " $f->{name}: array of rationals");
-                next;
-            }
-            printf "%s{\n", $ind;
-            printf "%s    let mut parts = Vec::new();\n", $ind;
-            printf "%s    for k in 0..%d {\n", $ind, $f->{n};
-            printf "%s        match %s(data, 0x%x + k * %d%s) {\n", $ind, $reader, $byte, $w, $args;
-            printf "%s            Some(x) => parts.push(x.to_string()),\n", $ind;
-            printf "%s            None => { parts.clear(); break }\n", $ind;
-            printf "%s        }\n%s    }\n", $ind, $ind;
-            if ($f->{hidden}) {
-                printf "%s}\n", $ind;
-                print  "    }\n" if defined $f->{cond};
-                next;
-            }
-            printf "%s    if !parts.is_empty() {\n", $ind;
-            printf "%s        let s = parts.join(\" \");\n", $ind;
-            # An array is ruled out by a RawConv as much as a scalar is:
-            # Panasonic's Face2Position is `$$self{NumFacePositions} < 2 ?
-            # undef : $val`, and emitting it regardless reported five face
-            # positions of zeros that ExifTool does not have.
-            my $arr_guard = 0;
-            if (defined $f->{rconv}) {
-                printf "%s        let ctx = Ctx { make, model, file_type, dm };\n", $ind;
-                printf "%s        let rc = conv_expr::eval_with(\"%s\", &Conv::Str(s.clone()), &ctx);\n",
-                    $ind, esc($f->{rconv});
-                printf "%s        if rc.as_ref() != Some(&Conv::Undef) {\n", $ind;
-                $arr_guard = 1;
-                $ind .= "    ";
-            }
-            # An array carries its conversions as much as a scalar does:
-            # RawMeasuredRGGB is four int32u read back with their halves
-            # exchanged, and joining them without that gives four other
-            # numbers entirely.
-            if (defined $f->{vconv} or defined $f->{pconv}) {
-                printf "%s        let ctx = Ctx { make, model, file_type, dm };\n", $ind;
-                printf "%s        let mut cv = Conv::Str(s.clone());\n", $ind;
-                printf "%s        if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
-                    $ind, esc($f->{vconv}) if defined $f->{vconv};
-                printf "%s        let raw = Value::String(cv.as_string());\n", $ind;
-                printf "%s        if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
-                    $ind, esc($f->{pconv}) if defined $f->{pconv};
-                printf "%s        tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));\n",
-                    $ind, $f->{name}, $f->{off} unless $f->{hidden};
-            } else {
-                printf "%s        tags.push(mk(\"%s\", 0x%x, s.clone(), Value::String(s), GRP0, GRP1, GRP2, PRIO));\n",
-                    $ind, $f->{name}, $f->{off} unless $f->{hidden};
-            }
-            if ($arr_guard) {
-                $ind = substr($ind, 4);
-                printf "%s        }\n", $ind;
-            }
-            printf "%s    }\n%s}\n", $ind, $ind;
-            print  "    }\n" if defined $f->{cond};
-            next;
-        }
-
-        printf "%sif let Some(v) = %s(data, 0x%x%s) {\n", $ind, $reader, $byte, $args;
-        if (defined $f->{mask}) {
-            my ($shift, $m) = (0, $f->{mask});
-            until ($m & 1) { $m >>= 1; ++$shift }
-            printf "%s    let v = %s;\n", $ind,
-                $shift ? sprintf('(v & %#x) >> %d', $f->{mask}, $shift) : sprintf('v & %#x', $f->{mask});
-        }
-        printf "%s    dm.push((\"%s\".to_string(), Conv::Num(f64::from(v))));\n",
-            $ind, $f->{dmname} // $f->{name};
-        # `Unknown => 1` is read but not reported unless -u is given, which is
-        # not the default. The value still goes into the state, because a later
-        # field can be conditioned on it; the conversions produce nothing but
-        # the tag, so they are not run at all.
-        if ($f->{hidden}) {
-            printf "%s}\n", $ind;
-            print  "    }\n" if defined $f->{cond};
-            next;
-        }
-        printf "%s    let ctx = Ctx { make, model, file_type, dm };\n", $ind
-            if defined $f->{rconv} or defined $f->{vconv} or defined $f->{pconv};
-        my $guard = 0;
-        # A RawConv can rule the value out -- `$val ? $val : undef` -- and it
-        # can change what kind of number it is: AVIHeader's FrameRate is
-        # `1e6 / $val`, and casting that back to the integer the reader
-        # produced turned 29.97 into 29.
-        printf "%s    let base = Conv::Num(f64::from(v));\n", $ind;
-        if (defined $f->{rconv}) {
-            printf "%s    let rc = conv_expr::eval_with(\"%s\", &base, &ctx);\n",
-                $ind, esc($f->{rconv});
-            printf "%s    if rc.as_ref() != Some(&Conv::Undef) {\n", $ind;
-            printf "%s        let base = rc.unwrap_or(base);\n", $ind;
-            $guard = 1;
-            $ind .= "    ";
-        }
-        my %conv = %{$f->{conv}};
-        if (%conv) {
-            # A hash conversion looks up the value AFTER any ValueConv, and a
-            # ValueConv that returns undef means no tag at all: H264's
-            # ExposureProgram is `$val == 15 ? undef : $val` and has a hash of
-            # its own, so running only the hash reported the raw 15.
-            my $vguard = 0;
-            if (defined $f->{vconv}) {
-                printf "%s    let vc = conv_expr::eval_with(\"%s\", &base, &ctx);\n",
-                    $ind, esc($f->{vconv});
-                printf "%s    if vc.as_ref() != Some(&Conv::Undef) {\n", $ind;
-                printf "%s        let base = vc.unwrap_or(base);\n", $ind;
-                $vguard = 1;
-                $ind .= "    ";
-            }
-            printf "%s    #[allow(clippy::cast_possible_truncation)]\n", $ind;
-            printf "%s    let s = match base.as_num() as i64 {\n", $ind;
-            for my $k (sort { $a <=> $b } keys %conv) {
-                printf "%s        %d => \"%s\".to_string(),\n", $ind, $k, esc($conv{$k});
-            }
-            printf "%s        other => other.to_string(),\n", $ind;
-            printf "%s    };\n", $ind;
-            printf "%s    #[allow(clippy::cast_possible_truncation)]\n", $ind;
-            printf "%s    let raw = Value::I32(base.as_num() as i32);\n", $ind;
-            printf "%s    tags.push(mk(\"%s\", 0x%x, s, raw, GRP0, GRP1, GRP2, PRIO));\n",
-                $ind, $f->{name}, $f->{off} unless $f->{hidden};
-            if ($vguard) {
-                $ind = substr($ind, 4);
-                printf "%s    }\n", $ind;
-            }
-        } elsif (defined $f->{vconv} or defined $f->{pconv}) {
-            printf "%s    let mut cv = base;\n", $ind;
-            # A ValueConv that returns undef means the tag is not extracted at
-            # all -- H264's ExposureProgram is `$val == 15 ? undef : $val`, and
-            # reporting it anyway gave three tags ExifTool does not have.
-            my $vguard = 0;
-            if (defined $f->{vconv}) {
-                printf "%s    let vc = conv_expr::eval_with(\"%s\", &cv, &ctx);\n",
-                    $ind, esc($f->{vconv});
-                printf "%s    if vc.as_ref() != Some(&Conv::Undef) {\n", $ind;
-                printf "%s        if let Some(x) = vc { cv = x; }\n", $ind;
-                $vguard = 1;
-                $ind .= "    ";
-            }
-            printf "%s    let raw = Value::F64(cv.as_num());\n", $ind;
-            printf "%s    if let Some(x) = conv_expr::eval_with(\"%s\", &cv, &ctx) { cv = x; }\n",
-                $ind, esc($f->{pconv}) if defined $f->{pconv};
-            printf "%s    tags.push(mk(\"%s\", 0x%x, cv.as_string(), raw, GRP0, GRP1, GRP2, PRIO));\n",
-                $ind, $f->{name}, $f->{off} unless $f->{hidden};
-            if ($vguard) {
-                $ind = substr($ind, 4);
-                printf "%s    }\n", $ind;
-            }
-        } else {
-            printf "%s    #[allow(clippy::cast_possible_truncation)]\n", $ind;
-            printf "%s    tags.push(mk(\"%s\", 0x%x, base.as_string(), Value::I32(base.as_num() as i32), GRP0, GRP1, GRP2, PRIO));\n",
-                $ind, $f->{name}, $f->{off} unless $f->{hidden};
-        }
-        if ($guard) {
-            $ind = substr($ind, 4);
-            printf "%s    }\n", $ind;
-        }
-        printf "%s}\n", $ind;
-        print  "    }\n" if defined $f->{cond};
-    }
-
-    for my $sd (@{$t->{subdirs}}) {
-        my $byte = $sd->{off} * $t->{width};
-        my $ind = "    ";
-        if (defined $sd->{cond}) {
-            (my $c = $sd->{cond}) =~ s/__OFF__/sprintf '0x%x', $byte/ge;
-            printf "%sif %s {\n", $ind, $c;
-            $ind .= "    ";
-        }
-        my $target = $by_name{"$sd->{mod}::$sd->{sub}"};
-        unless ($target) {
-            note(sprintf("%s::%s 0x%x:", $t->{module}, $t->{name}, $sd->{off}) . " sub-directory into $sd->{sub}, not generated");
-            print "    }\n" if defined $sd->{cond};
-            next;
-        }
-        if (defined $sd->{pointer}) {
-            my $reader = {
-                int8u => 'u8_at', int16u => 'u16_at', int32u => 'u32_at',
-                int8s => 'i8_at', int16s => 'i16_at', int32s => 'i32_at',
-            }->{$sd->{pointer}};
-            my $args = $sd->{pointer} =~ /^int8/ ? '' : ', bo';
-            printf "%sif let Some(sub) = %s(data, 0x%x%s)\n", $ind, $reader, $byte, $args;
-            printf "%s    .and_then(|at| data.get(at as usize..))\n", $ind;
-            printf "%s{\n", $ind;
-        } elsif (defined $sd->{len}) {
-            printf "%sif let Some(sub) = data.get(0x%x..0x%x + %d) {\n", $ind, $byte, $byte, $sd->{len};
-        } else {
-            printf "%sif let Some(sub) = data.get(0x%x..) {\n", $ind, $byte;
-        }
-        printf "%s    tags.extend(%s(sub, make, model, bo, file_type, format, dm));\n", $ind, fn_name($target);
-        printf "%s}\n", $ind;
-        print  "    }\n" if defined $sd->{cond};
-    }
-    print "    tags\n}\n\n";
+    let file = FileInfo { make, model, bo, file_type, format };
+    binary_tables::decode(TABLES, table, data, &file, dm)
 }
+
+/// What every field below is unless it says otherwise.
+const F: Field = Field::DEFAULT;
+
+DECODE
+
+for my $i (0 .. $#cond_src) {
+    printf "fn cond_%d(data: &[u8], make: &str, model: &str, file_type: &str, format: &str, dm: &State) -> bool {\n    let _ = (data, make, model, file_type, format, dm);\n    %s\n}\n",
+        $i, $cond_src[$i];
+}
+print "\n" if @cond_src;
+for my $i (0 .. $#map_src) {
+    printf "static MAP_%d: PrintMap = &[\n%s];\n", $i, $map_src[$i];
+}
+print "\n" if @map_src;
+print $_ for @table_src;
+
+print "/// Every table by the name `decode` is asked for, sorted for a binary search.\n";
+print "static TABLES: &[(&str, &Table)] = &[\n";
+printf "    (\"%s\", &%s),\n", $_->[0], static_name($_->[1]) for @by_key;
+print "];\n\n";
 
 $sel_src =~ s/\s+$//;
 print "$sel_src\n\n";
@@ -1537,7 +1246,23 @@ print "    /// Every generated pattern must compile: a bad one would otherwise\n
 print "    /// only surface as a panic on whichever file first reaches it.\n";
 print "    #[test]\n    fn every_model_pattern_compiles() {\n";
 printf "        LazyLock::force(&MODEL_RE_%d);\n", $_ for (0 .. $#re_list);
-print "    }\n}\n";
+print "    }\n\n";
+print <<'TESTS';
+    /// `decode` and the print maps find their entries by binary search, so
+    /// both must be sorted, and a name or a key given twice would hide one.
+    #[test]
+    fn tables_and_print_maps_are_sorted() {
+        assert!(TABLES.windows(2).all(|w| w[0].0 < w[1].0));
+        for (name, t) in TABLES {
+            for f in t.fields {
+                if let Some(map) = f.map {
+                    assert!(map.windows(2).all(|w| w[0].0 < w[1].0), "{name} {}", f.name);
+                }
+            }
+        }
+    }
+}
+TESTS
 
 printf STDERR "Generated %d tables, %d fields, %d model patterns.\n",
     scalar @tables, $nf, scalar @re_list;

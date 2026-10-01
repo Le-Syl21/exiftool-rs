@@ -72,41 +72,40 @@ my $lib_src = '';
     closedir $d;
 }
 
-# Our source with the generated dispatcher's own key lines removed, so a
-# table counts only where a READER names it.
-my $gen = 'src/tags/binary_tables_generated.rs';
+# Our source without the generated tables, so a table counts only where a
+# READER names it.
+my $gen = "$src/tags/binary_tables_generated.rs";
 my $outside = '';
 for my $f (keys %ours_by_file) {
     next if $f =~ /binary_tables_generated\.rs$/;
     $outside .= $ours_by_file{$f};
 }
 
-# Which generated decoder calls which, so a table opened as a sub-directory by
+# Which generated table opens which, so a table opened as a sub-directory by
 # a reached one counts as reached too -- that is how the NikonCustom settings
 # are decoded, from inside their ShotInfo.
-my (%fn_of_table, %table_of_fn, %calls, %called_from_reached);
+my (%static_of_table, %table_of_static, %calls, %called_from_reached);
 if (open my $h, '<', $gen) {
     local $/;
     my $body = <$h>;
     close $h;
-    # The decode dispatcher's own arms, not `table_byte_order`'s: both are
-    # keyed by the same strings, and matching either left every table mapped
-    # to the function `Some`.
-    # Written whitespace-insensitively: rustfmt reflows the longer arms into
-    # a block and breaks the argument list, and a regex that assumed one line
-    # silently lost every table whose name was long enough to wrap.
-    while ($body =~ /"(\w+)::(\w+)" => \{?\s*(\w+)\(\s*data\s*,/g) {
-        $fn_of_table{"$1\::$2"} = $3;
-        $table_of_fn{$3} = "$1\::$2";
+    # The name `decode` is asked for, and the static that describes the table
+    # under it: `("Mod::Table", &MOD_TABLE)` in TABLES. `table_byte_order` is
+    # keyed by the same strings, but maps them to `Some(...)`, not to a table.
+    # Written whitespace-insensitively: rustfmt breaks a pair that does not
+    # fit on one line.
+    while ($body =~ /\(\s*"(\w+)::(\w+)"\s*,\s*&(\w+)\s*\)/g) {
+        $static_of_table{"$1\::$2"} = $3;
+        $table_of_static{$3} = "$1\::$2";
     }
-    # Every call one decoder makes to another. Read from a copy: a `//g` loop
-    # leaves its position on the scalar, and the next loop over the same one
-    # would start where this ended.
-    my $bodies = $body;
-    while ($bodies =~ /^fn (\w+)\(.*?\n\}/gms) {
-        my $whole = $&;
-        my $from = $1;
-        while ($whole =~ /\b(\w+)\(\s*sub\s*,/gs) {
+    # Every sub-directory a table opens: `table: &MOD_TABLE` inside its own
+    # `static MOD_TABLE: Table = Table { ... };`. Read from a copy: a `//g`
+    # loop leaves its position on the scalar, and the next loop over the same
+    # one would start where this ended.
+    my $statics = $body;
+    while ($statics =~ /^static (\w+): Table = Table \{(.*?)^\};/gms) {
+        my ($from, $whole) = ($1, $2);
+        while ($whole =~ /\btable:\s*&(\w+)/g) {
             push @{$calls{$from}}, $1;
         }
     }
@@ -122,7 +121,7 @@ if (open my $h, '<', $gen) {
 
     # Seed: every table a reader names, then close over the call graph.
     my @queue;
-    for my $t (keys %fn_of_table) {
+    for my $t (keys %static_of_table) {
         push @queue, $t if $outside =~ /\Q$t\E/;
     }
     for my $k (keys %selector_tables) {
@@ -148,9 +147,9 @@ if (open my $h, '<', $gen) {
     my %seen;
     while (my $t = shift @queue) {
         next if $seen{$t}++;
-        my $fn = $fn_of_table{$t} or next;
-        for my $callee (@{$calls{$fn} || []}) {
-            my $ct = $table_of_fn{$callee} or next;
+        my $st = $static_of_table{$t} or next;
+        for my $callee (@{$calls{$st} || []}) {
+            my $ct = $table_of_static{$callee} or next;
             next if $seen{$ct};
             $called_from_reached{$ct} = 1;
             push @queue, $ct;
@@ -186,10 +185,10 @@ for my $pm (sort grep { /\.pm$/ } readdir $dh) {
         # A bare substring is not a mention: "Thumbnail" occurs in thousands
         # of places, and matching it counted Samsung::Thumbnail as reached
         # when nothing decodes it.
-        # Named OUTSIDE the generated dispatcher. A generated decoder that
-        # nothing calls is not reachable: its own `"Mod::Table" => mod_table()`
-        # line would otherwise be the only evidence, and generating a table
-        # would be enough to count it.
+        # Named OUTSIDE the generated tables. A generated table that nothing
+        # decodes is not reachable: its own `("Mod::Table", &MOD_TABLE)` entry
+        # would otherwise be the only evidence, and generating a table would
+        # be enough to count it.
         my $reached = $outside =~ /\Q$module\E::\Q$table\E/;
         # Or opened as a sub-directory by a table that is itself reached.
         $reached ||= $called_from_reached{"$module\::$table"};

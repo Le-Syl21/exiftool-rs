@@ -1,3 +1,4 @@
+pub(crate) mod binary_tables;
 pub mod binary_tables_generated;
 pub mod canon_sub;
 pub mod conv_expr;
