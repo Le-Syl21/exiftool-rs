@@ -1,7 +1,8 @@
 //! Auto-generated decoders for ExifTool's binary sub-tables.
 //!
 //! Do not edit: regenerate with
-//! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
+//! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`,
+//! then `cargo fmt`.
 //!
 //! 283 tables, 4782 fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at

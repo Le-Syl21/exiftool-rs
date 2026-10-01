@@ -13,6 +13,10 @@
 # long.
 #
 # Usage: perl scripts/gen_sony_ciphered.pl /path/to/exiftool/lib > src/tags/sony_ciphered_generated.rs
+#        cargo fmt
+#
+# The committed file is rustfmt's layout of this output, so the regeneration
+# is not finished until `cargo fmt` has run (`cargo fmt --check` gates CI).
 
 use strict;
 use warnings;

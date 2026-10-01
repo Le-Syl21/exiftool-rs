@@ -14,6 +14,10 @@
 # Everything it cannot express is named on stderr. Nothing is skipped quietly.
 #
 # Usage: perl scripts/gen_binary_tables.pl /path/to/exiftool/lib > src/tags/binary_tables_generated.rs
+#        cargo fmt
+#
+# The committed file is rustfmt's layout of this output, so the regeneration
+# is not finished until `cargo fmt` has run (`cargo fmt --check` gates CI).
 
 use strict;
 use warnings;
@@ -982,7 +986,8 @@ print <<"HDR";
 //! Auto-generated decoders for ExifTool's binary sub-tables.
 //!
 //! Do not edit: regenerate with
-//! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`.
+//! `perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs`,
+//! then `cargo fmt`.
 //!
 //! ${\ scalar @tables} tables, $nf fields. A binary sub-table is a block of
 //! bytes addressed by index: ExifTool's ProcessBinaryData reads the entry at
