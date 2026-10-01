@@ -2062,7 +2062,13 @@ pub fn read_url(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                     if hex.len() >= 16 {
                         let bytes: Vec<u8> = (0..16)
                             .step_by(2)
-                            .filter_map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
+                            // By bytes: a non-ASCII value would put `i` inside a
+                            // character, and a `str` slice there panics.
+                            .filter_map(|i| {
+                                std::str::from_utf8(&hex.as_bytes()[i..i + 2])
+                                    .ok()
+                                    .and_then(|pair| u8::from_str_radix(pair, 16).ok())
+                            })
                             .collect();
                         if bytes.len() >= 8 {
                             let lo = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);

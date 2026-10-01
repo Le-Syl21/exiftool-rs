@@ -169,7 +169,11 @@ fn ps_lines(data: &[u8]) -> Vec<(usize, usize)> {
 }
 
 fn starts_with_ci(line: &str, prefix: &str) -> bool {
-    line.len() >= prefix.len() && line[..prefix.len()].eq_ignore_ascii_case(prefix)
+    // Compared as bytes: the line comes from the file, and slicing the `str`
+    // at `prefix.len()` could split a multi-byte character.
+    line.as_bytes()
+        .get(..prefix.len())
+        .is_some_and(|head| head.eq_ignore_ascii_case(prefix.as_bytes()))
 }
 
 /// `$docNum =~ s/-?(\d+)$//` (PostScript.pm:578, :583). Removes the trailing

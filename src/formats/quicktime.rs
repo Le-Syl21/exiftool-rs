@@ -771,8 +771,13 @@ fn parse_atoms(
                     // Collect all sample sizes for stream extraction
                     if state.extract_embedded > 0 {
                         if sample_size > 0 {
-                            // All samples have the same size
-                            for _ in 0..sample_count {
+                            // All samples have the same size. ExifTool expands
+                            // the list as declared (`($sz) x $num`); a file
+                            // cannot hold more samples of that size than it has
+                            // bytes, so stop there rather than allocate
+                            // 16 GB for a count read from the file.
+                            let fits = data.len() / sample_size as usize + 1;
+                            for _ in 0..sample_count.min(fits) {
                                 state.stream_current.stsz.push(sample_size);
                             }
                         } else {
