@@ -1,169 +1,196 @@
 //! TIFF file metadata writer.
 //!
-//! Rewrites TIFF files (and TIFF-based RAW: DNG, CR2, etc.) with updated metadata.
+//! Edits TIFF files and TIFF-based RAW files (DNG, CR2, NEF, ARW, ORF, PEF)
+//! in place. The whole file is the EXIF block, so the in-place IFD editor of
+//! [`exif_edit`] does the work: an edited directory is rewritten where it was
+//! or moved to the end of the file when it grows, a new or longer value is
+//! appended, and everything else -- image strips and tiles, SubIFDs, maker
+//! notes and their private offsets -- keeps its offset.
+//!
+//! What may be deleted follows ExifTool's `WriteDirectory` (Writer.pl):
+//! IFD0 is never deleted from a TIFF, `EXIF:all` only drops the ExifIFD,
+//! and a RAW file keeps its IFD0, ExifIFD and maker notes whatever is asked.
 
-use crate::error::Result;
-use crate::metadata::exif::{parse_tiff_header, ByteOrderMark};
+use crate::error::{Error, Result};
+use crate::file_type::FileType;
+use crate::writer::exif_edit::{self, ExifChanges, ExifOutcome, Ifd};
 
-/// Rewrite a TIFF file, updating specific IFD entries.
+/// ExifTool's `%rawType` (Writer.pl), restricted to the types written here.
+pub fn is_raw_type(file_type: FileType) -> bool {
+    matches!(
+        file_type,
+        FileType::Cr2 | FileType::Nef | FileType::Arw | FileType::Orf | FileType::Pef
+    )
+}
+
+/// Restrict an EXIF request to what ExifTool applies to a TIFF-based file.
 ///
-/// This is a simple implementation that modifies tag values in-place when possible,
-/// or appends new data at the end of the file.
-pub fn write_tiff(
-    source: &[u8],
-    changes: &[(u16, Vec<u8>)], // (tag_id, new_value_bytes)
-) -> Result<Vec<u8>> {
-    let header = parse_tiff_header(source)?;
-    let bo = header.byte_order;
-
-    let mut output = source.to_vec();
-
-    // For each change, find the tag in IFD0 or ExifIFD and update
-    let ifd0_offset = header.ifd0_offset as usize;
-    for &(tag_id, ref new_data) in changes {
-        if !try_update_tag(&mut output, ifd0_offset, bo, tag_id, new_data) {
-            // Try ExifIFD
-            if let Some(exif_off) = find_sub_ifd(&output, ifd0_offset, bo, 0x8769) {
-                try_update_tag(&mut output, exif_off, bo, tag_id, new_data);
-            }
-        }
+/// - `EXIF:all` drops the ExifIFD only (GPS and the image directories stay),
+///   and nothing at all from a RAW file;
+/// - `IFD0:all` does nothing;
+/// - a RAW file keeps its ExifIFD and its maker notes;
+/// - only tags this crate knows how to write may be deleted by name, so a
+///   request can never remove a tag that describes the image data.
+pub fn tiff_changes(changes: &ExifChanges, file_type: FileType) -> ExifChanges {
+    let raw = is_raw_type(file_type);
+    let mut out = changes.clone();
+    out.delete_all = false;
+    out.delete_dirs.retain(|d| *d != Ifd::Ifd0);
+    if changes.delete_all && !out.delete_dirs.contains(&Ifd::ExifIfd) {
+        out.delete_dirs.push(Ifd::ExifIfd);
     }
-
-    Ok(output)
+    if raw {
+        out.delete_dirs.retain(|d| *d != Ifd::ExifIfd);
+        out.delete_maker_notes = false;
+    }
+    out.delete_tags
+        .retain(|(_, name)| exif_edit::tag_spec(name).is_some());
+    out
 }
 
-/// Try to update a tag value in an IFD. Returns true if found and updated.
-fn try_update_tag(
-    data: &mut Vec<u8>,
-    ifd_offset: usize,
-    bo: ByteOrderMark,
-    target_tag: u16,
-    new_value: &[u8],
-) -> bool {
-    if ifd_offset + 2 > data.len() {
-        return false;
+/// Apply `changes` to the TIFF-based file `source`. Returns the input
+/// unchanged when the request does not change anything.
+pub fn write_tiff(source: &[u8], changes: &ExifChanges, file_type: FileType) -> Result<Vec<u8>> {
+    if !(source.starts_with(b"II\x2a\0") || source.starts_with(b"MM\0\x2a")) {
+        return Err(Error::InvalidData("not a TIFF file".into()));
+    }
+    let changes = tiff_changes(changes, file_type);
+    match exif_edit::edit_exif(Some(source), &changes)? {
+        ExifOutcome::Unchanged => Ok(source.to_vec()),
+        ExifOutcome::Rewritten(t) => Ok(t),
+        // Only an IFD0 left with nothing in it can go, which a TIFF image
+        // never is; refuse rather than write a file without an image.
+        ExifOutcome::Removed => Err(Error::InvalidData(
+            "the edit would remove IFD0 from a TIFF file".into(),
+        )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::writer::exif_edit::SetValue;
+
+    /// A little-endian TIFF: one 2x1 strip, IFD0 with the image tags and
+    /// Model, and an ExifIFD holding DateTimeOriginal.
+    fn sample() -> Vec<u8> {
+        let mut t = b"II\x2a\0\x08\0\0\0".to_vec();
+        // IFD0 at 8: 8 entries.
+        let entries: [(u16, u16, u32, u32); 8] = [
+            (0x0100, 3, 1, 2),   // ImageWidth
+            (0x0101, 3, 1, 1),   // ImageLength
+            (0x0103, 3, 1, 1),   // Compression
+            (0x0106, 3, 1, 1),   // PhotometricInterpretation
+            (0x0110, 2, 6, 200), // Model -> "Model\0" at 200
+            (0x0111, 4, 1, 220), // StripOffsets
+            (0x0117, 4, 1, 2),   // StripByteCounts
+            (0x8769, 4, 1, 120), // ExifIFD
+        ];
+        t.extend_from_slice(&(entries.len() as u16).to_le_bytes());
+        for (tag, typ, n, v) in entries {
+            t.extend_from_slice(&tag.to_le_bytes());
+            t.extend_from_slice(&typ.to_le_bytes());
+            t.extend_from_slice(&n.to_le_bytes());
+            t.extend_from_slice(&v.to_le_bytes());
+        }
+        t.extend_from_slice(&0u32.to_le_bytes());
+        t.resize(120, 0);
+        // ExifIFD at 120: DateTimeOriginal.
+        t.extend_from_slice(&1u16.to_le_bytes());
+        t.extend_from_slice(&0x9003u16.to_le_bytes());
+        t.extend_from_slice(&2u16.to_le_bytes());
+        t.extend_from_slice(&20u32.to_le_bytes());
+        t.extend_from_slice(&160u32.to_le_bytes());
+        t.extend_from_slice(&0u32.to_le_bytes());
+        t.resize(160, 0);
+        t.extend_from_slice(b"2020:01:02 03:04:05\0");
+        t.resize(200, 0);
+        t.extend_from_slice(b"Model\0");
+        t.resize(220, 0);
+        t.extend_from_slice(&[0xAB, 0xCD]);
+        t
     }
 
-    let count = read_u16(data, ifd_offset, bo) as usize;
+    fn names(data: &[u8]) -> Vec<(String, String)> {
+        let tags = crate::metadata::ExifReader::read(data).unwrap();
+        tags.into_iter()
+            .map(|t| (t.group.family1.clone(), t.name.clone()))
+            .collect()
+    }
 
-    for i in 0..count {
-        let eoff = ifd_offset + 2 + i * 12;
-        if eoff + 12 > data.len() {
-            break;
+    fn set(name: &str, v: &str) -> SetValue {
+        let spec = exif_edit::tag_spec(name).unwrap();
+        SetValue {
+            ifd: spec.ifd,
+            tag: spec.tag,
+            format: spec.format,
+            big_endian: exif_edit::encode_value(
+                &spec,
+                v,
+                crate::metadata::exif::ByteOrderMark::BigEndian,
+            )
+            .unwrap(),
+            little_endian: exif_edit::encode_value(
+                &spec,
+                v,
+                crate::metadata::exif::ByteOrderMark::LittleEndian,
+            )
+            .unwrap(),
         }
+    }
 
-        let tag = read_u16(data, eoff, bo);
-        if tag != target_tag {
-            continue;
-        }
-
-        let old_count = read_u32(data, eoff + 4, bo);
-        let dtype = read_u16(data, eoff + 2, bo);
-        let type_size = match dtype {
-            1 | 2 | 6 | 7 => 1usize,
-            3 | 8 => 2,
-            4 | 9 | 11 | 13 => 4,
-            5 | 10 | 12 => 8,
-            _ => 1,
+    #[test]
+    fn adds_and_deletes_tags_keeping_the_strip() {
+        let src = sample();
+        let changes = ExifChanges {
+            set: vec![set("Artist", "Added by test")],
+            delete_tags: vec![(None, "model".into())],
+            ..Default::default()
         };
-        let old_total = type_size * old_count as usize;
-
-        let new_count = (new_value.len() / type_size.max(1)) as u32;
-
-        // Update count
-        match bo {
-            ByteOrderMark::LittleEndian => {
-                data[eoff + 4..eoff + 8].copy_from_slice(&new_count.to_le_bytes());
-            }
-            ByteOrderMark::BigEndian => {
-                data[eoff + 4..eoff + 8].copy_from_slice(&new_count.to_be_bytes());
-            }
-        }
-
-        if new_value.len() <= 4 {
-            // Value fits inline
-            let mut padded = [0u8; 4];
-            padded[..new_value.len()].copy_from_slice(new_value);
-            data[eoff + 8..eoff + 12].copy_from_slice(&padded);
-        } else if old_total >= new_value.len() && old_total > 4 {
-            // New value fits in old location - write in place
-            let old_offset = read_u32(data, eoff + 8, bo) as usize;
-            if old_offset + new_value.len() <= data.len() {
-                data[old_offset..old_offset + new_value.len()].copy_from_slice(new_value);
-                // Zero-fill remainder
-                for b in &mut data[old_offset + new_value.len()..old_offset + old_total] {
-                    *b = 0;
-                }
-            }
-        } else {
-            // Append new value at end of file
-            let new_offset = data.len() as u32;
-            match bo {
-                ByteOrderMark::LittleEndian => {
-                    data[eoff + 8..eoff + 12].copy_from_slice(&new_offset.to_le_bytes());
-                }
-                ByteOrderMark::BigEndian => {
-                    data[eoff + 8..eoff + 12].copy_from_slice(&new_offset.to_be_bytes());
-                }
-            }
-            data.extend_from_slice(new_value);
-            // Pad to word boundary
-            if new_value.len() % 2 != 0 {
-                data.push(0);
-            }
-        }
-
-        return true;
+        let out = write_tiff(&src, &changes, FileType::Tiff).unwrap();
+        // The strip did not move and is intact.
+        assert_eq!(&out[220..222], &[0xAB, 0xCD]);
+        let n = names(&out);
+        assert!(n.contains(&("IFD0".into(), "Artist".into())));
+        assert!(!n.iter().any(|(_, t)| t == "Model"));
+        assert!(n.contains(&("ExifIFD".into(), "DateTimeOriginal".into())));
     }
 
-    false
-}
-
-/// Find a sub-IFD pointer (ExifIFD=0x8769, GPS=0x8825) in an IFD.
-fn find_sub_ifd(
-    data: &[u8],
-    ifd_offset: usize,
-    bo: ByteOrderMark,
-    pointer_tag: u16,
-) -> Option<usize> {
-    if ifd_offset + 2 > data.len() {
-        return None;
+    #[test]
+    fn exif_all_drops_only_the_exif_ifd() {
+        // ExifTool 13.59 on a DNG: `-EXIF:all=` removes the ExifIFD and
+        // leaves IFD0 (Model included) alone.
+        let src = sample();
+        let changes = ExifChanges {
+            delete_all: true,
+            ..Default::default()
+        };
+        let out = write_tiff(&src, &changes, FileType::Dng).unwrap();
+        let n = names(&out);
+        assert!(n.contains(&("IFD0".into(), "Model".into())));
+        assert!(!n.iter().any(|(g, _)| g == "ExifIFD"));
+        assert_eq!(&out[220..222], &[0xAB, 0xCD]);
     }
-    let count = read_u16(data, ifd_offset, bo) as usize;
 
-    for i in 0..count {
-        let eoff = ifd_offset + 2 + i * 12;
-        if eoff + 12 > data.len() {
-            break;
-        }
-        let tag = read_u16(data, eoff, bo);
-        if tag == pointer_tag {
-            return Some(read_u32(data, eoff + 8, bo) as usize);
-        }
+    #[test]
+    fn raw_keeps_ifd0_and_exif_ifd() {
+        // "Can't delete IFD0/ExifIFD from CR2": nothing changes.
+        let src = sample();
+        let changes = ExifChanges {
+            delete_all: true,
+            ..Default::default()
+        };
+        let out = write_tiff(&src, &changes, FileType::Cr2).unwrap();
+        assert_eq!(out, src);
     }
-    None
-}
 
-fn read_u16(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {
-    match bo {
-        ByteOrderMark::LittleEndian => u16::from_le_bytes([data[offset], data[offset + 1]]),
-        ByteOrderMark::BigEndian => u16::from_be_bytes([data[offset], data[offset + 1]]),
-    }
-}
-
-fn read_u32(data: &[u8], offset: usize, bo: ByteOrderMark) -> u32 {
-    match bo {
-        ByteOrderMark::LittleEndian => u32::from_le_bytes([
-            data[offset],
-            data[offset + 1],
-            data[offset + 2],
-            data[offset + 3],
-        ]),
-        ByteOrderMark::BigEndian => u32::from_be_bytes([
-            data[offset],
-            data[offset + 1],
-            data[offset + 2],
-            data[offset + 3],
-        ]),
+    #[test]
+    fn image_structure_tags_cannot_be_deleted() {
+        let src = sample();
+        let changes = ExifChanges {
+            delete_tags: vec![(None, "stripoffsets".into())],
+            ..Default::default()
+        };
+        assert_eq!(write_tiff(&src, &changes, FileType::Tiff).unwrap(), src);
     }
 }

@@ -4811,7 +4811,20 @@ fn print_exposure_time(val: f64) -> String {
         let s = format!("{val:.2}");
         return s.trim_end_matches('0').trim_end_matches('.').to_string();
     }
-    format!("1/{}", (1.0 / val).round() as u64)
+    format!("1/{}", perl_int_d((0.5 + 1.0 / val).floor()))
+}
+
+/// Perl's `sprintf("%d", $n)` of a whole number: an IV when it fits, the
+/// wrapped UV when it only fits 64 unsigned bits, and -1 beyond that (a
+/// near-zero exposure time makes `1/$secs` astronomically large).
+fn perl_int_d(n: f64) -> i64 {
+    if n.abs() < i64::MAX as f64 {
+        n as i64
+    } else if (0.0..u64::MAX as f64).contains(&n) {
+        (n as u64) as i64
+    } else {
+        -1
+    }
 }
 
 /// Exif.pm PrintFNumber: one decimal, trimmed when whole.
@@ -4833,6 +4846,17 @@ mod tests {
 
     fn n(v: f64) -> Val {
         Val::Num(v)
+    }
+
+    #[test]
+    fn exposure_time_overflows_like_perl_sprintf_d() {
+        // Sony SonyExposureTime of 0xffff: 2 ** (16 - 65535/256), which
+        // ExifTool 13.59 prints as "1/-1".
+        assert_eq!(
+            print_exposure_time(2f64.powf(16.0 - 65535.0 / 256.0)),
+            "1/-1"
+        );
+        assert_eq!(print_exposure_time(1.0 / 15.0), "1/15");
     }
 
     #[test]

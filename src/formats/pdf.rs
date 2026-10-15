@@ -68,8 +68,9 @@ pub fn read_pdf(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> {
         offset_str.parse::<usize>().ok()
     });
 
-    // Try to find and parse trailer dictionary
-    if let Some(trailer_start) = find_bytes(tail, b"trailer") {
+    // Try to find and parse the trailer dictionary: the last one, which an
+    // incremental update appends after the original.
+    if let Some(trailer_start) = tail.windows(7).rposition(|w| w == b"trailer") {
         let trailer_data = &tail[trailer_start..];
         if let Some(dict_start) = find_bytes(trailer_data, b"<<") {
             let dict_str = &trailer_data[dict_start..];
@@ -165,7 +166,22 @@ fn find_and_parse_info_object(data: &[u8], obj_num: u32, tags: &mut Vec<Tag>) {
     let pattern = format!("{} 0 obj", obj_num);
     let pattern_bytes = pattern.as_bytes();
 
-    if let Some(pos) = find_bytes(data, pattern_bytes) {
+    // The last definition of the object wins (an incremental update adds a
+    // new revision after the old one), and "14 0 obj" is not object 4.
+    let at_boundary = |p: usize| p == 0 || !data[p - 1].is_ascii_digit();
+    let mut end = data.len();
+    let mut found = None;
+    while let Some(p) = data[..end]
+        .windows(pattern_bytes.len())
+        .rposition(|w| w == pattern_bytes)
+    {
+        if at_boundary(p) {
+            found = Some(p);
+            break;
+        }
+        end = p;
+    }
+    if let Some(pos) = found {
         let obj_data = &data[pos + pattern_bytes.len()..];
         if let Some(dict_start) = find_bytes(obj_data, b"<<") {
             if let Some(dict_end) = find_bytes(&obj_data[dict_start..], b">>") {

@@ -14,8 +14,8 @@ use crate::metadata::exif::ByteOrderMark;
 use crate::tag::{Tag, TagGroup, MAIN_DOCUMENT};
 use crate::value::Value;
 use crate::writer::{
-    exif_writer, iptc_writer, jpeg_writer, matroska_writer, mp4_writer, pdf_writer, png_writer,
-    psd_writer, tiff_writer, webp_writer, xmp_writer,
+    iptc_writer, jpeg_writer, matroska_writer, mp4_writer, pdf_writer, png_writer, psd_writer,
+    tiff_writer, webp_writer, xmp_writer,
 };
 
 /// Processing options for metadata extraction.
@@ -306,7 +306,7 @@ impl ExifTool {
 
         let file_type = self.detect_file_type(&data, src_path)?;
         let output = self.apply_changes(&data, file_type)?;
-        let applied = self.count_applied(&data, &output, src_path);
+        let applied = self.count_applied(&data, &output, src_path, file_type);
         if applied == 0 && !self.new_values.is_empty() {
             let requested: Vec<String> = self.new_values.iter().map(NewValue::describe).collect();
             return Err(Error::UnsupportedFileType(format!(
@@ -326,7 +326,7 @@ impl ExifTool {
 
     /// How many queued requests the rewrite of `before` into `after` carried
     /// out, judged by what a reader sees in each.
-    fn count_applied(&self, before: &[u8], after: &[u8], path: &Path) -> u32 {
+    fn count_applied(&self, before: &[u8], after: &[u8], path: &Path, file_type: FileType) -> u32 {
         let keep = |t: &Tag| {
             // `File` stays: a GIF or PNG comment lives there.
             !matches!(
@@ -352,7 +352,12 @@ impl ExifTool {
         let before = read(before).unwrap_or_default();
         self.new_values
             .iter()
-            .filter(|nv| request_applied(nv, &before, &after))
+            .filter(
+                |nv| match tiff_exif_all_applied(nv, file_type, &before, &after) {
+                    Some(done) => done,
+                    None => request_applied(nv, &before, &after),
+                },
+            )
             .count() as u32
     }
 
@@ -367,7 +372,7 @@ impl ExifTool {
             | FileType::Nef
             | FileType::Arw
             | FileType::Orf
-            | FileType::Pef => self.write_tiff(data),
+            | FileType::Pef => self.write_tiff(data, file_type),
             FileType::WebP => self.write_webp(data),
             FileType::Mp4
             | FileType::QuickTime
@@ -379,32 +384,37 @@ impl ExifTool {
             FileType::Heif | FileType::Avif => self.write_heif(data),
             FileType::Mkv | FileType::WebM => self.write_matroska(data),
             FileType::Gif => {
-                let comment = self
-                    .new_values
-                    .iter()
-                    .find(|nv| nv.tag.to_lowercase() == "comment")
-                    .and_then(|nv| nv.value.clone());
-                crate::writer::gif_writer::write_gif(data, comment.as_deref())
+                use crate::writer::gif_writer::{write_gif, GifComment};
+                // File:Comment (GIF:Comment); `File:all` or `all` deletes it.
+                let mut comment = GifComment::Keep;
+                for nv in &self.new_values {
+                    let g = nv.group.as_deref().unwrap_or("");
+                    let file_group = g.is_empty()
+                        || g.eq_ignore_ascii_case("File")
+                        || g.eq_ignore_ascii_case("GIF");
+                    if !file_group {
+                        continue;
+                    }
+                    match &nv.value {
+                        None if is_all(&nv.tag) => comment = GifComment::Delete,
+                        None if nv.tag.eq_ignore_ascii_case("comment") => {
+                            comment = GifComment::Delete
+                        }
+                        Some(v) if nv.tag.eq_ignore_ascii_case("comment") => {
+                            comment = GifComment::Set(v)
+                        }
+                        _ => {}
+                    }
+                }
+                write_gif(data, comment)
             }
             FileType::Flac => crate::writer::flac_writer::write_flac(data, &self.vorbis_changes()),
             FileType::Mp3 => crate::writer::id3_writer::write_mp3(data, &self.id3_changes()),
             FileType::Aiff => crate::writer::id3_writer::write_aiff(data, &self.id3_changes()),
             FileType::Jp2 | FileType::Jxl => {
-                let new_xmp = if self
-                    .new_values
-                    .iter()
-                    .any(|nv| nv.group.as_deref() == Some("XMP"))
-                {
-                    let refs: Vec<&NewValue> = self
-                        .new_values
-                        .iter()
-                        .filter(|nv| nv.group.as_deref() == Some("XMP"))
-                        .collect();
-                    Some(self.build_new_xmp(&refs))
-                } else {
-                    None
-                };
-                crate::writer::jp2_writer::write_jp2(data, new_xmp.as_deref(), None)
+                // Only the XMP of these files is written here.
+                let (_, xmp) = item_changes(&self.new_values);
+                crate::writer::jp2_writer::write_jp2(data, &xmp)
             }
             FileType::PostScript => {
                 let changes: Vec<(&str, &str)> = self
@@ -817,86 +827,100 @@ impl ExifTool {
         Some(iptc_writer::build_iptc(&records))
     }
 
-    /// Write metadata changes to PNG data.
+    /// Write metadata changes to PNG data: PNG text chunks for ungrouped
+    /// and `PNG:` tags, the XMP chunk and the eXIf chunk for the others.
     fn write_png(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let mut new_text: Vec<(&str, &str)> = Vec::new();
-        let mut remove_text: Vec<&str> = Vec::new();
-
-        // Collect text-based changes
-        // We need to hold the strings in vectors that live long enough
-        let owned_pairs: Vec<(String, String)> = self
-            .new_values
-            .iter()
-            .filter(|nv| nv.value.is_some())
-            .map(|nv| (nv.tag.clone(), nv.value.clone().unwrap()))
-            .collect();
-
-        for (tag, value) in &owned_pairs {
-            new_text.push((tag.as_str(), value.as_str()));
-        }
-
+        let mut text = png_writer::PngTextChanges::default();
+        let mut others: Vec<NewValue> = Vec::new();
         for nv in &self.new_values {
-            if nv.value.is_none() {
-                remove_text.push(&nv.tag);
+            let group = nv.group.as_deref().unwrap_or("");
+            if !(group.is_empty() || group.eq_ignore_ascii_case("PNG")) {
+                others.push(nv.clone());
+                continue;
+            }
+            match &nv.value {
+                None if is_all(&nv.tag) => {
+                    text.delete_all = true;
+                    if group.is_empty() {
+                        // `-all=`: the XMP and EXIF go too.
+                        others.push(nv.clone());
+                    }
+                }
+                None => text.delete.push(nv.tag.clone()),
+                Some(v) => text.set.push((nv.tag.clone(), v.clone())),
             }
         }
-
-        png_writer::write_png(data, &new_text, None, &remove_text)
+        let (exif, xmp) = item_changes(&others);
+        png_writer::write_png(data, &text, &exif, &xmp)
     }
 
-    /// Write metadata changes to PSD data.
+    /// Write metadata changes to PSD data: the IPTC and XMP resources,
+    /// each edited from what the file already holds.
     fn write_psd(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let mut iptc_values = Vec::new();
-        let mut xmp_values = Vec::new();
+        use crate::writer::psd_writer::ResourceChange;
+        use crate::writer::xmp_edit::{self, XmpOutcome};
 
+        let mut iptc_values: Vec<&NewValue> = Vec::new();
+        let mut xmp_values: Vec<NewValue> = Vec::new();
+        let mut delete_iptc = false;
         for nv in &self.new_values {
-            let group = nv.group.as_deref().unwrap_or("").to_uppercase();
-            match group.as_str() {
-                "XMP" => xmp_values.push(nv),
+            let group = nv.group.as_deref().unwrap_or("");
+            let g = group.to_ascii_uppercase();
+            if nv.value.is_none() && is_all(&nv.tag) {
+                match g.as_str() {
+                    "IPTC" => delete_iptc = true,
+                    "" | "*" | "ALL" => {
+                        delete_iptc = true;
+                        xmp_values.push(nv.clone());
+                    }
+                    _ => xmp_values.push(nv.clone()),
+                }
+                continue;
+            }
+            match g.as_str() {
                 "IPTC" => iptc_values.push(nv),
-                _ => {
+                "" => {
                     if is_xmp_tag(&nv.tag) {
-                        xmp_values.push(nv);
+                        xmp_values.push(nv.clone());
                     } else {
                         iptc_values.push(nv);
                     }
                 }
+                _ => xmp_values.push(nv.clone()),
             }
         }
 
-        let new_iptc = if !iptc_values.is_empty() {
-            let records: Vec<_> = iptc_values
-                .iter()
-                .filter_map(|nv| {
-                    let value = nv.value.as_deref()?;
-                    let (record, dataset) = iptc_writer::tag_name_to_iptc(&nv.tag)?;
-                    Some(iptc_writer::IptcRecord {
-                        record,
-                        dataset,
-                        // IPTC-IIM strings use the internal charset (Latin-1
-                        // by default); writing raw UTF-8 double-encodes
-                        // accented characters. See issue #6.
-                        data: crate::encoding::encode_latin1(value),
-                    })
-                })
-                .collect();
-            if records.is_empty() {
+        // IPTC: merged into the existing block (the JPEG merge rules).
+        let iptc = if delete_iptc && iptc_values.iter().all(|nv| nv.value.is_none()) {
+            ResourceChange::Remove
+        } else if iptc_values.is_empty() {
+            ResourceChange::Keep
+        } else {
+            let existing = if delete_iptc {
                 None
             } else {
-                Some(iptc_writer::build_iptc(&records))
+                psd_writer::resource(data, psd_writer::IPTC)?
+            };
+            match self.build_new_iptc(existing, &iptc_values) {
+                Some(block) => ResourceChange::Replace(block),
+                None => ResourceChange::Remove,
             }
-        } else {
-            None
         };
 
-        let new_xmp = if !xmp_values.is_empty() {
-            let refs: Vec<&NewValue> = xmp_values.to_vec();
-            Some(self.build_new_xmp(&refs))
+        // XMP: edited in place.
+        let (_, xmp_changes) = item_changes(&xmp_values);
+        let xmp = if xmp_changes.is_empty() {
+            ResourceChange::Keep
         } else {
-            None
+            let existing = psd_writer::resource(data, psd_writer::XMP)?;
+            match xmp_edit::edit_xmp(existing, &xmp_changes)? {
+                XmpOutcome::Unchanged => ResourceChange::Keep,
+                XmpOutcome::Removed => ResourceChange::Remove,
+                XmpOutcome::Rewritten(x) => ResourceChange::Replace(x),
+            }
         };
 
-        psd_writer::write_psd(data, new_iptc.as_deref(), new_xmp.as_deref())
+        psd_writer::write_psd(data, &[(psd_writer::IPTC, iptc), (psd_writer::XMP, xmp)])
     }
 
     /// Write metadata changes to Matroska (MKV/WebM) data: the segment
@@ -938,17 +962,24 @@ impl ExifTool {
         changes
     }
 
-    /// Write metadata changes to PDF data.
+    /// Write metadata changes to PDF data: the Info dictionary, through an
+    /// incremental update. Ungrouped and `PDF:` tags only.
     fn write_pdf(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let changes: Vec<(&str, &str)> = self
-            .new_values
-            .iter()
-            .filter_map(|nv| {
-                let value = nv.value.as_deref()?;
-                Some((nv.tag.as_str(), value))
-            })
-            .collect();
-
+        let mut changes = pdf_writer::PdfChanges::default();
+        for nv in &self.new_values {
+            let group = nv.group.as_deref().unwrap_or("");
+            if !(group.is_empty() || group.eq_ignore_ascii_case("PDF")) {
+                continue;
+            }
+            match &nv.value {
+                None if is_all(&nv.tag) => changes.delete_all = true,
+                None => changes.delete.push(nv.tag.clone()),
+                Some(v) if pdf_writer::is_info_tag(&nv.tag) => {
+                    changes.set.push((nv.tag.clone(), v.clone()))
+                }
+                Some(_) => {}
+            }
+        }
         pdf_writer::write_pdf(data, &changes)
     }
 
@@ -1052,90 +1083,18 @@ impl ExifTool {
         heif_writer::rewrite(data, exif, xmp)
     }
 
-    /// Write metadata changes to WebP data.
+    /// Write metadata changes to WebP data: the EXIF and XMP chunks,
+    /// edited in place.
     fn write_webp(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let mut exif_values: Vec<&NewValue> = Vec::new();
-        let mut xmp_values: Vec<&NewValue> = Vec::new();
-        let mut remove_exif = false;
-        let mut remove_xmp = false;
-
-        for nv in &self.new_values {
-            let group = nv.group.as_deref().unwrap_or("").to_uppercase();
-            if nv.value.is_none() && is_all(&nv.tag) {
-                if group == "EXIF" {
-                    remove_exif = true;
-                }
-                if group == "XMP" {
-                    remove_xmp = true;
-                }
-                continue;
-            }
-            match group.as_str() {
-                "XMP" => xmp_values.push(nv),
-                _ => exif_values.push(nv),
-            }
-        }
-
-        let new_exif = if !exif_values.is_empty() {
-            let bo = ByteOrderMark::BigEndian;
-            let mut entries = Vec::new();
-            for nv in &exif_values {
-                if let Some(ref v) = nv.value {
-                    let group = nv.group.as_deref().unwrap_or("");
-                    if let Some((tag_id, format, encoded)) = encode_exif_tag(&nv.tag, v, group, bo)
-                    {
-                        entries.push(exif_writer::IfdEntry {
-                            tag: tag_id,
-                            format,
-                            data: encoded,
-                        });
-                    }
-                }
-            }
-            if !entries.is_empty() {
-                Some(exif_writer::build_exif(&entries, &[], &[], bo)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        let new_xmp = if !xmp_values.is_empty() {
-            Some(self.build_new_xmp(&xmp_values.to_vec()))
-        } else {
-            None
-        };
-
-        webp_writer::write_webp(
-            data,
-            new_exif.as_deref(),
-            new_xmp.as_deref(),
-            remove_exif,
-            remove_xmp,
-        )
+        let (exif, xmp) = item_changes(&self.new_values);
+        webp_writer::write_webp(data, &exif, &xmp)
     }
 
-    /// Write metadata changes to TIFF data.
-    fn write_tiff(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let bo = if data.starts_with(b"II") {
-            ByteOrderMark::LittleEndian
-        } else {
-            ByteOrderMark::BigEndian
-        };
-
-        let mut changes: Vec<(u16, Vec<u8>)> = Vec::new();
-        for nv in &self.new_values {
-            if let Some(ref value) = nv.value {
-                let group = nv.group.as_deref().unwrap_or("");
-                if let Some((tag_id, _format, encoded)) = encode_exif_tag(&nv.tag, value, group, bo)
-                {
-                    changes.push((tag_id, encoded));
-                }
-            }
-        }
-
-        tiff_writer::write_tiff(data, &changes)
+    /// Write metadata changes to TIFF data (TIFF and TIFF-based RAW): the
+    /// EXIF directories are edited in place, the image data does not move.
+    fn write_tiff(&self, data: &[u8], file_type: FileType) -> Result<Vec<u8>> {
+        let (exif_changes, _) = item_changes(&self.new_values);
+        tiff_writer::write_tiff(data, &exif_changes, file_type)
     }
 
     /// Build new XMP data from queued values.
@@ -1223,6 +1182,10 @@ impl ExifTool {
         // so it has to be in place before anything is parsed, not after.
         let file_type_result = self.detect_file_type(data, path);
         crate::metadata::exif::set_tiff_type(file_type_result.as_ref().map_or("", |ft| ft.code()));
+        // `$$self{Software}` and `$$self{Make}` belong to the file being read:
+        // a file without them must not see the previous file's values.
+        crate::metadata::exif::set_software("");
+        crate::metadata::exif::set_make("");
         let (file_type, mut tags) = match file_type_result {
             Ok(ft) => {
                 let t = self
@@ -3021,6 +2984,41 @@ fn same_value(a: &str, b: &str) -> bool {
 ///
 /// Deleting everything (`all` with no group) asks for no EXIF, XMP, IPTC or
 /// maker note to be left: container tags are not metadata a user deletes.
+/// `EXIF:all=` on a TIFF-based file: ExifTool never deletes IFD0 there, and
+/// only drops the ExifIFD (none of it from a RAW file), so the request is
+/// done when an ExifIFD was there and is gone. `None` for any other request.
+fn tiff_exif_all_applied(
+    nv: &NewValue,
+    file_type: FileType,
+    before: &[Tag],
+    after: &[Tag],
+) -> Option<bool> {
+    let tiff = matches!(
+        file_type,
+        FileType::Tiff
+            | FileType::Dng
+            | FileType::Cr2
+            | FileType::Nef
+            | FileType::Arw
+            | FileType::Orf
+            | FileType::Pef
+    );
+    let exif_all = nv.value.is_none()
+        && is_all(&nv.tag)
+        && nv
+            .group
+            .as_deref()
+            .is_some_and(|g| g.eq_ignore_ascii_case("EXIF"));
+    if !tiff || !exif_all {
+        return None;
+    }
+    if crate::writer::tiff_writer::is_raw_type(file_type) {
+        return Some(false);
+    }
+    let in_exif_ifd = |t: &&Tag| matches!(t.group.family1.as_str(), "ExifIFD" | "InteropIFD");
+    Some(before.iter().any(|t| in_exif_ifd(&t)) && !after.iter().any(|t| in_exif_ifd(&t)))
+}
+
 fn request_applied(nv: &NewValue, before: &[Tag], after: &[Tag]) -> bool {
     let group = nv.group.as_deref().filter(|g| !g.is_empty());
     let all = is_all(&nv.tag);
@@ -3536,81 +3534,6 @@ fn is_xmp_tag(tag: &str) -> bool {
             | "label"
             | "hierarchicalsubject"
     )
-}
-
-/// Encode an EXIF tag value to binary.
-/// Returns (tag_id, format, encoded_data) or None if tag is unknown.
-fn encode_exif_tag(
-    tag_name: &str,
-    value: &str,
-    _group: &str,
-    bo: ByteOrderMark,
-) -> Option<(u16, exif_writer::ExifFormat, Vec<u8>)> {
-    let tag_lower = tag_name.to_lowercase();
-
-    // Map common tag names to EXIF tag IDs and formats
-    let (tag_id, format): (u16, exif_writer::ExifFormat) = match tag_lower.as_str() {
-        // IFD0 string tags
-        "imagedescription" => (0x010E, exif_writer::ExifFormat::Ascii),
-        "make" => (0x010F, exif_writer::ExifFormat::Ascii),
-        "model" => (0x0110, exif_writer::ExifFormat::Ascii),
-        "software" => (0x0131, exif_writer::ExifFormat::Ascii),
-        "modifydate" | "datetime" => (0x0132, exif_writer::ExifFormat::Ascii),
-        "artist" => (0x013B, exif_writer::ExifFormat::Ascii),
-        "copyright" => (0x8298, exif_writer::ExifFormat::Ascii),
-        // IFD0 numeric tags
-        "orientation" => (0x0112, exif_writer::ExifFormat::Short),
-        "xresolution" => (0x011A, exif_writer::ExifFormat::Rational),
-        "yresolution" => (0x011B, exif_writer::ExifFormat::Rational),
-        "resolutionunit" => (0x0128, exif_writer::ExifFormat::Short),
-        // ExifIFD tags
-        "datetimeoriginal" => (0x9003, exif_writer::ExifFormat::Ascii),
-        "createdate" | "datetimedigitized" => (0x9004, exif_writer::ExifFormat::Ascii),
-        "usercomment" => (0x9286, exif_writer::ExifFormat::Undefined),
-        "imageuniqueid" => (0xA420, exif_writer::ExifFormat::Ascii),
-        "ownername" | "cameraownername" => (0xA430, exif_writer::ExifFormat::Ascii),
-        "serialnumber" | "bodyserialnumber" => (0xA431, exif_writer::ExifFormat::Ascii),
-        "lensmake" => (0xA433, exif_writer::ExifFormat::Ascii),
-        "lensmodel" => (0xA434, exif_writer::ExifFormat::Ascii),
-        "lensserialnumber" => (0xA435, exif_writer::ExifFormat::Ascii),
-        _ => return None,
-    };
-
-    let encoded = match format {
-        exif_writer::ExifFormat::Ascii => exif_writer::encode_ascii(value),
-        exif_writer::ExifFormat::Short => {
-            let v: u16 = value.parse().ok()?;
-            exif_writer::encode_u16(v, bo)
-        }
-        exif_writer::ExifFormat::Long => {
-            let v: u32 = value.parse().ok()?;
-            exif_writer::encode_u32(v, bo)
-        }
-        exif_writer::ExifFormat::Rational => {
-            // Parse "N/D" or just "N"
-            if let Some(slash) = value.find('/') {
-                let num: u32 = value[..slash].trim().parse().ok()?;
-                let den: u32 = value[slash + 1..].trim().parse().ok()?;
-                exif_writer::encode_urational(num, den, bo)
-            } else if let Ok(v) = value.parse::<f64>() {
-                // Convert float to rational
-                let den = 10000u32;
-                let num = (v * den as f64).round() as u32;
-                exif_writer::encode_urational(num, den, bo)
-            } else {
-                return None;
-            }
-        }
-        exif_writer::ExifFormat::Undefined => {
-            // UserComment: 8 bytes charset + data
-            let mut data = vec![0x41, 0x53, 0x43, 0x49, 0x49, 0x00, 0x00, 0x00]; // "ASCII\0\0\0"
-            data.extend_from_slice(value.as_bytes());
-            data
-        }
-        _ => return None,
-    };
-
-    Some((tag_id, format, encoded))
 }
 
 /// Compute text file tags (from Perl Text.pm).

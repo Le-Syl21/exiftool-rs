@@ -72,6 +72,26 @@ pub fn read_psd(data: &[u8]) -> Result<Vec<Tag>> {
 
     let irb_end = (pos + irb_len).min(data.len());
     read_irb_resources(data, pos, irb_end, &mut tags);
+    // Photoshop.pm ProcessPhotoshop: the stored digest of the IPTC no longer
+    // matches the IPTC (an editor changed it without updating the digest).
+    let digest = |n: &str| {
+        tags.iter()
+            .find(|t| t.name == n)
+            .map(|t| t.print_value.clone())
+    };
+    if let (Some(stored), Some(current)) = (digest("IPTCDigest"), digest("CurrentIPTCDigest")) {
+        if stored != current {
+            let mut w = mk(
+                "Warning",
+                "Warning",
+                Value::String("IPTCDigest is not current. XMP may be out of sync".into()),
+            );
+            w.group.family0 = "ExifTool".into();
+            w.group.family1 = "ExifTool".into();
+            w.group.family2 = "ExifTool".into();
+            tags.insert(0, w);
+        }
+    }
 
     // Layer and mask section
     pos = irb_end;
