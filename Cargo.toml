@@ -77,7 +77,7 @@ unicode-width = "0.2"
 # build on Windows (wgpu/windows-rs mismatch). We render with glow (OpenGL, as in
 # 0.31), so select the default feature set with wgpu swapped for glow — this drops
 # egui-wgpu/wgpu/d3d12 entirely and keeps the build portable.
-eframe = { version = "0.36", optional = true, default-features = false, features = [
+eframe = { version = "0.37", optional = true, default-features = false, features = [
     "accesskit",
     "default_fonts",
     "glow",
@@ -85,7 +85,7 @@ eframe = { version = "0.36", optional = true, default-features = false, features
     "web_screen_reader",
     "x11",
 ] }
-egui = { version = "0.36", optional = true }
+egui = { version = "0.37", optional = true }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "bmp", "tiff"] }
 rfd = { version = "0.17", optional = true }
 noto-fonts-dl = { version = "0.1", optional = true, features = ["ar", "bn", "hi", "ja", "ko", "zh", "zh_tw"] }
