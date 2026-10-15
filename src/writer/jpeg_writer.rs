@@ -403,6 +403,23 @@ pub fn jfif_resolution_before_exif(
     None
 }
 
+/// Fix the offsets into what follows the scan data (an AFCP trailer, MPF
+/// images) after a rewrite of `source` into `output` moved the scan data
+/// from `src_scan` to `out_scan`: the IPTC and XMP pass
+/// (`jpeg_iptc_xmp`) changes segment sizes after `write_jpeg`.
+pub(crate) fn fix_offsets_after_scan(
+    source: &[u8],
+    output: &mut [u8],
+    src_scan: usize,
+    out_scan: usize,
+) {
+    let shift = out_scan as i64 - src_scan as i64;
+    if shift != 0 {
+        shift_afcp_trailer(output, src_scan, shift);
+        shift_mpf_offsets(source, output, src_scan, shift);
+    }
+}
+
 /// Shift the absolute offsets of an AFCP trailer (AFCP.pm) that moved by
 /// `shift` bytes in the output. `src_scan` is where the source's scan data
 /// starts: everything from there on was copied unchanged, at `src_scan +

@@ -413,7 +413,7 @@ impl ExifTool {
             FileType::Aiff => crate::writer::id3_writer::write_aiff(data, &self.id3_changes()),
             FileType::Jp2 | FileType::Jxl => {
                 // Only the XMP of these files is written here.
-                let (_, xmp) = item_changes(&self.new_values);
+                let (_, xmp) = item_changes(&self.new_values, true);
                 crate::writer::jp2_writer::write_jp2(data, &xmp)
             }
             FileType::PostScript => {
@@ -431,7 +431,7 @@ impl ExifTool {
             // so the properties it already has survive.
             FileType::Xmp => {
                 use crate::writer::xmp_edit::{edit_xmp, XmpOutcome};
-                let (_, changes) = item_changes(&self.new_values);
+                let (_, changes) = item_changes(&self.new_values, false);
                 match edit_xmp(Some(data), &changes)? {
                     XmpOutcome::Unchanged => Ok(data.to_vec()),
                     XmpOutcome::Rewritten(x) => Ok(x),
@@ -726,7 +726,7 @@ impl ExifTool {
         if !exif_values.is_empty() {
             use crate::writer::exif_edit::{edit_exif, ExifOutcome};
             let owned: Vec<NewValue> = exif_values.iter().map(|nv| (*nv).clone()).collect();
-            let (mut changes, _) = item_changes(&owned);
+            let (mut changes, _) = item_changes(&owned, true);
             changes.jfif_resolution = jpeg_writer::jfif_resolution_before_exif(data);
             let current = jpeg_writer::extract_jpeg_exif(data);
             match edit_exif(current, &changes)? {
@@ -779,7 +779,7 @@ impl ExifTool {
                 Some(v) => text.set.push((nv.tag.clone(), v.clone())),
             }
         }
-        let (exif, xmp) = item_changes(&others);
+        let (exif, xmp) = item_changes(&others, true);
         png_writer::write_png(data, &text, &exif, &xmp)
     }
 
@@ -845,7 +845,7 @@ impl ExifTool {
             }
         };
 
-        let (_, xmp_changes) = item_changes(&xmp_values);
+        let (_, xmp_changes) = item_changes(&xmp_values, true);
         let xmp = if xmp_changes.is_empty() {
             ResourceChange::Keep
         } else {
@@ -945,7 +945,7 @@ impl ExifTool {
     fn write_mp4(&self, data: &[u8]) -> Result<Vec<u8>> {
         use mp4_writer::{QtChanges, QtScope, QtSet};
 
-        let (_, xmp) = item_changes(&self.new_values);
+        let (_, xmp) = item_changes(&self.new_values, false);
         let mut changes = QtChanges {
             xmp,
             ..Default::default()
@@ -979,7 +979,7 @@ impl ExifTool {
         use crate::writer::heif_writer::{self, ItemChange};
         use crate::writer::xmp_edit::{self, XmpOutcome};
 
-        let (exif_changes, xmp_changes) = item_changes(&self.new_values);
+        let (exif_changes, xmp_changes) = item_changes(&self.new_values, true);
         if exif_changes.is_empty() && xmp_changes.is_empty() {
             return Ok(data.to_vec());
         }
@@ -1023,14 +1023,14 @@ impl ExifTool {
     /// Write metadata changes to WebP data: the EXIF and XMP chunks,
     /// edited in place.
     fn write_webp(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let (exif, xmp) = item_changes(&self.new_values);
+        let (exif, xmp) = item_changes(&self.new_values, true);
         webp_writer::write_webp(data, &exif, &xmp)
     }
 
     /// Write metadata changes to TIFF data (TIFF and TIFF-based RAW): the
     /// EXIF directories are edited in place, the image data does not move.
     fn write_tiff(&self, data: &[u8], file_type: FileType) -> Result<Vec<u8>> {
-        let (exif_changes, _) = item_changes(&self.new_values);
+        let (exif_changes, _) = item_changes(&self.new_values, true);
         tiff_writer::write_tiff(data, &exif_changes, file_type)
     }
 
@@ -2985,8 +2985,14 @@ fn request_applied(nv: &NewValue, before: &[Tag], after: &[Tag]) -> bool {
 /// Split queued requests into the EXIF and XMP edits the HEIF writer
 /// applies, with ExifTool's group semantics. Requests for other groups
 /// (IPTC, QuickTime, ...) have no place in a HEIF item and are left out.
+///
+/// `exif_writable` says whether the file can hold EXIF. When it can't (an
+/// XMP sidecar, a QuickTime movie), an ungrouped tag ExifTool would create
+/// in EXIF goes to XMP instead, as ExifTool falls back to the next group it
+/// can create (`-Artist=` on a MOV writes XMP-tiff:Artist).
 fn item_changes(
     values: &[NewValue],
+    exif_writable: bool,
 ) -> (
     crate::writer::exif_edit::ExifChanges,
     crate::writer::xmp_edit::XmpChanges,
@@ -3044,7 +3050,7 @@ fn item_changes(
                 xmp.delete_tags.push((None, tag_lc));
             }
             ("" | "*" | "all", Some(v)) => {
-                if !exif_set(&mut exif, None, &nv.tag, v) {
+                if !(exif_writable && exif_set(&mut exif, None, &nv.tag, v)) {
                     xmp_request(&mut xmp, &mut xmp_sets, "xmp", nv);
                 }
             }
@@ -3708,6 +3714,25 @@ mod tests {
         assert_eq!(et.new_values.len(), 2);
         et.clear_new_values();
         assert!(et.new_values.is_empty());
+    }
+
+    // `exiftool -Artist=X` writes IFD0:Artist where EXIF can go, and
+    // XMP-tiff:Artist in a MOV or a sidecar (XMP-xmpDM:Artist is `Avoid`).
+    #[test]
+    fn ungrouped_exif_tag_falls_back_to_xmp_without_exif() {
+        let nv = NewValue {
+            tag: "Artist".into(),
+            group: None,
+            value: Some("X".into()),
+        };
+        let (exif, xmp) = item_changes(std::slice::from_ref(&nv), true);
+        assert_eq!(exif.set.len(), 1);
+        assert!(xmp.set.is_empty());
+        let (exif, xmp) = item_changes(std::slice::from_ref(&nv), false);
+        assert!(exif.set.is_empty());
+        assert_eq!(xmp.set.len(), 1);
+        assert_eq!(xmp.set[0].prefix, "tiff");
+        assert_eq!(xmp.set[0].property, "Artist");
     }
 
     #[test]

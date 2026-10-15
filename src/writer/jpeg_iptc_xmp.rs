@@ -297,6 +297,9 @@ pub fn rewrite(jpeg: &[u8], iptc: &IptcChanges, xmp: &XmpChanges) -> Result<Vec<
     }
     let sos_out = out.len();
     out.extend_from_slice(&jpeg[sos..]);
+    // The segments changed size: shift the AFCP and MPF offsets (past the
+    // SOS marker, where `jpeg_writer` counts the scan data from).
+    crate::writer::jpeg_writer::fix_offsets_after_scan(jpeg, &mut out, sos + 2, sos_out + 2);
     let out = edit_fotostation(out, sos_out, iptc)?;
     fix_afcp(out, sos_out, iptc)
 }
@@ -347,9 +350,8 @@ fn edit_fotostation(jpeg: Vec<u8>, scan_from: usize, iptc: &IptcChanges) -> Resu
 
 /// Apply the IPTC edits to the IPTC an AFCP trailer holds (AFCP.pm's
 /// `ProcessAFCP`), as ExifTool edits IPTC wherever it is, and rewrite the
-/// trailer's absolute offsets for the new sizes. (The shift of the whole
-/// trailer when segments before it change size is `jpeg_writer`'s job; it
-/// is also undone here if it was not done.) `scan_from` is where the image data starts (the trailer is after it,
+/// trailer's absolute offsets for the new sizes. (Shifting the trailer when
+/// segments before it change size is `jpeg_writer::fix_offsets_after_scan`.) `scan_from` is where the image data starts (the trailer is after it,
 /// possibly followed by other trailers). A file without an AFCP trailer is
 /// returned unchanged.
 pub fn fix_afcp(jpeg: Vec<u8>, scan_from: usize, iptc: &IptcChanges) -> Result<Vec<u8>> {
