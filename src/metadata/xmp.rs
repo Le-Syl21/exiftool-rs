@@ -2005,9 +2005,12 @@ impl XmpReader {
             // XMP-aux LensInfo: ConvertRationalList (N/D → float, 0/0 → undef, 1/0 →
             // inf) then Exif::PrintLensInfo → "12-20mm f/3.8-4.5".
             if tag.name == "LensInfo" {
+                // exifEX:LensSpecification is a Seq: its items are
+                // listed with commas.
                 let converted: String = tag
                     .print_value
-                    .split_whitespace()
+                    .split(|c: char| c == ',' || c.is_whitespace())
+                    .filter(|t| !t.is_empty())
                     .map(|tok| match tok.split_once('/') {
                         Some((n, d)) => {
                             let nn: f64 = n.parse().unwrap_or(0.0);
@@ -2546,6 +2549,19 @@ fn strip_struct_prefix(parent: &str, field: &str) -> String {
 }
 
 /// Remap XMP tag names where ExifTool uses a different Name than the XMP local name.
+/// The tag name ExifTool's XMP tables give property `local_name` of the
+/// namespace `prefix`, when it is not the property name itself.
+fn xmp_table_name(prefix: &str, local_name: &str) -> Option<&'static str> {
+    crate::tags::xmp_write_generated::XMP_WRITE_TAGS
+        .iter()
+        .find(|t| {
+            t.property == local_name
+                && (t.prefix == prefix || t.group1.strip_prefix("XMP-") == Some(prefix))
+        })
+        .map(|t| t.name)
+        .filter(|n| *n != local_name)
+}
+
 pub(crate) fn remap_xmp_tag_name(group_prefix: &str, local_name: &str) -> String {
     // First strip non-ASCII characters from the local name (mirrors Perl byte-mode behavior)
     let clean_name = strip_non_ascii(local_name);
@@ -2565,6 +2581,13 @@ pub(crate) fn remap_xmp_tag_name(group_prefix: &str, local_name: &str) -> String
         ("photoshop", "ColorMode") => "ColorMode".into(),
         // plus: namespace remappings
         ("plus", "Version") => "PLUSVersion".into(),
+        // Any other property ExifTool's XMP tables name differently
+        // (`exif:FocalLengthIn35mmFilm` is FocalLengthIn35mmFormat).
+        _ if xmp_table_name(group_prefix, local_name).is_some() => {
+            xmp_table_name(group_prefix, local_name)
+                .expect("checked")
+                .to_string()
+        }
         _ => {
             // For unknown/ExifTool-internal namespaces (group_prefix = "XMP" or anything unknown),
             // if the local name has only uppercase letters (e.g. "ISO"), ExifTool normalizes it:

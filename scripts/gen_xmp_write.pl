@@ -38,6 +38,82 @@ sub q_rs {
     return "\"$s\"";
 }
 
+# The Rust conversion standing for a pair of inverse conversions
+# (PrintConvInv, ValueConvInv), or 'Unported' for code with no port. The
+# patterns are those of ExifTool 13.59's XMP tables.
+sub classify {
+    my ($p, $v, $name, $writable) = @_;
+    my $date = q{$self->InverseDateTime($val)};
+    # PrintConvInv first, then ValueConvInv. A date property's
+    # InverseDateTime is FormatXMPDate's job (`format_xmp_date`).
+    my $pk;
+    if ($p eq '' or $p eq '$val' or $p eq $date or
+        ($writable eq 'date' and $p =~ /^\$self->InverseDateTime\(\$val\b/))
+    {
+        $pk = '';
+    } elsif ($p =~ /^Image::ExifTool::GPS::ToDegrees\(\$val, 1, "(lat|lon)"\)$/) {
+        $pk = $1 eq 'lat' ? 'Lat' : 'Lon';
+    } elsif ($p eq '$val=~s/\s*mm$//;$val') {
+        $pk = 'StripMm';
+    } elsif ($p =~ /^\$val=~s\/\\s\*m\$\/\/; ?\$val$/) {
+        $pk = 'StripM';
+    } elsif ($p eq 'Image::ExifTool::Exif::ConvertParameter($val)') {
+        $pk = 'ConvertParameter';
+    } elsif ($p eq 'Image::ExifTool::Exif::ConvertFraction($val)') {
+        $pk = 'Fraction';
+    } elsif ($p eq 'CODE' and $name eq 'LensInfo') {
+        $pk = 'LensInfo';
+    } elsif ($p =~ /^\$val =~ s\[Tagged:/) {
+        return 'PhotoMechPrefs';
+    } elsif ($p =~ /pack\('C\*', split/) {
+        return 'DottedVersion';
+    } elsif ($p eq '$val =~ /^\w{4}$/ ? unpack("N", $val) : $val') {
+        return 'FourCc';
+    } else {
+        return 'Unported';
+    }
+    my $vk;
+    if ($v eq '' or $v eq '$val') {
+        $vk = '';
+    } elsif ($v =~ /^Image::ExifTool::GPS::ToDMS\(\$self, \$val, 2, "[NE]"\)$/) {
+        $vk = 'Dms';
+    } elsif ($v =~ /EncodeBase64\(\$val\)/) {
+        $vk = 'Base64';
+    } elsif ($v eq 'GetUnixTime($val)') {
+        $vk = 'UnixTime';
+    } elsif ($v eq '"http://ns.useplus.org/ldf/vocab/$val"') {
+        $vk = 'PlusVocab';
+    } elsif ($v eq 'Image::ExifTool::IPTC::IptcTime($val)') {
+        $vk = 'IptcTime';
+    } elsif ($v =~ /^warn "Expected one or more integer values"/) {
+        $vk = 'IntegerList';
+    } elsif ($v eq '$val=~/((?=\d|\.\d)\d*(?:\.\d*)?)/ ? $1 : undef') {
+        $vk = 'Number';
+    } elsif ($v eq '$val>0 ? 2*log($val)/log(2) : 0') {
+        $vk = 'Apex';
+    } elsif ($v eq '$val>0 ? -log($val)/log(2) : 0') {
+        $vk = 'ShutterApex';
+    } elsif ($v eq '"/$val"') {
+        $vk = 'PdfName';
+    } elsif ($v =~ /WritePDFValue\(\$self,\$val,"date"\)/) {
+        $vk = 'PdfDate';
+    } elsif ($v eq 'CODE' and $name eq 'LensInfo') {
+        $vk = 'Rationals';
+    } else {
+        return 'Unported';
+    }
+    my %known = (
+        '' => 'None', 'Lat' => 'GpsDegreesLat', 'Lon' => 'GpsDegreesLon',
+        'LatDms' => 'GpsDmsLat', 'LonDms' => 'GpsDmsLon', 'StripMm' => 'StripMm',
+        'StripM' => 'StripM', 'StripMNumber' => 'GpsAltitude',
+        'ConvertParameter' => 'ConvertParameter', 'FractionShutterApex' => 'ShutterApex',
+        'Apex' => 'Apex', 'Base64' => 'Base64', 'UnixTime' => 'UnixTime',
+        'PlusVocab' => 'PlusVocab', 'IptcTime' => 'IptcTime', 'IntegerList' => 'IntegerList',
+        'PdfName' => 'PdfName', 'PdfDate' => 'PdfDate', 'LensInfoRationals' => 'LensInfo',
+    );
+    return $known{$pk . $vk} || 'Unported';
+}
+
 my %skipNS = map { $_ => 1 } qw(x rdf xmlns xml);
 my (%seen, @rows);
 foreach my $tname (sort keys %Image::ExifTool::allTables) {
@@ -87,15 +163,25 @@ foreach my $tname (sort keys %Image::ExifTool::allTables) {
                     next if ref $$pc{$k};
                     push @pairs, '(' . q_rs($$pc{$k}) . ', ' . q_rs($k) . ')';
                 }
-            } elsif (defined $pc and not ($writable eq 'date' and $pc =~ /ConvertDateTime/)) {
-                $conv = 'Unported';
             }
+            # The inverse conversions, as the Perl code they run.
             my $pci = $$ti{PrintConvInv};
-            if (defined $pci and not ($writable eq 'date' and not ref $pci and $pci =~ /InverseDateTime/)) {
+            my $vci = $$ti{ValueConvInv};
+            my $code = sub { my $c = shift; defined $c ? (ref $c ? 'CODE' : $c) : '' };
+            my ($p, $v) = ($code->($pci), $code->($vci));
+            s/^\s+|\s+$//g, s/\s+/ /g foreach $p, $v;
+            # A PrintConv with no inverse is reversed by its hash, if any.
+            if (defined $pc and not ref $pc and not defined $pci and
+                not ($writable eq 'date' and $pc =~ /ConvertDateTime/))
+            {
                 $conv = 'Unported';
             }
-            $conv = 'Unported' if defined $$ti{ValueConvInv} or (defined $$ti{ValueConv} and not defined $$ti{ValueConvInv});
+            # A ValueConv with no inverse can't be reversed.
+            $conv = 'Unported' if defined $$ti{ValueConv} and not defined $vci;
             $conv = 'Unported' if $$ti{RawConvInv};
+            if ($conv eq 'None') {
+                $conv = classify($p, $v, $$ti{Name}, $writable);
+            }
             $writable = 'string' unless $writable =~ /^(string|integer|real|rational|date|boolean)$/;
             push @rows, sprintf("    XmpWriteInfo { group1: %s, name: %s, prefix: %s, uri: %s, property: %s, kind: XmpKind::%s, writable: XmpType::%s, avoid: %s, conv: XmpConv::%s, print_inv: &[%s], print_strict: %s },\n",
                 q_rs($group1), q_rs($name), q_rs($prefix), q_rs($uri), q_rs($id), $kind,
@@ -131,11 +217,54 @@ pub enum XmpType {
     Boolean,
 }
 
-/// Whether the value goes through a conversion written in Perl.
+/// The inverse conversions a value goes through before `CheckXMP`
+/// (`PrintConvInv`, then `ValueConvInv`), ported in `writer::xmp_tags`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum XmpConv {
+    /// None (or the inverse of a PrintConv hash, in `print_inv`).
     None,
+    /// Perl code with no port: the tag is not written.
     Unported,
+    /// GPS.pm `ToDegrees($val, 1, "lat"|"lon")`.
+    GpsDegreesLat,
+    GpsDegreesLon,
+    /// `ToDegrees` then `ToDMS($self, $val, 2, "N"|"E")`.
+    GpsDmsLat,
+    GpsDmsLon,
+    /// `$val=~s/\s*mm$//`.
+    StripMm,
+    /// `$val=~s/\s*m$//`.
+    StripM,
+    /// `$val=~s/\s*m$//`, then the first unsigned number.
+    GpsAltitude,
+    /// Exif.pm `ConvertParameter` (Normal/Low/High).
+    ConvertParameter,
+    /// `2*log($val)/log(2)` (APEX aperture).
+    Apex,
+    /// `ConvertFraction`, then `-log($val)/log(2)` (APEX shutter speed).
+    ShutterApex,
+    /// WriteXMP.pl `EncodeBase64`.
+    Base64,
+    /// `InverseDateTime`, then `GetUnixTime`.
+    UnixTime,
+    /// The PLUS vocabulary URI prefix.
+    PlusVocab,
+    /// WriteIPTC.pl `IptcTime`.
+    IptcTime,
+    /// Integers separated by spaces, or the value is rejected.
+    IntegerList,
+    /// A PDF name: `/` prefix.
+    PdfName,
+    /// `InverseDateTime`, then a PDF date.
+    PdfDate,
+    /// Exif.pm `ConvertLensInfo`, then four rationals.
+    LensInfo,
+    /// PhotoMechanic `Prefs`: `Tagged:..., ColorClass:...` → `t:c:r:f`.
+    PhotoMechPrefs,
+    /// `a.b.c.d` → the int32u of those four bytes.
+    DottedVersion,
+    /// Four word characters → their int32u.
+    FourCc,
 }
 
 /// One writable XMP property.
