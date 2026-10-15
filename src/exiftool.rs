@@ -328,9 +328,10 @@ impl ExifTool {
     /// out, judged by what a reader sees in each.
     fn count_applied(&self, before: &[u8], after: &[u8], path: &Path) -> u32 {
         let keep = |t: &Tag| {
+            // `File` stays: a GIF or PNG comment lives there.
             !matches!(
                 t.group.family0.as_str(),
-                "File" | "System" | "Composite" | "ExifTool"
+                "System" | "Composite" | "ExifTool"
             )
         };
         let read = |d: &[u8]| -> Option<Vec<Tag>> {
@@ -434,21 +435,18 @@ impl ExifTool {
                     .collect();
                 crate::writer::ogg_writer::write_ogg(data, &changes)
             }
+            // An XMP sidecar is edited in place, like the XMP of a HEIF item,
+            // so the properties it already has survive.
             FileType::Xmp => {
-                let props: Vec<xmp_writer::XmpProperty> = self
-                    .new_values
-                    .iter()
-                    .filter_map(|nv| {
-                        let val = nv.value.as_deref()?;
-                        Some(xmp_writer::XmpProperty {
-                            namespace: nv.group.clone().unwrap_or_else(|| "dc".into()),
-                            property: nv.tag.clone(),
-                            values: vec![val.to_string()],
-                            prop_type: xmp_writer::XmpPropertyType::Simple,
-                        })
-                    })
-                    .collect();
-                Ok(crate::writer::xmp_sidecar_writer::write_xmp_sidecar(&props))
+                use crate::writer::xmp_edit::{edit_xmp, XmpOutcome};
+                let (_, changes) = item_changes(&self.new_values);
+                match edit_xmp(Some(data), &changes)? {
+                    XmpOutcome::Unchanged => Ok(data.to_vec()),
+                    XmpOutcome::Rewritten(x) => Ok(x),
+                    // Nothing left: an empty packet (ExifTool's `-all=`
+                    // on a sidecar leaves one too).
+                    XmpOutcome::Removed => Ok(b"<?xpacket begin='\xef\xbb\xbf' id='W5M0MpCehiHzreSzNTczkc9d'?>\n<x:xmpmeta xmlns:x='adobe:ns:meta/'>\n<rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>\n</rdf:RDF>\n</x:xmpmeta>\n<?xpacket end='w'?>".to_vec()),
+                }
             }
             _ => Err(Error::UnsupportedFileType(format!(
                 "writing not yet supported for {}",

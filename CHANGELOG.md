@@ -41,6 +41,15 @@ All notable changes to `exiftool-rs` are documented here.
   type, it now fails and writes nothing.
 - `EXIF:all` and `XMP:all` delete the group in JPEG and WebP too; only the
   `EXIF:*` spelling did.
+- Writing an XMP sidecar edits the packet in place instead of replacing it
+  with the written properties alone, so the rest of the file survives.
+- The write matrix of the parity audit counts 118 ISO cases out of 460, up
+  from 29; silent no-ops drop from 137 to 47, and none is left on HEIF or
+  AVIF (all 26 HEIF cases are ISO, `QuickTime:Title`, which neither tool
+  writes there, aside). 43 cases that wrote nothing or something wrong are
+  now refused with an error. The matrix ignores `MediaDataSize` and
+  `MediaDataOffset`, which depend on the writer's layout, and reads our
+  output with duplicates, as it reads Perl's with `-a`.
 
 ### Added
 

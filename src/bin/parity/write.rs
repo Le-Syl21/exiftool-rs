@@ -77,6 +77,14 @@ pub const IGNORED: &[(&str, &str)] = &[
         "TileOffsets",
         "file offsets of the image data; depend on the writer's block layout",
     ),
+    (
+        "MediaDataSize",
+        "size of the ISOBMFF mdat box; depends on how the writer lays out item data",
+    ),
+    (
+        "MediaDataOffset",
+        "file offset of the ISOBMFF mdat box; depends on the size of the meta box",
+    ),
 ];
 
 /// Values written by the matrix.
@@ -111,7 +119,10 @@ fn by_g1(m: &TagMap) -> BTreeMap<String, String> {
 }
 
 fn read_ours(file: &Path) -> TagMap {
-    let et = exiftool_rs::ExifTool::new();
+    // Every instance, like Perl's `-a` below: otherwise `Composite:GPSLatitude`
+    // hides `GPS:GPSLatitude` and a written tag looks absent.
+    let mut et = exiftool_rs::ExifTool::new();
+    et.options_mut().duplicates = true;
     let mut m = TagMap::new();
     if let Ok(tags) = et.extract_info(file) {
         for t in tags {
