@@ -3074,7 +3074,7 @@ fn cond_51(model: &str, dm: &State) -> bool {
 fn cond_52(model: &str, dm: &State) -> bool {
     (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1)
         && (MODEL_RE_36.is_match(model)
-            || MODEL_RE_37.is_match(&crate::metadata::exif::software())))
+            || MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition())))
 }
 
 fn cond_53(model: &str, dm: &State) -> bool {
@@ -3085,31 +3085,37 @@ fn cond_53(model: &str, dm: &State) -> bool {
 fn cond_54(model: &str, dm: &State) -> bool {
     (dm_get(&dm, "FlashFired").is_some_and(|v| ((v as i64) & 1) != 1)
         && (!MODEL_RE_39.is_match(model)
-            && !MODEL_RE_37.is_match(&crate::metadata::exif::software())))
+            && !MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition())))
 }
 
 fn cond_55(model: &str, dm: &State) -> bool {
-    (MODEL_RE_36.is_match(model) || MODEL_RE_37.is_match(&crate::metadata::exif::software()))
+    (MODEL_RE_36.is_match(model)
+        || MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 fn cond_56(model: &str, dm: &State) -> bool {
-    (!MODEL_RE_41.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software()))
+    (!MODEL_RE_41.is_match(model)
+        && !MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 fn cond_57(model: &str, dm: &State) -> bool {
-    (MODEL_RE_46.is_match(model) || MODEL_RE_37.is_match(&crate::metadata::exif::software()))
+    (MODEL_RE_46.is_match(model)
+        || MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 fn cond_58(model: &str, dm: &State) -> bool {
-    (MODEL_RE_47.is_match(model) || MODEL_RE_37.is_match(&crate::metadata::exif::software()))
+    (MODEL_RE_47.is_match(model)
+        || MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 fn cond_59(model: &str, dm: &State) -> bool {
-    (MODEL_RE_48.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software()))
+    (MODEL_RE_48.is_match(model)
+        && !MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 fn cond_60(model: &str, dm: &State) -> bool {
-    (MODEL_RE_49.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software()))
+    (MODEL_RE_49.is_match(model)
+        && !MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 fn cond_61(model: &str, dm: &State) -> bool {
@@ -3146,12 +3152,12 @@ fn cond_68(model: &str, dm: &State) -> bool {
 
 fn cond_69(model: &str, dm: &State) -> bool {
     (dm_get(&dm, "Ver9401").is_some_and(|v| v == 167.0)
-        && !MODEL_RE_64.is_match(&crate::metadata::exif::software()))
+        && !MODEL_RE_64.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 fn cond_70(model: &str, dm: &State) -> bool {
     (dm_get(&dm, "Ver9401").is_some_and(|v| v == 167.0)
-        && MODEL_RE_64.is_match(&crate::metadata::exif::software()))
+        && MODEL_RE_64.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 fn cond_71(model: &str, dm: &State) -> bool {
@@ -3210,7 +3216,8 @@ fn cond_83(model: &str, dm: &State) -> bool {
 }
 
 fn cond_84(model: &str, dm: &State) -> bool {
-    (MODEL_RE_79.is_match(model) && !MODEL_RE_37.is_match(&crate::metadata::exif::software()))
+    (MODEL_RE_79.is_match(model)
+        && !MODEL_RE_37.is_match(&crate::metadata::exif::software_in_condition()))
 }
 
 static CAMERAINFO: Table = Table {
@@ -4323,12 +4330,9 @@ static FOCUSINFO: Table = Table {
         Field {
             off: 0x1110,
             name: "TiffMeteringImage",
-            shape: Shape::Text {
+            shape: Shape::Binary {
                 len: 9600,
-                stop_at_nul: false,
-                member: None,
-                value: None,
-                print: None,
+                shown: 7404,
             },
             ..F
         },
@@ -15011,12 +15015,9 @@ static TAG940E: Table = Table {
             off: 0x1a08,
             name: "TiffMeteringImage",
             cond: Cond::Fn(cond_84),
-            shape: Shape::Text {
+            shape: Shape::Binary {
                 len: 2640,
-                stop_at_nul: false,
-                member: None,
-                value: None,
-                print: None,
+                shown: 2640,
             },
             ..F
         },

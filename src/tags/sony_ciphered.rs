@@ -133,6 +133,9 @@ pub(crate) enum Shape {
         value: Option<&'static str>,
         print: Option<&'static str>,
     },
+    /// `undef[N]` whose ValueConv turns it into an image: without the Binary
+    /// option ExifTool reports it as `shown` bytes of binary data.
+    Binary { len: u16, shown: u16 },
 }
 
 /// One entry of a table.
@@ -201,6 +204,20 @@ impl Cond {
     }
 }
 
+/// ExifTool evaluates a Condition with Perl warnings on, and when a condition
+/// that matched the undefined `$$self{Software}` turns out false it reports
+/// "Condition <tag>: Use of uninitialized value in pattern match (m//)", once
+/// per message (GetTagInfo and Warn, ExifTool.pm:9175 and :5635).
+fn undefined_software_warning(name: &str, tags: &mut Vec<Tag>) {
+    let text = format!("Condition {name}: Use of uninitialized value in pattern match (m//)");
+    if !tags
+        .iter()
+        .any(|t| t.name == "Warning" && t.print_value == text)
+    {
+        tags.push(crate::tag::warning_tag(&text));
+    }
+}
+
 /// Walk a table over its deciphered block: every field in byte order, then
 /// every sub-directory in the order the table lists them.
 ///
@@ -209,7 +226,12 @@ impl Cond {
 pub(crate) fn run(t: &Table, data: &[u8], model: &str, dm: &mut State) -> Vec<Tag> {
     let mut tags = Vec::new();
     for f in t.fields {
-        if !f.cond.holds(model, dm) {
+        let holds = f.cond.holds(model, dm);
+        let undefined_read = crate::metadata::exif::take_undefined_software_read();
+        if !holds {
+            if undefined_read {
+                undefined_software_warning(f.name, &mut tags);
+            }
             continue;
         }
         let at = usize::from(f.off);
@@ -304,6 +326,16 @@ pub(crate) fn run(t: &Table, data: &[u8], model: &str, dm: &mut State) -> Vec<Ta
                 };
                 tags.push(mk(f, t, printed, Value::String(s)));
             }
+            Shape::Binary { len, shown } => {
+                // ValueConv: `return undef unless length $val >= N`.
+                let Some(bytes) = data.get(at..at + usize::from(*len)) else {
+                    continue;
+                };
+                if !f.hidden {
+                    let printed = format!("(Binary data {shown} bytes, use -b option to extract)");
+                    tags.push(mk(f, t, printed, Value::Binary(bytes.to_vec())));
+                }
+            }
             Shape::Text {
                 len,
                 stop_at_nul,
@@ -341,7 +373,10 @@ pub(crate) fn run(t: &Table, data: &[u8], model: &str, dm: &mut State) -> Vec<Ta
         }
     }
     for sd in t.subdirs {
-        if !sd.cond.holds(model, dm) {
+        let holds = sd.cond.holds(model, dm);
+        // A sub-directory carries no name for the warning to give.
+        crate::metadata::exif::take_undefined_software_read();
+        if !holds {
             continue;
         }
         let at = usize::from(sd.off);

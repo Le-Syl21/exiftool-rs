@@ -31,6 +31,10 @@ thread_local! {
     /// read because MakerNote conditions ask for it. Sony tells one ILCE-9
     /// firmware from another that way, and reads a different offset for each.
     static SOFTWARE: RefCell<String> = const { RefCell::new(String::new()) };
+    /// Whether IFD0 had a Software tag: `$$self{Software}` is undefined otherwise.
+    static SOFTWARE_DEFINED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// Set when a condition matched a pattern against the undefined Software.
+    static SOFTWARE_UNDEF_READ: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     /// ExifTool's `$$self{Make}`, kept for the same reason as Software: a
     /// binary sub-table can be conditioned on it, and Kodak's Type9 reads four
     /// of its fields only when the file says Kodak wrote it.
@@ -96,6 +100,28 @@ pub fn set_software(text: &str) {
 #[must_use]
 pub fn software() -> String {
     SOFTWARE.with(|s| s.borrow().clone())
+}
+
+/// Record whether the file declares a Software tag at all.
+pub fn set_software_defined(defined: bool) {
+    SOFTWARE_DEFINED.with(|d| d.set(defined));
+    SOFTWARE_UNDEF_READ.with(|r| r.set(false));
+}
+
+/// `$$self{Software}` as a maker-note condition matches it: the string, or an
+/// empty one when it is undefined -- a read Perl warns about ("Use of
+/// uninitialized value in pattern match"), noted for [`take_undefined_software_read`].
+#[must_use]
+pub fn software_in_condition() -> String {
+    if !SOFTWARE_DEFINED.with(std::cell::Cell::get) {
+        SOFTWARE_UNDEF_READ.with(|r| r.set(true));
+    }
+    software()
+}
+
+/// Whether a condition read the undefined Software since the last call.
+pub fn take_undefined_software_read() -> bool {
+    SOFTWARE_UNDEF_READ.with(|r| r.replace(false))
 }
 
 /// Set the Make the file declares (ExifTool's `$$self{Make}`).
@@ -419,35 +445,44 @@ impl ExifReader {
             }
         }
 
-        // ExifTool stores Software as it reads it (`DataMember => 'Software'`,
-        // Exif.pm:905) because MakerNote conditions test it -- Sony reads
-        // ShutterCount2 from a different offset on an ILCE-9 running v5 or v6.
-        if let Some(sw) = tags.iter().find(|t| t.name == "Software") {
-            set_software(sw.print_value.trim_end());
-        }
-
-        // Extract Make + Model for MakerNotes detection and sub-table dispatch
-        if let Some(mk) = tags.iter().find(|t| t.name == "Make") {
-            set_make(mk.print_value.trim_end());
-        }
-        let make = tags
-            .iter()
-            .find(|t| t.name == "Make")
-            .map(|t| t.print_value.clone())
-            .unwrap_or_default();
-
-        let model = tags
-            .iter()
-            .find(|t| t.name == "Model")
-            .map(|t| t.print_value.clone())
-            .unwrap_or_default();
-
-        // Store model for sub-table dispatch
-        let make_and_model = if model.is_empty() {
-            make.clone()
-        } else {
-            model
+        // ExifTool stores Make, Model and Software as it reads them (their
+        // RawConv and `DataMember => 'Software'`, Exif.pm:905) because the
+        // maker-note conditions test them. IFD0 holds them ahead of the ExifIFD
+        // pointer, and the maker note is read inside the ExifIFD, so it sees
+        // IFD0's values -- not those of IFD1, read after it -- and an undefined
+        // member, an empty string to every condition, when IFD0 has none.
+        let ifd0 = |name: &str| {
+            tags.iter()
+                .find(|t| t.name == name && t.group.family1 == "IFD0")
+                .map(|t| t.print_value.trim_end().to_string())
+                .unwrap_or_default()
         };
+        set_software(&ifd0("Software"));
+        set_software_defined(
+            tags.iter()
+                .any(|t| t.name == "Software" && t.group.family1 == "IFD0"),
+        );
+        // An XMP packet in IFD0 (0x02bc) is read before the ExifIFD, and its
+        // tiff:Make and tiff:Model fill a member IFD0 left unset (XMP.pm:1974,
+        // `$$self{Model} ? $val : $$self{Model} = $val`).
+        let or_xmp = |v: String, name: &str| {
+            if !v.is_empty() {
+                return v;
+            }
+            tags.iter()
+                .find(|t| t.name == name && t.group.family1 == "XMP-tiff")
+                .map(|t| t.print_value.trim_end().to_string())
+                .unwrap_or_default()
+        };
+        let make = or_xmp(ifd0("Make"), "Make");
+        set_make(&make);
+        let model = or_xmp(ifd0("Model"), "Model");
+
+        // The maker-note conditions read `$$self{Model}`, which is undefined --
+        // an empty string to every regex -- when the file has no Model tag. It
+        // must not fall back to the Make: a Canon maker note whose Model was
+        // deleted is decoded as for a model that matches nothing.
+        let make_and_model = model;
 
         // Find and parse MakerNotes
         // Look for the MakerNote tag (0x927C) that was stored as Undefined

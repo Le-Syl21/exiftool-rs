@@ -358,6 +358,16 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
         }
         for ($vconv, $pconv) { $_ =~ s/\\'/'/g if defined }
 
+        # A ValueConv written as a Perl sub. The TiffMeteringImage ones rebuild
+        # the bytes into a TIFF and, without the Binary option, return a
+        # reference to "Binary data N bytes" -- which ExifTool prints as binary
+        # data of that size, not as the bytes read as text.
+        my $binary;
+        if ($fb =~ /ValueConv\s*=>\s*sub\s*\{/
+            and $fb =~ /return\s*\\\s*"Binary data (\d+) bytes"\s+unless\s+\$et->Options\('Binary'\)/) {
+            $binary = $1;
+        }
+
         # `string[20]` and `undef[6]` are N bytes read as text.
         if ($ffmt =~ /^(string|undef)\[(\d+)\]$/) {
             push @skipped, "$table 0x" . sprintf('%04x', $off) . " $name: Mask on a text field"
@@ -365,7 +375,7 @@ while ($src =~ /^%Image::ExifTool::Sony::(\w+)\s*=\s*\((.*?)\n\);/gms) {
             push @fields, { off => $off, name => $name, fmt => $1, n => $2,
                             re => $re, neg => $neg, conv => {},
                             vconv => $vconv, pconv => $pconv, hidden => $hidden,
-                            dmname => $dmname, grp2 => $fgrp2 };
+                            dmname => $dmname, grp2 => $fgrp2, binary => $binary };
             next;
         }
         unless (exists $WIDTH{$ffmt}) {
@@ -638,7 +648,7 @@ sub compile_cond {
     if ($cond =~ m{^\$\$self\{Software\} (=~|!~) /(.*)/$}) {
         my ($op, $pat) = ($1, $2);
         return () if $pat =~ /\(\?[=!<]/;
-        return (sprintf('%sMODEL_RE_%d.is_match(&crate::metadata::exif::software())',
+        return (sprintf('%sMODEL_RE_%d.is_match(&crate::metadata::exif::software_in_condition())',
                         $op eq '!~' ? '!' : '', re_id($pat)), 'false');
     }
     # The model name.
@@ -1188,7 +1198,9 @@ my $n_maps;
             my $shape;
             # `string[N]` and `undef[N]` are N bytes read as text. A string
             # stops at its first NUL, as ExifTool's reader does.
-            if ($text) {
+            if ($text and defined $f->{binary}) {
+                $shape = sprintf('Shape::Binary { len: %d, shown: %d }', $f->{n}, $f->{binary});
+            } elsif ($text) {
                 # A text field stores itself only where ExifTool names it a
                 # DataMember, and only when it carries no conversion.
                 my $conv = (defined $f->{vconv} or defined $f->{pconv});

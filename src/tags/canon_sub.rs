@@ -590,40 +590,17 @@ pub fn decode_focal_length(values: &[u16], model: &str, focal_units: u16) -> Vec
             ));
         }
     }
-    // FocalPlaneXSize/YSize for older Canon models (Perl: Canon::FocalLength table)
-    // Only present for some lower-end models, not 1D/5D/7D series
-    let model_upper = model.to_uppercase();
-    let is_1d_series = model_upper.contains("EOS-1D")
-        || model_upper.contains("EOS 1D")
-        || model_upper.contains("EOS 1DS")
-        || model_upper.contains("EOS-1DS");
-    let has_focal_plane = !is_1d_series
-        && (model_upper.contains("REBEL")
-            || model_upper.contains("300D")
-            || model_upper.contains("350D")
-            || model_upper.contains("400D")
-            || model_upper.contains("POWERSHOT")
-            || (model_upper.contains("EOS")
-                && !model_upper.contains("EOS 5D")
-                && !model_upper.contains("EOS 7D")));
-    if has_focal_plane && values.len() >= 4 {
-        let fpx = values.get(2).copied().unwrap_or(0);
-        let fpy = values.get(3).copied().unwrap_or(0);
-        // Sanity check: raw value should be < 2000 (gives < ~50mm)
-        // Larger values indicate the field is not valid for this model
-        if fpx > 0 && fpx < 2000 {
-            tags.push(mkt(
-                "FocalPlaneXSize",
-                Value::U16(fpx),
-                format!("{:.2} mm", fpx as f64 / 1000.0 * 25.4),
-            ));
-        }
-        if fpy > 0 && fpy < 2000 {
-            tags.push(mkt(
-                "FocalPlaneYSize",
-                Value::U16(fpy),
-                format!("{:.2} mm", fpy as f64 / 1000.0 * 25.4),
-            ));
+    // Canon.pm:2726-2768 indices 2 and 3 -- FocalPlaneXSize/YSize, valid only
+    // for PowerShots and a few EOS bodies; RawConv drops a value under 40.
+    if focal_plane_size_valid(model) {
+        for (index, name) in [(2, "FocalPlaneXSize"), (3, "FocalPlaneYSize")] {
+            if let Some(&v) = values.get(index).filter(|&&v| v >= 40) {
+                tags.push(mkt(
+                    name,
+                    Value::U16(v),
+                    format!("{:.2} mm", v as f64 * 25.4 / 1000.0),
+                ));
+            }
         }
     }
     // Canon::FocalLength GROUPS => { 2 => 'Image' } (Canon.pm); see decode_shot_info.
@@ -631,6 +608,21 @@ pub fn decode_focal_length(values: &[u16], model: &str, focal_units: u16) -> Vec
         t.group.family2 = "Image".into();
     }
     tags
+}
+
+/// The Condition of FocalPlaneXSize/YSize (Canon.pm:2735): any model that is
+/// not an EOS, and the EOS bodies whose focal plane size is known to be right.
+fn focal_plane_size_valid(model: &str) -> bool {
+    static RE: std::sync::LazyLock<[regex_lite::Regex; 2]> = std::sync::LazyLock::new(|| {
+        [
+            regex_lite::Regex::new(r"\b(1DS?|5D|D30|D60|10D|20D|30D|K236)$").unwrap(),
+            regex_lite::Regex::new(
+                r"\b((300D|350D|400D) DIGITAL|REBEL( XTi?)?|Kiss Digital( [NX])?)$",
+            )
+            .unwrap(),
+        ]
+    });
+    !model.contains("EOS") || RE.iter().any(|re| re.is_match(model))
 }
 
 /// Emit a CameraSettings enum tag, applying the generated PrintConv (raw fallback).

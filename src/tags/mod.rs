@@ -1,5 +1,7 @@
 pub(crate) mod binary_tables;
 pub mod binary_tables_generated;
+pub(crate) mod canon_custom2;
+pub(crate) mod canon_custom2_generated;
 pub mod canon_sub;
 pub mod conv_expr;
 pub mod conv_tables_generated;

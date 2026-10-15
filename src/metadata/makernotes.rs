@@ -51,6 +51,9 @@ struct MakerNoteInfo {
     ifd_offset: usize,                 // Offset to IFD start within maker note data
     _base_adjust: i64,                 // Base offset adjustment for value pointers
     byte_order: Option<ByteOrderMark>, // Override byte order, or None for auto-detect
+    /// No arm of MakerNotes.pm claims the note: ExifTool reads it with
+    /// `Unknown::Main`, which names nothing but PrintIM.
+    generic: bool,
 }
 
 /// Parse maker notes from raw EXIF data.
@@ -101,7 +104,7 @@ pub fn parse_makernotes_with_base(
         return Vec::new();
     }
     let mn_data = &data[mn_offset..mn_offset + mn_size];
-    let info = detect_manufacturer(mn_data, make);
+    let info = detect_manufacturer(mn_data, make, model);
     let byte_order = info.byte_order.unwrap_or(parent_byte_order);
     let ifd_offset = mn_offset + info.ifd_offset;
     let mut tags = Vec::new();
@@ -159,7 +162,7 @@ pub fn parse_makernotes_exif_base(
         // mn_offset+18 and value offsets are relative to that GE TIFF base.
         // Perl applies FixBase (MakerNotes.pm) — for GE, makeDiff=0 and
         // fix = -(minPt - ifdEnd) where minPt is the first value offset >= 12.
-        let info = detect_manufacturer(mn_data, make);
+        let info = detect_manufacturer(mn_data, make, model);
         let ge_tiff = mn_offset + 10;
         // Byte order from GE's own TIFF header, not the parent.
         let byte_order = match (data.get(ge_tiff), data.get(ge_tiff + 1)) {
@@ -306,7 +309,19 @@ pub fn parse_makernotes_exif_base(
         return decode_google_hdrp(mn_data);
     }
 
-    let info = detect_manufacturer(mn_data, make);
+    let info = detect_manufacturer(mn_data, make, model);
+
+    if info.generic {
+        return read_unknown_makernote(
+            data,
+            mn_offset,
+            mn_size,
+            make,
+            model,
+            parent_byte_order,
+            exif_base,
+        );
+    }
 
     let byte_order = info.byte_order.unwrap_or(parent_byte_order);
 
@@ -508,6 +523,174 @@ pub fn parse_makernotes_exif_base(
     }
 
     tags
+}
+
+/// MakerNoteUnknown (MakerNotes.pm:1117): no arm claims the note, so
+/// ExifTool looks for an IFD in it (`LocateIFD`) and reads that with
+/// `Unknown::Main`, a table that names nothing but PrintIM. A note with no IFD
+/// it can find is reported as unrecognized (`ProcessUnknown`, :1834).
+fn read_unknown_makernote(
+    data: &[u8],
+    mn_offset: usize,
+    mn_size: usize,
+    make: &str,
+    model: &str,
+    parent_byte_order: ByteOrderMark,
+    exif_base: usize,
+) -> Vec<Tag> {
+    let mn = &data[mn_offset..mn_offset + mn_size];
+    let Some(found) = locate_ifd(mn, data.len() - mn_offset, make, model, parent_byte_order) else {
+        return vec![crate::tag::warning_tag("[minor] Unrecognized MakerNotes")];
+    };
+    let mut tags = Vec::new();
+    match found {
+        LocatedIfd::Tiff { header, ifd, bo } => read_makernote_ifd(
+            &mn[header..],
+            ifd,
+            bo,
+            Manufacturer::Unknown,
+            &mut tags,
+            model,
+            exif_base + mn_offset + header,
+        ),
+        LocatedIfd::Plain { at, bo } => read_makernote_ifd(
+            data,
+            mn_offset + at,
+            bo,
+            Manufacturer::Unknown,
+            &mut tags,
+            model,
+            exif_base,
+        ),
+    }
+    tags.retain(|t| t.group.family0 == "PrintIM");
+    tags
+}
+
+/// Where `LocateIFD` found the IFD of an unknown maker note.
+#[derive(Debug, PartialEq)]
+enum LocatedIfd {
+    /// Behind a TIFF header `header` bytes in, the IFD `ifd` bytes past it;
+    /// value offsets count from the header.
+    Tiff {
+        header: usize,
+        ifd: usize,
+        bo: ByteOrderMark,
+    },
+    /// A bare IFD `at` bytes in, whose offsets keep the parent's base.
+    Plain { at: usize, bo: ByteOrderMark },
+}
+
+/// ExifTool's `LocateIFD` scan (MakerNotes.pm:1494): something that looks like
+/// a TIFF header or an IFD within the first 32 bytes of the note. `size` is
+/// what is left of the EXIF block from the note on, which bounds the IFD.
+fn locate_ifd(
+    mn: &[u8],
+    size: usize,
+    make: &str,
+    model: &str,
+    parent_bo: ByteOrderMark,
+) -> Option<LocatedIfd> {
+    // ExifTool's byte order is global state: a header test sets it and a
+    // byte-swapped count toggles it, and either sticks for the next try.
+    let mut bo = parent_bo;
+    let toggle = |b: ByteOrderMark| match b {
+        ByteOrderMark::BigEndian => ByteOrderMark::LittleEndian,
+        ByteOrderMark::LittleEndian => ByteOrderMark::BigEndian,
+    };
+    let dir_len = mn.len();
+    if dir_len < 14 {
+        return None;
+    }
+    let mut offset = 0;
+    'try_ifd: while offset <= 32 {
+        let pos = offset;
+        offset += 2;
+        if pos + 14 > dir_len {
+            break;
+        }
+        // A standard TIFF header.
+        let header_bo = match &mn[pos..pos + 2] {
+            b"II" => Some(ByteOrderMark::LittleEndian),
+            b"MM" => Some(ByteOrderMark::BigEndian),
+            _ => None,
+        };
+        if let Some(hb) = header_bo {
+            bo = hb;
+            if read_u16(mn, pos + 2, bo) == 0x2a {
+                let ptr = read_u32(mn, pos + 4, bo) as usize;
+                if ptr >= 8 && ptr + pos + 14 <= dir_len {
+                    return Some(LocatedIfd::Tiff {
+                        header: pos,
+                        ifd: ptr,
+                        bo,
+                    });
+                }
+            }
+        }
+        // A standard IFD: a 2-byte entry count between 1 and 255.
+        let mut num = read_u16(mn, pos, bo) as usize;
+        if num == 0 {
+            continue;
+        }
+        if num & 0xff == 0 {
+            // The low byte is zero: the byte order could be wrong.
+            bo = toggle(bo);
+            num >>= 8;
+        } else if num & 0xff00 != 0 {
+            continue;
+        }
+        let used = pos + 2 + 12 * num;
+        if used > size || (size - used < 4 && size - used != 2 && size - used != 0) {
+            continue;
+        }
+        for index in 0..num {
+            let entry = pos + 2 + 12 * index;
+            if entry + 12 > mn.len() {
+                continue 'try_ifd;
+            }
+            let format = read_u16(mn, entry + 2, bo);
+            let count = read_u32(mn, entry + 4, bo);
+            if format == 0 {
+                // Padding with null entries is allowed after the first one.
+                if count != 0 || index == 0 {
+                    // fall through to the format test below
+                } else {
+                    continue;
+                }
+                // Canon EOS 40D firmware 1.0.4 leaves the last format at zero.
+                if index == num - 1 && model.contains("EOS 40D") {
+                    continue;
+                }
+            }
+            // Sony DSC-P10 and kin carry invalid entries past the eighth.
+            if num == 12 && make == "SONY" && index >= 8 {
+                continue;
+            }
+            // Apple ProRAW DNG uses format 16 in its maker notes.
+            if format == 16 && make == "Apple" {
+                continue;
+            }
+            if !(1..=13).contains(&format) || count & 0xff00_0000 != 0 {
+                continue 'try_ifd;
+            }
+            if num != 1 {
+                continue;
+            }
+            const SIZES: [usize; 14] = [0, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8, 4];
+            let value_size = count as usize * SIZES[format as usize];
+            if value_size > 4 {
+                if value_size > size {
+                    continue 'try_ifd;
+                }
+                if read_u32(mn, entry + 8, bo) > 0x10000 {
+                    continue 'try_ifd;
+                }
+            }
+        }
+        return Some(LocatedIfd::Plain { at: pos, bo });
+    }
+    None
 }
 
 /// Decode Google HDRP MakerNote (text-based key:value from Perl Google.pm).
@@ -731,159 +914,6 @@ fn canon_custom_350d(tag: u8, val: u8) -> Option<(&'static str, String)> {
     Some((name, pv))
 }
 
-/// Decode Canon CustomFunctions2 (from Perl CanonCustom.pm ProcessCanonCustom2).
-/// Multi-value CustomFunctions2 PrintConvs (1D Mark III): per-index conversions joined
-/// with "; ". First value is Disable/Enable.
-fn canon_cf2_1d3_multi(tag_id: u32, vals: &[u32]) -> Option<String> {
-    if vals.is_empty() {
-        return None;
-    }
-    let de = if vals[0] == 0 { "Disable" } else { "Enable" };
-    match tag_id {
-        // (ISOSpeedRange/ApertureRange/ShutterSpeedRange encode their bounds and are
-        // left raw rather than guessed.)
-        0x0109 | 0x010a if vals.len() >= 2 => Some(format!("{}; Flags 0x{:x}", de, vals[1])),
-        0x0610 if vals.len() >= 3 => Some(format!("{}; Hi {}; Lo {}", de, vals[1], vals[2])),
-        0x0611 if vals.len() >= 2 => Some(format!("{}; {} shots", de, vals[1])),
-        // ShutterSpeedRange: [disableEnable, "Hi "+PrintExposureTime, "Lo "+...].
-        0x010c if vals.len() >= 3 => {
-            let conv = |v: u32| {
-                let secs = (-((v as f64) / 8.0 - 7.0) * std::f64::consts::LN_2).exp();
-                print_exposure_time(secs)
-            };
-            Some(format!(
-                "{}; Hi {}; Lo {}",
-                de,
-                conv(vals[1]),
-                conv(vals[2])
-            ))
-        }
-        // ApertureRange: [disableEnable, "Closed %.2g", "Open %.2g"].
-        0x010d if vals.len() >= 3 => {
-            let conv = |v: u32| ((v as f64 / 8.0 - 1.0) * std::f64::consts::LN_2 / 2.0).exp();
-            Some(format!(
-                "{}; Closed {}; Open {}",
-                de,
-                crate::value::format_g_prec(conv(vals[1]), 2),
-                crate::value::format_g_prec(conv(vals[2]), 2)
-            ))
-        }
-        // ApplyShootingMeteringMode: field0 disableEnable, remaining fields raw.
-        0x010e if vals.len() >= 8 => {
-            let rest = vals[1..8]
-                .iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<_>>()
-                .join("; ");
-            Some(format!("{}; {}", de, rest))
-        }
-        // AFMicroadjustment: field0 enum, remaining fields raw.
-        0x0507 if vals.len() >= 5 => {
-            let f0 = match vals[0] {
-                0 => "Disable",
-                1 => "Adjust all by same amount",
-                2 => "Adjust by lens",
-                _ => "Disable",
-            };
-            let rest = vals[1..5]
-                .iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<_>>()
-                .join("; ");
-            Some(format!("{}; {}", f0, rest))
-        }
-        // TimerLength: [disableEnable, "6 s: v", "16 s: v", "After release: v"].
-        0x080c if vals.len() >= 4 => Some(format!(
-            "{}; 6 s: {}; 16 s: {}; After release: {}",
-            de, vals[1], vals[2], vals[3]
-        )),
-        // ISOSpeedRange: [disableEnable, "Max %.0f", "Min %.0f"].
-        0x0103 if vals.len() >= 3 => {
-            let conv = |v: u32| -> f64 {
-                let vf = v as f64;
-                if vf < 2.0 {
-                    vf
-                } else if vf < 1000.0 {
-                    ((vf / 8.0 - 9.0) * std::f64::consts::LN_2).exp() * 100.0
-                } else {
-                    0.0
-                }
-            };
-            Some(format!(
-                "{}; Max {:.0}; Min {:.0}",
-                de,
-                conv(vals[1]),
-                conv(vals[2])
-            ))
-        }
-        _ => None,
-    }
-}
-
-/// Canon CustomFunctions2 PrintConvs for the EOS-1D Mark III (CanonCustom::Functions2,
-/// the `/\b1D.../` model branches). Single-value enums only; validated by the ratchet.
-fn canon_cf2_1d3_pc(tag_id: u32, val: u32) -> Option<&'static str> {
-    let m = |t: &[(u32, &'static str)]| t.iter().find(|(k, _)| *k == val).map(|(_, s)| *s);
-    match tag_id {
-        0x0101 => m(&[
-            (0, "1/3-stop set, 1/3-stop comp."),
-            (1, "1-stop set, 1/3-stop comp."),
-            (2, "1/2-stop set, 1/2-stop comp."),
-        ]),
-        0x0106 => m(&[
-            (0, "3 shots"),
-            (1, "2 shots"),
-            (2, "5 shots"),
-            (3, "7 shots"),
-        ]),
-        // HighISONoiseReduction ("other models" → %offOn for 1D Mark III).
-        0x0202 => m(&[(0, "Off"), (1, "On")]),
-        0x0409 => m(&[
-            (0, "Displays camera settings"),
-            (1, "Displays shooting functions"),
-        ]),
-        0x0508 => m(&[(0, "Disable"), (1, "Enable")]),
-        0x0509 => m(&[
-            (0, "19 points"),
-            (1, "Inner 9 points"),
-            (2, "Outer 9 points"),
-        ]),
-        0x050a => m(&[
-            (0, "Disable"),
-            (1, "Switch with multi-controller"),
-            (2, "Only while AEL is pressed"),
-        ]),
-        0x050c => m(&[(0, "On"), (1, "Off"), (2, "On (when focus achieved)")]),
-        0x050e => m(&[
-            (0, "Emits"),
-            (1, "Does not emit"),
-            (2, "IR AF assist beam only"),
-        ]),
-        0x0701 => m(&[
-            (0, "Metering + AF start"),
-            (1, "Metering + AF start/AF stop"),
-            (2, "Metering start/Meter + AF start"),
-            (3, "AE lock/Metering + AF start"),
-            (4, "Metering + AF start/disable"),
-        ]),
-        // value 0 ("Normal (disabled)") is common to every SetButtonWhenShooting variant.
-        0x0704 => m(&[(0, "Normal (disabled)")]),
-        0x0709 => m(&[
-            (0, "Protect (hold:record memo)"),
-            (1, "Record memo (protect:disable)"),
-            (2, "Play memo (hold:record memo)"),
-            (3, "Rating (protect/memo:disable)"),
-        ]),
-        0x080b => m(&[
-            (0, "Ec-CIV"),
-            (1, "Ec-A,B,C,CII,CIII,D,H,I,L"),
-            (2, "Ec-S"),
-            (3, "Ec-N,R"),
-        ]),
-        _ => None,
-    }
-}
-
 fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if data.len() < 8 {
@@ -926,187 +956,23 @@ fn decode_canon_custom_functions2(data: &[u8], bo: ByteOrderMark, model: &str) -
                 break;
             }
 
-            let val = if num_vals > 0 && pos + 4 <= data.len() {
-                read_u32(data, pos, bo)
-            } else {
-                0
-            };
-            let all_vals: Vec<u32> = (0..num_vals)
+            let vals: Vec<i32> = (0..num_vals)
                 .filter_map(|i| {
                     let o = pos + i * 4;
-                    (o + 4 <= data.len()).then(|| read_u32(data, o, bo))
+                    (o + 4 <= data.len()).then(|| read_u32(data, o, bo) as i32)
                 })
                 .collect();
-
-            // Look up tag name from CustomFunctions2 table
-            // Tag 0x0103: ISOSpeedRange for 1D models, ISOExpansion for others
-            let name = if tag_id == 0x0103 && !model.contains("1D") {
-                "ISOExpansion"
-            } else {
-                canon_custom2_name(tag_id)
-            };
-            if !name.is_empty() {
-                // 1D Mark III uses the CanonCustom::Functions2 model-specific PrintConvs,
-                // which differ from the generic by-name table; prefer them when applicable.
-                let is_1d3 = model.contains("1D Mark III") || model.contains("1Ds Mark III");
-                let pv = (is_1d3 && num_vals == 1)
-                    .then(|| canon_cf2_1d3_pc(tag_id, val))
-                    .flatten()
-                    .map(str::to_string)
-                    .or_else(|| {
-                        if is_1d3 && num_vals > 1 {
-                            canon_cf2_1d3_multi(tag_id, &all_vals)
-                        } else {
-                            None
-                        }
-                    })
-                    .or_else(|| {
-                        crate::tags::print_conv_generated::print_conv_by_name(name, val as i64)
-                            .map(str::to_string)
-                    })
-                    .or_else(|| {
-                        // CanonCustom ISOExpansion: PrintConv => %offOn.
-                        (name == "ISOExpansion")
-                            .then(|| match val {
-                                0 => Some("Off".to_string()),
-                                1 => Some("On".to_string()),
-                                _ => None,
-                            })
-                            .flatten()
-                    })
-                    .unwrap_or_else(|| {
-                        // No PrintConv: ExifTool shows the raw value(s). Multi-value
-                        // entries (e.g. CustomControls) are space-joined, not just the
-                        // first.
-                        if num_vals > 1 {
-                            all_vals
-                                .iter()
-                                .map(|v| v.to_string())
-                                .collect::<Vec<_>>()
-                                .join(" ")
-                        } else {
-                            val.to_string()
-                        }
-                    });
+            // ProcessCanonCustom2 reads the values as int32s and lets the
+            // CanonCustom::Functions2 variant whose Condition holds name and
+            // convert them; an id it has no variant for is not reported.
+            if let Some((name, pv)) = crate::tags::canon_custom2::decode(tag_id, &vals, model) {
                 tags.push(mk_canon_str(name, &pv));
-            } else if tag_id > 0 {
-                // Emit unknown custom functions with their hex ID
-                tags.push(mk_canon_str(
-                    &format!("CustomFunc-0x{:04X}", tag_id),
-                    &val.to_string(),
-                ));
             }
 
             pos += num_vals * 4;
         }
     }
     tags
-}
-
-fn canon_custom2_name(id: u32) -> &'static str {
-    match id {
-        0x0101 => "ExposureLevelIncrements",
-        0x0102 => "ISOSpeedIncrements",
-        0x0103 => "ISOSpeedRange",
-        0x0104 => "AEBAutoCancel",
-        0x0105 => "AEBSequence",
-        0x0106 => "AEBShotCount",
-        0x0107 => "SpotMeterLinkToAFPoint",
-        0x0108 => "SafetyShift",
-        0x0109 => "UsableShootingModes",
-        0x010A => "UsableMeteringModes",
-        0x010B => "ExposureModeInManual",
-        0x010C => "ShutterSpeedRange",
-        0x010D => "ApertureRange",
-        0x010E => "ApplyShootingMeteringMode",
-        0x010F => "FlashSyncSpeedAv",
-        0x0110 => "AEMicroadjustment",
-        0x0111 => "FEMicroadjustment",
-        0x0112 => "SameExposureForNewAperture",
-        0x0113 => "ExposureCompAutoCancel",
-        0x0114 => "AELockMeterModeAfterFocus",
-        0x0201 => "LongExposureNoiseReduction",
-        0x0202 => "HighISONoiseReduction",
-        0x0203 => "HighlightTonePriority",
-        0x0204 => "AutoLightingOptimizer",
-        0x0304 => "ETTLII",
-        0x0305 => "ShutterCurtainSync",
-        0x0306 => "FlashFiring",
-        0x0407 => "ViewInfoDuringExposure",
-        0x0408 => "LCDIlluminationDuringBulb",
-        0x0409 => "InfoButtonWhenShooting",
-        0x040A => "ViewfinderWarnings",
-        0x040B => "LVShootingAreaDisplay",
-        0x040C => "LVShootingAreaDisplay",
-        0x0501 => "USMLensElectronicMF",
-        0x0502 => "AIServoTrackingSensitivity",
-        0x0503 => "AIServoImagePriority",
-        0x0504 => "AIServoTrackingMethod",
-        0x0505 => "LensDriveNoAF",
-        0x0506 => "LensAFStopButton",
-        0x0507 => "AFMicroadjustment",
-        0x0508 => "AFPointAreaExpansion",
-        0x0509 => "SelectableAFPoint",
-        0x050A => "SwitchToRegisteredAFPoint",
-        0x050B => "AFPointAutoSelection",
-        0x050C => "AFPointDisplayDuringFocus",
-        0x050D => "AFPointBrightness",
-        0x050E => "AFAssistBeam",
-        0x050F => "AFPointSelectionMethod",
-        0x0510 => "VFDisplayIllumination",
-        0x0511 => "AFDuringLiveView",
-        0x0512 => "SelectAFAreaSelectMode",
-        0x0513 => "ManualAFPointSelectPattern",
-        0x0514 => "DisplayAllAFPoints",
-        0x0515 => "FocusDisplayAIServoAndMF",
-        0x0516 => "OrientationLinkedAFPoint",
-        0x0517 => "MultiControllerWhileMetering",
-        0x0518 => "AccelerationTracking",
-        0x0519 => "AIServoFirstImagePriority",
-        0x051A => "AIServoSecondImagePriority",
-        0x051B => "AFAreaSelectMethod",
-        0x051C => "AutoAFPointColorTracking",
-        0x051D => "VFDisplayIllumination",
-        0x051E => "InitialAFPointAIServoAF",
-        0x060F => "MirrorLockup",
-        0x0610 => "ContinuousShootingSpeed",
-        0x0611 => "ContinuousShotLimit",
-        0x0612 => "RestrictDriveModes",
-        0x0701 => "ShutterButtonAFOnButton",
-        0x0702 => "AFOnAELockButtonSwitch",
-        0x0703 => "QuickControlDialInMeter",
-        0x0704 => "SetButtonWhenShooting",
-        0x0705 => "ManualTv",
-        0x0706 => "DialDirectionTvAv",
-        0x0707 => "AvSettingWithoutLens",
-        0x0708 => "WBMediaImageSizeSetting",
-        0x0709 => "LockMicrophoneButton",
-        0x070A => "ButtonFunctionControlOff",
-        0x070B => "AssignFuncButton",
-        0x070C => "CustomControls",
-        0x070D => "StartMovieShooting",
-        0x070E => "FlashButtonFunction",
-        0x070F => "MultiFunctionLock",
-        0x0710 => "TrashButtonFunction",
-        0x0711 => "ShutterReleaseWithoutLens",
-        0x0712 => "ControlRingRotation",
-        0x0713 => "FocusRingRotation",
-        0x0714 => "RFLensMFFocusRingSensitivity",
-        0x0715 => "CustomizeDials",
-        0x080B => "FocusingScreen",
-        0x080C => "TimerLength",
-        0x080D => "ShortReleaseTimeLag",
-        0x080E => "AddAspectRatioInfo",
-        0x080F => "AddOriginalDecisionData",
-        0x0810 => "LiveViewExposureSimulation",
-        0x0811 => "LCDDisplayAtPowerOn",
-        0x0812 => "MemoAudioQuality",
-        0x0813 => "DefaultEraseOption",
-        0x0814 => "RetractLensOnPowerOff",
-        0x0815 => "AddIPTCInformation",
-        0x0816 => "AudioCompression",
-        _ => "",
-    }
 }
 
 /// ExifTool Exif::PrintParameter: 0 -> "Normal", positive -> "+N", negative -> "N".
@@ -3644,8 +3510,17 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
         ));
     }
 
+    // Pentax.pm CameraSettings: entries 13 to 21 are conditional on the model,
+    // `$$self{Model} =~ /(K10D|GX10)\b/` for most and `/K-5\b/` for a few.
+    static K10D_RE: std::sync::LazyLock<regex_lite::Regex> =
+        std::sync::LazyLock::new(|| regex_lite::Regex::new(r"(K10D|GX10)\b").unwrap());
+    static K5_RE: std::sync::LazyLock<regex_lite::Regex> =
+        std::sync::LazyLock::new(|| regex_lite::Regex::new(r"K-5\b").unwrap());
+    let k10d = K10D_RE.is_match(model);
+    let k5 = K5_RE.is_match(model);
+
     // Byte 13: RawAndJpgRecording
-    if data.len() > 13 {
+    if data.len() > 13 && k10d {
         let b = data[13];
         let s = match b {
             0x01 => "JPEG (Best)",
@@ -3670,10 +3545,8 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
         }
     }
 
-    // Bytes 14-18: K10D/K-5/GX10 specific tags
-    let is_k10d = model.contains("K10D") || model.contains("GX10") || model.contains("K-5");
     // Byte 14: bit-field tags (K10D/K-5 specific)
-    if data.len() > 14 && is_k10d {
+    if data.len() > 14 && (k10d || k5) {
         let b = data[14];
         // 14.1: JpgRecordedPixels (bits 0-1)
         let jpgrp = b & 0x03;
@@ -3683,7 +3556,7 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
             2 => "2 MP",
             _ => "",
         };
-        if !jpgrp_s.is_empty() {
+        if !jpgrp_s.is_empty() && k10d {
             tags.push(pb("JpgRecordedPixels", jpgrp_s));
         }
         // 14.3: SensitivitySteps (bits 4-5)
@@ -3699,7 +3572,7 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
     }
 
     // Byte 16: FlashOptions2 + MeteringMode3
-    if data.len() > 16 && is_k10d {
+    if data.len() > 16 && k10d {
         let b = data[16];
         // 16: FlashOptions2 (bits 4-7)
         let fo2 = (b & 0xf0) >> 4;
@@ -3732,7 +3605,7 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
     }
 
     // Byte 17: bit-field tags
-    if data.len() > 17 && is_k10d {
+    if data.len() > 17 && k10d {
         let b = data[17];
         // SRActive: Mask 0x80 (bit 7).
         let sr = (b & 0x80) >> 7;
@@ -3763,7 +3636,7 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
     }
 
     // Byte 18: TvExposureTimeSetting — ValueConv: exp(-PentaxEv(val-68)*log(2))
-    if data.len() > 18 && is_k10d {
+    if data.len() > 18 && k10d {
         let raw = data[18] as i32;
         let ev = pentax_ev(raw - 68);
         let t = (-ev * std::f64::consts::LN_2).exp();
@@ -3780,7 +3653,7 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
     }
 
     // Byte 19: AvApertureSetting — ValueConv: exp(PentaxEv(val-68)*log(2)/2)
-    if data.len() > 19 {
+    if data.len() > 19 && k10d {
         let raw = data[19] as i32;
         let ev = pentax_ev(raw - 68);
         let av = (ev * std::f64::consts::LN_2 / 2.0).exp();
@@ -3788,7 +3661,7 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
     }
 
     // Byte 20: SvISOSetting — ValueConv: int(100*exp(PentaxEv(val-32)*log(2))+0.5)
-    if data.len() > 20 {
+    if data.len() > 20 && k10d {
         let raw = data[20] as i32;
         let ev = pentax_ev(raw - 32);
         let iso = (100.0 * (ev * std::f64::consts::LN_2).exp() + 0.5) as u32;
@@ -3796,7 +3669,7 @@ fn decode_pentax_camera_settings(data: &[u8], byte_order: ByteOrderMark, model: 
     }
 
     // Byte 21: BaseExposureCompensation — ValueConv: PentaxEv(64-val)
-    if data.len() > 21 {
+    if data.len() > 21 && k10d {
         let raw = data[21] as i32;
         let ev = pentax_ev(64 - raw);
         let s = if ev == 0.0 {
@@ -4381,98 +4254,190 @@ fn decode_pentax_camera_info(data: &[u8], byte_order: ByteOrderMark) -> Vec<Tag>
     tags
 }
 
-/// Decode Pentax BatteryInfo (tag 0x0216).
-/// From Perl Pentax::BatteryInfo table.
+/// Decode Pentax BatteryInfo (tag 0x0216), `%Pentax::BatteryInfo`: a
+/// big-endian binary table whose entries are chosen by the model name.
 fn decode_pentax_battery_info(data: &[u8], model: &str) -> Vec<Tag> {
-    // K10D-family A/D battery PrintConv: "%d (%.1fV, %d%%)".
-    let is_k10d = model.contains("K10D")
-        || model.contains("GX10")
-        || model.contains("K20D")
-        || model.contains("GX20");
-    // ADLoad uses ($val-152)*100/34; ADNoLoad uses ($val-155)*100/35.
-    let ad = |v: u8, off: i64, div: i64| -> String {
-        if is_k10d {
-            format!(
+    use regex_lite::Regex;
+    use std::sync::LazyLock;
+    macro_rules! re {
+        ($p:expr) => {{
+            static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new($p).unwrap());
+            RE.is_match(model)
+        }};
+    }
+    let k3iii = model.contains("K-3 Mark III");
+    let k10_k20 = re!(r"(K10D|GX10|K20D|GX20)\b");
+    let ist = re!(r"(\*ist|K100D|K200D|GX-1[LS]?)\b");
+    let ist_load = re!(r"(\*ist|K100D|K200D)\b");
+    let volt12 =
+        re!(r"(645D|645Z|K-(1|01|3|5|7|30|50|70|500|r|x|S[12])|KP)\b") && !model.contains("III");
+
+    let mut tags = Vec::new();
+    let pb = |tags: &mut Vec<Tag>, name: &str, v: String| tags.push(mk_pentax(name, &v));
+    let map = |v: u32, t: &[(u32, &str)]| {
+        t.iter()
+            .find(|(k, _)| *k == v)
+            .map_or_else(|| format!("Unknown ({v})"), |(_, s)| s.to_string())
+    };
+    let u16_at =
+        |at: usize| (at + 2 <= data.len()).then(|| read_u16(data, at, ByteOrderMark::BigEndian));
+    let volts = |v: u16| format!("{:.2} V", v as f64 / 100.0);
+    let Some(&b0) = data.first() else {
+        return tags;
+    };
+
+    // 0.1 PowerSource and 0.2 PowerAvailable.
+    let ps = (b0 & 0x0f) as u32;
+    if k3iii {
+        let ps_s = map(
+            ps,
+            &[
+                (1, "Body Battery"),
+                (2, "Grip Battery"),
+                (4, "External Power Supply"),
+            ],
+        );
+        pb(&mut tags, "PowerSource", ps_s);
+        let avail = ((b0 & 0xf0) >> 4) as u32;
+        let bits: Vec<String> = (0..4)
+            .filter(|b| avail & (1 << b) != 0)
+            .map(|b| match b {
+                0 => "Body Battery".to_string(),
+                1 => "Grip Battery".to_string(),
+                3 => "External Power Supply".to_string(),
+                _ => format!("[{b}]"),
+            })
+            .collect();
+        let s = if bits.is_empty() {
+            "(none)".to_string()
+        } else {
+            bits.join(", ")
+        };
+        pb(&mut tags, "PowerAvailable", s);
+    } else {
+        let ps_s = map(
+            ps,
+            &[
+                (1, "Camera Battery"),
+                (2, "Body Battery"),
+                (3, "Grip Battery"),
+                (4, "External Power Supply"),
+            ],
+        );
+        pb(&mut tags, "PowerSource", ps_s);
+    }
+
+    // 1.1 BodyBatteryState and 1.2 GripBatteryState.
+    if let Some(&b1) = data.get(1) {
+        let body = ((b1 & 0xf0) >> 4) as u32;
+        if re!(r"(\*ist|K100D|K200D|K10D|GX10|K20D|GX20|GX-1[LS]?)\b") {
+            let t = [
+                (1, "Empty or Missing"),
+                (2, "Almost Empty"),
+                (3, "Running Low"),
+                (4, "Full"),
+            ];
+            pb(&mut tags, "BodyBatteryState", map(body, &t));
+        } else if !re!(r"(K110D|K2000|K-m|K-3 Mark III)\b") {
+            let t = [
+                (1, "Empty or Missing"),
+                (2, "Almost Empty"),
+                (3, "Running Low"),
+                (4, "Close to Full"),
+                (5, "Full"),
+            ];
+            pb(&mut tags, "BodyBatteryState", map(body, &t));
+        }
+        if k10_k20 {
+            let t = [
+                (1, "Empty or Missing"),
+                (2, "Almost Empty"),
+                (3, "Running Low"),
+                (4, "Full"),
+            ];
+            pb(&mut tags, "GripBatteryState", map((b1 & 0x0f) as u32, &t));
+        }
+    }
+
+    // 2: BodyBatteryADNoLoad / BodyBatteryVoltage1 / BodyBatteryState (K-3III).
+    if let Some(&b) = data.get(2) {
+        if k10_k20 {
+            let v = b as i64;
+            let s = format!(
                 "{} ({:.1}V, {}%)",
                 v,
                 v as f64 * 8.18 / 186.0,
-                ((v as i64 - off) * 100) / div
-            )
-        } else {
-            v.to_string()
+                (v - 155) * 100 / 35
+            );
+            pb(&mut tags, "BodyBatteryADNoLoad", s);
+        } else if ist {
+            pb(&mut tags, "BodyBatteryADNoLoad", b.to_string());
+        } else if volt12 {
+            if let Some(v) = u16_at(2) {
+                pb(&mut tags, "BodyBatteryVoltage1", volts(v));
+            }
+        } else if k3iii {
+            let t = [
+                (0, "Empty or Missing"),
+                (1, "Almost Empty"),
+                (2, "Running Low"),
+                (3, "Half Full"),
+                (4, "Close to Full"),
+                (5, "Full"),
+            ];
+            pb(&mut tags, "BodyBatteryState", map(b as u32, &t));
         }
-    };
-    let mut tags = Vec::new();
-    let pb = |name: &str, v: &str| mk_pentax(name, v);
-    if data.is_empty() {
-        return tags;
     }
 
-    // Byte 0.1: PowerSource (mask 0x0f)
-    let b0 = data[0];
-    let ps = b0 & 0x0f;
-    let ps_s = match ps {
-        1 => "Camera Battery",
-        2 => "Body Battery",
-        3 => "Grip Battery",
-        4 => "External Power Supply",
-        _ => "",
-    };
-    let ps_tmp = if ps_s.is_empty() {
-        ps.to_string()
-    } else {
-        ps_s.to_string()
-    };
-    tags.push(pb("PowerSource", &ps_tmp));
-
-    if data.len() > 1 {
-        let b1 = data[1];
-        // Byte 1.1: BodyBatteryState (mask 0xf0) >> 4
-        let bbs = (b1 & 0xf0) >> 4;
-        let bbs_s = match bbs {
-            1 => "Empty or Missing",
-            2 => "Almost Empty",
-            3 => "Running Low",
-            4 => "Full",
-            5 => "Full",
-            _ => "",
-        };
-        let bbs_tmp = if bbs_s.is_empty() {
-            bbs.to_string()
-        } else {
-            bbs_s.to_string()
-        };
-        tags.push(pb("BodyBatteryState", &bbs_tmp));
-
-        // Byte 1.2: GripBatteryState (mask 0x0f)
-        let gbs = b1 & 0x0f;
-        let gbs_s = match gbs {
-            1 => "Empty or Missing",
-            2 => "Almost Empty",
-            3 => "Running Low",
-            4 => "Full",
-            _ => "",
-        };
-        let gbs_tmp = if gbs_s.is_empty() {
-            gbs.to_string()
-        } else {
-            gbs_s.to_string()
-        };
-        tags.push(pb("GripBatteryState", &gbs_tmp));
+    // 3: BodyBatteryADLoad / BodyBatteryPercent (K-3III).
+    if let Some(&b) = data.get(3) {
+        if k10_k20 {
+            let v = b as i64;
+            let s = format!(
+                "{} ({:.1}V, {}%)",
+                v,
+                v as f64 * 8.18 / 186.0,
+                (v - 152) * 100 / 34
+            );
+            pb(&mut tags, "BodyBatteryADLoad", s);
+        } else if ist_load {
+            pb(&mut tags, "BodyBatteryADLoad", b.to_string());
+        } else if k3iii {
+            pb(&mut tags, "BodyBatteryPercent", b.to_string());
+        }
     }
 
-    // Bytes 2-5: BodyBatteryADNoLoad, BodyBatteryADLoad, GripBatteryADNoLoad, GripBatteryADLoad
-    if data.len() > 2 {
-        tags.push(pb("BodyBatteryADNoLoad", &ad(data[2], 155, 35)));
+    // 4: GripBatteryADNoLoad / BodyBatteryVoltage2 / BodyBatteryVoltage (K-3III).
+    if let Some(&b) = data.get(4) {
+        if re!(r"(\*ist|K10D|GX10|K20D|GX20|GX-1[LS]?)\b") {
+            pb(&mut tags, "GripBatteryADNoLoad", b.to_string());
+        } else if volt12 {
+            if let Some(v) = u16_at(4) {
+                pb(&mut tags, "BodyBatteryVoltage2", volts(v));
+            }
+        } else if k3iii && data.len() >= 8 {
+            let v = read_u32(data, 4, ByteOrderMark::BigEndian) as f64 * 4e-8 + 0.27219;
+            pb(&mut tags, "BodyBatteryVoltage", format!("{v:.2} V"));
+        }
     }
-    if data.len() > 3 {
-        tags.push(pb("BodyBatteryADLoad", &ad(data[3], 152, 34)));
+
+    // 5: GripBatteryADLoad.
+    if let Some(&b) = data.get(5) {
+        if re!(r"(\*ist|K10D|GX10|K20D|GX20)\b") {
+            pb(&mut tags, "GripBatteryADLoad", b.to_string());
+        }
     }
-    if data.len() > 4 {
-        tags.push(pb("GripBatteryADNoLoad", &data[4].to_string()));
+
+    // 6 and 8: BodyBatteryVoltage3/4 (K-5, K-r, 645D).
+    if re!(r"(K-5|K-r|645D)\b") {
+        if let Some(v) = u16_at(6) {
+            pb(&mut tags, "BodyBatteryVoltage3", volts(v));
+        }
     }
-    if data.len() > 5 {
-        tags.push(pb("GripBatteryADLoad", &data[5].to_string()));
+    if re!(r"(K-5|K-r)\b") {
+        if let Some(v) = u16_at(8) {
+            pb(&mut tags, "BodyBatteryVoltage4", volts(v));
+        }
     }
 
     tags
@@ -4833,7 +4798,7 @@ fn decode_preview_ifd(
 }
 
 /// Decode Nikon AFInfo (tag 0x0088).
-fn decode_nikon_afinfo(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
+fn decode_nikon_afinfo(data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     if data.len() < 4 {
         return tags;
@@ -4872,11 +4837,16 @@ fn decode_nikon_afinfo(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
         tags.push(mk_nikon_str("AFPoint", af_point));
     }
 
-    // AFPointsInFocus (bytes 2-3): the Nikon AFInfo BinaryData table is big-endian
-    // regardless of the maker-note byte order.
-    let _ = bo;
+    // AFPointsInFocus (bytes 2-3): Nikon.pm:2281 reads AFInfo big-endian for a
+    // model matching /^NIKON D/i and little-endian for any other, whatever the
+    // maker note's own byte order.
     if data.len() >= 4 {
-        let mask = u16::from_be_bytes([data[2], data[3]]);
+        let big = model.to_ascii_uppercase().starts_with("NIKON D");
+        let mask = if big {
+            u16::from_be_bytes([data[2], data[3]])
+        } else {
+            u16::from_le_bytes([data[2], data[3]])
+        };
         let points: Vec<&str> = (0..11)
             .filter(|&i| mask & (1 << i) != 0)
             .map(|i| match i {
@@ -5547,15 +5517,14 @@ fn decrypt_nikon_subtables(
 }
 
 /// Detect manufacturer from maker note header bytes.
-fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
-    let make_upper = make.to_uppercase();
-
+fn detect_manufacturer(mn_data: &[u8], make: &str, model: &str) -> MakerNoteInfo {
     // Nikon type 2: "Nikon\0\x02\x10\0\0" followed by TIFF header at offset 10
     if mn_data.len() >= 18 && mn_data.starts_with(b"Nikon\0\x02") {
         return MakerNoteInfo {
             manufacturer: Manufacturer::Nikon,
             ifd_offset: 18, // Skip Nikon header(10) + TIFF header(8)
             _base_adjust: 0,
+            generic: false,
             byte_order: detect_tiff_byte_order(&mn_data[10..]),
         };
     }
@@ -5566,6 +5535,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::NikonOld,
             ifd_offset: 8,
             _base_adjust: 0,
+            generic: false,
             byte_order: Some(ByteOrderMark::BigEndian),
         };
     }
@@ -5576,6 +5546,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::OlympusNew,
             ifd_offset: 12,
             _base_adjust: 0,
+            generic: false,
             byte_order: detect_tiff_byte_order(&mn_data[8..]),
         };
     }
@@ -5586,6 +5557,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::OlympusNew,
             ifd_offset: 16,
             _base_adjust: 0,
+            generic: false,
             byte_order: detect_tiff_byte_order(&mn_data[12..]),
         };
     }
@@ -5596,6 +5568,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Olympus,
             ifd_offset: 8,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5608,6 +5581,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Fujifilm,
             ifd_offset: ifd_off,
             _base_adjust: 0,
+            generic: false,
             byte_order: Some(ByteOrderMark::LittleEndian),
         };
     }
@@ -5620,6 +5594,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::GE,
             ifd_offset: ifd_off,
             _base_adjust: 0,
+            generic: false,
             byte_order: Some(ByteOrderMark::LittleEndian),
         };
     }
@@ -5633,6 +5608,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Sony,
             ifd_offset: 12,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5643,17 +5619,20 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Panasonic,
             ifd_offset: 12,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
 
     // Sanyo: "SANYO\0" (6 bytes) + 2 padding + IFD
     // (from Perl: Start => '$valuePtr + 8')
-    if mn_data.starts_with(b"SANYO\0") {
+    // MakerNoteSanyo (MakerNotes.pm:984) asks for a SANYO Make as well.
+    if mn_data.starts_with(b"SANYO\0") && make.starts_with("SANYO") {
         return MakerNoteInfo {
             manufacturer: Manufacturer::Sanyo,
             ifd_offset: 8,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5665,28 +5644,30 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::CasioType2,
             ifd_offset: 6,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
 
-    // Kodak: "KDK INFO" — NOT an IFD, binary format
-    if mn_data.starts_with(b"KDK INFO") {
-        // Kodak uses binary data, not IFD — handled separately
-        return MakerNoteInfo {
-            manufacturer: Manufacturer::Unknown,
-            ifd_offset: 0, // special marker for non-IFD
-            _base_adjust: 0,
-            byte_order: Some(ByteOrderMark::BigEndian),
-        };
-    }
+    // "KDK" opens the Kodak1a/1b notes, but only with an EASTMAN KODAK Make
+    // (MakerNotes.pm:255-265), and those were decoded before this is reached:
+    // the header alone claims nothing.
 
     // Ricoh: "RICOH\0\0\0" (8 bytes) + IFD
     // (from Perl MakerNotes.pm: Start => '$valuePtr + 8')
-    if mn_data.starts_with(b"Ricoh") || mn_data.starts_with(b"RICOH") {
+    // MakerNoteRicoh (MakerNotes.pm:911) asks for a (PENTAX )RICOH Make too.
+    // MakerNoteRicohPentax ("RICOH\0II"/"RICOH\0MM", :900) comes first.
+    let ricoh_pentax =
+        mn_data.len() >= 8 && mn_data.starts_with(b"RICOH\0") && matches!(mn_data[6], b'I' | b'M');
+    if (mn_data.starts_with(b"Ricoh") || mn_data.starts_with(b"RICOH"))
+        && !ricoh_pentax
+        && (make.starts_with("RICOH") || make.starts_with("PENTAX RICOH"))
+    {
         return MakerNoteInfo {
             manufacturer: Manufacturer::Ricoh,
             ifd_offset: 8,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5697,6 +5678,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::GE,
             ifd_offset: 18,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5707,6 +5689,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Motorola,
             ifd_offset: 8,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5717,6 +5700,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Sony,
             ifd_offset: 12,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5726,15 +5710,21 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Sony,
             ifd_offset: 12,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
     // Sigma: "SIGMA\0\0\0" or "FOVEON\0\0" — offset 10
-    if mn_data.starts_with(b"SIGMA\0") || mn_data.starts_with(b"FOVEON\0") {
+    // MakerNoteSigma (MakerNotes.pm:1018) is chosen by the Make alone.
+    if (mn_data.starts_with(b"SIGMA\0") || mn_data.starts_with(b"FOVEON\0"))
+        && (make.to_ascii_uppercase().starts_with("SIGMA")
+            || make.to_ascii_uppercase().starts_with("FOVEON"))
+    {
         return MakerNoteInfo {
             manufacturer: Manufacturer::Sigma,
             ifd_offset: 10,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5744,6 +5734,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Pentax,
             ifd_offset: 10,
             _base_adjust: 0,
+            generic: false,
             byte_order: detect_tiff_byte_order(&mn_data[6..]),
         };
     }
@@ -5753,6 +5744,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Panasonic, // Leica uses Panasonic tables
             ifd_offset: 8,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5762,6 +5754,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Panasonic,
             ifd_offset: 18,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5771,6 +5764,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Unknown,
             ifd_offset: 22,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5780,6 +5774,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Unknown,
             ifd_offset: 24,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5789,6 +5784,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Sony,
             ifd_offset: 20,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5798,6 +5794,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Unknown,
             ifd_offset: 0,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5807,6 +5804,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Samsung,
             ifd_offset: 0,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5819,6 +5817,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Pentax,
             ifd_offset: 8,
             _base_adjust: 0,
+            generic: false,
             byte_order: detect_tiff_byte_order(&mn_data[6..]),
         };
     }
@@ -5830,6 +5829,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Jvc,
             ifd_offset: 4,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5845,6 +5845,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Unknown,
             ifd_offset: 0,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5863,6 +5864,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Apple,
             ifd_offset: 14, // After "Apple iOS\0\0\x01MM" — IFD starts immediately
             _base_adjust: 0,
+            generic: false,
             byte_order: bo,
         };
     }
@@ -5873,6 +5875,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Pentax,
             ifd_offset: 6,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5883,6 +5886,7 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Pentax,
             ifd_offset: 10,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
@@ -5893,64 +5897,162 @@ fn detect_manufacturer(mn_data: &[u8], make: &str) -> MakerNoteInfo {
             manufacturer: Manufacturer::Samsung,
             ifd_offset: 8,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
 
     // SIGMA\0
-    if mn_data.starts_with(b"SIGMA\0") || mn_data.starts_with(b"FOVEON\0") {
+    // MakerNoteSigma (MakerNotes.pm:1018) is chosen by the Make alone.
+    if (mn_data.starts_with(b"SIGMA\0") || mn_data.starts_with(b"FOVEON\0"))
+        && (make.to_ascii_uppercase().starts_with("SIGMA")
+            || make.to_ascii_uppercase().starts_with("FOVEON"))
+    {
         return MakerNoteInfo {
             manufacturer: Manufacturer::Sigma,
             ifd_offset: 10,
             _base_adjust: 0,
+            generic: false,
             byte_order: None,
         };
     }
 
-    // Fallback by Make string
-    let mfr = if make_upper.starts_with("CANON") {
-        Manufacturer::Canon
-    } else if make_upper.starts_with("NIKON") {
-        Manufacturer::Nikon
-    } else if make_upper.starts_with("SONY") {
-        Manufacturer::Sony
-    } else if make_upper.starts_with("OLYMPUS") || make_upper.starts_with("OM DIGITAL") {
-        Manufacturer::Olympus
-    } else if make_upper.starts_with("PENTAX") || make_upper.starts_with("RICOH") {
-        Manufacturer::Pentax
-    } else if make_upper.starts_with("PANASONIC") || make_upper.starts_with("LEICA") {
-        Manufacturer::Panasonic
-    } else if make_upper.starts_with("FUJI") {
-        Manufacturer::Fujifilm
-    } else if make_upper.starts_with("SAMSUNG") {
-        Manufacturer::Samsung
-    } else if make_upper.starts_with("CASIO") {
-        Manufacturer::Casio
-    } else if make_upper.starts_with("RICOH") {
-        Manufacturer::Ricoh
-    } else if make_upper.starts_with("MINOLTA") || make_upper.starts_with("KONICA") {
-        Manufacturer::Minolta
-    } else if make_upper.starts_with("APPLE") {
-        Manufacturer::Apple
-    } else if make_upper.starts_with("GOOGLE") {
-        Manufacturer::Google
-    } else if make_upper.starts_with("DJI") {
-        Manufacturer::DJI
-    } else if make_upper.starts_with("GENERAL") || make_upper.starts_with("GEDSC") {
-        Manufacturer::GE
-    } else if make_upper.starts_with("FLIR SYSTEMS") || make_upper.starts_with("TELEDYNE FLIR") {
-        // MakerNotes.pm:111.
-        Manufacturer::Flir
-    } else {
-        Manufacturer::Unknown
+    // No header matched: the arms of MakerNotes.pm that are left choose by
+    // the Make (and sometimes the Model) alone, with ExifTool's own tests.
+    let (mfr, generic) = match manufacturer_from_make(mn_data, make, model) {
+        Some(m) => (m, false),
+        // An arm we do not decode on its own claims the note: keep reading it
+        // the way we always have.
+        None if make_claims_makernote(mn_data, make, model) => (Manufacturer::Unknown, false),
+        // Nothing claims it, so ExifTool falls through to MakerNoteUnknown.
+        None => (Manufacturer::Unknown, true),
     };
 
     MakerNoteInfo {
         manufacturer: mfr,
         ifd_offset: 0, // No header, IFD starts immediately
         _base_adjust: 0,
+        generic,
         byte_order: None,
     }
+}
+
+/// The arms of MakerNotes.pm chosen by the opening bytes alone that
+/// `detect_manufacturer` has no branch for, plus MakerNoteUnknownText and
+/// MakerNoteUnknownBinary (:1103, :1112), which come before MakerNoteUnknown.
+fn header_claims_makernote(d: &[u8]) -> bool {
+    const PREFIXES: &[&[u8]] = &[
+        b"[ae_dbg_info:",            // MakerNoteDJIInfo (:95)
+        b"GE\x0c\0\0\0\x16\0\0\0",   // MakerNoteGE2 (:148)
+        b"IIII\x06\0",               // MakerNoteHP6 (:217)
+        b"Panasonic",                // MakerNotePanasonic3 (:754)
+        b"S1\0\0\0\0\0\0\x0c\0\0\0", // MakerNotePentax6 (:832)
+        b"PREMI\0",                  // MakerNoteSony3 (:1056)
+        b"\0\0SONY PIC\0",           // MakerNoteSony (:1036)
+        b"VHAB     \0",
+        b"MINOL\0", // MakerNoteMinolta2 (:509)
+        b"CAMER\0",
+        b"LSI1\0", // MakerNoteUnknownBinary (:1112)
+        b"LEICA",  // MakerNoteLeica5-10
+    ];
+    let at = |i: usize| d.get(i).copied();
+    PREFIXES.iter().any(|p| d.starts_with(p))
+        // MakerNoteHP2 /^610[\0-\4]/ and MakerNoteHP4 /^IIII[\x04|\x05]\0/.
+        || (d.starts_with(b"610") && at(3).is_some_and(|b| b <= 4))
+        || (d.starts_with(b"IIII") && matches!(at(4), Some(4 | 5 | b'|')) && at(5) == Some(0))
+        // MakerNotePhaseOne /^(IIII.waR|MMMMRaw.)/s (:844).
+        || (d.len() >= 8 && (&d[..4] == b"IIII" && &d[5..8] == b"waR"))
+        || d.starts_with(b"MMMMRaw")
+        // MakerNoteSamsung1a/1b /^STMN\d{3}/ (:953-960).
+        || (d.starts_with(b"STMN") && d.len() >= 7 && d[4..7].iter().all(u8::is_ascii_digit))
+        // MakerNoteUnknownText /^[\x09\x0d\x0a\x20-\x7e]+\0*$/ (:1103).
+        || {
+            let text = d.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
+            text > 0
+                && d[..text]
+                    .iter()
+                    .all(|&b| matches!(b, 0x09 | 0x0a | 0x0d | 0x20..=0x7e))
+        }
+}
+
+/// The header-less arms of MakerNotes.pm we decode, tested as ExifTool tests
+/// them: `$$self{Make}` and `$$self{Model}` are compared case for case unless
+/// the pattern says `/i`, and an absent Make or Model is an empty string.
+fn manufacturer_from_make(mn_data: &[u8], make: &str, model: &str) -> Option<Manufacturer> {
+    let upper = make.to_ascii_uppercase();
+    Some(if make.starts_with("Canon") {
+        // MakerNoteCanon (MakerNotes.pm:63).
+        Manufacturer::Canon
+    } else if make.starts_with("CASIO") {
+        // MakerNoteCasio (:75); the QVC/DCI headers were taken above.
+        Manufacturer::Casio
+    } else if make == "DJI" && !mn_data.starts_with(b"DJI") && !is_amba(mn_data) {
+        // MakerNoteDJI (:101).
+        Manufacturer::DJI
+    } else if make.starts_with("FLIR Systems") || make.starts_with("Teledyne FLIR") {
+        // MakerNoteFLIR (:111).
+        Manufacturer::Flir
+    } else if upper.starts_with("KONICA MINOLTA") || upper.starts_with("MINOLTA") {
+        // MakerNoteMinolta and MakerNoteMinolta3 (:496, :523).
+        Manufacturer::Minolta
+    } else if upper.starts_with("NIKON") {
+        // MakerNoteNikon3 (:550).
+        Manufacturer::Nikon
+    } else if make.starts_with("PENTAX") || make.starts_with("Asahi") {
+        // MakerNotePentax2/3/4 (:785-809).
+        Manufacturer::Pentax
+    } else if make.starts_with("RICOH") {
+        // MakerNoteRicoh2 and MakerNoteRicohText (:929, :943), whose header-less
+        // IFD is read with the Pentax tables here.
+        Manufacturer::Pentax
+    } else if make == "LEICA" {
+        // MakerNoteLeica (:602), a Panasonic IFD.
+        Manufacturer::Panasonic
+    } else if upper == "SAMSUNG" {
+        // MakerNoteSamsung2 (:968).
+        Manufacturer::Samsung
+    } else if (make.starts_with("SONY")
+        || (make.starts_with("HASSELBLAD")
+            && ["HV", "Stellar", "Lusso", "Lunar"]
+                .iter()
+                .any(|p| model.starts_with(p))))
+        && !mn_data.starts_with(b"\x01\x00")
+    {
+        // MakerNoteSony5 (:1072).
+        Manufacturer::Sony
+    } else {
+        return None;
+    })
+}
+
+/// `$$valPt =~ /^...\@AMBA/s`, the DJI notes MakerNoteDJI leaves alone.
+fn is_amba(mn_data: &[u8]) -> bool {
+    mn_data.len() >= 8 && &mn_data[3..8] == b"@AMBA"
+}
+
+/// Whether some other header-less arm of MakerNotes.pm claims the note:
+/// the makes ExifTool has a table for that is read here as `Unknown`.
+fn make_claims_makernote(mn_data: &[u8], make: &str, model: &str) -> bool {
+    if header_claims_makernote(mn_data) {
+        return true;
+    }
+    let upper = make.to_ascii_uppercase();
+    let model_upper = model.to_ascii_uppercase();
+    make == "Hasselblad"                                   // MakerNoteHasselblad (:171)
+        || ((make.starts_with("JVC") || make.starts_with("Victor"))
+            && mn_data.starts_with(b"VER:"))                // MakerNoteJVCText (:247)
+        || upper.contains("KODAK")                         // the Kodak arms (:255-475)
+        || ((model_upper.contains("KODAK") || model_upper.contains("PIXPRO"))
+            && (mn_data.starts_with(b"II\x2a\0\x08\0\0\0")
+                || mn_data.starts_with(b"MM\0\x2a\0\0\0\x08")))  // Kodak11/12 (:442-461)
+        || make == "Nintendo"                              // MakerNoteNintendo (:559)
+        || make.starts_with("Leica Camera AG")             // MakerNoteLeica2-9
+        || make.starts_with("Panasonic") && mn_data.starts_with(b"MKE")
+        || make == "RECONYX"
+        || make.starts_with("PENTAX RICOH")                // MakerNoteRicoh (:911)
+        || make.starts_with("SANYO")                       // MakerNoteSanyo* (:984-1007)
+        || upper.starts_with("SIGMA")                      // MakerNoteSigma (:1018)
+        || upper.starts_with("FOVEON")
 }
 
 /// Detect byte order from a TIFF header at the given position.
@@ -6355,11 +6457,11 @@ fn read_makernote_ifd_with_base(
                 }
                 (Manufacturer::Canon, 0x0012) => {
                     // Canon AFInfo (old): int16u array
-                    decode_canon_afinfo(value_data, count as usize, byte_order)
+                    decode_canon_afinfo(value_data, count as usize, byte_order, model_name)
                 }
                 (Manufacturer::Canon, 0x0026) => {
                     // Canon AFInfo2 (same structure as AFInfo but different tag)
-                    decode_canon_afinfo2(value_data, count as usize, byte_order)
+                    decode_canon_afinfo2(value_data, count as usize, byte_order, model_name)
                 }
                 (Manufacturer::Canon, 0x009A) => {
                     // Canon AspectInfo: int32u format (from Perl Canon::AspectInfo)
@@ -7024,7 +7126,7 @@ fn read_makernote_ifd_with_base(
                         Vec::new()
                     }
                 }
-                (Manufacturer::Nikon, 0x0088) => decode_nikon_afinfo(value_data, byte_order),
+                (Manufacturer::Nikon, 0x0088) => decode_nikon_afinfo(value_data, model_name),
                 (Manufacturer::Nikon, 0x0097) => decode_nikon_color_balance(value_data, byte_order),
                 (Manufacturer::Nikon, 0x00A8) => decode_nikon_flashinfo(value_data, byte_order),
                 (Manufacturer::Nikon, 0x0091) => subs::dispatch_nikon_shot_info(&dispatch_ctx),
@@ -7425,7 +7527,7 @@ fn read_makernote_ifd_with_base(
                 // Apple RunTime plist
                 (Manufacturer::Apple, 0x0003) => decode_apple_runtime(value_data),
                 // Ricoh RicohSubdir (tag 0x2001): contains ManufactureDate1/ManufactureDate2
-                (Manufacturer::Ricoh, 0x2001) => decode_ricoh_subdir(value_data, data, byte_order),
+                (Manufacturer::Ricoh, 0x2001) => decode_ricoh_subdir(value_data, data, model_name),
                 // Sony sub-tables. 0x2010 and 0x9400 used to be picked here by
                 // a hand-written chain of model prefixes; the generated
                 // selector carries ExifTool's own conditions, so the arm below
@@ -9149,7 +9251,7 @@ fn decode_canon_color_balance(data: &[u8], count: usize, bo: ByteOrderMark) -> V
 }
 
 /// Decode Canon AFInfo (tag 0x0012, old format).
-fn decode_canon_afinfo(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
+fn decode_canon_afinfo(data: &[u8], count: usize, bo: ByteOrderMark, model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     let rd = |i: usize| -> u16 { read_u16(data, i * 2, bo) };
 
@@ -9207,6 +9309,15 @@ fn decode_canon_afinfo(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag>
                 set.join(",")
             };
             tags.push(mk_canon_str("AFPointsInFocus", &pv));
+            // Canon.pm:6482-6498: serial processing stops here for an EOS;
+            // any other model has PrimaryAFPoint next, or after 8 unknown
+            // words when the record holds 36 of them.
+            if !model.contains("EOS") {
+                let at = focus_base + focus_words + if count == 36 { 8 } else { 0 };
+                if at < count {
+                    tags.push(mk_canon("PrimaryAFPoint", Value::U16(rd(at))));
+                }
+            }
         }
     }
 
@@ -9219,7 +9330,7 @@ fn decode_canon_afinfo(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag>
 /// [4]=CanonImageWidth, [5]=CanonImageHeight, [6]=AFImageWidth, [7]=AFImageHeight,
 /// then variable-length arrays of size NumAFPoints: Widths, Heights, XPos, YPos,
 /// then AFPointsInFocus (ceil(N/16) words), AFPointsSelected (EOS, ceil(N/16) words)
-fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag> {
+fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark, model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
     let rd = |i: usize| -> u16 { read_u16(data, i * 2, bo) };
     let rdi = |i: usize| -> i16 { read_u16(data, i * 2, bo) as i16 };
@@ -9320,9 +9431,16 @@ fn decode_canon_afinfo2(data: &[u8], count: usize, bo: ByteOrderMark) -> Vec<Tag
                 tags.push(mk_canon_str("AFPointsInFocus", &pv));
             }
 
-            // AFPointsSelected: another ceil(num_af/16) words (EOS models)
+            // Canon.pm:6594-6603: an EOS has AFPointsSelected next, ceil(N/16)
+            // words; any other model has one more unknown word there, then
+            // PrimaryAFPoint.
             let sel_base = focus_base + focus_words;
-            if sel_base + focus_words <= count {
+            if !model.contains("EOS") {
+                let at = sel_base + focus_words + 1;
+                if at < count {
+                    tags.push(mk_canon("PrimaryAFPoint", Value::U16(rd(at))));
+                }
+            } else if sel_base + focus_words <= count {
                 let mut sel_set: Vec<u32> = Vec::new();
                 for b in 0..num_af {
                     if bit_set(sel_base, b) {
@@ -10558,8 +10676,12 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
 
 /// Decode Ricoh RicohSubdir (tag 0x2001): IFD or text header "[Ricoh Camera Info]"
 /// followed by a sub-IFD containing ManufactureDate1 (0x0004) and ManufactureDate2 (0x0005).
-fn decode_ricoh_subdir(data: &[u8], full_data: &[u8], _parent_bo: ByteOrderMark) -> Vec<Tag> {
+fn decode_ricoh_subdir(data: &[u8], full_data: &[u8], model: &str) -> Vec<Tag> {
     let mut tags = Vec::new();
+    // `$self->{Model} !~ /^Caplio RR1\b/` picks RicohSubdir over RicohRR1Subdir.
+    let rr1 = model
+        .strip_prefix("Caplio RR1")
+        .is_some_and(|rest| !rest.starts_with(|c: char| c.is_alphanumeric() || c == '_'));
     // Data may start with "[Ricoh Camera Info]\0" (20 bytes), then a Big-Endian IFD
     let ifd_start = if data.len() > 20 && data.starts_with(b"[Ricoh Camera Info]") {
         20
@@ -10595,14 +10717,12 @@ fn decode_ricoh_subdir(data: &[u8], full_data: &[u8], _parent_bo: ByteOrderMark)
             &ifd_data[eoff + 8..eoff + 8 + total_size.min(4)]
         } else {
             let raw_offset = read_u32(ifd_data, eoff + 8, bo) as usize;
-            // Ricoh sub-IFD value offsets are relative to the start of the sub-directory
-            // data (which includes the "[Ricoh Camera Info]" header), so try `data` first.
-            if raw_offset + total_size <= data.len() {
-                &data[raw_offset..raw_offset + total_size]
-            } else if raw_offset + total_size <= ifd_data.len() {
-                &ifd_data[raw_offset..raw_offset + total_size]
-            } else if raw_offset + total_size <= full_data.len() {
-                &full_data[raw_offset..raw_offset + total_size]
+            // Ricoh.pm:397-431: the value offsets count from the maker note's
+            // base, the EXIF TIFF header -- except on the Caplio RR1, whose
+            // RicohRR1Subdir sets `Base => '$start-20'`, the start of this block.
+            let base: &[u8] = if rr1 { data } else { full_data };
+            if raw_offset + total_size <= base.len() {
+                &base[raw_offset..raw_offset + total_size]
             } else {
                 continue;
             }
@@ -10630,10 +10750,12 @@ fn decode_ricoh_subdir(data: &[u8], full_data: &[u8], _parent_bo: ByteOrderMark)
         };
 
         let val = if data_type == 2 {
-            // ASCII string
-            crate::encoding::decode_utf8_or_latin1(value_data)
-                .trim_end_matches('\0')
-                .to_string()
+            // A `string` value ends at its first NUL (ReadValue).
+            let end = value_data
+                .iter()
+                .position(|&b| b == 0)
+                .unwrap_or(value_data.len());
+            crate::encoding::decode_utf8_or_latin1(&value_data[..end]).to_string()
         } else {
             continue;
         };
@@ -10913,4 +11035,63 @@ fn decode_canon_filter_info(data: &[u8], bo: ByteOrderMark) -> Vec<Tag> {
         pos = nxt;
     }
     tags
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A one-entry big-endian IFD: tag 0x0001, int16u[1].
+    fn ifd() -> Vec<u8> {
+        let mut d = vec![0, 1, 0, 1, 0, 3, 0, 0, 0, 1, 0, 7, 0, 0];
+        d.extend_from_slice(&[0, 0, 0, 0]);
+        d
+    }
+
+    #[test]
+    fn locate_ifd_finds_a_bare_ifd_and_a_tiff_header() {
+        let be = ByteOrderMark::BigEndian;
+        assert_eq!(
+            locate_ifd(&ifd(), 18, "", "", be),
+            Some(LocatedIfd::Plain { at: 0, bo: be })
+        );
+        // The same IFD read with the wrong byte order: the count's low byte is
+        // zero, so ExifTool toggles the order.
+        assert_eq!(
+            locate_ifd(&ifd(), 18, "", "", ByteOrderMark::LittleEndian),
+            Some(LocatedIfd::Plain { at: 0, bo: be })
+        );
+        let mut tiff = b"MM\0\x2a\0\0\0\x08".to_vec();
+        tiff.extend(ifd());
+        assert_eq!(
+            locate_ifd(&tiff, tiff.len(), "", "", ByteOrderMark::LittleEndian),
+            Some(LocatedIfd::Tiff {
+                header: 0,
+                ifd: 8,
+                bo: be
+            })
+        );
+        // Kodak's "KDK INFO" binary block has no IFD in its first 32 bytes.
+        let mut kdk = b"KDK INFODX4900  \x03\x01\x00\x01\x09\x90\x06\x60".to_vec();
+        kdk.resize(64, 0xff);
+        assert_eq!(locate_ifd(&kdk, 64, "", "", be), None);
+    }
+
+    #[test]
+    fn make_conditions_are_exiftools() {
+        let ifd = ifd();
+        // `$$self{Make} =~ /^Canon/` is case-sensitive.
+        assert_eq!(
+            detect_manufacturer(&ifd, "Canon", "").manufacturer,
+            Manufacturer::Canon
+        );
+        assert!(detect_manufacturer(&ifd, "CANON", "").generic);
+        assert!(detect_manufacturer(&ifd, "", "").generic);
+        // A Kodak model name alone claims only a TIFF-headed note.
+        assert!(
+            detect_manufacturer(b"KDK INFO\x03\x01\x00\x01\x09\x90", "Other", "KODAK DX4900")
+                .generic
+        );
+        assert!(!detect_manufacturer(&ifd, "EASTMAN KODAK COMPANY", "").generic);
+    }
 }

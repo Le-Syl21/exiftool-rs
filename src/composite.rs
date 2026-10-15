@@ -1143,8 +1143,9 @@ fn compute_light_value(tags: &[Tag]) -> Option<Tag> {
 /// Canon CalcSensorDiag (Canon.pm): the sensor diagonal in mm, derived from the
 /// rational denominators of FocalPlaneX/YResolution (sensor size in inches × 1000).
 fn canon_sensor_diag(tags: &[Tag]) -> Option<f64> {
+    // `$$et{Make} eq 'Canon'` (Exif.pm:5466): the whole Make, not a substring.
     let make = find_tag_value(tags, "Make").unwrap_or_default();
-    if !make.contains("Canon") {
+    if make.trim_end() != "Canon" {
         return None;
     }
     let rat = |name: &str| -> Option<(u32, u32)> {
@@ -1228,37 +1229,35 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         let fpxr = find_tag_f64(tags, "FocalPlaneXResolution")?;
         // FocalPlaneYResolution defaults to X if not present (e.g., Lytro: "Y same as X")
         let fpyr = find_tag_f64(tags, "FocalPlaneYResolution").unwrap_or(fpxr);
-        // Use largest available image dimensions (full sensor)
-        let img_w = find_tag_f64(tags, "RelatedImageWidth")
-            .or_else(|| find_tag_f64(tags, "ExifImageWidth"))
-            .or_else(|| find_tag_f64(tags, "ImageWidth"))?;
-        let img_h = find_tag_f64(tags, "RelatedImageHeight")
-            .or_else(|| find_tag_f64(tags, "ExifImageHeight"))
-            .or_else(|| find_tag_f64(tags, "ImageHeight"))?;
-        if fpxr <= 0.0 || fpyr <= 0.0 || img_w <= 0.0 || img_h <= 0.0 {
+        // The first of ExifImageWidth/Height, CanonImageWidth/Height and
+        // ImageWidth/Height whose aspect ratio is reasonable (Exif.pm:5495).
+        let (img_w, img_h) = [
+            ("ExifImageWidth", "ExifImageHeight"),
+            ("CanonImageWidth", "CanonImageHeight"),
+            ("ImageWidth", "ImageHeight"),
+        ]
+        .iter()
+        .find_map(|(w, h)| {
+            let (w, h) = (find_tag_f64(tags, w)?, find_tag_f64(tags, h)?);
+            (w != 0.0 && h != 0.0 && w / h > 0.5 && w / h < 2.0).then_some((w, h))
+        })?;
+        if fpxr <= 0.0 || fpyr <= 0.0 {
             return None;
         }
 
         let unit = find_tag_f64(tags, "FocalPlaneResolutionUnit").unwrap_or(2.0);
+        // mm per unit, inches unless the unit says otherwise (Exif.pm:5488).
         let factor = match unit as u32 {
-            2 => 25.4,
             3 => 10.0,
+            4 => 1.0,
+            5 => 0.001,
             _ => 25.4,
         };
         let sensor_w = img_w * factor / fpxr;
         let sensor_h = img_h * factor / fpyr;
         let sensor_diag = (sensor_w * sensor_w + sensor_h * sensor_h).sqrt();
-        // Sanity check
+        // The size must be reasonable (Exif.pm:5508).
         if sensor_diag <= 1.0 || sensor_diag >= 100.0 {
-            return None;
-        }
-        // Aspect ratio sanity check
-        let ratio = if sensor_w > sensor_h {
-            sensor_w / sensor_h
-        } else {
-            sensor_h / sensor_w
-        };
-        if ratio > 3.0 {
             return None;
         }
         diag35 / sensor_diag
@@ -1498,8 +1497,9 @@ fn make_subsec_date(
 /// Canon-specific composites.
 fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
     // Only if this is a Canon file
+    // `$$et{Make} eq 'Canon'` (Exif.pm:5466): the whole Make, not a substring.
     let make = find_tag_value(tags, "Make").unwrap_or_default();
-    if !make.contains("Canon") {
+    if make.trim_end() != "Canon" {
         return None;
     }
 

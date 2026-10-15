@@ -1082,6 +1082,7 @@ impl ExifTool {
         // `$$self{Software}` and `$$self{Make}` belong to the file being read:
         // a file without them must not see the previous file's values.
         crate::metadata::exif::set_software("");
+        crate::metadata::exif::set_software_defined(true);
         crate::metadata::exif::set_make("");
         let (file_type, mut tags) = match file_type_result {
             Ok(ft) => {
