@@ -1,0 +1,132 @@
+ExifIFD:ApertureValue	3.5
+ExifIFD:BrightnessValue	2
+ExifIFD:ColorSpace	sRGB
+ExifIFD:ComponentsConfiguration	Y, Cb, Cr, -
+ExifIFD:CompressedBitsPerPixel	1.6
+ExifIFD:CreateDate	2001:05:19 18:36:41
+ExifIFD:DateTimeOriginal	2001:05:19 18:36:41
+ExifIFD:ExifImageHeight	80
+ExifIFD:ExifImageWidth	100
+ExifIFD:ExifVersion	0210
+ExifIFD:ExposureCompensation	0
+ExifIFD:ExposureProgram	Program AE
+ExifIFD:FNumber	3.5
+ExifIFD:FileSource	Digital Camera
+ExifIFD:Flash	Fired
+ExifIFD:FlashpixVersion	0100
+ExifIFD:FocalLength	6.0 mm
+ExifIFD:FocalPlaneResolutionUnit	cm
+ExifIFD:FocalPlaneXResolution	3053
+ExifIFD:FocalPlaneYResolution	3053
+ExifIFD:ISO	100
+ExifIFD:MaxApertureValue	3.5
+ExifIFD:MeteringMode	Multi-segment
+ExifIFD:SceneType	Directly photographed
+ExifIFD:SensingMethod	One-chip color area
+ExifIFD:ShutterSpeedValue	1/64
+File:ExifByteOrder	Little-endian (Intel, II)
+FotoStation:ColorPlanes	3
+FotoStation:CropBottom	86.25%
+FotoStation:CropLeft	24.557%
+FotoStation:CropRight	30.676%
+FotoStation:CropRotation	0
+FotoStation:CropTop	21.25%
+FotoStation:OriginalImageHeight	16
+FotoStation:OriginalImageWidth	16
+FotoStation:Rotation	0
+FotoStation:XYResolution	9
+IFD0:Artist	Phil Harvey
+IFD0:Copyright	Copyright 2004 Phil Harvey
+IFD0:ImageDescription	A witty caption
+IFD0:Make	FUJIFILM
+IFD0:Model	FinePix2400Zoom
+IFD0:ModifyDate	2004:02:26 09:36:46
+IFD0:Orientation	Horizontal (normal)
+IFD0:ResolutionUnit	inches
+IFD0:Software	Adobe Photoshop 7.0
+IFD0:XResolution	72
+IFD0:YCbCrPositioning	Co-sited
+IFD0:YResolution	72
+IFD1:Compression	JPEG (old-style)
+IFD1:ResolutionUnit	inches
+IFD1:ThumbnailLength	0
+IFD1:XResolution	72
+IFD1:YResolution	72
+IPTC2:ApplicationRecordVersion	4
+IPTC2:By-line	Set by write parity
+IPTC3:ApplicationRecordVersion	2
+IPTC3:By-line	Set by write parity
+IPTC4:ApplicationRecordVersion	2
+IPTC4:By-line	Set by write parity
+IPTC4:By-lineTitle	byline title
+IPTC4:Caption-Abstract	ExifTool AFCP test
+IPTC4:Category	p
+IPTC4:City	city
+IPTC4:CopyrightNotice	copy freely
+IPTC4:Country-PrimaryLocationName	country name
+IPTC4:Credit	credit
+IPTC4:DateCreated	2005:12:23
+IPTC4:Headline	headline
+IPTC4:Keywords	jambalaya
+IPTC4:ObjectName	object name
+IPTC4:OriginalTransmissionReference	otr
+IPTC4:Province-State	state
+IPTC4:Source	source
+IPTC4:SpecialInstructions	special instructions
+IPTC4:SupplementalCategories	supp cat
+IPTC4:Urgency	2
+IPTC4:Writer-Editor	caption writer
+IPTC:ApplicationRecordVersion	2
+IPTC:By-line	Set by write parity
+IPTC:By-lineTitle	My Position
+IPTC:Caption-Abstract	A witty caption
+IPTC:Category	1
+IPTC:City	Kingston
+IPTC:CopyrightNotice	Copyright 2004 Phil Harvey
+IPTC:Country-PrimaryLocationName	Canada
+IPTC:Credit	My Credit
+IPTC:DateCreated	2004:02:26
+IPTC:Headline	No headline
+IPTC:Keywords	jambalaya
+IPTC:ObjectName	Test IPTC picture
+IPTC:OriginalTransmissionReference	What is a transmission reference
+IPTC:Province-State	Ont
+IPTC:Source	I'm the source
+IPTC:SpecialInstructions	What instructions
+IPTC:SupplementalCategories	amazing, image, utilities
+IPTC:Urgency	8 (least urgent)
+IPTC:Writer-Editor	I wrote it
+MIE-Doc:Copyright	© 2006 Phil Harvey
+MIE-Main:TrailerSignature	
+PhotoMechanic:ColorClass	6 (Typical alt)
+PhotoMechanic:CropBottom	1072
+PhotoMechanic:CropLeft	438
+PhotoMechanic:CropRight	890
+PhotoMechanic:CropTop	618
+PhotoMechanic:Rotation	180
+PhotoMechanic:Tagged	Yes
+XMP-dc:Creator	Phil Harvey
+XMP-dc:Description	UTF-16 (big-endian) encoded XMP
+XMP-dc:Rights	Copyright 2004 Phil Harvey
+XMP-dc:Subject	ExifTool, Test, XMP
+XMP-dc:Title	Test IPTC picture
+XMP-photoshop:AuthorsPosition	My Position
+XMP-photoshop:CaptionWriter	I wrote it
+XMP-photoshop:Category	1
+XMP-photoshop:City	Kingston
+XMP-photoshop:Country	Canada
+XMP-photoshop:Credit	My Credit
+XMP-photoshop:DateCreated	2004:02:26
+XMP-photoshop:Headline	No headline
+XMP-photoshop:Instructions	What instructions
+XMP-photoshop:Source	I'm the source
+XMP-photoshop:State	Ont
+XMP-photoshop:SupplementalCategories	amazing, image, utilities
+XMP-photoshop:TransmissionReference	What is a transmission reference?
+XMP-photoshop:Urgency	8 (least urgent)
+XMP-rdf:About	uuid:80056b68-1045-fa97-3401-6f4ed84cd53d
+XMP-x:XMPToolkit	Image::ExifTool 4.73
+XMP-xmpBJ:JobRefName	My Job
+XMP-xmpMM:DocumentID	adobe:docid:photoshop:4cc7b857-69d0-11d8-8ac4-bb59c92f0d9a
+XMP-xmpRights:Marked	False
+XMP-xmpRights:WebStatement	https://exiftool.org/

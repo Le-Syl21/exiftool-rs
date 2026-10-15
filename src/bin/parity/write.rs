@@ -353,8 +353,14 @@ impl Edit {
                 .collect();
             return (!names.is_empty()).then(|| names.join(", "));
         }
+        // A tag is written and deleted in its WriteGroup only (Writer.pl
+        // `SetNewValue`): `EXIF:Model=` and `-Model=` delete IFD0:Model and
+        // leave an IFD1 copy, as Perl ExifTool does (checked on Sony.jpg).
+        // The EXIF candidates are all IFD0 tags, so IFD1 is not their state.
         m.iter()
-            .find(|(k, _)| self.in_group(k) && k.2 == self.name)
+            .find(|(k, _)| {
+                self.in_group(k) && k.2 == self.name && !(self.group == "EXIF" && k.1 == "IFD1")
+            })
             .map(|(_, v)| v.clone())
     }
     fn satisfied(&self, m: &TagMap) -> bool {

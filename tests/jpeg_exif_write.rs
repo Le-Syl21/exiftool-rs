@@ -123,6 +123,12 @@ fn deleting_a_tag_only_reaches_its_write_group() {
 }
 
 #[test]
+fn an_ungrouped_delete_also_reaches_its_write_group_only() {
+    // `-Model=` on Sony.jpg: Perl leaves IFD1:Model too.
+    check("sony_del_model_ungrouped", "Sony.jpg", &[("Model", None)]);
+}
+
+#[test]
 fn gps_all_removes_the_gps_directory_only() {
     check("gps_del_group", "GPS.jpg", &[("GPS:all", None)]);
 }
