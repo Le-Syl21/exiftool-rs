@@ -2239,7 +2239,7 @@ fn xmp_property_is_unknown_aliased(family1: &str, name: &str) -> bool {
     crate::tags::group2::xmp_property_is_unknown(&resolved, name)
 }
 
-fn exiftool_namespace_alias(prefix: &str) -> Option<&'static str> {
+pub(crate) fn exiftool_namespace_alias(prefix: &str) -> Option<&'static str> {
     Some(match prefix {
         "Iptc4xmpCore" => "iptcCore",
         "Iptc4xmpExt" => "iptcExt",
@@ -2546,7 +2546,7 @@ fn strip_struct_prefix(parent: &str, field: &str) -> String {
 }
 
 /// Remap XMP tag names where ExifTool uses a different Name than the XMP local name.
-fn remap_xmp_tag_name(group_prefix: &str, local_name: &str) -> String {
+pub(crate) fn remap_xmp_tag_name(group_prefix: &str, local_name: &str) -> String {
     // First strip non-ASCII characters from the local name (mirrors Perl byte-mode behavior)
     let clean_name = strip_non_ascii(local_name);
     let local_name = clean_name.as_str();
@@ -2944,12 +2944,57 @@ fn xmp_exif_print_override(prefix: &str, name: &str, value: &Value) -> Option<St
     if prefix != "exif" {
         return None;
     }
+    if let Some(lat) = match name {
+        "GPSLatitude" | "GPSDestLatitude" => Some(true),
+        "GPSLongitude" | "GPSDestLongitude" => Some(false),
+        _ => None,
+    } {
+        return xmp_gps_coordinate(&value.to_display_string(), lat);
+    }
     let v = value.as_f64()?;
     match name {
         "ExposureTime" => Some(crate::tags::canon_sub::print_exposure_time(v)),
         "ShutterSpeedValue" => Some(crate::tags::canon_sub::print_exposure_time(2f64.powf(-v))),
         _ => None,
     }
+}
+
+/// An XMP GPS coordinate ("51,30.042N" or "51,30,2.52N") the way ExifTool
+/// prints it (GPS.pm `ToDegrees`, then `ToDMS` with a reference letter):
+/// `51 deg 30' 2.52" N`.
+fn xmp_gps_coordinate(text: &str, latitude: bool) -> Option<String> {
+    let t = text.trim();
+    let last = t.chars().last()?.to_ascii_uppercase();
+    let (body, negative) = match last {
+        'N' | 'E' => (&t[..t.len() - 1], false),
+        'S' | 'W' => (&t[..t.len() - 1], true),
+        _ => (t, t.starts_with('-')),
+    };
+    let nums: Vec<f64> = body
+        .split(',')
+        .map(|p| p.trim().trim_start_matches('-').parse::<f64>())
+        .collect::<std::result::Result<_, _>>()
+        .ok()?;
+    let deg =
+        nums.first()? + nums.get(1).unwrap_or(&0.0) / 60.0 + nums.get(2).unwrap_or(&0.0) / 3600.0;
+    let mut d = deg.trunc();
+    let mut m = ((deg - d) * 60.0).trunc();
+    let mut sec = format!("{:.2}", (deg - d - m / 60.0) * 3600.0);
+    if sec.parse::<f64>().ok()? >= 60.0 {
+        sec = format!("{:.2}", sec.parse::<f64>().ok()? - 60.0);
+        m += 1.0;
+        if m >= 60.0 {
+            m -= 60.0;
+            d += 1.0;
+        }
+    }
+    let r = match (latitude, negative) {
+        (true, false) => 'N',
+        (true, true) => 'S',
+        (false, false) => 'E',
+        (false, true) => 'W',
+    };
+    Some(format!("{} deg {}' {}\" {}", d as i64, m as i64, sec, r))
 }
 
 fn parse_xmp_value(text: &str) -> Value {

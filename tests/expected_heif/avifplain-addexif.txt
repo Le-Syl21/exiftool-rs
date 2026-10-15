@@ -1,0 +1,3 @@
+IFD0:Artist=Someone
+IFD0:Make=Maker
+IFD0:YCbCrPositioning=Centered

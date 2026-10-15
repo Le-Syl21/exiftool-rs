@@ -78,8 +78,8 @@ exiftool-rs reimplements ExifTool in Rust: the tag tables and print conversions 
 
 | Category | Formats |
 |----------|---------|
-| **Images** | JPEG, TIFF, PNG, WebP, PSD |
-| **Raw** | CR2, HEIF/AVIF |
+| **Images** | JPEG, TIFF, PNG, WebP, PSD, HEIF/HEIC/AVIF (EXIF and XMP items) |
+| **Raw** | CR2 |
 | **Video** | MP4, MKV, AVI |
 | **Audio** | MP3, FLAC, WAV, OGG |
 | **Documents** | PDF |

@@ -136,7 +136,7 @@ fn escape_xml(s: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-fn namespace_uri(prefix: &str) -> Option<&'static str> {
+pub(crate) fn namespace_uri(prefix: &str) -> Option<&'static str> {
     Some(match prefix {
         "dc" => "http://purl.org/dc/elements/1.1/",
         "xmp" => "http://ns.adobe.com/xap/1.0/",

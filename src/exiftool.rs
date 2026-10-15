@@ -81,6 +81,20 @@ pub struct NewValue {
     pub value: Option<String>,
 }
 
+impl NewValue {
+    /// `-Group:Tag=value`, as the request would be written on a command line.
+    fn describe(&self) -> String {
+        let name = match &self.group {
+            Some(g) => format!("{g}:{}", self.tag),
+            None => self.tag.clone(),
+        };
+        match &self.value {
+            Some(v) => format!("{name}={v}"),
+            None => format!("{name}= (delete)"),
+        }
+    }
+}
+
 /// The main ExifTool engine — read, write, and edit metadata.
 ///
 /// # Reading metadata
@@ -274,6 +288,13 @@ impl ExifTool {
     ///
     /// If `dst_path` is the same as `src_path`, the file is modified in-place
     /// (via a temporary file).
+    ///
+    /// Returns the number of queued requests that took effect, checked by
+    /// reading the result back: a written tag must be there with its new
+    /// value, a deleted tag or group must be gone. A request the writer for
+    /// this file type cannot apply is not counted, and when none of the
+    /// queued requests can be applied the call fails without writing
+    /// anything. (Deleting a tag the file does not have counts as done.)
     pub fn write_info<P: AsRef<Path>, Q: AsRef<Path>>(
         &self,
         src_path: P,
@@ -285,13 +306,53 @@ impl ExifTool {
 
         let file_type = self.detect_file_type(&data, src_path)?;
         let output = self.apply_changes(&data, file_type)?;
+        let applied = self.count_applied(&data, &output, src_path);
+        if applied == 0 && !self.new_values.is_empty() {
+            let requested: Vec<String> = self.new_values.iter().map(NewValue::describe).collect();
+            return Err(Error::UnsupportedFileType(format!(
+                "none of the requested changes could be written to this {} file ({})",
+                file_type,
+                requested.join(", ")
+            )));
+        }
 
         // Write to temp file first, then rename (atomic)
         let temp_path = dst_path.with_extension("exiftool_tmp");
         fs::write(&temp_path, &output).map_err(Error::Io)?;
         fs::rename(&temp_path, dst_path).map_err(Error::Io)?;
 
-        Ok(self.new_values.len() as u32)
+        Ok(applied)
+    }
+
+    /// How many queued requests the rewrite of `before` into `after` carried
+    /// out, judged by what a reader sees in each.
+    fn count_applied(&self, before: &[u8], after: &[u8], path: &Path) -> u32 {
+        let keep = |t: &Tag| {
+            !matches!(
+                t.group.family0.as_str(),
+                "File" | "System" | "Composite" | "ExifTool"
+            )
+        };
+        let read = |d: &[u8]| -> Option<Vec<Tag>> {
+            // Every instance of a tag, as `-a` shows them: without it a
+            // Composite tag hides the EXIF tag of the same name.
+            let reader = ExifTool::with_options(Options {
+                duplicates: true,
+                ..Options::default()
+            });
+            reader
+                .extract_info_from_bytes(d, path)
+                .ok()
+                .map(|v| v.into_iter().filter(keep).collect())
+        };
+        let Some(after) = read(after) else {
+            return 0;
+        };
+        let before = read(before).unwrap_or_default();
+        self.new_values
+            .iter()
+            .filter(|nv| request_applied(nv, &before, &after))
+            .count() as u32
     }
 
     /// Apply queued changes to in-memory data.
@@ -314,7 +375,7 @@ impl ExifTool {
             | FileType::F4v => self.write_mp4(data),
             FileType::Psd => self.write_psd(data),
             FileType::Pdf => self.write_pdf(data),
-            FileType::Heif | FileType::Avif => self.write_mp4(data),
+            FileType::Heif | FileType::Avif => self.write_heif(data),
             FileType::Mkv | FileType::WebM => self.write_matroska(data),
             FileType::Gif => {
                 let comment = self
@@ -636,7 +697,7 @@ impl ExifTool {
             let group_upper = group.to_uppercase();
 
             // Check for group deletion
-            if nv.value.is_none() && nv.tag == "*" {
+            if nv.value.is_none() && is_all(&nv.tag) {
                 match group_upper.as_str() {
                     "EXIF" => {
                         remove_exif = true;
@@ -978,6 +1039,55 @@ impl ExifTool {
         mp4_writer::write_mp4(data, &tag_refs, new_xmp.as_deref())
     }
 
+    /// Write metadata changes to HEIF/HEIC/AVIF data: the Exif and XMP
+    /// items of the primary image, edited in place (ExifTool's
+    /// `WriteItemInfo`). Requests for other groups are left unapplied.
+    fn write_heif(&self, data: &[u8]) -> Result<Vec<u8>> {
+        use crate::writer::exif_edit::{self, ExifOutcome};
+        use crate::writer::heif_writer::{self, ItemChange};
+        use crate::writer::xmp_edit::{self, XmpOutcome};
+
+        let (exif_changes, xmp_changes) = item_changes(&self.new_values);
+        if exif_changes.is_empty() && xmp_changes.is_empty() {
+            return Ok(data.to_vec());
+        }
+        let current = heif_writer::read_metadata(data)?;
+
+        let exif = if exif_changes.is_empty() {
+            ItemChange::Keep
+        } else {
+            // The item starts with the offset of the TIFF header (past
+            // "Exif\0\0", normally). ExifTool keeps that header as found,
+            // and writes the usual one for a new item.
+            let (header, tiff) = match current.exif.as_deref() {
+                None | Some([]) => (b"\0\0\0\x06Exif\0\0".to_vec(), None),
+                Some(p) if p.starts_with(b"MM\0\x2a") || p.starts_with(b"II\x2a\0") => {
+                    (Vec::new(), Some(p))
+                }
+                Some(p) => {
+                    let n = p
+                        .get(..4)
+                        .map(|b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]) as usize)
+                        .and_then(|n| n.checked_add(4))
+                        .filter(|&n| n <= p.len())
+                        .ok_or_else(|| Error::InvalidExif("invalid Exif item header".into()))?;
+                    (p[..n].to_vec(), Some(&p[n..]))
+                }
+            };
+            match exif_edit::edit_exif(tiff, &exif_changes)? {
+                ExifOutcome::Unchanged => ItemChange::Keep,
+                ExifOutcome::Removed => ItemChange::Remove,
+                ExifOutcome::Rewritten(t) => ItemChange::Replace([header, t].concat()),
+            }
+        };
+        let xmp = match xmp_edit::edit_xmp(current.xmp.as_deref(), &xmp_changes)? {
+            XmpOutcome::Unchanged => ItemChange::Keep,
+            XmpOutcome::Removed => ItemChange::Remove,
+            XmpOutcome::Rewritten(x) => ItemChange::Replace(x),
+        };
+        heif_writer::rewrite(data, exif, xmp)
+    }
+
     /// Write metadata changes to WebP data.
     fn write_webp(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut exif_values: Vec<&NewValue> = Vec::new();
@@ -987,7 +1097,7 @@ impl ExifTool {
 
         for nv in &self.new_values {
             let group = nv.group.as_deref().unwrap_or("").to_uppercase();
-            if nv.value.is_none() && nv.tag == "*" {
+            if nv.value.is_none() && is_all(&nv.tag) {
                 if group == "EXIF" {
                     remove_exif = true;
                 }
@@ -1195,6 +1305,11 @@ impl ExifTool {
             triple
         } else if let Some((code, mime)) = refine_filetype_by_content(file_type, data) {
             let (_, _, ext) = default_tags();
+            let ext = if code == "HEIC" {
+                "heic".to_string()
+            } else {
+                ext
+            };
             (code, mime, ext)
         } else {
             default_tags()
@@ -2829,6 +2944,11 @@ fn refine_filetype_by_content(file_type: FileType, data: &[u8]) -> Option<(Strin
         FileType::WebP if data.len() >= 16 && &data[12..16] == b"VP8X" => {
             Some(("Extended WEBP".into(), file_type.mime_type().to_string()))
         }
+        // HEVC still image: QuickTime.pm names the file after its major brand
+        // (`%ftypLookup`: 'heic' is ".HEIC", 'mif1' is ".HEIF").
+        FileType::Heif if data.len() >= 12 && &data[8..12] == b"heic" => {
+            Some(("HEIC".into(), "image/heic".into()))
+        }
         // Multi-page DjVu: "DJVM" form type at offset 12.
         FileType::DjVu if data.len() >= 16 && &data[12..16] == b"DJVM" => Some((
             "DJVU (multi-page)".into(),
@@ -2895,6 +3015,285 @@ pub fn get_file_type<P: AsRef<Path>>(path: P) -> Result<FileType> {
     }
 
     Err(Error::UnsupportedFileType("unknown".into()))
+}
+
+/// `*` or `all`: every tag of a group.
+fn is_all(tag: &str) -> bool {
+    tag == "*" || tag.eq_ignore_ascii_case("all")
+}
+
+/// Does `tag` belong to `group` (any family, case-insensitive)? `None`, `*`
+/// and `all` match every tag.
+fn in_group(tag: &Tag, group: Option<&str>) -> bool {
+    match group {
+        None => true,
+        Some(g) if is_all(g) => true,
+        Some(g) => {
+            let g = g.to_ascii_lowercase();
+            [&tag.group.family0, &tag.group.family1, &tag.group.family2]
+                .iter()
+                .any(|f| f.to_ascii_lowercase() == g)
+        }
+    }
+}
+
+/// Values compared loosely: case, surrounding space and list spacing aside.
+fn same_value(a: &str, b: &str) -> bool {
+    let norm = |s: &str| {
+        s.trim()
+            .split(',')
+            .map(|p| p.trim().to_ascii_lowercase())
+            .collect::<Vec<_>>()
+    };
+    norm(a) == norm(b)
+}
+
+/// Did `nv` take effect, comparing what a reader sees before and after?
+///
+/// - a deleted tag (or `Group:all`) must be absent afterwards;
+/// - a written tag must be present afterwards, either holding the requested
+///   value or with a value it did not have before (a value the writer
+///   formats differently, such as a GPS coordinate given in degrees).
+///
+/// Deleting everything (`all` with no group) asks for no EXIF, XMP, IPTC or
+/// maker note to be left: container tags are not metadata a user deletes.
+fn request_applied(nv: &NewValue, before: &[Tag], after: &[Tag]) -> bool {
+    let group = nv.group.as_deref().filter(|g| !g.is_empty());
+    let all = is_all(&nv.tag);
+    match &nv.value {
+        None => {
+            if all && group.is_none_or(is_all) {
+                return !after.iter().any(|t| {
+                    matches!(
+                        t.group.family0.as_str(),
+                        "EXIF" | "XMP" | "IPTC" | "MakerNotes"
+                    )
+                });
+            }
+            !after
+                .iter()
+                .any(|t| in_group(t, group) && (all || t.name.eq_ignore_ascii_case(&nv.tag)))
+        }
+        Some(v) => {
+            if all {
+                return false;
+            }
+            let new_here = |t: &Tag| {
+                !before.iter().any(|b| {
+                    b.name == t.name
+                        && b.group.family1 == t.group.family1
+                        && b.print_value == t.print_value
+                })
+            };
+            after.iter().any(|t| {
+                if !in_group(t, group) {
+                    return false;
+                }
+                let holds = same_value(&t.print_value, v)
+                    || same_value(&t.raw_value.to_display_string(), v);
+                if t.name.eq_ignore_ascii_case(&nv.tag) {
+                    // Under its own name: the requested value, or at least
+                    // a new one (the writer may format it differently).
+                    holds || new_here(t)
+                } else {
+                    // Under an alias the writer maps the name to.
+                    holds && new_here(t)
+                }
+            })
+        }
+    }
+}
+
+/// Split queued requests into the EXIF and XMP edits the HEIF writer
+/// applies, with ExifTool's group semantics. Requests for other groups
+/// (IPTC, QuickTime, ...) have no place in a HEIF item and are left out.
+fn item_changes(
+    values: &[NewValue],
+) -> (
+    crate::writer::exif_edit::ExifChanges,
+    crate::writer::xmp_edit::XmpChanges,
+) {
+    use crate::writer::exif_edit::{self, ExifChanges, Ifd, SetValue};
+    use crate::writer::xmp_edit::{XmpChanges, XmpSet};
+
+    let mut exif = ExifChanges::default();
+    let mut xmp = XmpChanges {
+        toolkit: format!("exiftool-rs {}", env!("CARGO_PKG_VERSION")),
+        ..Default::default()
+    };
+    let mut xmp_sets: Vec<XmpSet> = Vec::new();
+
+    let exif_set = |exif: &mut ExifChanges, ifd: Option<Ifd>, tag: &str, v: &str| -> bool {
+        let Some(spec) = exif_edit::tag_spec(tag) else {
+            return false;
+        };
+        if ifd.is_some_and(|i| i != spec.ifd) {
+            return false;
+        }
+        let (Some(be), Some(le)) = (
+            exif_edit::encode_value(&spec, v, ByteOrderMark::BigEndian),
+            exif_edit::encode_value(&spec, v, ByteOrderMark::LittleEndian),
+        ) else {
+            return false;
+        };
+        exif.set
+            .retain(|s| !(s.ifd == spec.ifd && s.tag == spec.tag));
+        exif.set.push(SetValue {
+            ifd: spec.ifd,
+            tag: spec.tag,
+            format: spec.format,
+            big_endian: be,
+            little_endian: le,
+        });
+        true
+    };
+
+    for nv in values {
+        let group = nv.group.as_deref().unwrap_or("");
+        let g = group.to_ascii_lowercase();
+        let tag_lc = nv.tag.to_ascii_lowercase();
+        let all = is_all(&nv.tag);
+        match (g.as_str(), &nv.value) {
+            // Everything.
+            ("" | "*" | "all", None) if all => {
+                exif.delete_all = true;
+                xmp.delete_all = true;
+            }
+            // An ungrouped tag: deleted wherever it is, written to its
+            // preferred group (EXIF first, as ExifTool prefers).
+            ("" | "*" | "all", None) => {
+                exif.delete_tags.push((None, tag_lc.clone()));
+                xmp.delete_tags.push((None, tag_lc));
+            }
+            ("" | "*" | "all", Some(v)) => {
+                if !exif_set(&mut exif, None, &nv.tag, v) {
+                    if let Some(s) = xmp_target(None, &nv.tag, v) {
+                        xmp_sets.push(s);
+                    }
+                }
+            }
+            ("exif", None) if all => exif.delete_all = true,
+            ("exif", None) => exif.delete_tags.push((None, tag_lc)),
+            ("exif", Some(v)) => {
+                exif_set(&mut exif, None, &nv.tag, v);
+            }
+            ("makernotes", None) if all => exif.delete_maker_notes = true,
+            ("xmp", None) if all => xmp.delete_all = true,
+            ("xmp", None) => xmp.delete_tags.push((None, tag_lc)),
+            ("xmp", Some(v)) => {
+                if let Some(s) = xmp_target(None, &nv.tag, v) {
+                    xmp_sets.push(s);
+                }
+            }
+            (other, _) => {
+                if let Some(ifd) = Ifd::from_group(other) {
+                    match &nv.value {
+                        None if all && ifd == Ifd::Ifd0 => exif.delete_all = true,
+                        None if all => exif.delete_dirs.push(ifd),
+                        None => exif.delete_tags.push((Some(ifd), tag_lc)),
+                        Some(v) => {
+                            exif_set(&mut exif, Some(ifd), &nv.tag, v);
+                        }
+                    }
+                } else if let Some(prefix) = other.strip_prefix("xmp-") {
+                    match &nv.value {
+                        None if all => xmp.delete_groups.push(prefix.to_string()),
+                        None => xmp.delete_tags.push((Some(prefix.to_string()), tag_lc)),
+                        Some(v) => {
+                            if let Some(s) = xmp_target(Some(prefix), &nv.tag, v) {
+                                xmp_sets.push(s);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Several values for one list property become its items.
+    for s in xmp_sets {
+        match xmp
+            .set
+            .iter_mut()
+            .find(|x| x.uri == s.uri && x.property == s.property)
+        {
+            Some(x)
+                if matches!(
+                    x.kind,
+                    crate::writer::xmp_edit::XmpValueKind::Bag
+                        | crate::writer::xmp_edit::XmpValueKind::Seq
+                ) =>
+            {
+                x.values.extend(s.values)
+            }
+            Some(x) => *x = s,
+            None => xmp.set.push(s),
+        }
+    }
+    (exif, xmp)
+}
+
+/// The XMP property a write goes to: `prefix` is the group's namespace
+/// (`XMP-dc` gives `dc`), or `None` for a plain `XMP:` request, which
+/// takes the namespace ExifTool prefers for the tag.
+fn xmp_target(
+    prefix: Option<&str>,
+    tag: &str,
+    value: &str,
+) -> Option<crate::writer::xmp_edit::XmpSet> {
+    use crate::writer::xmp_edit::{XmpSet, XmpValueKind};
+    let tag_lc = tag.to_ascii_lowercase();
+    let prefix = match prefix {
+        Some(p) => p.to_ascii_lowercase(),
+        None => match tag_lc.as_str() {
+            "title" | "description" | "subject" | "creator" | "rights" => "dc".into(),
+            "rating" | "label" | "createdate" | "modifydate" | "metadatadate" | "creatortool" => {
+                "xmp".into()
+            }
+            _ => return None,
+        },
+    };
+    // ExifTool's short group names for two IPTC namespaces.
+    let canonical = match prefix.as_str() {
+        "iptccore" => "Iptc4xmpCore",
+        "iptcext" => "Iptc4xmpExt",
+        "dc" => "dc",
+        "xmp" => "xmp",
+        "xmpmm" => "xmpMM",
+        "xmprights" => "xmpRights",
+        "tiff" => "tiff",
+        "exif" => "exif",
+        "exifex" => "exifEX",
+        "aux" => "aux",
+        "photoshop" => "photoshop",
+        "crs" => "crs",
+        "lr" => "lr",
+        "pdf" => "pdf",
+        "pdfx" => "pdfx",
+        _ => return None,
+    };
+    let uri = crate::writer::xmp_writer::namespace_uri(canonical)?;
+    // Dublin Core properties are lower case; the others are named like the tag.
+    let property = if canonical == "dc" {
+        tag_lc.clone()
+    } else {
+        let mut c = tag.chars();
+        let first = c.next()?;
+        first.to_uppercase().chain(c).collect()
+    };
+    let kind = match (canonical, tag_lc.as_str()) {
+        ("dc", "title" | "description" | "rights") => XmpValueKind::LangAlt,
+        ("dc", "subject") | ("lr", "hierarchicalsubject") => XmpValueKind::Bag,
+        ("dc", "creator") => XmpValueKind::Seq,
+        _ => XmpValueKind::Simple,
+    };
+    Some(XmpSet {
+        uri: uri.to_string(),
+        prefix: canonical.to_string(),
+        property,
+        values: vec![value.to_string()],
+        kind,
+    })
 }
 
 /// Classification of EXIF tags into IFD groups.

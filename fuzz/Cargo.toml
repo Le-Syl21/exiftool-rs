@@ -24,3 +24,10 @@ path = "fuzz_targets/extract.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "write_heif"
+path = "fuzz_targets/write_heif.rs"
+test = false
+doc = false
+bench = false

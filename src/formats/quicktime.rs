@@ -79,6 +79,8 @@ struct QtState {
     item_props: ItemProps,
     /// `$$et{DOC_NUM}` while an item property is being extracted (0 = main).
     current_item_doc: u32,
+    /// Inside the deferred `ipco` box (item properties).
+    in_item_properties: bool,
     /// Whether the current track's stsd format is CTMD
     current_track_is_ctmd: bool,
     /// ExtractEmbedded level (0=off, 1=-ee, 2=-ee2, 3=-ee3)
@@ -649,6 +651,11 @@ fn parse_atoms(
                         depth + 1,
                     );
                 }
+                // HEIF metadata items (ExifTool's `HandleItemInfo`, which runs
+                // the Exif and XMP items before the deferred properties).
+                if off == 4 {
+                    extract_metadata_items(data, content_start, content_end, tags);
+                }
                 // The deferred `ipco` box, now that `ipma`/`iref`/`pitm` are known.
                 if let Some((s, e)) = state.item_props.ipco.take() {
                     process_ipco(data, s, e, tags, state, depth + 1);
@@ -916,6 +923,69 @@ fn parse_atoms(
                     "",
                     &mut dm,
                 ));
+            }
+            // Item properties ExifTool's ItemPropCont table decodes
+            // (QuickTime.pm:2993-3073). `colr` with an ICC profile is not
+            // decoded here.
+            b"colr" if state.in_item_properties => {
+                parse_colr(&data[content_start..content_end], tags);
+            }
+            b"pixi" if state.in_item_properties => {
+                let d = &data[content_start..content_end];
+                if d.len() >= 5 && d[..4] == [0, 0, 0, 0] {
+                    let depth: Vec<String> = d[5..].iter().map(|b| b.to_string()).collect();
+                    let mut t = mk(
+                        "ImagePixelDepth",
+                        "Image Pixel Depth",
+                        Value::String(depth.join(" ")),
+                    );
+                    t.group.family2 = "Image".into();
+                    tags.push(t);
+                }
+            }
+            b"clap" if state.in_item_properties => {
+                // Four rational64s: width, height, horizontal and vertical offset.
+                let d = &data[content_start..content_end];
+                if d.len() >= 32 {
+                    let parts: Vec<String> = (0..4)
+                        .map(|i| {
+                            let n = i32::from_be_bytes([
+                                d[i * 8],
+                                d[i * 8 + 1],
+                                d[i * 8 + 2],
+                                d[i * 8 + 3],
+                            ]);
+                            let den = i32::from_be_bytes([
+                                d[i * 8 + 4],
+                                d[i * 8 + 5],
+                                d[i * 8 + 6],
+                                d[i * 8 + 7],
+                            ]);
+                            match den {
+                                0 => {
+                                    if n == 0 {
+                                        "undef".into()
+                                    } else {
+                                        "inf".into()
+                                    }
+                                }
+                                1 => n.to_string(),
+                                _ => {
+                                    let v = n as f64 / den as f64;
+                                    let s = format!("{v:.10}");
+                                    s.trim_end_matches('0').trim_end_matches('.').to_string()
+                                }
+                            }
+                        })
+                        .collect();
+                    let mut t = mk(
+                        "CleanAperture",
+                        "Clean Aperture",
+                        Value::String(parts.join(" ")),
+                    );
+                    t.group.family2 = "Image".into();
+                    tags.push(t);
+                }
             }
             // Image spatial extent (width/height for HEIF) - only process first one
             b"ispe" => {
@@ -2257,6 +2327,53 @@ fn parse_ispe(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, doc_nu
     }
 }
 
+/// The Exif and XMP items of a HEIF `meta` box (QuickTime.pm `HandleItemInfo`).
+///
+/// Only the items of the main document are extracted: those that describe
+/// the primary image, or nothing. An item that cannot be located or decoded
+/// is skipped, as ExifTool skips it with a warning; an empty one is ignored
+/// ("ignore empty directories").
+fn extract_metadata_items(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>) {
+    let Ok(meta) = super::heif_items::Meta::parse(data, start..end) else {
+        return;
+    };
+    if meta.iinf.is_none() || meta.iloc.is_none() {
+        return;
+    }
+    for item in meta.main_metadata_items() {
+        let Ok(buf) = meta.item_data(data, item.item_id) else {
+            continue;
+        };
+        if buf.is_empty() {
+            continue;
+        }
+        if item.is_exif() {
+            if buf.len() < 4 {
+                continue;
+            }
+            // The payload is a 4-byte offset to the TIFF header (usually
+            // past "Exif\0\0"). Two broken forms ExifTool still accepts: a
+            // bare TIFF header, and "Exif\0\0" without the offset.
+            let tiff_start = if buf.starts_with(b"MM\0\x2a") || buf.starts_with(b"II\x2a\0") {
+                0
+            } else if buf.starts_with(b"Exif\0\0") {
+                6
+            } else {
+                let n = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]) as usize;
+                match n.checked_add(4) {
+                    Some(s) if s <= buf.len() => s,
+                    _ => continue,
+                }
+            };
+            if let Ok(exif_tags) = ExifReader::read(&buf[tiff_start..]) {
+                tags.extend(exif_tags);
+            }
+        } else if let Ok(xmp_tags) = XmpReader::read(&buf) {
+            tags.extend(xmp_tags);
+        }
+    }
+}
+
 /// `ParseItemPropAssoc` (QuickTime.pm:9287-9338): reads the `ipma` box into
 /// `$$items{$id}{Association}`.
 fn parse_ipma(data: &[u8], start: usize, end: usize, items: &mut ItemProps) {
@@ -2435,7 +2552,9 @@ fn process_ipco(
             state.ispe_done = false;
         }
         state.current_item_doc = doc;
+        state.in_item_properties = true;
         parse_atoms(data, pos, pos + size, tags, state, depth);
+        state.in_item_properties = false;
         state.current_item_doc = 0;
         if doc > 0 {
             if state.extract_embedded == 0 {

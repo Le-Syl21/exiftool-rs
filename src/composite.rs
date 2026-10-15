@@ -851,6 +851,47 @@ pub fn gps_coordinates(tags: &[Tag]) -> Vec<Tag> {
         t.group.family2 = "Location".into();
         out.push(t);
     }
+    // XMP.pm Composite GPSLatitudeRef / GPSLongitudeRef: the hemisphere of
+    // the XMP coordinate (`Require => 'XMP-exif:GPSLatitude'`), from its sign
+    // or its trailing letter. ExifTool notes these are not inhibited by an
+    // EXIF reference, so with both present the Composite one is shown.
+    for (coord, reftag, pos_ref, neg_ref, pos_name, neg_name) in [
+        ("GPSLatitude", "GPSLatitudeRef", 'N', 'S', "North", "South"),
+        ("GPSLongitude", "GPSLongitudeRef", 'E', 'W', "East", "West"),
+    ] {
+        let Some(src) = tags
+            .iter()
+            .find(|t| t.name == coord && t.group.family1 == "XMP-exif")
+        else {
+            continue;
+        };
+        let raw = src.raw_value.to_display_string();
+        let raw = raw.trim();
+        let letter = match raw.parse::<f64>() {
+            Ok(v) => Some(if v < 0.0 { neg_ref } else { pos_ref }),
+            Err(_) => raw
+                .chars()
+                .rev()
+                .find(|c| c.eq_ignore_ascii_case(&pos_ref) || c.eq_ignore_ascii_case(&neg_ref))
+                .map(|c| c.to_ascii_uppercase()),
+        };
+        let Some(letter) = letter else {
+            continue;
+        };
+        let print = if letter == neg_ref {
+            neg_name
+        } else {
+            pos_name
+        };
+        let mut t = mk_composite_raw(
+            reftag,
+            reftag,
+            Value::String(letter.to_string()),
+            print.to_string(),
+        );
+        t.group.family2 = "Location".into();
+        out.push(t);
+    }
     out
 }
 fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {

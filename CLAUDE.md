@@ -22,6 +22,7 @@ src/
 ├── geolocation.rs      # Reverse geocoding from Geolocation.dat
 ├── config.rs           # .ExifTool_config parser
 ├── formats/            # 29 format readers (one per file)
+│   └── heif_items.rs   # HEIF item tables (iinf/iloc/iref/ipma), shared by reader and writer
 ├── metadata/           # Cross-format: exif.rs, iptc.rs, xmp.rs, makernotes.rs
 ├── tags/               # Tag tables + print conversions
 │   ├── exif.rs         # Hand-written EXIF tags + print conv
@@ -41,6 +42,9 @@ src/
 │   ├── exif_writer.rs  # TIFF/EXIF IFD building
 │   ├── xmp_writer.rs   # XMP XML generation
 │   ├── iptc_writer.rs  # IPTC-IIM encoding
+│   ├── exif_edit.rs    # In-place EXIF edits (keeps IFD1, maker notes, offsets)
+│   ├── xmp_edit.rs     # In-place XMP packet edits
+│   ├── heif_writer.rs  # HEIF/AVIF Exif/XMP items, iloc relocation
 │   └── ...             # png, tiff, webp, mp4, psd, pdf, matroska, etc.
 └── scripts/
     ├── gen_tags.pl      # Generate tag names from Perl source
@@ -151,3 +155,8 @@ diff <(target/release/exiftool -s -n photo.jpg) <(perl ../exiftool/exiftool -s -
 2. Add to `src/writer/mod.rs`
 3. Add dispatch in `ExifTool::apply_changes()` in `src/exiftool.rs`
 4. Add `fn write_myformat()` method to `ExifTool`
+
+`write_info` reads the output back and returns how many queued requests
+actually took effect (a written tag present with its value, a deleted tag
+or group absent); when none did it fails without writing. A writer that
+ignores a request therefore shows up as a lower count, not a silent success.

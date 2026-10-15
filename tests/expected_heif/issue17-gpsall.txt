@@ -1,0 +1,13 @@
+ExifIFD:ColorSpace=Uncalibrated
+ExifIFD:ComponentsConfiguration=Y, Cb, Cr, -
+ExifIFD:DateTimeOriginal=2026:10:07 12:34:56
+ExifIFD:ExifVersion=0232
+IFD0:Artist=Fixture Author
+IFD0:Copyright=CC0 fixture
+IFD0:ImageDescription=synthetic descriptive metadata
+IFD0:Make=Synthetic Camera Co.
+IFD0:Model=Fixture Model 1
+IFD0:YCbCrPositioning=Centered
+XMP-dc:Description=synthetic xmp description
+XMP-exif:GPSLatitude=51 deg 30' 2.52" N
+XMP-exif:GPSLongitude=0 deg 7' 28.56" E

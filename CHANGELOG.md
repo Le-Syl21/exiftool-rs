@@ -4,6 +4,44 @@ All notable changes to `exiftool-rs` are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- HEIF, HEIC and AVIF files can now really be written (#17). The writer used
+  to hand them to the MP4 writer, which rewrites `moov` and skips deletions,
+  while a HEIF keeps its EXIF and XMP as items of the `meta` box: every edit
+  was dropped and `write_info` still reported each request as written. The
+  new writer edits the primary image's Exif and XMP items the way ExifTool's
+  `WriteItemInfo` does. It sets, adds and deletes single tags, deletes whole
+  groups (`EXIF:all`, `XMP:all`, `GPS:all`, `ExifIFD:all`, `XMP-dc:all`,
+  `all`), creates a missing Exif or XMP item, and relocates every other item
+  in `iloc` (field sizes 0, 4 and 8, base offsets, several extents, versions
+  0 to 2, data in `mdat` or `idat`) along with the chunk offsets of any
+  track. The coded image and its properties are copied byte for byte.
+  Against ExifTool 13.59, the reporter's 16 deletions, `-EXIF:all=
+  -XMP:all=`, `-GPS:all=`, edits of Make, Artist and the GPS position, and
+  adding EXIF, GPS or XMP to a file without them give the same tags and
+  values on the reporter's file and on AVIF samples; libheif decodes every
+  output to the same pixels.
+  Differences from ExifTool: an item whose metadata is all deleted is
+  removed (ExifTool keeps it, empty), and deleted bytes are zeroed;
+  `XMP-x:XMPToolkit` names exiftool-rs; ExifTool's 2 KB of XMP padding is
+  not added.
+- Reading HEIF/AVIF now extracts the Exif and XMP items (it extracted
+  neither) and the `colr`, `pixi` and `clap` item properties
+  (ColorProfiles, ColorPrimaries, ..., ImagePixelDepth, CleanAperture); a
+  file whose major brand is `heic` is typed HEIC (`image/heic`), as
+  ExifTool types it. XMP GPS coordinates print as ExifTool prints them
+  (`51 deg 30' 2.52" N`, not `51,30.042N`), and the XMP Composite
+  GPSLatitudeRef/GPSLongitudeRef are built. The reporter's file and the two
+  new AVIF samples now read identically to ExifTool 13.59.
+- `write_info` returns the number of requests that took effect, checked by
+  reading the output back: a written tag must be there with its value, a
+  deleted tag or group must be gone. It used to return the number of queued
+  requests whatever happened. When none of them can be applied to the file
+  type, it now fails and writes nothing.
+- `EXIF:all` and `XMP:all` delete the group in JPEG and WebP too; only the
+  `EXIF:*` spelling did.
+
 ### Added
 
 - The parity audit now checks writes end to end, and the
@@ -22,6 +60,14 @@ All notable changes to `exiftool-rs` are documented here.
   `--dump-write` emits them alone. The four IPTC write cases the audit
   had before are part of the matrix, now compared on every tag rather than
   on the IPTC block alone.
+- `writer::exif_edit` edits an EXIF block in place, keeping what it is not
+  asked to change (IFD1, Interop IFD, maker notes and their offsets), and
+  follows ExifTool's mandatory-tag rules: a directory left with only its
+  mandatory tags after a deletion is dropped, and a new one gets them.
+- `writer::xmp_edit` edits an XMP packet in place.
+- `formats::heif_items` parses the HEIF item tables (`iinf`, `iloc`, `iref`,
+  `ipma`, `idat`).
+- A `write_heif` fuzz target.
 
 ## [0.9.0] - 2026-10-01
 

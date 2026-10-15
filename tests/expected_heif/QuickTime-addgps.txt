@@ -1,0 +1,4 @@
+GPS:GPSLatitude=48 deg 51' 30.24"
+GPS:GPSLatitudeRef=North
+GPS:GPSVersionID=2.3.0.0
+IFD0:YCbCrPositioning=Centered

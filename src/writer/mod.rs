@@ -1,3 +1,4 @@
+pub mod exif_edit;
 pub mod exif_writer;
 pub mod extended_xmp;
 pub mod flac_writer;
@@ -17,5 +18,6 @@ pub mod ps_writer;
 pub mod psd_writer;
 pub mod tiff_writer;
 pub mod webp_writer;
+pub mod xmp_edit;
 pub mod xmp_sidecar_writer;
 pub mod xmp_writer;

@@ -30,6 +30,7 @@ pub mod gif;
 pub mod gimp;
 pub mod gzip;
 pub mod hdr;
+pub mod heif_items;
 pub mod html;
 pub mod icc;
 pub mod ico;
