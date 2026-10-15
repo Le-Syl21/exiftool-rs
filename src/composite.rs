@@ -908,7 +908,9 @@ fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
     // GPSLatitude/GPSLongitude already carry ExifTool's "D deg M' S\" REF" print value.
     let (lat, lon) = (lat_tag.print_value.clone(), lon_tag.print_value.clone());
 
-    if lat.is_empty() || lon.is_empty() || lat.contains("undef") || lon.contains("undef") {
+    // Exif.pm GPSPosition ValueConv: `(length($val[0]) or length($val[1]))`,
+    // so one empty coordinate still gives a position.
+    if (lat.is_empty() && lon.is_empty()) || lat.contains("undef") || lon.contains("undef") {
         return None;
     }
 

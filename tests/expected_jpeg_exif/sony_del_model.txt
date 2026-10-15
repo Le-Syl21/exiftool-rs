@@ -1,0 +1,49 @@
+ExifIFD:ColorSpace	sRGB
+ExifIFD:ComponentsConfiguration	Y, Cb, Cr, -
+ExifIFD:CompressedBitsPerPixel	8
+ExifIFD:Contrast	Normal
+ExifIFD:CreateDate	2003:12:18 13:51:33
+ExifIFD:CustomRendered	Normal
+ExifIFD:DateTimeOriginal	2003:12:18 13:51:33
+ExifIFD:ExifImageHeight	2448
+ExifIFD:ExifImageWidth	3264
+ExifIFD:ExifVersion	0220
+ExifIFD:ExposureCompensation	0
+ExifIFD:ExposureMode	Auto bracket
+ExifIFD:ExposureProgram	Program AE
+ExifIFD:ExposureTime	1/250
+ExifIFD:FNumber	7.1
+ExifIFD:FileSource	Digital Camera
+ExifIFD:Flash	Off, Did not fire
+ExifIFD:FlashpixVersion	0100
+ExifIFD:FocalLength	12.5 mm
+ExifIFD:ISO	64
+ExifIFD:LightSource	Unknown
+ExifIFD:MaxApertureValue	2.0
+ExifIFD:MeteringMode	Multi-segment
+ExifIFD:Saturation	Normal
+ExifIFD:SceneCaptureType	Standard
+ExifIFD:SceneType	Directly photographed
+ExifIFD:Sharpness	Normal
+ExifIFD:WhiteBalance	Auto
+File:ExifByteOrder	Little-endian (Intel, II)
+IFD0:ImageDescription	
+IFD0:Make	SONY
+IFD0:ModifyDate	2003:12:18 13:51:33
+IFD0:Orientation	Horizontal (normal)
+IFD0:ResolutionUnit	inches
+IFD0:XResolution	72
+IFD0:YCbCrPositioning	Co-sited
+IFD0:YResolution	72
+IFD1:Compression	JPEG (old-style)
+IFD1:Make	SONY
+IFD1:Model	DSC-F828
+IFD1:ModifyDate	2003:12:18 13:51:33
+IFD1:Orientation	Horizontal (normal)
+IFD1:ResolutionUnit	inches
+IFD1:ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+IFD1:ThumbnailLength	28
+IFD1:XResolution	72
+IFD1:YResolution	72
+InteropIFD:InteropIndex	R98 - DCF basic file (sRGB)
+InteropIFD:InteropVersion	0100

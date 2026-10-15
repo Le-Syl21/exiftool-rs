@@ -98,7 +98,7 @@ crate's build time and of the binary's size.
 2. **Auto-generated tag tables** — Perl scripts extract from ExifTool source
 3. **Fallback chain for tag lookup** — hand-written tables → generated tables
 4. **Print conversion chain** — hand-written → manufacturer-specific → generated
-5. **JPEG merge mode** — reads existing EXIF, applies changes, rebuilds
+5. **In-place EXIF edits** — JPEG and HEIF EXIF is edited where it is (`writer/exif_edit.rs`), keeping byte order, IFD1, InteropIFD and maker notes, as ExifTool does
 6. **Geolocation.dat** — uses ExifTool's binary database directly (no conversion)
 7. **GUI is optional** — behind `gui` feature flag, no GUI deps in default build
 8. **i18n via YAML** — locale files in `locales/`, 23 languages, UI strings prefixed `_ui.`

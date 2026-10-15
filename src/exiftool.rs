@@ -679,10 +679,8 @@ impl ExifTool {
             // Check for group deletion
             if nv.value.is_none() && is_all(&nv.tag) {
                 match group_upper.as_str() {
-                    "EXIF" => {
-                        remove_exif = true;
-                        continue;
-                    }
+                    // EXIF group deletions (`EXIF:all`, `GPS:all`, ...) go
+                    // to the EXIF editor with the other EXIF requests.
                     "XMP" => {
                         remove_xmp = true;
                         continue;
@@ -717,12 +715,22 @@ impl ExifTool {
             }
         }
 
-        // Build new EXIF data
-        let new_exif = if !exif_values.is_empty() {
-            Some(self.build_new_exif(data, &exif_values)?)
-        } else {
-            None
-        };
+        // Edit the existing EXIF in place, as ExifTool's WriteExif does:
+        // byte order, IFD1 and its thumbnail, InteropIFD and the maker note
+        // stay as they are.
+        let mut new_exif: Option<Vec<u8>> = None;
+        if !exif_values.is_empty() {
+            use crate::writer::exif_edit::{edit_exif, ExifOutcome};
+            let owned: Vec<NewValue> = exif_values.iter().map(|nv| (*nv).clone()).collect();
+            let (mut changes, _) = item_changes(&owned);
+            changes.jfif_resolution = jpeg_writer::jfif_resolution_before_exif(data);
+            let current = jpeg_writer::extract_jpeg_exif(data);
+            match edit_exif(current, &changes)? {
+                ExifOutcome::Unchanged => {}
+                ExifOutcome::Removed => remove_exif = true,
+                ExifOutcome::Rewritten(tiff) => new_exif = Some(tiff),
+            }
+        }
 
         // Build new XMP data
         let new_xmp = if !xmp_values.is_empty() {
@@ -807,76 +815,6 @@ impl ExifTool {
             return None;
         }
         Some(iptc_writer::build_iptc(&records))
-    }
-
-    /// Build new EXIF data by merging existing EXIF with queued changes.
-    fn build_new_exif(&self, jpeg_data: &[u8], values: &[&NewValue]) -> Result<Vec<u8>> {
-        let bo = ByteOrderMark::BigEndian;
-        let mut ifd0_entries = Vec::new();
-        let mut exif_entries = Vec::new();
-        let mut gps_entries = Vec::new();
-
-        // Step 1: Extract existing EXIF entries from the JPEG
-        let existing = extract_existing_exif_entries(jpeg_data, bo);
-        for entry in &existing {
-            match classify_exif_tag(entry.tag) {
-                ExifIfdGroup::Ifd0 => ifd0_entries.push(entry.clone()),
-                ExifIfdGroup::ExifIfd => exif_entries.push(entry.clone()),
-                ExifIfdGroup::Gps => gps_entries.push(entry.clone()),
-            }
-        }
-
-        // Step 2: Apply queued changes (add/replace/delete)
-        let deleted_tags: Vec<u16> = values
-            .iter()
-            .filter(|nv| nv.value.is_none())
-            .filter_map(|nv| tag_name_to_id(&nv.tag))
-            .collect();
-
-        // Remove deleted tags
-        ifd0_entries.retain(|e| !deleted_tags.contains(&e.tag));
-        exif_entries.retain(|e| !deleted_tags.contains(&e.tag));
-        gps_entries.retain(|e| !deleted_tags.contains(&e.tag));
-
-        // Add/replace new values
-        for nv in values {
-            if nv.value.is_none() {
-                continue;
-            }
-            let value_str = nv.value.as_deref().unwrap_or("");
-            let group = nv.group.as_deref().unwrap_or("");
-
-            if let Some((tag_id, format, encoded)) = encode_exif_tag(&nv.tag, value_str, group, bo)
-            {
-                let entry = exif_writer::IfdEntry {
-                    tag: tag_id,
-                    format,
-                    data: encoded,
-                };
-
-                let target = match group.to_uppercase().as_str() {
-                    "GPS" => &mut gps_entries,
-                    "EXIFIFD" => &mut exif_entries,
-                    _ => match classify_exif_tag(tag_id) {
-                        ExifIfdGroup::ExifIfd => &mut exif_entries,
-                        ExifIfdGroup::Gps => &mut gps_entries,
-                        ExifIfdGroup::Ifd0 => &mut ifd0_entries,
-                    },
-                };
-
-                // Replace existing or add new
-                if let Some(existing) = target.iter_mut().find(|e| e.tag == tag_id) {
-                    *existing = entry;
-                } else {
-                    target.push(entry);
-                }
-            }
-        }
-
-        // Remove sub-IFD pointers from entries (they'll be rebuilt by build_exif)
-        ifd0_entries.retain(|e| e.tag != 0x8769 && e.tag != 0x8825 && e.tag != 0xA005);
-
-        exif_writer::build_exif(&ifd0_entries, &exif_entries, &gps_entries, bo)
     }
 
     /// Write metadata changes to PNG data.
@@ -3099,9 +3037,19 @@ fn request_applied(nv: &NewValue, before: &[Tag], after: &[Tag]) -> bool {
             // `QuickTime:all` is the metadata (ItemList, UserData, Keys), not
             // the movie structure the QuickTime group also names.
             let qt_all = all && group.is_some_and(|g| g.eq_ignore_ascii_case("quicktime"));
+            // Gone from where the request reaches: an EXIF tag is deleted
+            // from its write group only, so `EXIF:Model=` leaves
+            // `IFD1:Model`, as ExifTool does.
+            let reached = |t: &Tag| {
+                all || t.group.family0 != "EXIF"
+                    || group.is_some_and(|g| g.eq_ignore_ascii_case(&t.group.family1))
+                    || crate::writer::exif_edit::tag_spec(&nv.tag)
+                        .is_none_or(|s| s.ifd.name() == t.group.family1)
+            };
             !after.iter().any(|t| {
                 in_group(t, group)
                     && (all || t.name.eq_ignore_ascii_case(&nv.tag))
+                    && reached(t)
                     && (!qt_all
                         || matches!(
                             t.group.family1.as_str(),
@@ -3329,296 +3277,6 @@ fn xmp_target(
         values: vec![value.to_string()],
         kind,
     })
-}
-
-/// Classification of EXIF tags into IFD groups.
-enum ExifIfdGroup {
-    Ifd0,
-    ExifIfd,
-    Gps,
-}
-
-/// Determine which IFD a tag belongs to based on its ID.
-fn classify_exif_tag(tag_id: u16) -> ExifIfdGroup {
-    match tag_id {
-        // ExifIFD tags
-        0x829A..=0x829D | 0x8822..=0x8827 | 0x8830 | 0x9000..=0x9292 | 0xA000..=0xA435 => {
-            ExifIfdGroup::ExifIfd
-        }
-        // GPS tags
-        0x0000..=0x001F if tag_id <= 0x001F => ExifIfdGroup::Gps,
-        // Everything else → IFD0
-        _ => ExifIfdGroup::Ifd0,
-    }
-}
-
-/// Extract existing EXIF entries from a JPEG file's APP1 segment.
-fn extract_existing_exif_entries(
-    jpeg_data: &[u8],
-    target_bo: ByteOrderMark,
-) -> Vec<exif_writer::IfdEntry> {
-    let mut entries = Vec::new();
-
-    // Find EXIF APP1 segment
-    let mut pos = 2; // Skip SOI
-    while pos + 4 <= jpeg_data.len() {
-        if jpeg_data[pos] != 0xFF {
-            pos += 1;
-            continue;
-        }
-        let marker = jpeg_data[pos + 1];
-        pos += 2;
-
-        if marker == 0xDA || marker == 0xD9 {
-            break; // SOS or EOI
-        }
-        if marker == 0xFF || marker == 0x00 || marker == 0xD8 || (0xD0..=0xD7).contains(&marker) {
-            continue;
-        }
-
-        if pos + 2 > jpeg_data.len() {
-            break;
-        }
-        let seg_len = u16::from_be_bytes([jpeg_data[pos], jpeg_data[pos + 1]]) as usize;
-        if seg_len < 2 || pos + seg_len > jpeg_data.len() {
-            break;
-        }
-
-        let seg_data = &jpeg_data[pos + 2..pos + seg_len];
-
-        // EXIF APP1
-        if marker == 0xE1 && seg_data.len() > 14 && seg_data.starts_with(b"Exif\0\0") {
-            let tiff_data = &seg_data[6..];
-            extract_ifd_entries(tiff_data, target_bo, &mut entries);
-            break;
-        }
-
-        pos += seg_len;
-    }
-
-    entries
-}
-
-/// Extract IFD entries from TIFF data, re-encoding values in the target byte order.
-fn extract_ifd_entries(
-    tiff_data: &[u8],
-    target_bo: ByteOrderMark,
-    entries: &mut Vec<exif_writer::IfdEntry>,
-) {
-    use crate::metadata::exif::parse_tiff_header;
-
-    let header = match parse_tiff_header(tiff_data) {
-        Ok(h) => h,
-        Err(_) => return,
-    };
-
-    let src_bo = header.byte_order;
-
-    // Read IFD0
-    read_ifd_for_merge(
-        tiff_data,
-        header.ifd0_offset as usize,
-        src_bo,
-        target_bo,
-        entries,
-    );
-
-    // Find ExifIFD and GPS pointers
-    let ifd0_offset = header.ifd0_offset as usize;
-    if ifd0_offset + 2 > tiff_data.len() {
-        return;
-    }
-    let count = read_u16_bo(tiff_data, ifd0_offset, src_bo) as usize;
-    for i in 0..count {
-        let eoff = ifd0_offset + 2 + i * 12;
-        if eoff + 12 > tiff_data.len() {
-            break;
-        }
-        let tag = read_u16_bo(tiff_data, eoff, src_bo);
-        let value_off = read_u32_bo(tiff_data, eoff + 8, src_bo) as usize;
-
-        match tag {
-            0x8769 => read_ifd_for_merge(tiff_data, value_off, src_bo, target_bo, entries),
-            0x8825 => read_ifd_for_merge(tiff_data, value_off, src_bo, target_bo, entries),
-            _ => {}
-        }
-    }
-}
-
-/// Read a single IFD and extract entries for merge.
-fn read_ifd_for_merge(
-    data: &[u8],
-    offset: usize,
-    src_bo: ByteOrderMark,
-    target_bo: ByteOrderMark,
-    entries: &mut Vec<exif_writer::IfdEntry>,
-) {
-    if offset + 2 > data.len() {
-        return;
-    }
-    let count = read_u16_bo(data, offset, src_bo) as usize;
-
-    for i in 0..count {
-        let eoff = offset + 2 + i * 12;
-        if eoff + 12 > data.len() {
-            break;
-        }
-
-        let tag = read_u16_bo(data, eoff, src_bo);
-        let dtype = read_u16_bo(data, eoff + 2, src_bo);
-        let count_val = read_u32_bo(data, eoff + 4, src_bo);
-
-        // Skip sub-IFD pointers and MakerNote
-        if tag == 0x8769 || tag == 0x8825 || tag == 0xA005 || tag == 0x927C {
-            continue;
-        }
-
-        let type_size = match dtype {
-            1 | 2 | 6 | 7 => 1usize,
-            3 | 8 => 2,
-            4 | 9 | 11 | 13 => 4,
-            5 | 10 | 12 => 8,
-            _ => continue,
-        };
-
-        let total_size = type_size * count_val as usize;
-        let raw_data = if total_size <= 4 {
-            data[eoff + 8..eoff + 12].to_vec()
-        } else {
-            let voff = read_u32_bo(data, eoff + 8, src_bo) as usize;
-            if voff + total_size > data.len() {
-                continue;
-            }
-            data[voff..voff + total_size].to_vec()
-        };
-
-        // Re-encode multi-byte values if byte orders differ
-        let final_data = if src_bo != target_bo && type_size > 1 {
-            reencode_bytes(&raw_data, dtype, count_val as usize, src_bo, target_bo)
-        } else {
-            raw_data[..total_size].to_vec()
-        };
-
-        let format = match dtype {
-            1 => exif_writer::ExifFormat::Byte,
-            2 => exif_writer::ExifFormat::Ascii,
-            3 => exif_writer::ExifFormat::Short,
-            4 => exif_writer::ExifFormat::Long,
-            5 => exif_writer::ExifFormat::Rational,
-            6 => exif_writer::ExifFormat::SByte,
-            7 => exif_writer::ExifFormat::Undefined,
-            8 => exif_writer::ExifFormat::SShort,
-            9 => exif_writer::ExifFormat::SLong,
-            10 => exif_writer::ExifFormat::SRational,
-            11 => exif_writer::ExifFormat::Float,
-            12 => exif_writer::ExifFormat::Double,
-            _ => continue,
-        };
-
-        entries.push(exif_writer::IfdEntry {
-            tag,
-            format,
-            data: final_data,
-        });
-    }
-}
-
-/// Re-encode multi-byte values when converting between byte orders.
-fn reencode_bytes(
-    data: &[u8],
-    dtype: u16,
-    count: usize,
-    src_bo: ByteOrderMark,
-    dst_bo: ByteOrderMark,
-) -> Vec<u8> {
-    let mut out = Vec::with_capacity(data.len());
-    match dtype {
-        3 | 8 => {
-            // 16-bit
-            for i in 0..count {
-                let v = read_u16_bo(data, i * 2, src_bo);
-                match dst_bo {
-                    ByteOrderMark::LittleEndian => out.extend_from_slice(&v.to_le_bytes()),
-                    ByteOrderMark::BigEndian => out.extend_from_slice(&v.to_be_bytes()),
-                }
-            }
-        }
-        4 | 9 | 11 | 13 => {
-            // 32-bit
-            for i in 0..count {
-                let v = read_u32_bo(data, i * 4, src_bo);
-                match dst_bo {
-                    ByteOrderMark::LittleEndian => out.extend_from_slice(&v.to_le_bytes()),
-                    ByteOrderMark::BigEndian => out.extend_from_slice(&v.to_be_bytes()),
-                }
-            }
-        }
-        5 | 10 => {
-            // Rational (two 32-bit)
-            for i in 0..count {
-                let n = read_u32_bo(data, i * 8, src_bo);
-                let d = read_u32_bo(data, i * 8 + 4, src_bo);
-                match dst_bo {
-                    ByteOrderMark::LittleEndian => {
-                        out.extend_from_slice(&n.to_le_bytes());
-                        out.extend_from_slice(&d.to_le_bytes());
-                    }
-                    ByteOrderMark::BigEndian => {
-                        out.extend_from_slice(&n.to_be_bytes());
-                        out.extend_from_slice(&d.to_be_bytes());
-                    }
-                }
-            }
-        }
-        12 => {
-            // 64-bit double
-            for i in 0..count {
-                let mut bytes = [0u8; 8];
-                bytes.copy_from_slice(&data[i * 8..i * 8 + 8]);
-                if src_bo != dst_bo {
-                    bytes.reverse();
-                }
-                out.extend_from_slice(&bytes);
-            }
-        }
-        _ => out.extend_from_slice(data),
-    }
-    out
-}
-
-fn read_u16_bo(data: &[u8], offset: usize, bo: ByteOrderMark) -> u16 {
-    if offset + 2 > data.len() {
-        return 0;
-    }
-    match bo {
-        ByteOrderMark::LittleEndian => u16::from_le_bytes([data[offset], data[offset + 1]]),
-        ByteOrderMark::BigEndian => u16::from_be_bytes([data[offset], data[offset + 1]]),
-    }
-}
-
-fn read_u32_bo(data: &[u8], offset: usize, bo: ByteOrderMark) -> u32 {
-    if offset + 4 > data.len() {
-        return 0;
-    }
-    match bo {
-        ByteOrderMark::LittleEndian => u32::from_le_bytes([
-            data[offset],
-            data[offset + 1],
-            data[offset + 2],
-            data[offset + 3],
-        ]),
-        ByteOrderMark::BigEndian => u32::from_be_bytes([
-            data[offset],
-            data[offset + 1],
-            data[offset + 2],
-            data[offset + 3],
-        ]),
-    }
-}
-
-/// Map tag name to numeric EXIF tag ID.
-fn tag_name_to_id(name: &str) -> Option<u16> {
-    encode_exif_tag(name, "", "", ByteOrderMark::BigEndian).map(|(id, _, _)| id)
 }
 
 /// Convert a tag value to a safe filename.

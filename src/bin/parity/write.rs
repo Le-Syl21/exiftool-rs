@@ -66,6 +66,14 @@ pub const IGNORED: &[(&str, &str)] = &[
         "file offset of the embedded JPEG; depends on the writer's block layout",
     ),
     (
+        "OriginalDecisionDataOffset",
+        "file offset of the Canon original decision data (JPEG); depends on the writer's block layout",
+    ),
+    (
+        "MPImageStart",
+        "file offset of an MPF image; depends on the writer's block layout",
+    ),
+    (
         "OtherImageStart",
         "file offset of the embedded image; depends on the writer's block layout",
     ),

@@ -104,6 +104,19 @@ pub struct ExifChanges {
     pub delete_tags: Vec<(Option<Ifd>, String)>,
     /// Tags to write.
     pub set: Vec<SetValue>,
+    /// The JFIF resolution of a JPEG, when its JFIF segment comes before
+    /// the EXIF: ExifTool then takes IFD0's X/YResolution and
+    /// ResolutionUnit defaults from it (WriteExif.pl, `JFIFYResolution`).
+    pub jfif_resolution: Option<JfifResolution>,
+}
+
+/// The resolution fields of a JFIF APP0 segment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JfifResolution {
+    pub x: u16,
+    pub y: u16,
+    /// JFIF units: 0 none, 1 inches, 2 cm (EXIF ResolutionUnit is one more).
+    pub unit: u8,
 }
 
 impl ExifChanges {
@@ -189,6 +202,7 @@ struct Block {
     /// Byte ranges that held removed data and must be zeroed.
     freed: Vec<Range<usize>>,
     ifd0_moved: bool,
+    jfif: Option<JfifResolution>,
 }
 
 impl Block {
@@ -352,9 +366,14 @@ impl Block {
 }
 
 /// The mandatory tags of a directory and their values, in the block's byte
-/// order (WriteExif.pl `%mandatory`; XResolution and friends are optional
-/// since EXIF 3.0 and so are not in IFD0's list).
-fn mandatory(ifd: Ifd, bo: ByteOrderMark) -> Vec<(u16, u16, Vec<u8>)> {
+/// order and in tag order (WriteExif.pl `%mandatory`; XResolution and
+/// friends are optional since EXIF 3.0 and so are not in IFD0's list, unless
+/// a JFIF segment gives them).
+fn mandatory(
+    ifd: Ifd,
+    bo: ByteOrderMark,
+    jfif: Option<JfifResolution>,
+) -> Vec<(u16, u16, Vec<u8>)> {
     let s = |v: u16| match bo {
         ByteOrderMark::LittleEndian => v.to_le_bytes().to_vec(),
         ByteOrderMark::BigEndian => v.to_be_bytes().to_vec(),
@@ -367,7 +386,15 @@ fn mandatory(ifd: Ifd, bo: ByteOrderMark) -> Vec<(u16, u16, Vec<u8>)> {
         [a, b].concat()
     };
     match ifd {
-        Ifd::Ifd0 => vec![(0x0213, 3, s(1))],
+        Ifd::Ifd0 => match jfif {
+            Some(j) => vec![
+                (0x011a, 5, r(u32::from(j.x), 1)),
+                (0x011b, 5, r(u32::from(j.y), 1)),
+                (0x0128, 3, s(u16::from(j.unit) + 1)),
+                (0x0213, 3, s(1)),
+            ],
+            None => vec![(0x0213, 3, s(1))],
+        },
         Ifd::Ifd1 => vec![
             (0x0103, 3, s(6)),
             (0x011a, 5, r(72, 1)),
@@ -382,6 +409,14 @@ fn mandatory(ifd: Ifd, bo: ByteOrderMark) -> Vec<(u16, u16, Vec<u8>)> {
         Ifd::Gps => vec![(0x0000, 1, vec![2, 3, 0, 0])],
         Ifd::Interop => vec![(0x0002, 7, b"0100".to_vec())],
     }
+}
+
+/// Does deleting tag `name` (lower case) with no directory given reach
+/// directory `ifd`? ExifTool deletes a tag from its `WriteGroup` only: `-Model=`
+/// leaves `IFD1:Model` alone. A tag this crate does not know the group of
+/// is deleted wherever it is.
+fn deletes_from(name: &str, ifd: Ifd) -> bool {
+    tag_spec(name).is_none_or(|spec| spec.ifd == ifd)
 }
 
 /// ExifTool's name for tag `id` in directory `ifd`.
@@ -419,9 +454,11 @@ pub fn edit_exif(tiff: Option<&[u8]>, changes: &ExifChanges) -> Result<ExifOutco
                 dirs: HashMap::new(),
                 freed: Vec::new(),
                 ifd0_moved: true,
+                jfif: None,
             }
         }
     };
+    block.jfif = changes.jfif_resolution;
     let mut changed = false;
 
     // Whole directories.
@@ -458,9 +495,9 @@ pub fn edit_exif(tiff: Option<&[u8]>, changes: &ExifChanges) -> Result<ExifOutco
                         None => return true,
                     },
                 };
-                let hit = targets
-                    .iter()
-                    .any(|(g, n)| g.is_none_or(|g| g == ifd) && *n == name);
+                let hit = targets.iter().any(|(g, n)| {
+                    *n == name && g.map_or_else(|| deletes_from(n, ifd), |g| g == ifd)
+                });
                 if hit {
                     if let Some(r) = &e.value {
                         freed.push(r.clone());
@@ -532,7 +569,7 @@ pub fn edit_exif(tiff: Option<&[u8]>, changes: &ExifChanges) -> Result<ExifOutco
             continue;
         };
         let only_mandatory = {
-            let mand = mandatory(ifd, block.bo);
+            let mand = mandatory(ifd, block.bo, block.jfif);
             dir.entries.iter().all(|e| {
                 let bytes = match (&e.new_value, &e.value) {
                     (Some(v), _) => v.clone(),
@@ -580,6 +617,7 @@ fn open_block(tiff: &[u8]) -> Result<Block> {
         dirs: HashMap::new(),
         freed: Vec::new(),
         ifd0_moved: false,
+        jfif: None,
     };
     let ifd0_off = block.u32(4) as usize;
     let ifd0 = block
@@ -685,7 +723,7 @@ fn ensure_dir(block: &mut Block, ifd: Ifd) {
         p.dirty = true;
     }
     let mut dir = Dir::new();
-    for (tag, typ, v) in mandatory(ifd, block.bo) {
+    for (tag, typ, v) in mandatory(ifd, block.bo, block.jfif) {
         let n = (v.len() / type_size(typ).unwrap_or(1)) as u32;
         dir.entries.push(Entry {
             tag,
@@ -1254,6 +1292,84 @@ mod tests {
         assert_eq!(
             edit_exif(Some(&tiff), &changes).unwrap(),
             ExifOutcome::Unchanged
+        );
+    }
+
+    #[test]
+    fn an_unqualified_deletion_stays_in_the_tag_write_group() {
+        // Model in IFD0 and in IFD1 (as in Sony.jpg): `EXIF:Model=` deletes
+        // IFD0:Model only, as ExifTool does (Model's WriteGroup is IFD0).
+        let tiff = sample(ByteOrderMark::LittleEndian);
+        let mut block = open_block(&tiff).unwrap();
+        ensure_dir(&mut block, Ifd::Ifd1);
+        let model = block.dirs[&Ifd::Ifd0]
+            .entries
+            .iter()
+            .find(|e| e.tag == 0x0110)
+            .cloned()
+            .unwrap();
+        let d1 = block.dirs.get_mut(&Ifd::Ifd1).unwrap();
+        d1.entries.insert(1, model);
+        write_block(&mut block).unwrap();
+        let with_ifd1 = block.buf;
+        let models = |t: &[u8]| {
+            read(t)
+                .into_iter()
+                .filter(|(_, n, _)| n == "Model")
+                .map(|(g, _, _)| g)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(models(&with_ifd1), ["IFD0", "IFD1"]);
+        let changes = ExifChanges {
+            delete_tags: vec![(None, "model".into())],
+            ..Default::default()
+        };
+        let ExifOutcome::Rewritten(out) = edit_exif(Some(&with_ifd1), &changes).unwrap() else {
+            panic!()
+        };
+        assert_eq!(models(&out), ["IFD1"]);
+    }
+
+    #[test]
+    fn a_new_ifd0_takes_the_jfif_resolution() {
+        // WriteExif.pl: a new IFD0 gets X/YResolution and ResolutionUnit
+        // (JFIF units + 1) from the JPEG's JFIF segment, and they then count
+        // as mandatory: deleting the only other tag removes the block.
+        let jfif = Some(JfifResolution {
+            x: 1,
+            y: 1,
+            unit: 0,
+        });
+        let changes = ExifChanges {
+            set: vec![set("Artist", "Somebody")],
+            jfif_resolution: jfif,
+            ..Default::default()
+        };
+        let ExifOutcome::Rewritten(tiff) = edit_exif(None, &changes).unwrap() else {
+            panic!()
+        };
+        let tags = read(&tiff);
+        for (n, v) in [
+            ("XResolution", "1"),
+            ("YResolution", "1"),
+            ("ResolutionUnit", "None"),
+            ("YCbCrPositioning", "Centered"),
+            ("Artist", "Somebody"),
+        ] {
+            assert!(
+                tags.iter()
+                    .any(|(g, tn, tv)| g == "IFD0" && tn == n && tv == v),
+                "{n}: {tags:?}"
+            );
+        }
+        let changes = ExifChanges {
+            delete_tags: vec![(None, "artist".into())],
+            jfif_resolution: jfif,
+            ..Default::default()
+        };
+        assert_eq!(
+            edit_exif(Some(&tiff), &changes).unwrap(),
+            ExifOutcome::Removed
         );
     }
 

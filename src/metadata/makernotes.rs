@@ -294,7 +294,8 @@ pub fn parse_makernotes_exif_base(
     }
 
     // Kodak binary: "KDK INFO" or "KDK" — not IFD, decode directly
-    if mn_data.starts_with(b"KDK") {
+    // (MakerNotes.pm MakerNoteKodak1a/1b: only for an EASTMAN KODAK Make).
+    if make.starts_with("EASTMAN KODAK") && mn_data.starts_with(b"KDK") {
         let start = 8;
         return decode_kodak_binary(&mn_data[start..]);
     }

@@ -215,7 +215,7 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
             if let Some(v) = value.as_u64() {
                 return Some(
                     match v {
-                        1 => "No Absolute Unit",
+                        1 => "None",
                         2 => "inches",
                         3 => "centimeters",
                         _ => return None,

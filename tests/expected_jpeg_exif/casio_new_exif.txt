@@ -1,0 +1,11 @@
+Casio:CasioQuality	Economy
+Casio:DateTimeOriginal	1998:10:24 12:08:57
+Casio:ManufactureCode	98000829
+Casio:ManufactureIndex	98082901
+Casio:ModelType	KX-778
+File:ExifByteOrder	Big-endian (Motorola, MM)
+IFD0:Artist	Added by write parity
+IFD0:ResolutionUnit	None
+IFD0:XResolution	1
+IFD0:YCbCrPositioning	Centered
+IFD0:YResolution	1

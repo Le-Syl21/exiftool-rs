@@ -1,0 +1,23 @@
+File:ExifByteOrder	Big-endian (Motorola, MM)
+IFD0:Artist	Added by write parity
+IFD0:YCbCrPositioning	Centered
+IPTC2:ApplicationRecordVersion	2
+IPTC2:By-line	byline
+IPTC2:By-lineTitle	byline title
+IPTC2:Caption-Abstract	ExifTool AFCP test
+IPTC2:Category	p
+IPTC2:City	city
+IPTC2:CopyrightNotice	copy freely
+IPTC2:Country-PrimaryLocationName	country name
+IPTC2:Credit	credit
+IPTC2:DateCreated	2005:12:23
+IPTC2:Headline	headline
+IPTC2:Keywords	keyword
+IPTC2:ObjectName	object name
+IPTC2:OriginalTransmissionReference	otr
+IPTC2:Province-State	state
+IPTC2:Source	source
+IPTC2:SpecialInstructions	special instructions
+IPTC2:SupplementalCategories	supp cat
+IPTC2:Urgency	2
+IPTC2:Writer-Editor	caption writer

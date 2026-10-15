@@ -1,0 +1,135 @@
+Canon:AEBBracketValue	0
+Canon:AFAreaHeight	151
+Canon:AFAreaWidth	151
+Canon:AFAreaXPositions	1014 608 0 0 0 -608 -1014
+Canon:AFAreaYPositions	0 0 -506 0 506 0 0
+Canon:AFImageHeight	2048
+Canon:AFImageWidth	3072
+Canon:AFPointsInFocus	(none)
+Canon:AutoExposureBracketing	Off
+Canon:AutoISO	100
+Canon:AutoRotate	None
+Canon:BaseISO	100
+Canon:BracketMode	Off
+Canon:BracketShotNumber	0
+Canon:BracketValue	0
+Canon:BulbDuration	4
+Canon:CameraISO	n/a
+Canon:CameraType	EOS Mid-range
+Canon:CanonExposureMode	Manual
+Canon:CanonFileLength	4480822
+Canon:CanonFirmwareVersion	Firmware Version 1.1.1
+Canon:CanonFlashMode	Off
+Canon:CanonImageHeight	2048
+Canon:CanonImageSize	Large
+Canon:CanonImageType	CRW:EOS DIGITAL REBEL CMOS RAW
+Canon:CanonImageWidth	3072
+Canon:CanonModelID	EOS Digital Rebel / 300D / Kiss Digital
+Canon:ColorSpace	sRGB
+Canon:ColorTemperature	5200
+Canon:ColorTone	Normal
+Canon:ContinuousDrive	Continuous
+Canon:Contrast	+1
+Canon:ControlMode	Camera Local Control
+Canon:DigitalZoom	Unknown (-1)
+Canon:EasyMode	Manual
+Canon:ExposureCompensation	0
+Canon:ExposureTime	128
+Canon:FNumber	14
+Canon:FileNumber	118-1861
+Canon:FlashBits	(none)
+Canon:FlashExposureComp	0
+Canon:FlashGuideNumber	0
+Canon:FlashModel	n/a
+Canon:FocalLength	34 mm
+Canon:FocalPlaneXSize	23.22 mm
+Canon:FocalPlaneYSize	15.49 mm
+Canon:FocalUnits	1/mm
+Canon:FocusDistanceLower	5.46 m
+Canon:FocusDistanceUpper	inf
+Canon:FocusMode	Manual Focus (3)
+Canon:FocusRange	Not Known
+Canon:LensType	n/a
+Canon:MacroMode	Unknown (0)
+Canon:ManualFlashOutput	n/a
+Canon:MaxAperture	4
+Canon:MaxFocalLength	55 mm
+Canon:MeasuredEV	-1.25
+Canon:MeasuredEV2	-1.25
+Canon:MeasuredRGGB	998 1022 1026 808
+Canon:MeteringMode	Center-weighted average
+Canon:MinAperture	27
+Canon:MinFocalLength	18 mm
+Canon:NDFilter	n/a
+Canon:NumAFPoints	7
+Canon:OpticalZoomCode	n/a
+Canon:OwnerName	Phil Harvey
+Canon:Quality	RAW
+Canon:RecordMode	CRW+THM
+Canon:Saturation	+1
+Canon:SelfTimer	Off
+Canon:SelfTimer2	0
+Canon:SequenceNumber	0
+Canon:SerialNumber	0560018150
+Canon:SerialNumberFormat	Format 1
+Canon:Sharpness	+1
+Canon:SlowShutter	None
+Canon:TargetAperture	14
+Canon:ThumbnailImageValidArea	0 159 7 112
+Canon:ValidAFPoints	7
+Canon:WB_RGGBBlackLevels	124 123 124 123
+Canon:WB_RGGBLevelsAuto	1719 832 831 990
+Canon:WB_RGGBLevelsCloudy	1878 832 831 903
+Canon:WB_RGGBLevelsCustom	1722 832 831 989
+Canon:WB_RGGBLevelsDaylight	1722 832 831 989
+Canon:WB_RGGBLevelsFlash	1933 832 831 895
+Canon:WB_RGGBLevelsFluorescent	1506 842 841 1381
+Canon:WB_RGGBLevelsKelvin	1722 832 831 988
+Canon:WB_RGGBLevelsShade	2035 832 831 839
+Canon:WB_RGGBLevelsTungsten	1228 913 912 1668
+Canon:WhiteBalance	Auto
+Canon:ZoomSourceWidth	3072
+Canon:ZoomTargetWidth	3072
+ExifIFD:ApertureValue	14.0
+ExifIFD:ColorSpace	sRGB
+ExifIFD:ComponentsConfiguration	Y, Cb, Cr, -
+ExifIFD:CompressedBitsPerPixel	9
+ExifIFD:CreateDate	2003:12:04 06:46:52
+ExifIFD:CustomRendered	Normal
+ExifIFD:DateTimeOriginal	2003:12:04 06:46:52
+ExifIFD:ExifImageHeight	120
+ExifIFD:ExifImageWidth	160
+ExifIFD:ExifVersion	0221
+ExifIFD:ExposureCompensation	0
+ExifIFD:ExposureMode	Manual
+ExifIFD:ExposureTime	4
+ExifIFD:FNumber	14.0
+ExifIFD:FileSource	Digital Camera
+ExifIFD:Flash	No Flash
+ExifIFD:FlashpixVersion	0100
+ExifIFD:FocalLength	34.0 mm
+ExifIFD:FocalPlaneResolutionUnit	inches
+ExifIFD:FocalPlaneXResolution	3443.946188
+ExifIFD:FocalPlaneYResolution	3442.016807
+ExifIFD:ISO	100
+ExifIFD:MaxApertureValue	4.5
+ExifIFD:MeteringMode	Average
+ExifIFD:SceneCaptureType	Standard
+ExifIFD:SensingMethod	One-chip color area
+ExifIFD:ShutterSpeedValue	0
+ExifIFD:UserComment	
+ExifIFD:WhiteBalance	Auto
+File:ExifByteOrder	Little-endian (Intel, II)
+IFD0:Artist	Added by write parity
+IFD0:Make	Canon
+IFD0:Model	Canon EOS DIGITAL REBEL
+IFD0:ModifyDate	2003:12:04 06:46:52
+IFD0:Orientation	Horizontal (normal)
+IFD0:ResolutionUnit	inches
+IFD0:XResolution	180
+IFD0:YCbCrPositioning	Centered
+IFD0:YResolution	180
+InteropIFD:InteropIndex	THM - DCF thumbnail file
+InteropIFD:InteropVersion	0100
+InteropIFD:RelatedImageHeight	2048
+InteropIFD:RelatedImageWidth	3072

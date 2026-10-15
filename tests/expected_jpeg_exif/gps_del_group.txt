@@ -1,0 +1,62 @@
+ExifIFD:ApertureValue	16.0
+ExifIFD:BrightnessValue	0.26015625
+ExifIFD:ColorSpace	sRGB
+ExifIFD:ComponentsConfiguration	Y, Cb, Cr, -
+ExifIFD:CreateDate	2002:07:13 15:58:28
+ExifIFD:DateTimeOriginal	2002:07:13 15:58:28
+ExifIFD:ExifImageHeight	1600
+ExifIFD:ExifImageWidth	2400
+ExifIFD:ExifVersion	0200
+ExifIFD:ExposureCompensation	-0.65
+ExifIFD:ExposureProgram	Shutter speed priority AE
+ExifIFD:FNumber	0.64
+ExifIFD:FileSource	Unknown (0)
+ExifIFD:Flash	No Flash
+ExifIFD:FlashpixVersion	0100
+ExifIFD:FocalLength	0.0 mm
+ExifIFD:FocalPlaneResolutionUnit	inches
+ExifIFD:FocalPlaneXResolution	12.05078125
+ExifIFD:FocalPlaneYResolution	12.05078125
+ExifIFD:ISO	0
+ExifIFD:MeteringMode	Multi-segment
+ExifIFD:SceneType	Unknown (0)
+ExifIFD:SensingMethod	One-chip color area
+ExifIFD:ShutterSpeedValue	1/724
+File:ExifByteOrder	Little-endian (Intel, II)
+IFD0:Artist	Ian Britton
+IFD0:Copyright	ian Britton - FreeFoto.com
+IFD0:ImageDescription	Communications
+IFD0:Make	FUJIFILM
+IFD0:Model	FinePixS1Pro
+IFD0:ModifyDate	2002:07:19 13:28:10
+IFD0:Orientation	Horizontal (normal)
+IFD0:ReferenceBlackWhite	0 255 128 255 128 255
+IFD0:ResolutionUnit	inches
+IFD0:Software	Adobe Photoshop 7.0
+IFD0:XResolution	300
+IFD0:YCbCrPositioning	Co-sited
+IFD0:YResolution	300
+IFD1:Compression	JPEG (old-style)
+IFD1:ResolutionUnit	inches
+IFD1:ThumbnailImage	(Binary data 28 bytes, use -b option to extract)
+IFD1:ThumbnailLength	28
+IFD1:XResolution	72
+IFD1:YResolution	72
+IPTC:ApplicationRecordVersion	2
+IPTC:By-line	Ian Britton
+IPTC:By-lineTitle	Photographer
+IPTC:Caption-Abstract	Communications
+IPTC:Category	BUS
+IPTC:City	
+IPTC:CopyrightNotice	ian Britton - FreeFoto.com
+IPTC:Country-PrimaryLocationName	United Kingdom
+IPTC:Credit	Ian Britton
+IPTC:DateCreated	2002:06:20
+IPTC:Headline	Communications
+IPTC:Keywords	Communications
+IPTC:ObjectName	Communications
+IPTC:Province-State	
+IPTC:Source	FreeFoto.com
+IPTC:SupplementalCategories	Communications
+IPTC:Urgency	5 (normal urgency)
+IPTC:Writer-Editor	Ian Britton
