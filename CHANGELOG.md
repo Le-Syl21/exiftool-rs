@@ -2,6 +2,27 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [Unreleased]
+
+### Added
+
+- The parity audit now checks writes end to end, and the
+  [parity report](https://le-syl21.github.io/exiftool-rs/#write) has a Write
+  section. Every corpus file whose type exiftool-rs writes gets a small,
+  deterministic set of edits (set, add and delete a tag, delete a whole
+  EXIF, GPS, XMP or IPTC group, and a mixed edit), applied both with
+  `write_info` and with Perl ExifTool. Both outputs are re-read by Perl
+  ExifTool and by exiftool-rs, and each case checks the requested state,
+  equality with Perl's output, agreement between the two readers, and that
+  the file still reads without a new error or warning. `write_info`
+  returning `Ok` with nothing changed, the pattern of issue #17, is
+  reported as a silent no-op. Known failures are recorded in
+  `tests/parity_write_baseline.txt`, and the release gate fails on a new
+  one. `parity --dump` emits the write results after the read TSV, and
+  `--dump-write` emits them alone. The four IPTC write cases the audit
+  had before are part of the matrix, now compared on every tag rather than
+  on the IPTC block alone.
+
 ## [0.9.0] - 2026-10-01
 
 Faster to build and smaller, with no tag, value or group change on valid

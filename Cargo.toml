@@ -35,7 +35,7 @@ required-features = ["gui"]
 # (needs perl + network), behind a feature so normal builds stay lean.
 [[bin]]
 name = "parity"
-path = "src/bin/parity.rs"
+path = "src/bin/parity/main.rs"
 required-features = ["parity"]
 
 # Counter one of the ISO-ExifTool goal: what share of ExifTool's conversion

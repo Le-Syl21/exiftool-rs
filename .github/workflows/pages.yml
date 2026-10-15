@@ -3,7 +3,9 @@ name: pages
 # Publish the live parity report to GitHub Pages on release (and on demand).
 # Independent of the release pipeline (ci.yml) — a Pages hiccup can never block
 # a crate publish. Regenerates the report from the shipped corpus: diffs
-# exiftool-rs against the pinned Perl ExifTool tag-by-tag, then renders it.
+# exiftool-rs against the pinned Perl ExifTool tag-by-tag (read), then edits
+# every corpus file exiftool-rs writes with both tools and verifies the outputs
+# by re-reading them (write), and renders both sections in one page.
 #
 # It used to run on every push to main. That is a full build of the crate plus
 # a Perl ExifTool run, several times a day, to republish a page nobody reads
@@ -42,12 +44,18 @@ jobs:
           sudo apt-get install -y --install-recommends --install-suggests \
             libimage-exiftool-perl
 
+      # `--dump` prints the read TSV, then the write matrix (about half a
+      # minute on four threads; scratch copies go to target/parity/write-work
+      # and are removed when it ends). pipefail: a crash of the binary must
+      # not publish a page built from a truncated dump.
       - name: Generate the parity report
         run: |
+          set -o pipefail
           mkdir -p _site
           cargo run --release --features parity --bin parity -- --dump \
             | python3 scripts/parity_report.py > _site/index.html
           test -s _site/index.html
+          grep -q 'id="write"' _site/index.html
           cat > _site/sitemap.xml <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -163,9 +163,11 @@ jobs:
   # Live differential parity gate, ahead of any signing: run the pinned Perl
   # ExifTool (EXIFTOOL_VERSION, NOT the latest — an upstream tag running ahead
   # would otherwise block the release) and exiftool-rs over the corpus, and diff
-  # the output. A new read delta or a write mismatch fails the job, so nothing
-  # gets signed or published. The binary downloads ExifTool itself; ubuntu-latest
-  # provides perl/curl/tar, and we install the optional Perl modules the corpus
+  # the output, then edit every corpus file we write with both tools and re-read
+  # the outputs. A new read delta or a new failing write case (neither in its
+  # baseline under tests/) fails the job, so nothing gets signed or published.
+  # The binary downloads ExifTool itself; ubuntu-latest provides perl/curl/tar,
+  # and we install the optional Perl modules the corpus
   # needs (without them ExifTool decodes less -> false deltas; the binary also
   # checks they are present and fails cleanly if one is missing).
   parity:

@@ -12,15 +12,21 @@
 //! cargo run --features parity --bin parity
 //! cargo run --features parity --bin parity -- --exiftool 13.59
 //! cargo run --features parity --bin parity -- --exiftool-path ../exiftool
-//! cargo run --features parity --bin parity -- --update   # refresh baseline
+//! cargo run --features parity --bin parity -- --update   # refresh baselines
+//! cargo run --features parity --bin parity -- --dump     # TSV for the report
 //! ```
 //!
-//! Exit code is non-zero if a **new** read delta (not in the baseline) or any
-//! write mismatch is found.
+//! The write side (`write.rs`) edits every corpus file exiftool-rs writes, with
+//! both tools, and verifies each output by re-reading it.
+//!
+//! Exit code is non-zero if a **new** read delta or a **new** failing write
+//! case (neither in its baseline) is found.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+mod write;
 
 /// `Group1:Tag` keys whose values are machine/tool state, not metadata parity.
 const EXCLUDE: &[&str] = &[
@@ -63,6 +69,7 @@ fn main() {
     let mut images = "tests/images".to_string();
     let mut update = false;
     let mut dump = false;
+    let mut dump_write = false;
     let mut show: Option<String> = None;
     let mut i = 0;
     while i < args.len() {
@@ -81,6 +88,7 @@ fn main() {
             }
             "--update" => update = true,
             "--dump" => dump = true,
+            "--dump-write" => dump_write = true,
             "--show" => {
                 show = args.get(i + 1).cloned();
                 i += 1;
@@ -92,8 +100,9 @@ fn main() {
                      --exiftool-path <d>  use a local ExifTool checkout instead\n\
                      --images <dir>       corpus (default tests/images)\n\
                      --show <file>        tag-by-tag ExifTool vs exiftool-rs for one file\n\
-                     --dump               TSV of the whole corpus (file, tag, both values, iso)\n\
-                     --update             refresh the read baseline",
+                     --dump               TSV of the whole corpus (read section, then write section)\n\
+                     --dump-write         TSV of the write matrix only\n\
+                     --update             refresh the read and write baselines",
                     exiftool_rs::EXIFTOOL_VERSION
                 );
                 return;
@@ -128,6 +137,11 @@ fn main() {
     }
     if dump {
         dump_all(&script, Path::new(&images));
+        write::dump(&script, Path::new(&images));
+        return;
+    }
+    if dump_write {
+        write::dump(&script, Path::new(&images));
         return;
     }
     println!(
@@ -141,13 +155,15 @@ fn main() {
     );
 
     let read_new = read_parity(&script, Path::new(&images), update);
-    let write_bad = write_parity(&script, Path::new(&images));
+    let write_bad = write::check(&script, Path::new(&images), update);
 
     println!();
     if read_new == 0 && write_bad == 0 {
-        println!("PARITY OK — no new read deltas, no write mismatches.");
+        println!("PARITY OK — no new read deltas, no new write failures.");
     } else {
-        eprintln!("PARITY FAILED — {read_new} new read delta(s), {write_bad} write mismatch(es).");
+        eprintln!(
+            "PARITY FAILED — {read_new} new read delta(s), {write_bad} new write failure(s)."
+        );
         std::process::exit(1);
     }
 }
@@ -552,130 +568,6 @@ fn save_baseline(current: &BTreeMap<String, (String, String)>) {
     std::fs::write(READ_BASELINE, s).expect("write baseline");
 }
 
-// ── write parity ────────────────────────────────────────────────────────────
-
-/// Edits applied to `IPTC.jpg` — same matrix as `tests/write_parity.rs`, but
-/// diffed live against Perl. Returns the count of mismatching cases.
-fn write_parity(script: &Path, images: &Path) -> usize {
-    let src = images.join("IPTC.jpg");
-    if !src.exists() {
-        println!("write: IPTC.jpg absent — skipped");
-        return 0;
-    }
-    // id + list of (group-qualified tag, value) edits; None deletes.
-    type WriteCase = (
-        &'static str,
-        &'static [(&'static str, Option<&'static str>)],
-    );
-    let cases: &[WriteCase] = &[
-        ("set-accent", &[("IPTC:By-line", Some("Martín"))]),
-        ("delete", &[("IPTC:By-line", None)]),
-        ("add", &[("IPTC:City", Some("Paris"))]),
-        (
-            "multi",
-            &[
-                ("IPTC:By-line", Some("Ada")),
-                ("IPTC:City", Some("London")),
-                ("IPTC:Headline", None),
-            ],
-        ),
-    ];
-    let mut bad = 0;
-    let mut rows: Vec<Vec<String>> = Vec::new();
-    for (id, ops) in cases {
-        let ours = write_and_snapshot(&src, ops, WriteWith::Ours);
-        let theirs = write_and_snapshot(&src, ops, WriteWith::Perl(script));
-        let iso = ours == theirs;
-        if !iso {
-            bad += 1;
-            eprintln!("write [{id}] MISMATCH\n--- ours ---\n{ours}--- perl ---\n{theirs}");
-        }
-        let edits = ops
-            .iter()
-            .map(|(t, v)| match v {
-                Some(v) => format!("{t}={v}"),
-                None => format!("{t}=∅"),
-            })
-            .collect::<Vec<_>>()
-            .join(" ");
-        rows.push(vec![
-            (*id).to_string(),
-            edits,
-            digest_of(&ours).to_string(),
-            digest_of(&theirs).to_string(),
-            if iso { "✓".into() } else { "✗".into() },
-        ]);
-    }
-    println!(
-        "\nWRITE PARITY — input {}, output compared by CurrentIPTCDigest",
-        src.display()
-    );
-    println!(
-        "  exiftool-rs: set_new_value + write_info (in-process)\n  \
-         ExifTool:    perl <exiftool> -charset UTF8 -overwrite_original <edits> <copy>"
-    );
-    print_table(&["Case", "Edits", "exiftool-rs", "ExifTool", "ISO"], &rows);
-    bad
-}
-
-enum WriteWith<'a> {
-    Ours,
-    Perl(&'a Path),
-}
-
-fn write_and_snapshot(src: &Path, ops: &[(&str, Option<&str>)], with: WriteWith) -> String {
-    let tmp = std::env::temp_dir().join("exiftool_rs_parity_wp.jpg");
-    std::fs::copy(src, &tmp).expect("copy");
-    match with {
-        WriteWith::Ours => {
-            let mut et = exiftool_rs::ExifTool::new();
-            for (tag, val) in ops {
-                et.set_new_value(tag, *val);
-            }
-            let p = tmp.to_str().unwrap();
-            et.write_info(p, p).expect("ours write");
-        }
-        WriteWith::Perl(script) => {
-            let mut cmd = Command::new("perl");
-            cmd.arg(script)
-                .args(["-charset", "UTF8", "-overwrite_original"]);
-            for (tag, val) in ops {
-                match val {
-                    Some(v) => cmd.arg(format!("-{tag}={v}")),
-                    None => cmd.arg(format!("-{tag}=")),
-                };
-            }
-            let out = cmd.arg(&tmp).output().expect("perl write");
-            assert!(out.status.success(), "perl write failed");
-        }
-    }
-    let snap = snapshot(&tmp);
-    std::fs::remove_file(&tmp).ok();
-    snap
-}
-
-fn snapshot(path: &Path) -> String {
-    let et = exiftool_rs::ExifTool::new();
-    let tags = et.extract_info(path).expect("read");
-    let digest = tags
-        .iter()
-        .find(|t| t.name == "CurrentIPTCDigest")
-        .map(|t| t.print_value.as_str())
-        .unwrap_or("<none>");
-    let mut out = format!("DIGEST {digest}\n");
-    for t in tags.iter().filter(|t| t.group.family0 == "IPTC") {
-        out.push_str(&format!("{}: {}\n", t.name, t.print_value));
-    }
-    out
-}
-
-fn digest_of(snap: &str) -> &str {
-    snap.lines()
-        .next()
-        .and_then(|l| l.strip_prefix("DIGEST "))
-        .unwrap_or("?")
-}
-
 // ── util ────────────────────────────────────────────────────────────────────
 
 /// Render an aligned box table. Cells wider than `MAX` chars are ellipsised.
@@ -707,7 +599,7 @@ fn print_table(headers: &[&str], rows: &[Vec<String>]) {
         let mut s = String::new();
         s.push(l);
         for (i, wi) in w.iter().enumerate() {
-            s.extend(std::iter::repeat('─').take(wi + 2));
+            s.extend(std::iter::repeat_n('─', wi + 2));
             s.push(if i + 1 == cols { r } else { m });
         }
         s
@@ -718,7 +610,7 @@ fn print_table(headers: &[&str], rows: &[Vec<String>]) {
             let pad = w[i] - c.chars().count();
             s.push(' ');
             s.push_str(c);
-            s.extend(std::iter::repeat(' ').take(pad));
+            s.extend(std::iter::repeat_n(' ', pad));
             s.push_str(" │");
         }
         s

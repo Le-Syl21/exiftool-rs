@@ -12,7 +12,7 @@
 //! Default checkout: /home/sylvain/dev/exiftool.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use exiftool_rs::tags::conv_expr::{eval_composite, eval_with, ParseState, Val};
 
@@ -111,9 +111,12 @@ fn perl_verdict(expr: &str) -> Option<Option<String>> {
     })
 }
 
+/// Expressions with their occurrence count, and where each one is written.
+type Collected = (Vec<(usize, String)>, HashMap<String, Vec<String>>);
+
 /// Every PrintConv/ValueConv written as a Perl expression, with its occurrence
 /// count. Hash-table conversions are not expressions and are not counted.
-fn collect(lib: &PathBuf) -> (Vec<(usize, String)>, HashMap<String, Vec<String>>) {
+fn collect(lib: &Path) -> Collected {
     let mut counts: HashMap<String, usize> = HashMap::new();
     // Where each expression is written, so a claim about one can be checked
     // against the Perl in a second rather than taken on trust.
