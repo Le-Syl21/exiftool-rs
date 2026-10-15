@@ -78,6 +78,10 @@ pub const IGNORED: &[(&str, &str)] = &[
         "file offset of the embedded image; depends on the writer's block layout",
     ),
     (
+        "MPImageStart",
+        "file offset of an MPF image (MPF header position + stored offset); depends on the writer's block layout",
+    ),
+    (
         "StripOffsets",
         "file offsets of the image data; depend on the writer's block layout",
     ),

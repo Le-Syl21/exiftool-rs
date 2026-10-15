@@ -15,7 +15,7 @@ use crate::tag::{Tag, TagGroup, MAIN_DOCUMENT};
 use crate::value::Value;
 use crate::writer::{
     iptc_writer, jpeg_writer, matroska_writer, mp4_writer, pdf_writer, png_writer, psd_writer,
-    tiff_writer, webp_writer, xmp_writer,
+    tiff_writer, webp_writer,
 };
 
 /// Processing options for metadata extraction.
@@ -678,34 +678,18 @@ impl ExifTool {
         let mut iptc_values: Vec<&NewValue> = Vec::new();
         let mut comment_value: Option<&str> = None;
         let mut remove_exif = false;
-        let mut remove_xmp = false;
-        let mut remove_iptc = false;
         let mut remove_comment = false;
 
         for nv in &self.new_values {
             let group = nv.group.as_deref().unwrap_or("");
             let group_upper = group.to_uppercase();
 
-            // Check for group deletion
-            if nv.value.is_none() && is_all(&nv.tag) {
-                match group_upper.as_str() {
-                    // EXIF group deletions (`EXIF:all`, `GPS:all`, ...) go
-                    // to the EXIF editor with the other EXIF requests.
-                    "XMP" => {
-                        remove_xmp = true;
-                        continue;
-                    }
-                    "IPTC" => {
-                        remove_iptc = true;
-                        continue;
-                    }
-                    _ => {}
-                }
-            }
+            // Group deletions (`EXIF:all`, `XMP:all`, `IPTC:all`) go to
+            // their editors with the other requests of the group.
 
             match group_upper.as_str() {
-                "XMP" => xmp_values.push(nv),
                 "IPTC" => iptc_values.push(nv),
+                g if g == "XMP" || g.starts_with("XMP-") => xmp_values.push(nv),
                 "EXIF" | "IFD0" | "EXIFIFD" | "GPS" => exif_values.push(nv),
                 "" => {
                     // Auto-detect best group based on tag name
@@ -716,6 +700,16 @@ impl ExifTool {
                             comment_value = nv.value.as_deref();
                         }
                     } else if is_xmp_tag(&nv.tag) {
+                        xmp_values.push(nv);
+                    } else if crate::writer::exif_edit::tag_spec(&nv.tag).is_none()
+                        && iptc_writer::lookup_tag(&nv.tag).is_some()
+                    {
+                        // Not an EXIF tag: IPTC comes next in ExifTool's
+                        // order of preference, then XMP.
+                        iptc_values.push(nv);
+                    } else if crate::writer::exif_edit::tag_spec(&nv.tag).is_none()
+                        && crate::writer::xmp_tags::is_known(&nv.tag)
+                    {
                         xmp_values.push(nv);
                     } else {
                         exif_values.push(nv);
@@ -742,89 +736,24 @@ impl ExifTool {
             }
         }
 
-        // Build new XMP data
-        let new_xmp = if !xmp_values.is_empty() {
-            Some(self.build_new_xmp(&xmp_values))
-        } else {
-            None
-        };
-
-        // Build new IPTC data by merging changes into the file's existing
-        // IPTC (issue #7), so writing one dataset doesn't drop the rest.
-        let new_iptc_data = if iptc_values.is_empty() {
-            None
-        } else {
-            let existing = jpeg_writer::extract_jpeg_iptc_iim(data);
-            self.build_new_iptc(existing.as_deref(), &iptc_values)
-        };
-
         // Rewrite JPEG
-        jpeg_writer::write_jpeg(
+        let out = jpeg_writer::write_jpeg(
             data,
             new_exif.as_deref(),
-            new_xmp.as_deref(),
-            new_iptc_data.as_deref(),
+            None,
+            None,
             comment_value,
             remove_exif,
-            remove_xmp,
-            remove_iptc,
+            false,
+            false,
             remove_comment,
+        )?;
+        // IPTC (APP13) and XMP (APP1, extended XMP) are edited in place.
+        crate::writer::jpeg_iptc_xmp::rewrite(
+            &out,
+            &iptc_changes(&iptc_values),
+            &xmp_changes(&xmp_values),
         )
-    }
-
-    /// Build the IPTC-IIM block by merging queued changes into the file's
-    /// existing IPTC instead of replacing it (issue #7). Datasets not being
-    /// changed are preserved (including `CodedCharacterSet`); a change updates
-    /// its dataset, and a `None` value deletes it. String values are encoded
-    /// in the block's charset — Latin-1 by default, UTF-8 if the existing IPTC
-    /// declares `CodedCharacterSet=UTF8`.
-    fn build_new_iptc(&self, existing: Option<&[u8]>, values: &[&NewValue]) -> Option<Vec<u8>> {
-        let mut records = existing.map(iptc_writer::parse_iim).unwrap_or_default();
-        // ESC % G (1B 25 47) in the CodedCharacterSet dataset (1:90) → UTF-8.
-        let utf8 = records.iter().any(|r| {
-            r.record == 1 && r.dataset == 90 && r.data.windows(3).any(|w| w == [0x1B, 0x25, 0x47])
-        });
-        for nv in values {
-            let Some((record, dataset)) = iptc_writer::tag_name_to_iptc(&nv.tag) else {
-                continue;
-            };
-            match nv.value.as_deref() {
-                // Set: update the dataset in place (ExifTool preserves the
-                // file's original dataset order — it does not re-sort), drop
-                // any duplicates, or append if the tag is new.
-                Some(value) => {
-                    let data = if utf8 {
-                        value.as_bytes().to_vec()
-                    } else {
-                        crate::encoding::encode_latin1(value)
-                    };
-                    let mut updated = false;
-                    records.retain_mut(|r| {
-                        if r.record == record && r.dataset == dataset {
-                            if updated {
-                                return false; // collapse repeated datasets to one
-                            }
-                            r.data = data.clone();
-                            updated = true;
-                        }
-                        true
-                    });
-                    if !updated {
-                        records.push(iptc_writer::IptcRecord {
-                            record,
-                            dataset,
-                            data,
-                        });
-                    }
-                }
-                // Delete: remove all datasets for this tag.
-                None => records.retain(|r| !(r.record == record && r.dataset == dataset)),
-            }
-        }
-        if records.is_empty() {
-            return None;
-        }
-        Some(iptc_writer::build_iptc(&records))
     }
 
     /// Write metadata changes to PNG data: PNG text chunks for ungrouped
@@ -890,24 +819,32 @@ impl ExifTool {
             }
         }
 
-        // IPTC: merged into the existing block (the JPEG merge rules).
-        let iptc = if delete_iptc && iptc_values.iter().all(|nv| nv.value.is_none()) {
-            ResourceChange::Remove
-        } else if iptc_values.is_empty() {
+        // IPTC: edited in place (WriteIPTC), XMP: edited in place.
+        let mut iptc_req = iptc_changes(&iptc_values);
+        iptc_req.delete_all |= delete_iptc;
+        let iptc = if iptc_req.is_empty() {
             ResourceChange::Keep
         } else {
-            let existing = if delete_iptc {
-                None
+            let old = psd_writer::resource(data, psd_writer::IPTC)?;
+            let base = if iptc_req.delete_all {
+                &[][..]
             } else {
-                psd_writer::resource(data, psd_writer::IPTC)?
+                old.unwrap_or_default()
             };
-            match self.build_new_iptc(existing, &iptc_values) {
-                Some(block) => ResourceChange::Replace(block),
-                None => ResourceChange::Remove,
+            let new = iptc_writer::edit_iptc(base, &iptc_req.tags)?;
+            if new.is_empty() {
+                if old.is_some() {
+                    ResourceChange::Remove
+                } else {
+                    ResourceChange::Keep
+                }
+            } else if old == Some(new.as_slice()) {
+                ResourceChange::Keep
+            } else {
+                ResourceChange::Replace(new)
             }
         };
 
-        // XMP: edited in place.
         let (_, xmp_changes) = item_changes(&xmp_values);
         let xmp = if xmp_changes.is_empty() {
             ResourceChange::Keep
@@ -1095,46 +1032,6 @@ impl ExifTool {
     fn write_tiff(&self, data: &[u8], file_type: FileType) -> Result<Vec<u8>> {
         let (exif_changes, _) = item_changes(&self.new_values);
         tiff_writer::write_tiff(data, &exif_changes, file_type)
-    }
-
-    /// Build new XMP data from queued values.
-    fn build_new_xmp(&self, values: &[&NewValue]) -> Vec<u8> {
-        let mut properties = Vec::new();
-
-        for nv in values {
-            let value_str = match &nv.value {
-                Some(v) => v.clone(),
-                None => continue,
-            };
-
-            let ns = nv.group.as_deref().unwrap_or("dc").to_lowercase();
-            let ns = if ns == "xmp" { "xmp".to_string() } else { ns };
-
-            let prop_type = match nv.tag.to_lowercase().as_str() {
-                "title" | "description" | "rights" => xmp_writer::XmpPropertyType::LangAlt,
-                "subject" | "keywords" => xmp_writer::XmpPropertyType::Bag,
-                "creator" => xmp_writer::XmpPropertyType::Seq,
-                _ => xmp_writer::XmpPropertyType::Simple,
-            };
-
-            let values = if matches!(
-                prop_type,
-                xmp_writer::XmpPropertyType::Bag | xmp_writer::XmpPropertyType::Seq
-            ) {
-                value_str.split(',').map(|s| s.trim().to_string()).collect()
-            } else {
-                vec![value_str]
-            };
-
-            properties.push(xmp_writer::XmpProperty {
-                namespace: ns,
-                property: nv.tag.clone(),
-                values,
-                prop_type,
-            });
-        }
-
-        xmp_writer::build_xmp(&properties).into_bytes()
     }
 
     // ================================================================
@@ -3148,9 +3045,7 @@ fn item_changes(
             }
             ("" | "*" | "all", Some(v)) => {
                 if !exif_set(&mut exif, None, &nv.tag, v) {
-                    if let Some(s) = xmp_target(None, &nv.tag, v) {
-                        xmp_sets.push(s);
-                    }
+                    xmp_request(&mut xmp, &mut xmp_sets, "xmp", nv);
                 }
             }
             ("exif", None) if all => exif.delete_all = true,
@@ -3159,13 +3054,6 @@ fn item_changes(
                 exif_set(&mut exif, None, &nv.tag, v);
             }
             ("makernotes", None) if all => exif.delete_maker_notes = true,
-            ("xmp", None) if all => xmp.delete_all = true,
-            ("xmp", None) => xmp.delete_tags.push((None, tag_lc)),
-            ("xmp", Some(v)) => {
-                if let Some(s) = xmp_target(None, &nv.tag, v) {
-                    xmp_sets.push(s);
-                }
-            }
             (other, _) => {
                 if let Some(ifd) = Ifd::from_group(other) {
                     match &nv.value {
@@ -3176,105 +3064,118 @@ fn item_changes(
                             exif_set(&mut exif, Some(ifd), &nv.tag, v);
                         }
                     }
-                } else if let Some(prefix) = other.strip_prefix("xmp-") {
-                    match &nv.value {
-                        None if all => xmp.delete_groups.push(prefix.to_string()),
-                        None => xmp.delete_tags.push((Some(prefix.to_string()), tag_lc)),
-                        Some(v) => {
-                            if let Some(s) = xmp_target(Some(prefix), &nv.tag, v) {
-                                xmp_sets.push(s);
-                            }
-                        }
-                    }
+                } else {
+                    xmp_request(&mut xmp, &mut xmp_sets, other, nv);
                 }
             }
         }
     }
+    finish_xmp_sets(&mut xmp, xmp_sets);
+    (exif, xmp)
+}
 
-    // Several values for one list property become its items.
-    for s in xmp_sets {
+/// The XMP edits of requests routed to XMP (group `XMP`, `XMP-<ns>`, or an
+/// ungrouped tag the caller chose XMP for).
+fn xmp_changes(values: &[&NewValue]) -> crate::writer::xmp_edit::XmpChanges {
+    let mut xmp = crate::writer::xmp_edit::XmpChanges {
+        toolkit: format!("exiftool-rs {}", env!("CARGO_PKG_VERSION")),
+        ..Default::default()
+    };
+    let mut sets = Vec::new();
+    for nv in values {
+        let g = nv.group.as_deref().unwrap_or("xmp").to_ascii_lowercase();
+        let g = if g.is_empty() { "xmp".to_string() } else { g };
+        xmp_request(&mut xmp, &mut sets, &g, nv);
+    }
+    finish_xmp_sets(&mut xmp, sets);
+    xmp
+}
+
+/// Add one request to the XMP edits, with ExifTool's group semantics:
+/// `group` is `xmp` (family 0) or `xmp-<prefix>` (family 1), lower case.
+/// Requests for other groups are left out.
+fn xmp_request(
+    xmp: &mut crate::writer::xmp_edit::XmpChanges,
+    sets: &mut Vec<crate::writer::xmp_edit::XmpSet>,
+    group: &str,
+    nv: &NewValue,
+) {
+    let tag_lc = nv.tag.to_ascii_lowercase();
+    let all = is_all(&nv.tag);
+    let prefix = match group {
+        "xmp" => None,
+        g => match g.strip_prefix("xmp-") {
+            Some(p) => Some(p),
+            None => return,
+        },
+    };
+    match (prefix, &nv.value) {
+        (None, None) if all => xmp.delete_all = true,
+        (None, None) => xmp.delete_tags.push((None, tag_lc)),
+        (Some(p), None) if all => xmp.delete_groups.push(p.to_string()),
+        (Some(p), None) => xmp.delete_tags.push((Some(p.to_string()), tag_lc)),
+        (p, Some(v)) => {
+            if let Some(t) = crate::writer::xmp_tags::resolve(p, &nv.tag, v) {
+                sets.extend(t.create);
+                xmp.edit_only.extend(t.edit_only);
+            }
+        }
+    }
+}
+
+/// Several values for one list property become its items.
+fn finish_xmp_sets(
+    xmp: &mut crate::writer::xmp_edit::XmpChanges,
+    sets: Vec<crate::writer::xmp_edit::XmpSet>,
+) {
+    use crate::writer::xmp_edit::XmpValueKind;
+    for s in sets {
         match xmp
             .set
             .iter_mut()
             .find(|x| x.uri == s.uri && x.property == s.property)
         {
-            Some(x)
-                if matches!(
-                    x.kind,
-                    crate::writer::xmp_edit::XmpValueKind::Bag
-                        | crate::writer::xmp_edit::XmpValueKind::Seq
-                ) =>
-            {
+            Some(x) if matches!(x.kind, XmpValueKind::Bag | XmpValueKind::Seq) => {
                 x.values.extend(s.values)
             }
             Some(x) => *x = s,
             None => xmp.set.push(s),
         }
     }
-    (exif, xmp)
 }
 
-/// The XMP property a write goes to: `prefix` is the group's namespace
-/// (`XMP-dc` gives `dc`), or `None` for a plain `XMP:` request, which
-/// takes the namespace ExifTool prefers for the tag.
-fn xmp_target(
-    prefix: Option<&str>,
-    tag: &str,
-    value: &str,
-) -> Option<crate::writer::xmp_edit::XmpSet> {
-    use crate::writer::xmp_edit::{XmpSet, XmpValueKind};
-    let tag_lc = tag.to_ascii_lowercase();
-    let prefix = match prefix {
-        Some(p) => p.to_ascii_lowercase(),
-        None => match tag_lc.as_str() {
-            "title" | "description" | "subject" | "creator" | "rights" => "dc".into(),
-            "rating" | "label" | "createdate" | "modifydate" | "metadatadate" | "creatortool" => {
-                "xmp".into()
+/// The IPTC edits of requests routed to IPTC. A tag ExifTool does not know
+/// or a value it would reject is left out (and so reported unapplied).
+fn iptc_changes(values: &[&NewValue]) -> crate::writer::photoshop_irb::IptcChanges {
+    use crate::writer::iptc_writer::{check_value, lookup_tag, IptcRequest};
+    let mut out = crate::writer::photoshop_irb::IptcChanges::default();
+    for nv in values {
+        if is_all(&nv.tag) {
+            if nv.value.is_none() {
+                out.delete_all = true;
+                out.tags.clear();
             }
-            _ => return None,
-        },
-    };
-    // ExifTool's short group names for two IPTC namespaces.
-    let canonical = match prefix.as_str() {
-        "iptccore" => "Iptc4xmpCore",
-        "iptcext" => "Iptc4xmpExt",
-        "dc" => "dc",
-        "xmp" => "xmp",
-        "xmpmm" => "xmpMM",
-        "xmprights" => "xmpRights",
-        "tiff" => "tiff",
-        "exif" => "exif",
-        "exifex" => "exifEX",
-        "aux" => "aux",
-        "photoshop" => "photoshop",
-        "crs" => "crs",
-        "lr" => "lr",
-        "pdf" => "pdf",
-        "pdfx" => "pdfx",
-        _ => return None,
-    };
-    let uri = crate::writer::xmp_writer::namespace_uri(canonical)?;
-    // Dublin Core properties are lower case; the others are named like the tag.
-    let property = if canonical == "dc" {
-        tag_lc.clone()
-    } else {
-        let mut c = tag.chars();
-        let first = c.next()?;
-        first.to_uppercase().chain(c).collect()
-    };
-    let kind = match (canonical, tag_lc.as_str()) {
-        ("dc", "title" | "description" | "rights") => XmpValueKind::LangAlt,
-        ("dc", "subject") | ("lr", "hierarchicalsubject") => XmpValueKind::Bag,
-        ("dc", "creator") => XmpValueKind::Seq,
-        _ => XmpValueKind::Simple,
-    };
-    Some(XmpSet {
-        uri: uri.to_string(),
-        prefix: canonical.to_string(),
-        property,
-        values: vec![value.to_string()],
-        kind,
-    })
+            continue;
+        }
+        let Some(tag) = lookup_tag(&nv.tag) else {
+            continue;
+        };
+        match nv.value.as_deref() {
+            None => out.tags.push(IptcRequest {
+                tag,
+                values: Vec::new(),
+            }),
+            Some(v) => {
+                if let Ok(v) = check_value(tag, v) {
+                    out.tags.push(IptcRequest {
+                        tag,
+                        values: vec![v],
+                    });
+                }
+            }
+        }
+    }
+    out
 }
 
 /// Convert a tag value to a safe filename.

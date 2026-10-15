@@ -1,21 +1,42 @@
 DIGEST a76beaae8db2c169c94eac7790547f30
-ApplicationRecordVersion: 2
-Caption-Abstract: A witty caption
-Writer-Editor: I wrote it
-Headline: No headline
-SpecialInstructions: What instructions
-By-line: Phil Harvey
-By-lineTitle: My Position
-Credit: My Credit
-ObjectName: Test IPTC picture
-DateCreated: 2004:02:26
-City: Paris
-Province-State: Ont
-Country-PrimaryLocationName: Canada
-OriginalTransmissionReference: What is a transmission reference
-Category: 1
-SupplementalCategories: amazing, image, utilities
-Keywords: ExifTool, Test, IPTC
-CopyrightNotice: Copyright 2004 Phil Harvey
-Urgency: 8 (least urgent)
-Source: I'm the source
+ExifTool:Warning: IPTCDigest is not current. XMP may be out of sync
+IPTC:ApplicationRecordVersion: 2
+IPTC:By-line: Phil Harvey
+IPTC:By-lineTitle: My Position
+IPTC:Caption-Abstract: A witty caption
+IPTC:Category: 1
+IPTC:City: Paris
+IPTC:CopyrightNotice: Copyright 2004 Phil Harvey
+IPTC:Country-PrimaryLocationName: Canada
+IPTC:Credit: My Credit
+IPTC:DateCreated: 2004:02:26
+IPTC:Headline: No headline
+IPTC:Keywords: ExifTool, Test, IPTC
+IPTC:ObjectName: Test IPTC picture
+IPTC:OriginalTransmissionReference: What is a transmission reference
+IPTC:Province-State: Ont
+IPTC:Source: I'm the source
+IPTC:SpecialInstructions: What instructions
+IPTC:SupplementalCategories: amazing, image, utilities
+IPTC:Urgency: 8 (least urgent)
+IPTC:Writer-Editor: I wrote it
+Photoshop:CopyrightFlag: False
+Photoshop:DisplayedUnitsX: inches
+Photoshop:DisplayedUnitsY: inches
+Photoshop:GlobalAltitude: 30
+Photoshop:GlobalAngle: 30
+Photoshop:HasRealMergedData: Yes
+Photoshop:IPTCDigest: 05ad1770b1a95f1f9788ac995fa647da
+Photoshop:NumSlices: 1
+Photoshop:PhotoshopFormat: Standard
+Photoshop:PhotoshopQuality: 7
+Photoshop:PrintPosition: 0 0
+Photoshop:PrintScale: 1
+Photoshop:PrintStyle: Centered
+Photoshop:ReaderName: Adobe Photoshop 7.0
+Photoshop:SlicesGroupName: IPTC
+Photoshop:URL: https://exiftool.org/
+Photoshop:URL_List: 
+Photoshop:WriterName: Adobe Photoshop
+Photoshop:XResolution: 72
+Photoshop:YResolution: 72

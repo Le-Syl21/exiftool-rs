@@ -7,10 +7,12 @@
 //! checked the rest survived, and no write was ever compared to ExifTool.
 //!
 //! For each case we apply an edit, read the result back with our own reader,
-//! and snapshot it as `CurrentIPTCDigest` + the full IPTC tag listing. The
-//! digest is an MD5 of the raw IPTC block, so a matching digest proves the
-//! bytes we wrote are identical to what ExifTool wrote; the tag listing gives
-//! a readable diff (and catches any dropped/reordered dataset).
+//! and snapshot it as `CurrentIPTCDigest` + the IPTC, Photoshop and XMP tags
+//! (sorted) and any warning. The digest is an MD5 of the raw IPTC block, so a
+//! matching digest proves the bytes we wrote are identical to what ExifTool
+//! wrote (dataset order and mandatory version included); the tag listing
+//! gives a readable diff and catches a dropped Photoshop resource or XMP
+//! property, or one written to the wrong namespace.
 //!
 //! Baselines live in `tests/expected_write/` and are generated from Perl
 //! ExifTool. Normal runs need no Perl — they compare against those snapshots.
@@ -68,23 +70,70 @@ const CASES: &[Case] = &[
             ("IPTC:Headline", None),
         ],
     },
+    // A file without IPTC: a new APP13 block, with the mandatory
+    // ApplicationRecordVersion ExifTool adds after the tag.
+    Case {
+        id: "create_iptc_block",
+        image: "Canon.jpg",
+        ops: &[("IPTC:City", Some("Paris"))],
+    },
+    // IPTC:all goes, the other Photoshop resources (and IPTCDigest) stay.
+    Case {
+        id: "delete_all_iptc",
+        image: "IPTC.jpg",
+        ops: &[("IPTC:all", None)],
+    },
+    // A list tag: every old value is replaced.
+    Case {
+        id: "replace_keywords",
+        image: "PhotoMechanic.jpg",
+        ops: &[("IPTC:Keywords", Some("one"))],
+    },
+    // XMP:Description goes to XMP-dc (XMP-xmp:Description is `Avoid`), in a
+    // UTF-16 packet whose other properties stay.
+    Case {
+        id: "xmp_description_utf16",
+        image: "XMP.jpg",
+        ops: &[("XMP:Description", Some("New description"))],
+    },
+    // The extended XMP is read with the standard packet; XMP:Title creates
+    // dc:title and also replaces the pdf:Title the extended part holds.
+    Case {
+        id: "xmp_title_extended",
+        image: "ExtendedXMP.jpg",
+        ops: &[("XMP:Title", Some("New title"))],
+    },
+    // XMP:all removes the extended XMP too.
+    Case {
+        id: "xmp_delete_all_extended",
+        image: "ExtendedXMP.jpg",
+        ops: &[("XMP:all", None)],
+    },
 ];
 
-/// `CurrentIPTCDigest` + every IPTC tag (in read order), as our reader sees
-/// the file. Deterministic, and a superset of what the bug would corrupt.
+/// `CurrentIPTCDigest`, then the IPTC, Photoshop and XMP tags and the
+/// warnings, sorted, as our reader sees the file.
 fn snapshot(path: &Path) -> String {
-    let et = ExifTool::new();
+    // Every instance (`-a`): XMP-pdf:Title is otherwise hidden by XMP-dc:Title.
+    let mut et = ExifTool::new();
+    et.options_mut().duplicates = true;
     let tags = et.extract_info(path).expect("read written file");
     let digest = tags
         .iter()
         .find(|t| t.name == "CurrentIPTCDigest")
         .map(|t| t.print_value.as_str())
         .unwrap_or("<none>");
-    let mut out = format!("DIGEST {digest}\n");
-    for t in tags.iter().filter(|t| t.group.family0 == "IPTC") {
-        out.push_str(&format!("{}: {}\n", t.name, t.print_value));
-    }
-    out
+    let mut lines: Vec<String> = tags
+        .iter()
+        .filter(|t| {
+            matches!(t.group.family0.as_str(), "IPTC" | "Photoshop" | "XMP")
+                && t.name != "XMPToolkit"
+                || t.name == "Warning"
+        })
+        .map(|t| format!("{}:{}: {}\n", t.group.family1, t.name, t.print_value))
+        .collect();
+    lines.sort();
+    format!("DIGEST {digest}\n{}", lines.concat())
 }
 
 /// Apply the edits with exiftool-rs (in place).

@@ -33,6 +33,7 @@ pub enum XmpValueKind {
     LangAlt,
     Bag,
     Seq,
+    Alt,
 }
 
 /// A property to write.
@@ -58,6 +59,9 @@ pub struct XmpChanges {
     /// (lower-case standard prefix or None, lower-case tag name).
     pub delete_tags: Vec<(Option<String>, String)>,
     pub set: Vec<XmpSet>,
+    /// Properties replaced only where the packet has them (ExifTool's
+    /// non-preferred namespaces for a tag written as `XMP:Tag`).
+    pub edit_only: Vec<XmpSet>,
     /// The `x:xmptk` value to stamp on a packet this edit changes.
     pub toolkit: String,
 }
@@ -68,6 +72,7 @@ impl XmpChanges {
             && self.delete_groups.is_empty()
             && self.delete_tags.is_empty()
             && self.set.is_empty()
+            && self.edit_only.is_empty()
     }
 }
 
@@ -304,6 +309,8 @@ struct Prop {
     local: String,
     /// Text to remove when the property is deleted.
     span: Range<usize>,
+    /// The value of an attribute property (None for an element).
+    attr_value: Option<Range<usize>>,
 }
 
 /// ExifTool's group prefix and tag name for a property, lower-cased.
@@ -337,11 +344,11 @@ fn serialize_property(qname: &str, set: &XmpSet, indent: &str) -> String {
                 escape(v)
             ));
         }
-        XmpValueKind::Bag | XmpValueKind::Seq => {
-            let c = if set.kind == XmpValueKind::Bag {
-                "rdf:Bag"
-            } else {
-                "rdf:Seq"
+        XmpValueKind::Bag | XmpValueKind::Seq | XmpValueKind::Alt => {
+            let c = match set.kind {
+                XmpValueKind::Bag => "rdf:Bag",
+                XmpValueKind::Seq => "rdf:Seq",
+                _ => "rdf:Alt",
             };
             s.push_str(&format!("{indent}<{qname}>\n{indent} <{c}>\n"));
             for v in &set.values {
@@ -368,6 +375,42 @@ fn skeleton(toolkit: &str) -> String {
     )
 }
 
+/// The text of a packet: UTF-8, or UTF-16 (either byte order), which
+/// ExifTool reads too and writes back as UTF-8.
+fn packet_text(x: &[u8]) -> Result<String> {
+    if let Ok(s) = std::str::from_utf8(x) {
+        return Ok(s.to_string());
+    }
+    let (body, big) = if let Some(r) = x.strip_prefix(b"\xfe\xff") {
+        (r, true)
+    } else if let Some(r) = x.strip_prefix(b"\xff\xfe") {
+        (r, false)
+    } else if x.len() >= 2 && x[0] == 0 && x[1] != 0 {
+        (x, true)
+    } else if x.len() >= 2 && x[0] != 0 && x[1] == 0 {
+        (x, false)
+    } else {
+        return Err(malformed("not UTF-8"));
+    };
+    utf16(body, big)
+}
+
+fn utf16(body: &[u8], big: bool) -> Result<String> {
+    if body.len() % 2 != 0 {
+        return Err(malformed("odd-length UTF-16"));
+    }
+    let units = body.chunks(2).map(|c| {
+        if big {
+            u16::from_be_bytes([c[0], c[1]])
+        } else {
+            u16::from_le_bytes([c[0], c[1]])
+        }
+    });
+    char::decode_utf16(units)
+        .collect::<std::result::Result<String, _>>()
+        .map_err(|_| malformed("bad UTF-16"))
+}
+
 /// Apply `changes` to the packet `existing` (`None` when the file has none).
 pub fn edit_xmp(existing: Option<&[u8]>, changes: &XmpChanges) -> Result<XmpOutcome> {
     if changes.is_empty() {
@@ -377,9 +420,7 @@ pub fn edit_xmp(existing: Option<&[u8]>, changes: &XmpChanges) -> Result<XmpOutc
     // Deleting the packet and writing properties in the same request leaves
     // only the new properties.
     let base: String = match existing {
-        Some(x) if !changes.delete_all && !x.is_empty() => std::str::from_utf8(x)
-            .map_err(|_| malformed("not UTF-8"))?
-            .to_string(),
+        Some(x) if !changes.delete_all && !x.is_empty() => packet_text(x)?,
         _ => {
             if changes.set.is_empty() {
                 return Ok(if had_xmp && changes.delete_all {
@@ -421,6 +462,7 @@ pub fn edit_xmp(existing: Option<&[u8]>, changes: &XmpChanges) -> Result<XmpOutc
                     uri,
                     local: l.to_string(),
                     span: a.span.clone(),
+                    attr_value: Some(a.value_span.clone()),
                 },
                 p.to_string(),
             ));
@@ -445,6 +487,7 @@ pub fn edit_xmp(existing: Option<&[u8]>, changes: &XmpChanges) -> Result<XmpOutc
                     uri,
                     local,
                     span: ws_start..doc.elems[c].end,
+                    attr_value: None,
                 },
                 p.to_string(),
             ));
@@ -468,6 +511,22 @@ pub fn edit_xmp(existing: Option<&[u8]>, changes: &XmpChanges) -> Result<XmpOutc
         if deleted {
             edits.push((prop.span.clone(), String::new()));
             remaining -= 1;
+            changed = true;
+        } else if let Some(s) = changes
+            .edit_only
+            .iter()
+            .find(|s| s.uri == prop.uri && s.property == prop.local)
+        {
+            // Replaced where it is, under the prefix the packet uses (an
+            // attribute keeps holding a single value).
+            match &prop.attr_value {
+                Some(v) => edits.push((v.clone(), escape(s.values.first().map_or("", |v| v)))),
+                None => {
+                    let qname = format!("{declared}:{}", prop.local);
+                    let body = format!("\n{}", serialize_property(&qname, s, "  "));
+                    edits.push((prop.span.clone(), body));
+                }
+            }
             changed = true;
         }
     }
@@ -579,6 +638,64 @@ pub fn edit_xmp(existing: Option<&[u8]>, changes: &XmpChanges) -> Result<XmpOutc
         floor = r.start;
     }
     Ok(XmpOutcome::Rewritten(out.into_bytes()))
+}
+
+/// Read `extra` along with `main` (ExifTool's JPEG extended XMP, or a
+/// second standard packet): its `rdf:Description`s are appended to the
+/// `rdf:RDF` of `main`, each carrying the namespace declarations it
+/// inherited in `extra`.
+pub fn merge_packets(main: &[u8], extra: &[u8]) -> Result<Vec<u8>> {
+    let main_text = packet_text(main)?;
+    let extra_text = packet_text(extra)?;
+    let (main_text, extra_text) = (main_text.as_str(), extra_text.as_str());
+    let rdf_of = |doc: &Doc| {
+        (0..doc.elems.len())
+            .find(|&e| doc.elem_name(e) == (Some(RDF_NS.to_string()), "RDF".to_string()))
+            .ok_or_else(|| malformed("no rdf:RDF element"))
+    };
+    let mdoc = Doc::parse(main_text)?;
+    let mrdf = rdf_of(&mdoc)?;
+    let close = {
+        let e = &mdoc.elems[mrdf];
+        if e.self_closing {
+            return Err(malformed("empty rdf:RDF element"));
+        }
+        main_text[..e.end]
+            .rfind("</")
+            .ok_or_else(|| malformed("no rdf:RDF end tag"))?
+    };
+    let edoc = Doc::parse(extra_text)?;
+    let erdf = rdf_of(&edoc)?;
+    let mut added = String::new();
+    for &d in &edoc.elems[erdf].children {
+        let e = &edoc.elems[d];
+        // Declarations in scope from the ancestors, unless redeclared here.
+        let mut decls = String::new();
+        let mut seen: Vec<&str> = e.attrs.iter().map(|a| a.qname.as_str()).collect();
+        let mut cur = e.parent;
+        while let Some(p) = cur {
+            for a in &edoc.elems[p].attrs {
+                if (a.qname == "xmlns" || a.qname.starts_with("xmlns:"))
+                    && !seen.contains(&a.qname.as_str())
+                {
+                    decls.push_str(&format!(" {}='{}'", a.qname, escape(&a.value)));
+                    seen.push(&a.qname);
+                }
+            }
+            cur = edoc.elems[p].parent;
+        }
+        let name_end = e.start + 1 + e.qname.len();
+        added.push(' ');
+        added.push_str(&extra_text[e.start..name_end]);
+        added.push_str(&decls);
+        added.push_str(&extra_text[name_end..e.end]);
+        added.push('\n');
+    }
+    let mut out = String::with_capacity(main.len() + added.len());
+    out.push_str(&main_text[..close]);
+    out.push_str(&added);
+    out.push_str(&main_text[close..]);
+    Ok(out.into_bytes())
 }
 
 #[cfg(test)]

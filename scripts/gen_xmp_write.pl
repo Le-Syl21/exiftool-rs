@@ -1,0 +1,164 @@
+#!/usr/bin/perl
+# Generate the XMP write table: every top-level, writable property of the
+# XMP namespace tables (XMP.pm, XMP2.pl and the vendor modules), with what
+# the writer needs to put a value where ExifTool would:
+#
+#   * the family-1 group (`XMP-dc`), the tag name, the namespace prefix and
+#     URI, and the property name;
+#   * the value kind (simple, lang-alt, Bag, Seq, Alt) and the `Writable`
+#     type CheckXMP formats the value by (`integer`, `real`, `rational`,
+#     `date`, `boolean`, or a plain string);
+#   * `Avoid`, which SetNewValue uses to pick the namespace a tag is created
+#     in when several define it (`XMP:Description` goes to XMP-dc, not to
+#     the avoided XMP-xmp one);
+#   * the inverse of a PrintConv hash, and whether a conversion written in
+#     Perl stands in the way (such a tag is not written).
+#
+# Structures and their flattened fields are left out.
+#
+# Usage: perl scripts/gen_xmp_write.pl ../exiftool > src/tags/xmp_write_generated.rs
+
+use strict;
+use warnings;
+no warnings "once";
+
+my $dir = shift or die "usage: $0 <path-to-exiftool-checkout>\n";
+unshift @INC, "$dir/lib";
+require Image::ExifTool;
+require Image::ExifTool::XMP;
+
+Image::ExifTool::LoadAllTables();
+
+sub q_rs {
+    my $s = shift;
+    $s =~ s/\\/\\\\/g;
+    $s =~ s/"/\\"/g;
+    $s =~ s/\n/\\n/g;
+    $s =~ s/([\x00-\x1f])/sprintf('\\x%02x', ord $1)/ge;
+    return "\"$s\"";
+}
+
+my %skipNS = map { $_ => 1 } qw(x rdf xmlns xml);
+my (%seen, @rows);
+foreach my $tname (sort keys %Image::ExifTool::allTables) {
+    my $table = $Image::ExifTool::allTables{$tname};
+    next unless ref $table eq 'HASH' and $$table{GROUPS} and ($$table{GROUPS}{0} || '') eq 'XMP';
+    my $ns = $$table{NAMESPACE};
+    next unless defined $ns;
+    my ($prefix, $uri);
+    if (ref $ns eq 'HASH') {
+        ($prefix) = keys %$ns;
+        $uri = $$ns{$prefix};
+    } else {
+        $prefix = $ns;
+        $uri = $Image::ExifTool::XMP::nsURI{$prefix};
+    }
+    next unless defined $prefix and defined $uri and not $skipNS{$prefix};
+    my $group1 = $$table{GROUPS}{1} || "XMP-$prefix";
+    foreach my $id (sort(Image::ExifTool::TagTableKeys($table))) {
+        foreach my $ti (Image::ExifTool::GetTagInfoList($table, $id)) {
+            next if $$ti{Struct} or defined $$ti{Flat} or $$ti{SubDirectory};
+            next if $$ti{RootTagInfo} or $$ti{PropertyPath};
+            my $writable = defined $$ti{Writable} ? $$ti{Writable} : $$table{WRITABLE};
+            next unless $writable;
+            next if $id =~ /[^\w.-]/;     # not a plain property name
+            my $name = $$ti{Name};
+            next if $seen{"$group1\t$name"}++;
+            my $list = $$ti{List} || '';
+            $list = 'Bag' if $list eq '1';
+            my $kind;
+            if ($writable eq 'lang-alt') {
+                next if $list;              # list of lang-alt: not handled
+                $kind = 'LangAlt';
+            } else {
+                $kind = $list ? $list : 'Simple';
+            }
+            next unless $kind =~ /^(Simple|LangAlt|Bag|Seq|Alt)$/;
+            $writable = 'string' if $writable eq 'lang-alt' or $writable eq '1';
+            my $conv = 'None';
+            my @pairs;
+            my $strict = 'false';
+            my $pc = $$ti{PrintConv};
+            if (ref $pc eq 'HASH') {
+                $strict = $$pc{OTHER} ? 'false' : 'true';
+                $conv = 'Unported' if $$pc{BITMASK};
+                foreach my $k (sort keys %$pc) {
+                    next if $k =~ /^(OTHER|BITMASK|Notes|PrintHex|PrintString|PrintSort)$/;
+                    next if ref $$pc{$k};
+                    push @pairs, '(' . q_rs($$pc{$k}) . ', ' . q_rs($k) . ')';
+                }
+            } elsif (defined $pc and not ($writable eq 'date' and $pc =~ /ConvertDateTime/)) {
+                $conv = 'Unported';
+            }
+            my $pci = $$ti{PrintConvInv};
+            if (defined $pci and not ($writable eq 'date' and not ref $pci and $pci =~ /InverseDateTime/)) {
+                $conv = 'Unported';
+            }
+            $conv = 'Unported' if defined $$ti{ValueConvInv} or (defined $$ti{ValueConv} and not defined $$ti{ValueConvInv});
+            $conv = 'Unported' if $$ti{RawConvInv};
+            $writable = 'string' unless $writable =~ /^(string|integer|real|rational|date|boolean)$/;
+            push @rows, sprintf("    XmpWriteInfo { group1: %s, name: %s, prefix: %s, uri: %s, property: %s, kind: XmpKind::%s, writable: XmpType::%s, avoid: %s, conv: XmpConv::%s, print_inv: &[%s], print_strict: %s },\n",
+                q_rs($group1), q_rs($name), q_rs($prefix), q_rs($uri), q_rs($id), $kind,
+                ucfirst($writable), $$ti{Avoid} ? 'true' : 'false', $conv, join(', ', @pairs), $strict);
+        }
+    }
+}
+@rows = sort { lc($a) cmp lc($b) } @rows;
+
+print <<'EOT';
+//! Auto-generated XMP write table, from ExifTool's XMP tag tables.
+//!
+//! Generated by `scripts/gen_xmp_write.pl`. DO NOT EDIT MANUALLY.
+
+/// How a property holds its value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum XmpKind {
+    Simple,
+    LangAlt,
+    Bag,
+    Seq,
+    Alt,
+}
+
+/// ExifTool's `Writable` type, which CheckXMP formats the value by.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum XmpType {
+    String,
+    Integer,
+    Real,
+    Rational,
+    Date,
+    Boolean,
+}
+
+/// Whether the value goes through a conversion written in Perl.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum XmpConv {
+    None,
+    Unported,
+}
+
+/// One writable XMP property.
+#[derive(Debug)]
+pub struct XmpWriteInfo {
+    pub group1: &'static str,
+    pub name: &'static str,
+    pub prefix: &'static str,
+    pub uri: &'static str,
+    pub property: &'static str,
+    pub kind: XmpKind,
+    pub writable: XmpType,
+    pub avoid: bool,
+    pub conv: XmpConv,
+    /// PrintConv hash, inverted: (printed value, raw value).
+    pub print_inv: &'static [(&'static str, &'static str)],
+    /// The PrintConv hash has no fallback for other values.
+    pub print_strict: bool,
+}
+
+/// Every writable top-level XMP property, sorted by group and name
+/// (case-insensitive).
+pub static XMP_WRITE_TAGS: &[XmpWriteInfo] = &[
+EOT
+print @rows;
+print "];\n";

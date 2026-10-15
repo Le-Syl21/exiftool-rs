@@ -68,6 +68,8 @@ perl scripts/gen_tags.pl ../exiftool/lib > src/tags/generated.rs
 perl scripts/gen_print_conv.pl ../exiftool/lib > src/tags/print_conv_generated.rs
 perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs
 perl scripts/gen_sony_ciphered.pl ../exiftool/lib > src/tags/sony_ciphered_generated.rs
+perl scripts/gen_iptc_write.pl ../exiftool > src/tags/iptc_write_generated.rs   # IPTC write table
+perl scripts/gen_xmp_write.pl ../exiftool > src/tags/xmp_write_generated.rs     # XMP write table
 
 # Always finish a regeneration with:
 cargo fmt        # or, for one file: rustfmt --edition 2021 <file>

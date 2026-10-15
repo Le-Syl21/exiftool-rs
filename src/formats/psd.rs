@@ -196,6 +196,17 @@ pub fn read_psd(data: &[u8]) -> Result<Vec<Tag>> {
         }
     }
 
+    // Photoshop.pm (end of ProcessPhotoshop): a stored IPTCDigest that is not
+    // the digest of the IPTC block means the XMP may be out of sync.
+    let value = |name: &str| tags.iter().find(|t| t.name == name).map(|t| &t.print_value);
+    if let (Some(stored), Some(current)) = (value("IPTCDigest"), value("CurrentIPTCDigest")) {
+        if stored != current {
+            tags.push(crate::tag::warning_tag(
+                "IPTCDigest is not current. XMP may be out of sync",
+            ));
+        }
+    }
+
     // Look for PhotoMechanic IPTC trailer at end of file
     // The trailer is raw IPTC data appended to the PSD file
     scan_photomechanic_trailer(data, &mut tags);
