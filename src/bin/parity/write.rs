@@ -357,9 +357,17 @@ impl Edit {
         // `SetNewValue`): `EXIF:Model=` and `-Model=` delete IFD0:Model and
         // leave an IFD1 copy, as Perl ExifTool does (checked on Sony.jpg).
         // The EXIF candidates are all IFD0 tags, so IFD1 is not their state.
+        // An ID3v1 field is fixed-width: an empty one is how a tag is
+        // deleted there (ID3.pm reads it as an empty `string[30]`).
+        let empty_v1 = |k: &(String, String, String), v: &String| {
+            self.value.is_none() && k.1 == "ID3v1" && v.is_empty()
+        };
         m.iter()
-            .find(|(k, _)| {
-                self.in_group(k) && k.2 == self.name && !(self.group == "EXIF" && k.1 == "IFD1")
+            .find(|(k, v)| {
+                self.in_group(k)
+                    && k.2 == self.name
+                    && !(self.group == "EXIF" && k.1 == "IFD1")
+                    && !empty_v1(k, v)
             })
             .map(|(_, v)| v.clone())
     }
@@ -969,7 +977,14 @@ fn evaluate(case: &Case, c: &CaseCtx) -> CaseResult {
         .into_iter()
         .collect();
     for d in diag(out_perl) {
-        if !before.contains(&d) && !theirs.contains(&d) {
+        // Without a Perl output to compare with, a warning from one of
+        // ExifTool's own tag-table conditions on a value the edit removed
+        // (`$$self{Software}` after `EXIF:Software=`) is what ExifTool reads
+        // in the requested state, not damage.
+        let condition_on_removed = perl_ref.is_none()
+            && d.contains("Condition ")
+            && d.contains("Use of uninitialized value");
+        if !before.contains(&d) && !theirs.contains(&d) && !condition_on_removed {
             r.valid_ok = false;
             r.details
                 .push(("valid", "ExifTool".into(), d, String::new()));

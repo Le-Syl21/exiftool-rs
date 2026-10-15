@@ -1,3 +1,4 @@
+pub mod ducky;
 pub mod exif_edit;
 pub mod exif_writer;
 pub mod extended_xmp;

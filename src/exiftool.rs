@@ -687,6 +687,19 @@ impl ExifTool {
         let mut comment_value: Option<&str> = None;
         let mut remove_exif = false;
         let mut remove_comment = false;
+        // APP12 Ducky: its tags are `Avoid`, so only `Ducky:Tag` creates one.
+        let mut ducky = crate::writer::ducky::DuckyChanges::default();
+        let mut ducky_request = |nv: &NewValue, create: bool| {
+            use crate::writer::ducky::{tag_id, DuckyEdit};
+            if let Some(tag) = tag_id(&nv.tag) {
+                ducky.edits.push(DuckyEdit {
+                    tag,
+                    value: nv.value.clone(),
+                    create,
+                });
+            }
+        };
+        let mut ducky_all = false;
 
         for nv in &self.new_values {
             let group = nv.group.as_deref().unwrap_or("");
@@ -699,18 +712,27 @@ impl ExifTool {
                 "IPTC" => iptc_values.push(nv),
                 g if g == "XMP" || g.starts_with("XMP-") => xmp_values.push(nv),
                 "EXIF" | "IFD0" | "EXIFIFD" | "GPS" => exif_values.push(nv),
+                "DUCKY" | "APP12" => {
+                    if is_all(&nv.tag) {
+                        ducky_all |= nv.value.is_none();
+                    } else {
+                        ducky_request(nv, true);
+                    }
+                }
                 "" if nv.tag.eq_ignore_ascii_case("comment") => {
                     if nv.value.is_none() {
                         remove_comment = true;
                     } else {
                         comment_value = nv.value.as_deref();
                     }
+                    ducky_request(nv, false);
                 }
                 "" if is_all(&nv.tag) => {
                     exif_values.push(nv);
                     if nv.value.is_none() {
                         iptc_values.push(nv);
                         xmp_values.push(nv);
+                        ducky_all = true;
                     }
                 }
                 "" => {
@@ -722,6 +744,7 @@ impl ExifTool {
                     let in_exif = crate::writer::exif_edit::tag_spec(&nv.tag).is_some();
                     let in_iptc = iptc_writer::lookup_exact(&nv.tag).is_some();
                     let in_xmp = crate::writer::xmp_tags::is_known(&nv.tag);
+                    ducky_request(nv, false);
                     if nv.value.is_none() {
                         if in_exif || !(in_iptc || in_xmp) {
                             exif_values.push(nv);
@@ -809,6 +832,8 @@ impl ExifTool {
         let iptc = iptc_changes(&iptc_values, &iptc_edit);
         let xmp = xmp_changes(&xmp_values, &xmp_edit);
         let out = crate::writer::jpeg_iptc_xmp::rewrite(&out, &iptc, &xmp)?;
+        ducky.delete_all = ducky_all;
+        let out = crate::writer::ducky::rewrite(out, &ducky)?;
         // Then the trailers after the EOI (AFCP, FotoStation, MIE...); the
         // IPTC of AFCP and FotoStation takes the same edits as APP13.
         let (mv, me) = mie_split(&iptc_values, &iptc_edit, &mie_own);

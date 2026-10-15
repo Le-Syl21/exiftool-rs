@@ -652,7 +652,9 @@ mod tests {
         };
         let out = write_mp3(&src, &ch).unwrap();
         let t = tags(&out);
-        assert!(!t.iter().any(|(_, n, _)| n == "Artist"));
+        // Gone from ID3v2; the fixed-width ID3v1 field is left empty, which
+        // ExifTool reads as an empty Artist.
+        assert!(!t.iter().any(|(_, n, v)| n == "Artist" && !v.is_empty()));
         assert!(t.contains(&("ID3v2_2".into(), "Album".into(), "Ålbum".into())));
         // The ID3v1 field is blanked; the others stay.
         assert!(t.contains(&("ID3v1".into(), "Title".into(), "V1 title".into())));

@@ -729,27 +729,19 @@ fn read_id3v1(data: &[u8]) -> Vec<Tag> {
     let comment = latin1_string(&data[97..127]);
     let genre_idx = data[127] as usize;
 
-    if !title.is_empty() {
-        tags.push(mk("Title", "Title", Value::String(title)));
-    }
-    if !artist.is_empty() {
-        tags.push(mk("Artist", "Artist", Value::String(artist)));
-    }
-    if !album.is_empty() {
-        tags.push(mk("Album", "Album", Value::String(album)));
-    }
-    if !year.is_empty() {
-        tags.push(mk("Year", "Year", Value::String(year)));
-    }
+    // ID3.pm's v1 table reads each field as a fixed `string[n]`: an empty
+    // (all-NUL) field is still a tag, with an empty value.
+    tags.push(mk("Title", "Title", Value::String(title)));
+    tags.push(mk("Artist", "Artist", Value::String(artist)));
+    tags.push(mk("Album", "Album", Value::String(album)));
+    tags.push(mk("Year", "Year", Value::String(year)));
 
     // ID3v1.1: if byte 125 is 0 and byte 126 is non-zero, byte 126 is track number
     if data[125] == 0 && data[126] != 0 {
         tags.push(mk("Track", "Track", Value::U8(data[126])));
         let short_comment = latin1_string(&data[97..125]);
-        if !short_comment.is_empty() {
-            tags.push(mk("Comment", "Comment", Value::String(short_comment)));
-        }
-    } else if !comment.is_empty() {
+        tags.push(mk("Comment", "Comment", Value::String(short_comment)));
+    } else {
         tags.push(mk("Comment", "Comment", Value::String(comment)));
     }
 
@@ -765,6 +757,8 @@ fn read_id3v1(data: &[u8]) -> Vec<Tag> {
 }
 
 fn latin1_string(data: &[u8]) -> String {
+    // A `string[n]` field ends at its first NUL.
+    let data = &data[..data.iter().position(|&b| b == 0).unwrap_or(data.len())];
     data.iter()
         .map(|&b| b as char)
         .collect::<String>()
