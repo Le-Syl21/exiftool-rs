@@ -3375,7 +3375,7 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
 /// `com.apple.quicktime.` prefix that is stripped before lookup; other vendors
 /// (Android, Xiaomi, Samsung) use the full reverse-DNS key. Port of the relevant
 /// entries of ExifTool's `QuickTime::Keys` table. Unmapped keys return `None`.
-fn keys_tag_name(key: &str) -> Option<(&'static str, &'static str)> {
+pub(crate) fn keys_tag_name(key: &str) -> Option<(&'static str, &'static str)> {
     // Non-Apple namespaces are matched on the full key first.
     let mapped = match key {
         "com.android.version" => Some(("AndroidVersion", "Android Version")),
@@ -3569,37 +3569,37 @@ fn parse_qt_text_atom(
     }
 }
 
+/// MacRoman high half (0x80-0xFF) -> Unicode.
+pub(crate) const MAC_ROMAN_HIGH: [char; 128] = [
+    'Ä', 'Å', 'Ç', 'É', 'Ñ', 'Ö', 'Ü', 'á', 'à', 'â', 'ä', 'ã', 'å', 'ç', 'é', 'è', 'ê', 'ë', 'í',
+    'ì', 'î', 'ï', 'ñ', 'ó', 'ò', 'ô', 'ö', 'õ', 'ú', 'ù', 'û', 'ü', '†', '°', '¢', '£', '§', '•',
+    '¶', 'ß', '®', '©', '™', '´', '¨', '≠', 'Æ', 'Ø', '∞', '±', '≤', '≥', '¥', 'µ', '∂', '∑', '∏',
+    'π', '∫', 'ª', 'º', 'Ω', 'æ', 'ø', '¿', '¡', '¬', '√', 'ƒ', '≈', '∆', '«', '»', '…', '\u{a0}',
+    'À', 'Ã', 'Õ', 'Œ', 'œ', '–', '—', '“', '”', '‘', '’', '÷', '◊', 'ÿ', 'Ÿ', '⁄', '€', '‹', '›',
+    'ﬁ', 'ﬂ', '‡', '·', '‚', '„', '‰', 'Â', 'Ê', 'Á', 'Ë', 'È', 'Í', 'Î', 'Ï', 'Ì', 'Ó', 'Ô',
+    '\u{f8ff}', 'Ò', 'Ú', 'Û', 'Ù', 'ı', 'ˆ', '˜', '¯', '˘', '˙', '˚', '¸', '˝', '˛', 'ˇ',
+];
+
 /// Decode a classic QuickTime text value: valid UTF-8 if possible, otherwise MacRoman
 /// (the encoding used by old-style \xa9 udta atoms with Macintosh language codes).
 fn decode_qt_text(bytes: &[u8]) -> String {
     if let Ok(s) = std::str::from_utf8(bytes) {
         return s.to_string();
     }
-    // MacRoman high half (0x80-0xFF) -> Unicode.
-    const HIGH: [char; 128] = [
-        'Ä', 'Å', 'Ç', 'É', 'Ñ', 'Ö', 'Ü', 'á', 'à', 'â', 'ä', 'ã', 'å', 'ç', 'é', 'è', 'ê', 'ë',
-        'í', 'ì', 'î', 'ï', 'ñ', 'ó', 'ò', 'ô', 'ö', 'õ', 'ú', 'ù', 'û', 'ü', '†', '°', '¢', '£',
-        '§', '•', '¶', 'ß', '®', '©', '™', '´', '¨', '≠', 'Æ', 'Ø', '∞', '±', '≤', '≥', '¥', 'µ',
-        '∂', '∑', '∏', 'π', '∫', 'ª', 'º', 'Ω', 'æ', 'ø', '¿', '¡', '¬', '√', 'ƒ', '≈', '∆', '«',
-        '»', '…', '\u{a0}', 'À', 'Ã', 'Õ', 'Œ', 'œ', '–', '—', '“', '”', '‘', '’', '÷', '◊', 'ÿ',
-        'Ÿ', '⁄', '€', '‹', '›', 'ﬁ', 'ﬂ', '‡', '·', '‚', '„', '‰', 'Â', 'Ê', 'Á', 'Ë', 'È', 'Í',
-        'Î', 'Ï', 'Ì', 'Ó', 'Ô', '\u{f8ff}', 'Ò', 'Ú', 'Û', 'Ù', 'ı', 'ˆ', '˜', '¯', '˘', '˙', '˚',
-        '¸', '˝', '˛', 'ˇ',
-    ];
     bytes
         .iter()
         .map(|&b| {
             if b < 0x80 {
                 b as char
             } else {
-                HIGH[(b - 0x80) as usize]
+                MAC_ROMAN_HIGH[(b - 0x80) as usize]
             }
         })
         .collect()
 }
 
 /// Map ilst item types to tag names.
-fn ilst_tag_name(item_type: &[u8]) -> (&'static str, &'static str) {
+pub(crate) fn ilst_tag_name(item_type: &[u8]) -> (&'static str, &'static str) {
     match item_type {
         b"\xa9nam" => ("Title", "Title"),
         b"\xa9ART" => ("Artist", "Artist"),
@@ -3640,7 +3640,7 @@ fn ilst_tag_name(item_type: &[u8]) -> (&'static str, &'static str) {
 }
 
 /// Map QuickTime text atom keys to tag names.
-fn qt_text_name(key: &str) -> (&'static str, &'static str) {
+pub(crate) fn qt_text_name(key: &str) -> (&'static str, &'static str) {
     match key {
         "nam" => ("Title", "Title"),
         "ART" => ("Artist", "Artist"),

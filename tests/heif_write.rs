@@ -249,8 +249,11 @@ fn counts_are_honest_for_other_formats() {
         .any(|t| t.group.family1 == "XMP-dc" && t.name == "Creator");
     assert_eq!(n, if still_there { 1 } else { 2 });
 
-    // QuickTime/MP4: deleting an XMP group is not supported by its writer.
+    // QuickTime/MP4: an XMP group deletion is applied, and so counted; an
+    // IPTC request has nowhere to go and is not.
     let (res, _) = write("QuickTime.mov", &[("XMP:all", None)], "qt.mov");
+    assert_eq!(res.unwrap(), 1);
+    let (res, _) = write("QuickTime.mov", &[("IPTC:City", Some("x"))], "qt2.mov");
     assert!(res.is_err(), "{res:?}");
 
     // PNG: a text write lands and is counted.

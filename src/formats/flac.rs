@@ -200,24 +200,7 @@ pub fn parse_vorbis_comments(data: &[u8], tags: &mut Vec<Tag>) {
                 continue;
             }
 
-            let (name, description) = vorbis_field_name(field);
-            // If vorbis_field_name returned the raw field (unknown), try CamelCase conversion
-            let (final_name, final_desc) = if name == field && field.contains(':') {
-                // Handle NAMESPACE:KEY → NamespaceKey (from Perl Vorbis.pm)
-                // Each word is capitalized, spaces removed: "TOOL NAME" → "ToolName"
-                let parts: Vec<&str> = field.splitn(2, ':').collect();
-                let ns = parts[0];
-                let key = parts.get(1).unwrap_or(&"");
-                let ns_cc = to_camel_case(ns);
-                let key_cc = to_camel_case(key);
-                let cc = format!("{}{}", ns_cc, key_cc);
-                (cc.clone(), cc)
-            } else if name == field {
-                let cc = to_camel_case(field);
-                (cc.clone(), cc)
-            } else {
-                (name.to_string(), description.to_string())
-            };
+            let (final_name, final_desc) = vorbis_tag_name_desc(field);
             // CoverArt is a base64-encoded image (ValueConv DecodeBase64) → binary.
             if final_name == "CoverArt" {
                 if let Some(bin) = base64_decode(value) {
@@ -399,6 +382,35 @@ pub fn base64_decode(input: &str) -> Option<Vec<u8>> {
         i += 4;
     }
     Some(out)
+}
+
+/// The tag name (and description) ExifTool gives a Vorbis comment field.
+fn vorbis_tag_name_desc(field: &str) -> (String, String) {
+    let (name, description) = vorbis_field_name(field);
+    // If vorbis_field_name returned the raw field (unknown), try CamelCase conversion
+    if name == field && field.contains(':') {
+        // Handle NAMESPACE:KEY → NamespaceKey (from Perl Vorbis.pm)
+        // Each word is capitalized, spaces removed: "TOOL NAME" → "ToolName"
+        let parts: Vec<&str> = field.splitn(2, ':').collect();
+        let ns = parts[0];
+        let key = parts.get(1).unwrap_or(&"");
+        let cc = format!("{}{}", to_camel_case(ns), to_camel_case(key));
+        (cc.clone(), cc)
+    } else if name == field {
+        let cc = to_camel_case(field);
+        (cc.clone(), cc)
+    } else {
+        (name.to_string(), description.to_string())
+    }
+}
+
+/// The tag name our reader gives a Vorbis comment field (`TITLE` is
+/// Title, `METADATA_BLOCK_PICTURE` holds the Picture tags).
+pub(crate) fn vorbis_tag_name(field: &str) -> String {
+    if field.eq_ignore_ascii_case("METADATA_BLOCK_PICTURE") {
+        return "Picture".into();
+    }
+    vorbis_tag_name_desc(field).0
 }
 
 /// Convert "SOME WORDS" to "SomeWords" (CamelCase, spaces/underscores removed).

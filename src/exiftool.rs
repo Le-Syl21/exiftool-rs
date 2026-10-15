@@ -386,22 +386,9 @@ impl ExifTool {
                     .and_then(|nv| nv.value.clone());
                 crate::writer::gif_writer::write_gif(data, comment.as_deref())
             }
-            FileType::Flac => {
-                let changes: Vec<(&str, &str)> = self
-                    .new_values
-                    .iter()
-                    .filter_map(|nv| Some((nv.tag.as_str(), nv.value.as_deref()?)))
-                    .collect();
-                crate::writer::flac_writer::write_flac(data, &changes)
-            }
-            FileType::Mp3 | FileType::Aiff => {
-                let changes: Vec<(&str, &str)> = self
-                    .new_values
-                    .iter()
-                    .filter_map(|nv| Some((nv.tag.as_str(), nv.value.as_deref()?)))
-                    .collect();
-                crate::writer::id3_writer::write_id3(data, &changes)
-            }
+            FileType::Flac => crate::writer::flac_writer::write_flac(data, &self.vorbis_changes()),
+            FileType::Mp3 => crate::writer::id3_writer::write_mp3(data, &self.id3_changes()),
+            FileType::Aiff => crate::writer::id3_writer::write_aiff(data, &self.id3_changes()),
             FileType::Jp2 | FileType::Jxl => {
                 let new_xmp = if self
                     .new_values
@@ -428,12 +415,7 @@ impl ExifTool {
                 crate::writer::ps_writer::write_postscript(data, &changes)
             }
             FileType::Ogg | FileType::Opus => {
-                let changes: Vec<(&str, &str)> = self
-                    .new_values
-                    .iter()
-                    .filter_map(|nv| Some((nv.tag.as_str(), nv.value.as_deref()?)))
-                    .collect();
-                crate::writer::ogg_writer::write_ogg(data, &changes)
+                crate::writer::ogg_writer::write_ogg(data, &self.vorbis_changes())
             }
             // An XMP sidecar is edited in place, like the XMP of a HEIF item,
             // so the properties it already has survive.
@@ -979,18 +961,43 @@ impl ExifTool {
         psd_writer::write_psd(data, new_iptc.as_deref(), new_xmp.as_deref())
     }
 
-    /// Write metadata changes to Matroska (MKV/WebM) data.
+    /// Write metadata changes to Matroska (MKV/WebM) data: the segment
+    /// Title and the SimpleTags (ExifTool cannot write Matroska; see
+    /// [`matroska_writer`]).
     fn write_matroska(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let changes: Vec<(&str, &str)> = self
-            .new_values
-            .iter()
-            .filter_map(|nv| {
-                let value = nv.value.as_deref()?;
-                Some((nv.tag.as_str(), value))
-            })
-            .collect();
-
+        let mut changes = matroska_writer::MkvChanges::default();
+        for nv in &self.new_values {
+            let g = nv.group.as_deref().unwrap_or("").to_ascii_lowercase();
+            if !matches!(g.as_str(), "" | "*" | "all" | "matroska") {
+                continue;
+            }
+            match &nv.value {
+                None if is_all(&nv.tag) => changes.delete_all = true,
+                None => changes.delete.push(nv.tag.to_ascii_lowercase()),
+                Some(_) if is_all(&nv.tag) => {}
+                Some(v) => changes.set.push((nv.tag.clone(), v.clone())),
+            }
+        }
         matroska_writer::write_matroska(data, &changes)
+    }
+
+    /// The Vorbis comment requests among the queued ones (FLAC, Ogg, Opus;
+    /// ExifTool cannot write them).
+    fn vorbis_changes(&self) -> crate::writer::flac_writer::VorbisChanges {
+        let mut changes = crate::writer::flac_writer::VorbisChanges::default();
+        for nv in &self.new_values {
+            let g = nv.group.as_deref().unwrap_or("").to_ascii_lowercase();
+            if !matches!(g.as_str(), "" | "*" | "all" | "vorbis") {
+                continue;
+            }
+            match &nv.value {
+                None if is_all(&nv.tag) => changes.delete_all = true,
+                None => changes.delete.push(nv.tag.to_ascii_lowercase()),
+                Some(_) if is_all(&nv.tag) => {}
+                Some(v) => changes.set.push((nv.tag.clone(), v.clone())),
+            }
+        }
+        changes
     }
 
     /// Write metadata changes to PDF data.
@@ -1007,34 +1014,55 @@ impl ExifTool {
         pdf_writer::write_pdf(data, &changes)
     }
 
-    /// Write metadata changes to MP4/MOV data.
-    fn write_mp4(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let mut ilst_tags: Vec<([u8; 4], String)> = Vec::new();
-        let mut xmp_values: Vec<&NewValue> = Vec::new();
-
+    /// The ID3 requests among the queued ones (ExifTool cannot write ID3;
+    /// see [`id3_writer`](crate::writer::id3_writer)).
+    fn id3_changes(&self) -> crate::writer::id3_writer::Id3Changes {
+        use crate::writer::id3_writer::{Id3Changes, Id3Scope};
+        let mut changes = Id3Changes::default();
         for nv in &self.new_values {
-            if nv.value.is_none() {
+            let Some(scope) = Id3Scope::from_group(nv.group.as_deref().unwrap_or("")) else {
                 continue;
-            }
-            let group = nv.group.as_deref().unwrap_or("").to_uppercase();
-            if group == "XMP" {
-                xmp_values.push(nv);
-            } else if let Some(key) = mp4_writer::tag_to_ilst_key(&nv.tag) {
-                ilst_tags.push((key, nv.value.clone().unwrap()));
+            };
+            match &nv.value {
+                None if is_all(&nv.tag) => changes.delete_all.push(scope),
+                None => changes.delete.push((scope, nv.tag.to_ascii_lowercase())),
+                Some(_) if is_all(&nv.tag) => {}
+                Some(v) => changes.set.push((scope, nv.tag.clone(), v.clone())),
             }
         }
+        changes
+    }
 
-        let tag_refs: Vec<(&[u8; 4], &str)> =
-            ilst_tags.iter().map(|(k, v)| (k, v.as_str())).collect();
+    /// Write metadata changes to MP4/MOV data: QuickTime ItemList,
+    /// UserData and Keys tags, and XMP edited in place (ExifTool's
+    /// `WriteQuickTime`). Requests for other groups are left unapplied.
+    fn write_mp4(&self, data: &[u8]) -> Result<Vec<u8>> {
+        use mp4_writer::{QtChanges, QtScope, QtSet};
 
-        let new_xmp = if !xmp_values.is_empty() {
-            let refs: Vec<&NewValue> = xmp_values.to_vec();
-            Some(self.build_new_xmp(&refs))
-        } else {
-            None
+        let (_, xmp) = item_changes(&self.new_values);
+        let mut changes = QtChanges {
+            xmp,
+            ..Default::default()
         };
-
-        mp4_writer::write_mp4(data, &tag_refs, new_xmp.as_deref())
+        for nv in &self.new_values {
+            let group = nv.group.as_deref().unwrap_or("");
+            let Some(scope) = QtScope::from_group(group) else {
+                continue;
+            };
+            let all = is_all(&nv.tag);
+            match &nv.value {
+                // Everything: every QuickTime location (XMP is in `xmp`).
+                None if all => changes.delete_groups.push(scope),
+                None => changes.delete.push((scope, nv.tag.to_ascii_lowercase())),
+                Some(_) if all => {}
+                Some(v) => changes.set.push(QtSet {
+                    scope,
+                    tag: nv.tag.clone(),
+                    value: v.clone(),
+                }),
+            }
+        }
+        mp4_writer::write_mp4(data, &changes)
     }
 
     /// Write metadata changes to HEIF/HEIC/AVIF data: the Exif and XMP
@@ -3068,9 +3096,18 @@ fn request_applied(nv: &NewValue, before: &[Tag], after: &[Tag]) -> bool {
                     )
                 });
             }
-            !after
-                .iter()
-                .any(|t| in_group(t, group) && (all || t.name.eq_ignore_ascii_case(&nv.tag)))
+            // `QuickTime:all` is the metadata (ItemList, UserData, Keys), not
+            // the movie structure the QuickTime group also names.
+            let qt_all = all && group.is_some_and(|g| g.eq_ignore_ascii_case("quicktime"));
+            !after.iter().any(|t| {
+                in_group(t, group)
+                    && (all || t.name.eq_ignore_ascii_case(&nv.tag))
+                    && (!qt_all
+                        || matches!(
+                            t.group.family1.as_str(),
+                            "ItemList" | "UserData" | "Keys" | "iTunes"
+                        ))
+            })
         }
         Some(v) => {
             if all {

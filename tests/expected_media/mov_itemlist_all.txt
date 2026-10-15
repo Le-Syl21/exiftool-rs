@@ -1,0 +1,14 @@
+Keys:Album=ålbum
+Keys:Artist=årtist
+Keys:Comment=çømménts
+UserData:Format=Digital Camera
+UserData:Information=PENTAX DIGITAL CAMERA
+UserData:Album=ålbum
+UserData:Artist=årtist
+UserData:Comment=çømménts
+UserData:Composer=cømpøsér
+UserData:Genre=Genré
+XMP-xmpDM:AltTapeName=An Alternate Scene Name
+XMP-xmpDM:Album=No Album
+XMP-xmp:MetadataDate=2008:09:12 11:17:39-04:00
+XMP-dc:Creator=Phil Harvey

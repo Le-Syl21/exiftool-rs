@@ -995,7 +995,7 @@ fn mk(name: &str, description: &str, value: Value) -> Tag {
 }
 
 /// ID3v1 genre list (index 0-191). Matches Perl's %genre hash.
-static GENRES: &[&str] = &[
+pub(crate) static GENRES: &[&str] = &[
     "Blues",
     "Classic Rock",
     "Country",
