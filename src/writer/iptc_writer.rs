@@ -252,44 +252,145 @@ fn iptc_date(val: &str) -> Option<String> {
     None
 }
 
-/// `IptcTime`: `HH:MM:SS[+-HH:MM|Z]` → `HHMMSS+HHMM`. ExifTool falls back
-/// to the system's time zone when the value has none; this uses UTC.
-fn iptc_time(val: &str) -> Option<String> {
-    let v = val.trim_end();
-    // The last token holding the time, with an optional zone after it.
-    let token = v.rsplit(char::is_whitespace).next()?;
-    let digits_end = token
-        .find(|c: char| !(c.is_ascii_digit() || c == ':'))
-        .unwrap_or(token.len());
-    let (time, tz) = token.split_at(digits_end);
-    let nums: Vec<&str> = if time.contains(':') {
-        time.split(':').collect()
-    } else if time.len() == 6 {
-        vec![&time[0..2], &time[2..4], &time[4..6]]
-    } else {
-        return None;
-    };
-    if nums.len() != 3 || nums.iter().any(|n| n.is_empty() || n.len() > 2) {
+/// WriteIPTC.pl `IptcTime`: `[date ]HH:MM:SS[zone]` → `HHMMSS+HHMM`.
+///
+/// A value without a zone takes the zone of the system ExifTool runs on,
+/// as ExifTool does (`TimeZoneString`): the offset of the local time zone
+/// at the given date when the value starts with a `YYYY:mm:dd` date, at
+/// the current time otherwise. The offset comes from the C library's
+/// `localtime_r` (the `TZ` variable, else the system zone), so a run with
+/// `TZ=UTC` writes `+0000`.
+pub(crate) fn iptc_time(val: &str) -> Option<String> {
+    iptc_time_with(val, |date| {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs() as i64);
+        // Local time → UTC by the offset at (about) that time, then the
+        // offset at that instant.
+        let ts = date.map_or(now, |utc| utc - crate::formats::gzip::local_tz_offset(utc));
+        crate::formats::gzip::local_tz_offset(ts)
+    })
+}
+
+/// [`iptc_time`] with the local time zone given by `offset`: the offset in
+/// seconds at the date and time (as seconds since the epoch, read as UTC)
+/// of the value, or at the current time when it has no date.
+fn iptc_time_with(val: &str, offset: impl Fn(Option<i64>) -> i64) -> Option<String> {
+    // /(.*?)\b(\d{1,2})(:?)(\d{2})(:?)(\d{2})(\S*)\s*$/s and ($3 or not $5)
+    let b = val.as_bytes();
+    let word = |c: u8| c.is_ascii_alphanumeric() || c == b'_';
+    let digit = |i: usize| i < b.len() && b[i].is_ascii_digit();
+    let mut found = None;
+    'start: for i in 0..b.len() {
+        if !digit(i) || (i > 0 && word(b[i - 1])) {
+            continue;
+        }
+        for hl in [2usize, 1] {
+            if !(0..hl).all(|k| digit(i + k)) {
+                continue;
+            }
+            let p = i + hl;
+            for c1 in [true, false] {
+                if c1 && b.get(p) != Some(&b':') {
+                    continue;
+                }
+                let p = p + usize::from(c1);
+                if !(digit(p) && digit(p + 1)) {
+                    continue;
+                }
+                let p = p + 2;
+                for c2 in [true, false] {
+                    if c2 && b.get(p) != Some(&b':') {
+                        continue;
+                    }
+                    let p = p + usize::from(c2);
+                    if !(digit(p) && digit(p + 1)) {
+                        continue;
+                    }
+                    let rest = &val[p + 2..];
+                    let tz = rest.trim_end();
+                    if tz.contains(char::is_whitespace) {
+                        continue;
+                    }
+                    let m = p - usize::from(c2) - 2;
+                    found = Some((i, hl, m, p, c1, c2, tz));
+                    break 'start;
+                }
+            }
+        }
+    }
+    let (i, hl, m, s, c1, c2, tz) = found?;
+    if !c1 && c2 {
         return None;
     }
-    let n: Vec<u32> = nums.iter().map(|n| n.parse().ok()).collect::<Option<_>>()?;
-    let mut out = format!("{:02}{:02}{:02}", n[0], n[1], n[2]);
-    let tz = tz.trim();
-    if tz.eq_ignore_ascii_case("z") || tz.is_empty() {
+    let num = |r: std::ops::Range<usize>| val[r].parse::<i64>().ok();
+    let (h, mi, se) = (num(i..i + hl)?, num(m..m + 2)?, num(s..s + 2)?);
+    let mut out = format!("{h:02}{mi:02}{se:02}");
+    // /([+-]\d{1,2}):?(\d{2})/
+    let tb = tz.as_bytes();
+    let zone = (0..tb.len()).find_map(|k| {
+        if !matches!(tb[k], b'+' | b'-') {
+            return None;
+        }
+        let d = |j: usize| j < tb.len() && tb[j].is_ascii_digit();
+        for hl in [2usize, 1] {
+            if !(1..=hl).all(|j| d(k + j)) {
+                continue;
+            }
+            let mut q = k + 1 + hl;
+            for colon in [true, false] {
+                if colon && tb.get(q) != Some(&b':') {
+                    continue;
+                }
+                let r = q + usize::from(colon);
+                if d(r) && d(r + 1) {
+                    let hh: i64 = tz[k + 1..k + 1 + hl].parse().ok()?;
+                    q = r;
+                    return Some(format!("{}{hh:02}{}", tb[k] as char, &tz[q..q + 2]));
+                }
+            }
+        }
+        None
+    });
+    if let Some(z) = zone {
+        out.push_str(&z);
+    } else if tz.contains(['Z', 'z']) {
         out.push_str("+0000");
     } else {
-        let sign = tz.chars().next()?;
-        if sign != '+' && sign != '-' {
-            return None;
-        }
-        let rest: String = tz[1..].chars().filter(|c| *c != ':').collect();
-        if rest.len() < 3 || rest.len() > 4 || !rest.bytes().all(|b| b.is_ascii_digit()) {
-            return None;
-        }
-        let (h, m) = rest.split_at(rest.len() - 2);
-        out.push_str(&format!("{sign}{:02}{m}", h.parse::<u32>().ok()?));
+        // A `YYYY:mm:dd` date before the time gives the date of the offset.
+        let date = val[..i].trim_end();
+        let db = date.as_bytes();
+        let utc = (db.len() == 10
+            && db[4] == b':'
+            && db[7] == b':'
+            && db
+                .iter()
+                .enumerate()
+                .all(|(k, c)| k == 4 || k == 7 || c.is_ascii_digit()))
+        .then(|| {
+            let y: i64 = date[0..4].parse().ok()?;
+            let mo: i64 = date[5..7].parse().ok()?;
+            let d: i64 = date[8..10].parse().ok()?;
+            Some(days_from_civil(y, mo, d) * 86400 + h * 3600 + mi * 60 + se)
+        })
+        .flatten();
+        let off = offset(utc);
+        let min = (off as f64 / 60.0).round() as i64;
+        let (sign, min) = if min < 0 { ('-', -min) } else { ('+', min) };
+        out.push_str(&format!("{sign}{:02}{:02}", min / 60, min % 60));
     }
     Some(out)
+}
+
+/// Days from 1970-01-01 to a proleptic Gregorian date.
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let mp = (m + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146097 + doe - 719468
 }
 
 /// `CodedCharacterSet`: `UTF8` → `ESC % G`, or `ESC X Y[, ...]` escapes.
@@ -338,7 +439,7 @@ fn format_value(tag: &IptcWriteInfo, val: &str, latin: bool) -> Vec<u8> {
         return val.as_bytes().to_vec();
     }
     let mut bytes = if tag.record != 1 && tag.record < 7 && latin && !val.is_ascii() {
-        crate::encoding::encode_latin1(val)
+        crate::encoding::encode_cp1252(val)
     } else {
         val.as_bytes().to_vec()
     };
@@ -695,6 +796,53 @@ mod tests {
         let long = "x".repeat(40);
         let out = edit_iptc(&[], &[req("By-line", &[&long])]).unwrap();
         assert_eq!(&out[3..5], &[0, 32]);
+    }
+
+    /// Perl's `IptcTime` with TZ=Europe/Paris (checked on 2026-10-15, summer
+    /// time): `12:34:56` → `123456+0200`; with a date the offset of that date is used; an explicit
+    /// zone or `Z` wins.
+    #[test]
+    fn iptc_time_takes_the_local_zone_when_none_is_given() {
+        let paris = |utc: Option<i64>| match utc {
+            // 2024-01-15 is in winter time.
+            Some(t) if t < 1_711_846_800 => 3600,
+            _ => 7200,
+        };
+        assert_eq!(iptc_time_with("12:34:56", paris).unwrap(), "123456+0200");
+        assert_eq!(
+            iptc_time_with("2024:01:15 12:34:56", paris).unwrap(),
+            "123456+0100"
+        );
+        assert_eq!(
+            iptc_time_with("12:34:56-05:30", paris).unwrap(),
+            "123456-0530"
+        );
+        assert_eq!(iptc_time_with("12:34:56Z", paris).unwrap(), "123456+0000");
+        assert_eq!(iptc_time_with("123456", paris).unwrap(), "123456+0200");
+        assert_eq!(
+            iptc_time_with("1:02:03 -0330", |_| 0),
+            None,
+            "a zone after a space is not part of the time"
+        );
+        assert_eq!(
+            iptc_time_with("1:02:03+5:30", |_| 0).unwrap(),
+            "010203+0530"
+        );
+        assert_eq!(iptc_time_with("12:3456", |_| 0).unwrap(), "123456+0000");
+        assert_eq!(iptc_time_with("1234:56", |_| 0), None);
+        assert_eq!(iptc_time_with("noon", |_| 0), None);
+        assert_eq!(
+            iptc_time_with("12:34:56", |_| -9000).unwrap(),
+            "123456-0230"
+        );
+    }
+
+    /// Perl's IPTC "Latin" charset is cp1252: `€` is 0x80, `Š` 0x8A, and a
+    /// character it cannot hold becomes `?`.
+    #[test]
+    fn latin_strings_are_cp1252() {
+        let out = edit_iptc(&[], &[req("By-line", &["€Š一é"])]).unwrap();
+        assert!(out.windows(4).any(|w| w == b"\x80\x8a?\xe9"));
     }
 
     #[test]

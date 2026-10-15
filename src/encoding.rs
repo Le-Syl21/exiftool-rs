@@ -47,6 +47,29 @@ pub fn encode_latin1(s: &str) -> Vec<u8> {
         .collect()
 }
 
+/// Encode a UTF-8 string as Windows-1252 (cp1252) bytes, Perl ExifTool's
+/// `Latin` charset (Charset.pm): `€` is 0x80, `Š` 0x8A, the C1 positions
+/// cp1252 leaves undefined are kept as their code points, and a character
+/// cp1252 cannot hold becomes `?`, as ExifTool's `Recompose` writes it.
+pub fn encode_cp1252(s: &str) -> Vec<u8> {
+    let mut out = Vec::with_capacity(s.len());
+    let mut buf = [0u8; 4];
+    for c in s.chars() {
+        let cp = c as u32;
+        if cp < 0x80 {
+            out.push(cp as u8);
+            continue;
+        }
+        let (bytes, _, bad) = encoding_rs::WINDOWS_1252.encode(c.encode_utf8(&mut buf));
+        if bad || bytes.len() != 1 {
+            out.push(b'?');
+        } else {
+            out.push(bytes[0]);
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

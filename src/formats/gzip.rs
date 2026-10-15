@@ -232,6 +232,12 @@ pub(crate) fn gzip_unix_to_datetime(secs: i64) -> String {
     )
 }
 
+/// The offset of the local time zone from UTC, in seconds, at Unix time
+/// `ts` (DST-aware; see `get_local_tz_offset_for_timestamp`).
+pub(crate) fn local_tz_offset(ts: i64) -> i64 {
+    get_local_tz_offset_for_timestamp(ts)
+}
+
 /// Get local timezone offset in seconds for a specific Unix timestamp (DST-aware).
 /// Uses libc's localtime_r to account for DST. `struct tm` carries `tm_gmtoff`
 /// on every Unix (glibc, macOS, the BSDs), so this path covers all of them;
