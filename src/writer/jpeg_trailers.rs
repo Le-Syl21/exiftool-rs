@@ -31,15 +31,163 @@ use crate::writer::xmp_edit::{self, XmpChanges, XmpOutcome};
 
 /// The edits that may reach a trailer.
 pub struct TrailerEdits<'a> {
+    /// The EXIF edits of the MIE trailer.
     pub exif: &'a ExifChanges,
+    /// The IPTC edits of the AFCP and FotoStation trailers.
     pub iptc: &'a IptcChanges,
+    /// Unused by AFCP and FotoStation; kept with the others for MIE.
     pub xmp: &'a XmpChanges,
+    /// The IPTC and XMP edits of the MIE trailer: those of `iptc` and
+    /// `xmp`, except that an ungrouped tag MIE defines only edits what is
+    /// there (see [`mie_defines`]).
+    pub mie_iptc: &'a IptcChanges,
+    pub mie_xmp: &'a XmpChanges,
 }
 
 impl TrailerEdits<'_> {
-    fn is_empty(&self) -> bool {
-        self.exif.is_empty() && self.iptc.is_empty() && self.xmp.is_empty()
+    fn mie_is_empty(&self) -> bool {
+        self.exif.is_empty() && self.mie_iptc.is_empty() && self.mie_xmp.is_empty()
     }
+}
+
+/// The tags of ExifTool 13.59's MIE tables (MIE.pm). Their tables are
+/// `PREFERRED`, so an ungrouped request for one of them writes the MIE tag
+/// in a MIE trailer, and ExifTool then creates no EXIF, IPTC or XMP
+/// directory there for it (InitWriteDirs with `CreateGroups{MIE}`). This
+/// crate does not write MIE tags themselves.
+const MIE_TAGS: &[&str] = &[
+    "Address",
+    "AudioCompression",
+    "Author",
+    "Azimuth",
+    "BitDepth",
+    "Brightness",
+    "Channels",
+    "City",
+    "Codec",
+    "ColorBalance",
+    "ColorSpace",
+    "ColorTemperature",
+    "Comment",
+    "ComponentsConfiguration",
+    "CompressionRatio",
+    "Contrast",
+    "Contributors",
+    "Copyright",
+    "Country",
+    "CreateDate",
+    "DateTimeOriginal",
+    "Declination",
+    "DigitalZoom",
+    "Duration",
+    "Elevation",
+    "Email",
+    "ExposureCompensation",
+    "ExposureMode",
+    "ExposureTime",
+    "ExtenderMagnification",
+    "ExtenderMake",
+    "ExtenderModel",
+    "ExtenderSerialNumber",
+    "FNumber",
+    "FirmwareVersion",
+    "FlashExposureComp",
+    "FlashFired",
+    "FlashGuideNumber",
+    "FlashMake",
+    "FlashMode",
+    "FlashModel",
+    "FlashSerialNumber",
+    "FlashType",
+    "FocalLength",
+    "FocusDistance",
+    "FocusMode",
+    "FullSizeImage",
+    "FullSizeImageName",
+    "FullSizeImageType",
+    "GPSAltitude",
+    "GPSDateTime",
+    "GPSDestBearing",
+    "GPSDestDistance",
+    "GPSDifferential",
+    "GPSLatitude",
+    "GPSLongitude",
+    "GPSMapDatum",
+    "GPSMeasureMode",
+    "GPSSatellites",
+    "GPSSpeed",
+    "GPSTrack",
+    "ISO",
+    "ISOSetting",
+    "ImageNumber",
+    "ImageQuality",
+    "ImageSize",
+    "ImageStabilization",
+    "Keywords",
+    "LensMake",
+    "LensModel",
+    "LensSerialNumber",
+    "MD5Digest",
+    "MIEVersion",
+    "Make",
+    "MaxAperture",
+    "MaxApertureAtMaxFocal",
+    "MaxFocalLength",
+    "MeasuredEV",
+    "MinAperture",
+    "MinFocalLength",
+    "Model",
+    "ModifyDate",
+    "OpticalZoom",
+    "OriginalImageSize",
+    "OwnerName",
+    "PhoneNumber",
+    "PostalCode",
+    "PreviewImage",
+    "PreviewImageName",
+    "PreviewImageSize",
+    "PreviewImageType",
+    "References",
+    "RelatedAudioFile",
+    "RelatedAudioFileName",
+    "RelatedAudioFileType",
+    "RelatedVideoFile",
+    "RelatedVideoFileName",
+    "RelatedVideoFileType",
+    "Resolution",
+    "RightAscension",
+    "Rotation",
+    "SampleBits",
+    "SampleRate",
+    "Saturation",
+    "SensorSize",
+    "SerialNumber",
+    "Sharpness",
+    "ShootingMode",
+    "Software",
+    "State",
+    "SubfileData",
+    "SubfileDirectory",
+    "SubfileMIMEType",
+    "SubfileName",
+    "SubfileResource",
+    "SubfileType",
+    "ThumbnailImage",
+    "ThumbnailImageName",
+    "ThumbnailImageSize",
+    "ThumbnailImageType",
+    "Title",
+    "TrailerSignature",
+    "URL",
+    "UTMEasting",
+    "UTMMapDatum",
+    "UTMNorthing",
+    "UTMZone",
+];
+
+/// Does a MIE table define the tag `name`?
+pub fn mie_defines(name: &str) -> bool {
+    MIE_TAGS.iter().any(|t| t.eq_ignore_ascii_case(name))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -359,7 +507,7 @@ pub fn rewrite(jpeg: Vec<u8>, edits: &TrailerEdits) -> Result<Vec<u8>> {
         let new = match t.kind {
             Kind::Afcp => edit_afcp(&jpeg, t, pos, edits.iptc)?,
             Kind::FotoStation => edit_fotostation(old, edits.iptc)?,
-            Kind::Mie if !edits.is_empty() => edit_mie(old, edits)?,
+            Kind::Mie if !edits.mie_is_empty() => edit_mie(old, edits)?,
             Kind::Samsung => t.samsung_audio.and_then(|(field, audio, size)| {
                 let start = u32::try_from(pos + audio).ok()?;
                 let mut b = old.to_vec();
@@ -673,7 +821,7 @@ fn edit_mie_dir(tag: &[u8], old: Option<&[u8]>, edits: &TrailerEdits) -> Result<
             ExifOutcome::Rewritten(b) => XmpOutcome::Rewritten(b),
         },
         b"IPTC" => {
-            let iptc = edits.iptc;
+            let iptc = edits.mie_iptc;
             if iptc.is_empty() || (old.is_none() && !iptc.creates()) {
                 XmpOutcome::Unchanged
             } else {
@@ -696,7 +844,7 @@ fn edit_mie_dir(tag: &[u8], old: Option<&[u8]>, edits: &TrailerEdits) -> Result<
                 }
             }
         }
-        b"XMP" => xmp_edit::edit_xmp(old, edits.xmp)?,
+        b"XMP" => xmp_edit::edit_xmp(old, edits.mie_xmp)?,
         _ => XmpOutcome::Unchanged,
     })
 }
@@ -853,6 +1001,7 @@ mod tests {
             tags: vec![IptcRequest {
                 tag,
                 values: vec![check_value(tag, v).unwrap()],
+                edit_only: false,
             }],
         }
     }
@@ -918,6 +1067,8 @@ mod tests {
             exif: &ExifChanges::default(),
             iptc: &iptc,
             xmp: &XmpChanges::default(),
+            mie_iptc: &iptc,
+            mie_xmp: &XmpChanges::default(),
         };
         let out = rewrite(src, &edits).unwrap();
         let (_, chain) = chain(&out).unwrap();
@@ -960,6 +1111,8 @@ mod tests {
             exif: &ExifChanges::default(),
             iptc: &iptc,
             xmp: &XmpChanges::default(),
+            mie_iptc: &iptc,
+            mie_xmp: &XmpChanges::default(),
         };
         let out = rewrite(src.clone(), &edits).unwrap();
         let (_, chain) = chain(&out).unwrap();

@@ -104,6 +104,10 @@ pub struct ExifChanges {
     pub delete_tags: Vec<(Option<Ifd>, String)>,
     /// Tags to write.
     pub set: Vec<SetValue>,
+    /// Tags replaced only where the block has them: ExifTool's
+    /// non-preferred groups for an ungrouped tag (`SetNewValue` leaves
+    /// `IsCreating` unset), and a MIE trailer for a tag MIE defines.
+    pub edit_only: Vec<SetValue>,
     /// The JFIF resolution of a JPEG, when its JFIF segment comes before
     /// the EXIF: ExifTool then takes IFD0's X/YResolution and
     /// ResolutionUnit defaults from it (WriteExif.pl, `JFIFYResolution`).
@@ -126,6 +130,7 @@ impl ExifChanges {
             && !self.delete_maker_notes
             && self.delete_tags.is_empty()
             && self.set.is_empty()
+            && self.edit_only.is_empty()
     }
 }
 
@@ -514,8 +519,19 @@ pub fn edit_exif(tiff: Option<&[u8]>, changes: &ExifChanges) -> Result<ExifOutco
         }
     }
 
-    // Writes.
-    for sv in &changes.set {
+    // Writes; an edit-only value replaces an existing tag only.
+    let existing = |block: &Block, sv: &SetValue| {
+        block
+            .dirs
+            .get(&sv.ifd)
+            .is_some_and(|d| d.entries.iter().any(|e| e.tag == sv.tag))
+    };
+    let edits: Vec<&SetValue> = changes
+        .edit_only
+        .iter()
+        .filter(|sv| existing(&block, sv))
+        .collect();
+    for sv in changes.set.iter().chain(edits) {
         if sv.ifd == Ifd::Ifd1 {
             // Creating or editing IFD1 means handling a thumbnail; not
             // supported, so the request is left unapplied.

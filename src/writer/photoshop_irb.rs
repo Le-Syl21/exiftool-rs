@@ -28,7 +28,9 @@ impl IptcChanges {
     }
     /// Will this edit create IPTC where there is none?
     pub(crate) fn creates(&self) -> bool {
-        self.tags.iter().any(|t| !t.values.is_empty())
+        self.tags
+            .iter()
+            .any(|t| !t.values.is_empty() && !t.edit_only)
     }
 }
 
@@ -157,6 +159,7 @@ mod tests {
             tags: vec![IptcRequest {
                 tag,
                 values: vec![check_value(tag, v).unwrap()],
+                edit_only: false,
             }],
         }
     }

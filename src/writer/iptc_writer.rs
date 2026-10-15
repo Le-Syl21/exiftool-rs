@@ -116,6 +116,14 @@ pub fn lookup_tag(name: &str) -> Option<&'static IptcWriteInfo> {
         .find(|t| t.name.eq_ignore_ascii_case(&alias))
 }
 
+/// The writable IPTC tag of ExifTool's name `name`, without this crate's
+/// aliases (`Title`, `Description`...): what an ungrouped request matches.
+pub fn lookup_exact(name: &str) -> Option<&'static IptcWriteInfo> {
+    IPTC_WRITE_TAGS
+        .iter()
+        .find(|t| t.name.eq_ignore_ascii_case(name))
+}
+
 /// Map IPTC tag name to (record, dataset).
 pub fn tag_name_to_iptc(name: &str) -> Option<(u8, u8)> {
     lookup_tag(name).map(|t| (t.record, t.dataset))
@@ -127,6 +135,9 @@ pub struct IptcRequest {
     pub tag: &'static IptcWriteInfo,
     /// The values to write (several for a list tag). Empty: delete the tag.
     pub values: Vec<String>,
+    /// Only replace the tag where the block has it: ExifTool's non-preferred
+    /// groups for an ungrouped tag (`SetNewValue`, `IsCreating` unset).
+    pub edit_only: bool,
 }
 
 /// Validate and convert a value for `tag` the way ExifTool's inverse
@@ -571,7 +582,7 @@ pub fn edit_iptc(data: &[u8], requests: &[IptcRequest]) -> Result<Vec<u8>> {
                 let do_set = if f & 0x02 != 0 {
                     f & 0x04 == 0
                 } else {
-                    req.tag.list || f == 0
+                    (req.tag.list || f == 0) && !req.edit_only
                 };
                 if do_set && !req.values.is_empty() {
                     *found.entry(key).or_insert(f) |= 0x04;
@@ -653,6 +664,7 @@ mod tests {
                 .iter()
                 .map(|v| check_value(lookup_tag(name).unwrap(), v).unwrap())
                 .collect(),
+            edit_only: false,
         }
     }
 
@@ -777,6 +789,7 @@ mod tests {
         let del = IptcRequest {
             tag: lookup_tag("By-line").unwrap(),
             values: vec![],
+            edit_only: false,
         };
         assert!(edit_iptc(&old, &[del]).unwrap().is_empty());
     }

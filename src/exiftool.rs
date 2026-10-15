@@ -676,6 +676,14 @@ impl ExifTool {
         let mut exif_values: Vec<&NewValue> = Vec::new();
         let mut xmp_values: Vec<&NewValue> = Vec::new();
         let mut iptc_values: Vec<&NewValue> = Vec::new();
+        // Ungrouped tags written to another family where it already has them
+        // (EXIF, first in ExifTool's order of preference, never is one).
+        let mut xmp_edit: Vec<&NewValue> = Vec::new();
+        let mut iptc_edit: Vec<&NewValue> = Vec::new();
+        // Ungrouped tags a MIE trailer defines: ExifTool writes the MIE tag
+        // there, so it does not create an EXIF, IPTC or XMP directory in the
+        // trailer for them (InitWriteDirs, `CreateGroups`).
+        let mut mie_own: Vec<&NewValue> = Vec::new();
         let mut comment_value: Option<&str> = None;
         let mut remove_exif = false;
         let mut remove_comment = false;
@@ -691,47 +699,91 @@ impl ExifTool {
                 "IPTC" => iptc_values.push(nv),
                 g if g == "XMP" || g.starts_with("XMP-") => xmp_values.push(nv),
                 "EXIF" | "IFD0" | "EXIFIFD" | "GPS" => exif_values.push(nv),
-                "" => {
-                    // Auto-detect best group based on tag name
-                    if nv.tag.to_lowercase() == "comment" {
-                        if nv.value.is_none() {
-                            remove_comment = true;
-                        } else {
-                            comment_value = nv.value.as_deref();
-                        }
-                    } else if is_xmp_tag(&nv.tag) {
-                        xmp_values.push(nv);
-                    } else if crate::writer::exif_edit::tag_spec(&nv.tag).is_none()
-                        && iptc_writer::lookup_tag(&nv.tag).is_some()
-                    {
-                        // Not an EXIF tag: IPTC comes next in ExifTool's
-                        // order of preference, then XMP.
-                        iptc_values.push(nv);
-                    } else if crate::writer::exif_edit::tag_spec(&nv.tag).is_none()
-                        && crate::writer::xmp_tags::is_known(&nv.tag)
-                    {
-                        xmp_values.push(nv);
+                "" if nv.tag.eq_ignore_ascii_case("comment") => {
+                    if nv.value.is_none() {
+                        remove_comment = true;
                     } else {
+                        comment_value = nv.value.as_deref();
+                    }
+                }
+                "" if is_all(&nv.tag) => {
+                    exif_values.push(nv);
+                    if nv.value.is_none() {
+                        iptc_values.push(nv);
+                        xmp_values.push(nv);
+                    }
+                }
+                "" => {
+                    // SetNewValue: the tag goes to every family defining it,
+                    // created in the preferred one (EXIF, then IPTC, then
+                    // XMP) and replaced where it exists in the others; a
+                    // deletion reaches them all. IPTC names are matched
+                    // exactly here: `Title` is XMP-dc's, not ObjectName.
+                    let in_exif = crate::writer::exif_edit::tag_spec(&nv.tag).is_some();
+                    let in_iptc = iptc_writer::lookup_exact(&nv.tag).is_some();
+                    let in_xmp = crate::writer::xmp_tags::is_known(&nv.tag);
+                    if nv.value.is_none() {
+                        if in_exif || !(in_iptc || in_xmp) {
+                            exif_values.push(nv);
+                        }
+                        if in_iptc {
+                            iptc_values.push(nv);
+                        }
+                        if in_xmp {
+                            xmp_values.push(nv);
+                        }
+                        continue;
+                    }
+                    if crate::writer::jpeg_trailers::mie_defines(&nv.tag) {
+                        mie_own.push(nv);
+                    }
+                    if in_exif || !(in_iptc || in_xmp) {
                         exif_values.push(nv);
+                    } else if in_iptc {
+                        iptc_values.push(nv);
+                    } else {
+                        xmp_values.push(nv);
+                    }
+                    if in_iptc && in_exif {
+                        iptc_edit.push(nv);
+                    }
+                    if in_xmp && (in_exif || in_iptc) {
+                        xmp_edit.push(nv);
                     }
                 }
                 _ => exif_values.push(nv), // default to EXIF
             }
+        }
+        /// `values` without the tags in `own`, and `edit` with them.
+        fn mie_split<'a>(
+            values: &[&'a NewValue],
+            edit: &[&'a NewValue],
+            own: &[&'a NewValue],
+        ) -> (Vec<&'a NewValue>, Vec<&'a NewValue>) {
+            let mut e = edit.to_vec();
+            let mut v = Vec::new();
+            for nv in values {
+                if own.iter().any(|m| std::ptr::eq(*m, *nv)) {
+                    e.push(nv);
+                } else {
+                    v.push(*nv);
+                }
+            }
+            (v, e)
         }
 
         // Edit the existing EXIF in place, as ExifTool's WriteExif does:
         // byte order, IFD1 and its thumbnail, InteropIFD and the maker note
         // stay as they are.
         let mut new_exif: Option<Vec<u8>> = None;
-        let mut trailer_exif = crate::writer::exif_edit::ExifChanges::default();
-        if !exif_values.is_empty() {
+        let (mie_v, mie_e) = mie_split(&exif_values, &[], &mie_own);
+        let mut trailer_exif = exif_changes(&mie_v, &mie_e);
+        // By the time ExifTool writes the trailers it has read the JFIF
+        // segment wherever it is: a new IFD0 there takes its resolution.
+        trailer_exif.jfif_resolution = jpeg_writer::jfif_resolution(data);
+        let mut changes = exif_changes(&exif_values, &[]);
+        if !changes.is_empty() {
             use crate::writer::exif_edit::{edit_exif, ExifOutcome};
-            let owned: Vec<NewValue> = exif_values.iter().map(|nv| (*nv).clone()).collect();
-            let (mut changes, _) = item_changes(&owned, true);
-            // By the time ExifTool writes the trailers it has read the JFIF
-            // segment wherever it is: a new IFD0 there takes its resolution.
-            trailer_exif = changes.clone();
-            trailer_exif.jfif_resolution = jpeg_writer::jfif_resolution(data);
             changes.jfif_resolution = jpeg_writer::jfif_resolution_before_exif(data);
             let current = jpeg_writer::extract_jpeg_exif(data);
             match edit_exif(current, &changes)? {
@@ -754,16 +806,23 @@ impl ExifTool {
             remove_comment,
         )?;
         // IPTC (APP13) and XMP (APP1, extended XMP) are edited in place.
-        let iptc = iptc_changes(&iptc_values);
-        let xmp = xmp_changes(&xmp_values);
+        let iptc = iptc_changes(&iptc_values, &iptc_edit);
+        let xmp = xmp_changes(&xmp_values, &xmp_edit);
         let out = crate::writer::jpeg_iptc_xmp::rewrite(&out, &iptc, &xmp)?;
-        // Then the trailers after the EOI (AFCP, FotoStation, MIE...).
+        // Then the trailers after the EOI (AFCP, FotoStation, MIE...); the
+        // IPTC of AFCP and FotoStation takes the same edits as APP13.
+        let (mv, me) = mie_split(&iptc_values, &iptc_edit, &mie_own);
+        let mie_iptc = iptc_changes(&mv, &me);
+        let (mv, me) = mie_split(&xmp_values, &xmp_edit, &mie_own);
+        let mie_xmp = xmp_changes(&mv, &me);
         crate::writer::jpeg_trailers::rewrite(
             out,
             &crate::writer::jpeg_trailers::TrailerEdits {
                 exif: &trailer_exif,
                 iptc: &iptc,
                 xmp: &xmp,
+                mie_iptc: &mie_iptc,
+                mie_xmp: &mie_xmp,
             },
         )
     }
@@ -832,7 +891,7 @@ impl ExifTool {
         }
 
         // IPTC: edited in place (WriteIPTC), XMP: edited in place.
-        let mut iptc_req = iptc_changes(&iptc_values);
+        let mut iptc_req = iptc_changes(&iptc_values, &[]);
         iptc_req.delete_all |= delete_iptc;
         let iptc = if iptc_req.is_empty() {
             ResourceChange::Keep
@@ -3063,7 +3122,10 @@ fn item_changes(
                 xmp.delete_tags.push((None, tag_lc));
             }
             ("" | "*" | "all", Some(v)) => {
-                if !(exif_writable && exif_set(&mut exif, None, &nv.tag, v)) {
+                if exif_writable && exif_set(&mut exif, None, &nv.tag, v) {
+                    // Created in EXIF, replaced where the XMP has it.
+                    xmp_edit_only(&mut xmp, nv);
+                } else {
                     xmp_request(&mut xmp, &mut xmp_sets, "xmp", nv);
                 }
             }
@@ -3095,7 +3157,11 @@ fn item_changes(
 
 /// The XMP edits of requests routed to XMP (group `XMP`, `XMP-<ns>`, or an
 /// ungrouped tag the caller chose XMP for).
-fn xmp_changes(values: &[&NewValue]) -> crate::writer::xmp_edit::XmpChanges {
+/// `edit_only`: ungrouped tags that only replace properties the packet has.
+fn xmp_changes(
+    values: &[&NewValue],
+    edit_only: &[&NewValue],
+) -> crate::writer::xmp_edit::XmpChanges {
     let mut xmp = crate::writer::xmp_edit::XmpChanges {
         toolkit: format!("exiftool-rs {}", env!("CARGO_PKG_VERSION")),
         ..Default::default()
@@ -3107,7 +3173,37 @@ fn xmp_changes(values: &[&NewValue]) -> crate::writer::xmp_edit::XmpChanges {
         xmp_request(&mut xmp, &mut sets, &g, nv);
     }
     finish_xmp_sets(&mut xmp, sets);
+    for nv in edit_only {
+        xmp_edit_only(&mut xmp, nv);
+    }
     xmp
+}
+
+/// An ungrouped tag ExifTool creates in another family: replaced in every
+/// XMP namespace defining it, where the packet has it.
+fn xmp_edit_only(xmp: &mut crate::writer::xmp_edit::XmpChanges, nv: &NewValue) {
+    if let Some(v) = &nv.value {
+        if let Some(t) = crate::writer::xmp_tags::resolve(None, &nv.tag, v) {
+            xmp.edit_only.extend(t.create);
+            xmp.edit_only.extend(t.edit_only);
+        }
+    }
+}
+
+/// The EXIF edits of `values`, and of `edit_only` as values that only
+/// replace a tag the block has.
+fn exif_changes(
+    values: &[&NewValue],
+    edit_only: &[&NewValue],
+) -> crate::writer::exif_edit::ExifChanges {
+    let owned: Vec<NewValue> = values.iter().map(|nv| (*nv).clone()).collect();
+    let (mut changes, _) = item_changes(&owned, true);
+    if !edit_only.is_empty() {
+        let owned: Vec<NewValue> = edit_only.iter().map(|nv| (*nv).clone()).collect();
+        let (e, _) = item_changes(&owned, true);
+        changes.edit_only.extend(e.set);
+    }
+    changes
 }
 
 /// Add one request to the XMP edits, with ExifTool's group semantics:
@@ -3165,10 +3261,18 @@ fn finish_xmp_sets(
 
 /// The IPTC edits of requests routed to IPTC. A tag ExifTool does not know
 /// or a value it would reject is left out (and so reported unapplied).
-fn iptc_changes(values: &[&NewValue]) -> crate::writer::photoshop_irb::IptcChanges {
+/// `edit_only`: requests that only replace a tag where a block has it.
+fn iptc_changes(
+    values: &[&NewValue],
+    edit_only: &[&NewValue],
+) -> crate::writer::photoshop_irb::IptcChanges {
     use crate::writer::iptc_writer::{check_value, lookup_tag, IptcRequest};
     let mut out = crate::writer::photoshop_irb::IptcChanges::default();
-    for nv in values {
+    let all = values
+        .iter()
+        .map(|nv| (nv, false))
+        .chain(edit_only.iter().map(|nv| (nv, true)));
+    for (nv, only_edit) in all {
         if is_all(&nv.tag) {
             if nv.value.is_none() {
                 out.delete_all = true;
@@ -3183,12 +3287,14 @@ fn iptc_changes(values: &[&NewValue]) -> crate::writer::photoshop_irb::IptcChang
             None => out.tags.push(IptcRequest {
                 tag,
                 values: Vec::new(),
+                edit_only: false,
             }),
             Some(v) => {
                 if let Ok(v) = check_value(tag, v) {
                     out.tags.push(IptcRequest {
                         tag,
                         values: vec![v],
+                        edit_only: only_edit,
                     });
                 }
             }

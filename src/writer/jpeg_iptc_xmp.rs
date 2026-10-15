@@ -340,6 +340,7 @@ mod tests {
             tags: vec![IptcRequest {
                 tag,
                 values: vec![check_value(tag, v).unwrap()],
+                edit_only: false,
             }],
         }
     }
