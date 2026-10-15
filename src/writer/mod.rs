@@ -8,6 +8,7 @@ pub mod id3_writer;
 pub mod iptc_writer;
 pub mod jp2_writer;
 pub mod jpeg_iptc_xmp;
+pub mod jpeg_trailers;
 pub mod jpeg_writer;
 pub mod makernote_writer;
 pub mod matroska_writer;

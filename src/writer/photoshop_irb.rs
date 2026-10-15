@@ -27,7 +27,7 @@ impl IptcChanges {
         !self.delete_all && self.tags.is_empty()
     }
     /// Will this edit create IPTC where there is none?
-    fn creates(&self) -> bool {
+    pub(crate) fn creates(&self) -> bool {
         self.tags.iter().any(|t| !t.values.is_empty())
     }
 }

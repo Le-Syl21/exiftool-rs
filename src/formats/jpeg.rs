@@ -1219,7 +1219,11 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
     // MIE trailer: scan for "~\x10\x04\xfe" outer MIE group signature (from Perl MIE.pm).
     if let Some(mie_pos) = data.windows(4).rposition(|w| w == b"\x7e\x10\x04\xfe") {
         let mie_data = &data[mie_pos..];
-        tags.extend(parse_mie_trailer(mie_data));
+        let mut mie_iptc = Vec::new();
+        tags.extend(parse_mie_trailer(mie_data, &mut mie_iptc));
+        // A MIE IPTC directory is a non-standard one, numbered with the
+        // others by its place in the trailer chain.
+        nonstd_iptc.extend(mie_iptc.into_iter().map(|(at, t)| (mie_pos + at, t)));
     }
 
     // IPTCDigest Warning: compare stored IPTCDigest with CurrentIPTCDigest
@@ -2155,13 +2159,16 @@ fn parse_samsung_seft(data: &[u8], block_end: usize) -> Vec<crate::tag::Tag> {
     tags
 }
 
-fn parse_mie_trailer(data: &[u8]) -> Vec<crate::tag::Tag> {
+fn parse_mie_trailer(
+    data: &[u8],
+    iptc: &mut Vec<(usize, Vec<crate::tag::Tag>)>,
+) -> Vec<crate::tag::Tag> {
     // Parse MIE elements linearly, treating groups as transparent containers.
     // Key: groups with val_len=0 have inline sub-elements (stream-based, not length-delimited).
     // Groups with val_len>0 have their content embedded in the value bytes.
     let mut tags = Vec::new();
     let mut pos = 0usize;
-    parse_mie_elements(data, &mut pos, &mut tags, 0, "MIE-Main");
+    parse_mie_elements(data, &mut pos, &mut tags, iptc, 0, "MIE-Main");
     tags
 }
 
@@ -2170,6 +2177,7 @@ fn parse_mie_trailer(data: &[u8]) -> Vec<crate::tag::Tag> {
 /// (MIE.pm:126) and the `Document` group is `MIE-Doc` (MIE.pm:238, 296).
 fn mie_group1(name: &str) -> Option<&'static str> {
     Some(match name {
+        "Meta" => "MIE-Meta",
         "Document" => "MIE-Doc",
         "Camera" => "MIE-Camera",
         "Image" => "MIE-Image",
@@ -2195,6 +2203,7 @@ fn parse_mie_elements(
     data: &[u8],
     pos: &mut usize,
     tags: &mut Vec<crate::tag::Tag>,
+    iptc: &mut Vec<(usize, Vec<crate::tag::Tag>)>,
     depth: usize,
     group1: &str,
 ) {
@@ -2269,7 +2278,7 @@ fn parse_mie_elements(
             if val_len == 0 {
                 // Inline group: sub-elements follow immediately in the stream
                 let sub_group = mie_group1(&name).unwrap_or(group1);
-                parse_mie_elements(data, pos, tags, depth + 1, sub_group);
+                parse_mie_elements(data, pos, tags, iptc, depth + 1, sub_group);
             } else {
                 // Embedded group: content is the next val_len bytes
                 if *pos + val_len > data.len() {
@@ -2279,7 +2288,7 @@ fn parse_mie_elements(
                 *pos += val_len;
                 let mut sub_pos = 0usize;
                 let sub_group = mie_group1(&name).unwrap_or(group1);
-                parse_mie_elements(sub_data, &mut sub_pos, tags, depth + 1, sub_group);
+                parse_mie_elements(sub_data, &mut sub_pos, tags, iptc, depth + 1, sub_group);
             }
         } else {
             // Leaf value
@@ -2287,7 +2296,35 @@ fn parse_mie_elements(
                 break;
             }
             let val_bytes = &data[*pos..*pos + val_len];
+            let at = *pos;
             *pos += val_len;
+
+            // MIE.pm's MIE-Meta directories (`EXIF`, `IPTC`, `XMP`), read
+            // with their own tables. A compressed one (format bit 0x04) is
+            // left as it is.
+            if group1 == "MIE-Meta" && format & 0x04 == 0 {
+                match name.as_str() {
+                    "EXIF" => {
+                        if let Ok(t) = crate::metadata::ExifReader::read(val_bytes) {
+                            tags.extend(t);
+                        }
+                        continue;
+                    }
+                    "XMP" => {
+                        if let Ok(t) = crate::metadata::XmpReader::read(val_bytes) {
+                            tags.extend(t);
+                        }
+                        continue;
+                    }
+                    "IPTC" => {
+                        if let Ok(t) = IptcReader::read_nonstandard(val_bytes) {
+                            iptc.push((at, t));
+                        }
+                        continue;
+                    }
+                    _ => {}
+                }
+            }
 
             // Skip internal MIE metadata names starting with digit (e.g. "0MIE", "0Type")
             if name.starts_with(|c: char| c.is_ascii_digit()) {

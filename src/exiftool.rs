@@ -723,10 +723,15 @@ impl ExifTool {
         // byte order, IFD1 and its thumbnail, InteropIFD and the maker note
         // stay as they are.
         let mut new_exif: Option<Vec<u8>> = None;
+        let mut trailer_exif = crate::writer::exif_edit::ExifChanges::default();
         if !exif_values.is_empty() {
             use crate::writer::exif_edit::{edit_exif, ExifOutcome};
             let owned: Vec<NewValue> = exif_values.iter().map(|nv| (*nv).clone()).collect();
             let (mut changes, _) = item_changes(&owned, true);
+            // By the time ExifTool writes the trailers it has read the JFIF
+            // segment wherever it is: a new IFD0 there takes its resolution.
+            trailer_exif = changes.clone();
+            trailer_exif.jfif_resolution = jpeg_writer::jfif_resolution(data);
             changes.jfif_resolution = jpeg_writer::jfif_resolution_before_exif(data);
             let current = jpeg_writer::extract_jpeg_exif(data);
             match edit_exif(current, &changes)? {
@@ -749,10 +754,17 @@ impl ExifTool {
             remove_comment,
         )?;
         // IPTC (APP13) and XMP (APP1, extended XMP) are edited in place.
-        crate::writer::jpeg_iptc_xmp::rewrite(
-            &out,
-            &iptc_changes(&iptc_values),
-            &xmp_changes(&xmp_values),
+        let iptc = iptc_changes(&iptc_values);
+        let xmp = xmp_changes(&xmp_values);
+        let out = crate::writer::jpeg_iptc_xmp::rewrite(&out, &iptc, &xmp)?;
+        // Then the trailers after the EOI (AFCP, FotoStation, MIE...).
+        crate::writer::jpeg_trailers::rewrite(
+            out,
+            &crate::writer::jpeg_trailers::TrailerEdits {
+                exif: &trailer_exif,
+                iptc: &iptc,
+                xmp: &xmp,
+            },
         )
     }
 

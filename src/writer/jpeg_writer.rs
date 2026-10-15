@@ -403,6 +403,20 @@ pub fn jfif_resolution_before_exif(
     None
 }
 
+/// The resolution of the first JFIF APP0 segment of a JPEG, wherever it is.
+pub fn jfif_resolution(jpeg: &[u8]) -> Option<crate::writer::exif_edit::JfifResolution> {
+    segments(jpeg).into_iter().find_map(|(marker, at, len)| {
+        let seg = &jpeg[at..at + len];
+        (marker == 0xE0 && seg.len() >= 12 && seg.starts_with(b"JFIF\0")).then(|| {
+            crate::writer::exif_edit::JfifResolution {
+                unit: seg[7],
+                x: u16::from_be_bytes([seg[8], seg[9]]),
+                y: u16::from_be_bytes([seg[10], seg[11]]),
+            }
+        })
+    })
+}
+
 /// Fix the offsets into what follows the scan data (an AFCP trailer, MPF
 /// images) after a rewrite of `source` into `output` moved the scan data
 /// from `src_scan` to `out_scan`: the IPTC and XMP pass
