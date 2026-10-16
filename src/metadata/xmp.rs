@@ -11,6 +11,22 @@ use xml::reader::{EventReader, XmlEvent};
 /// XMP metadata reader.
 pub struct XmpReader;
 
+thread_local! {
+    /// ExifTool's `Struct` option (`-struct`), set per extraction by
+    /// `ExifTool::extract_info_from_bytes` like the other reader options.
+    static STRUCT_OUTPUT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Enable or disable structured XMP output for the current thread.
+pub fn set_struct_output(on: bool) {
+    STRUCT_OUTPUT.with(|s| s.set(on));
+}
+
+/// Whether structured XMP output is on for the current thread.
+pub fn struct_output() -> bool {
+    STRUCT_OUTPUT.with(|s| s.get())
+}
+
 /// Known XMP namespace prefixes.
 pub(crate) fn namespace_prefix(uri: &str) -> &str {
     match uri {
@@ -122,7 +138,7 @@ fn xmp_group_prefix(uri: &str, cur_ns: &std::collections::HashMap<String, String
 }
 
 /// Category for an XMP namespace.
-fn namespace_category(prefix: &str) -> &str {
+pub(crate) fn namespace_category(prefix: &str) -> &str {
     match prefix {
         "dc" => "Author",
         "xmp" | "xmpMM" | "xmpRights" => "Other",
@@ -475,7 +491,7 @@ impl XmpReader {
                                 let category =
                                     xmp_toplevel_family2(group_prefix, &name.local_name, category);
                                 let full_name = ucfirst(&name.local_name);
-                                let value = if bag_values.len() == 1 {
+                                let value = if bag_values.len() == 1 && !struct_output() {
                                     Value::String(bag_values[0].clone())
                                 } else {
                                     Value::List(
@@ -1448,7 +1464,11 @@ impl XmpReader {
                                 let group_prefix = group_prefix.as_str();
                                 let _category = namespace_category(group_prefix);
 
-                                let value = if list_values.len() == 1 {
+                                // With -struct ExifTool reports every Bag/Seq as a list,
+                                // one item included (`Creator: ["one"]`); lang-alts (Alt)
+                                // stay scalar.
+                                let keep_list = struct_output() && name.local_name != "Alt";
+                                let value = if list_values.len() == 1 && !keep_list {
                                     Value::String(list_values[0].clone())
                                 } else {
                                     Value::List(
@@ -1909,6 +1929,23 @@ impl XmpReader {
             // value into its quotient (XMP.pm lines 3400-3412). This is what
             // makes an ExifTool-written `Composite:ShutterSpeed` of `1/213`
             // read back as 0.00469483568075117.
+            // A list of rationals ("18/1 55/1 0/0 0/0", aux:LensInfo) is
+            // converted term by term, ConvertRationalList style, in both values.
+            if tag.print_value.contains(' ')
+                && tag.print_value.split(' ').count() > 1
+                && tag
+                    .print_value
+                    .split(' ')
+                    .all(|term| convert_xmp_rational(term).is_some())
+            {
+                let converted: Vec<String> = tag
+                    .print_value
+                    .split(' ')
+                    .map(|term| convert_xmp_rational(term).unwrap_or_else(|| term.to_string()))
+                    .collect();
+                // Raw only: the print form (LensInfo "18-55mm f/?") is built later.
+                tag.raw_value = Value::String(converted.join(" "));
+            }
             if let Some(quotient) = convert_xmp_rational(&tag.print_value) {
                 if xmp_property_is_unknown_aliased(&tag.group.family1, &tag.name) {
                     tag.print_value = quotient.clone();
@@ -1917,6 +1954,10 @@ impl XmpReader {
                 }
             }
             if let Some(reformatted) = convert_xmp_date(&tag.print_value) {
+                // ConvertXMPDate is a ValueConv: -n shows the reformatted date too.
+                if matches!(tag.raw_value, Value::String(_)) {
+                    tag.raw_value = Value::String(reformatted.clone());
+                }
                 tag.print_value = reformatted;
                 // `if ($stdDate and $added) { $$tagInfo{Groups}{2} = 'Time' }`
                 // (XMP.pm lines 3683-3685): a property ExifTool has no schema
@@ -1933,6 +1974,25 @@ impl XmpReader {
             }
             // XMP-plus vocabulary: strip the LDF URL prefix and map each code.
             if tag.print_value.contains("ns.useplus.org/ldf/vocab/") {
+                // ValueConv strips the vocabulary URL down to the code (-n shows
+                // "CS-PRO"); PrintConv then maps the code to its phrase.
+                let codes: Vec<String> = tag
+                    .print_value
+                    .split(", ")
+                    .map(|item| {
+                        item.trim()
+                            .rsplit('/')
+                            .next()
+                            .unwrap_or("")
+                            .trim()
+                            .to_string()
+                    })
+                    .collect();
+                tag.raw_value = if codes.len() == 1 && !matches!(tag.raw_value, Value::List(_)) {
+                    Value::String(codes[0].clone())
+                } else {
+                    Value::List(codes.into_iter().map(Value::String).collect())
+                };
                 let mapped: Vec<String> = tag
                     .print_value
                     .split(", ")
@@ -2079,6 +2139,12 @@ impl XmpReader {
         // where repeated struct properties (e.g. in Bag/Seq items) are combined into one tag.
         // For exact duplicate names, keep only the first instance but join all values.
         let mut tags = aggregate_duplicate_xmp_tags(tags);
+
+        // -struct: replace the flattened fields of structured properties by one
+        // struct-valued tag each (tree pass over the same packet).
+        if struct_output() {
+            tags = super::xmp_struct::apply(xml_for_parse, tags);
+        }
 
         // Last of all, give the family-1 groups the names ExifTool reports. This
         // runs after every lookup keyed on the namespace prefix recorded in the
@@ -2261,7 +2327,9 @@ fn aggregate_duplicate_xmp_tags(tags: Vec<Tag>) -> Vec<Tag> {
             let prefix = tag.group.family1.strip_prefix("XMP-").unwrap_or("");
             if is_known_xmp_prefix(prefix) {
                 let existing = &mut result[idx];
-                if existing.print_value != tag.print_value {
+                // Every occurrence is a list item, equal values included:
+                // two "Correction" masks are two entries, not one.
+                {
                     // Grow an element list alongside the joined print string so JSON
                     // output emits an array (ExifTool keeps these List=>1 flattened
                     // fields as an array ref). Elements are the per-occurrence print
@@ -2584,7 +2652,7 @@ pub(crate) fn remap_xmp_tag_name(group_prefix: &str, local_name: &str) -> String
 /// E.g., ArtworkOrObjectAOTitle → ArtworkTitle, KeywordsHierarchyKeyword → HierarchicalKeywords1.
 /// Apply flat name remap that may involve dynamic prefix substitution.
 /// This converts concatenated property-path names to their ExifTool tag Names.
-fn apply_flat_name_remap(name: &str) -> String {
+pub(crate) fn apply_flat_name_remap(name: &str) -> String {
     // Dynamic prefix substitutions first (can't be done in a simple match)
     // MWG Regions Extensions: RegionsRegionListExtensions* → RegionExtensions*
     // Then apply any further remappings to the suffix (e.g., ArtworkOrObject → Artwork)
@@ -3019,7 +3087,7 @@ fn parse_xmp_value(text: &str) -> Value {
     Value::String(text.to_string())
 }
 
-fn ucfirst(s: &str) -> String {
+pub(crate) fn ucfirst(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),
@@ -3032,7 +3100,7 @@ fn ucfirst(s: &str) -> String {
 /// may contain raw UTF-8 bytes (e.g. U+2182 encoded as \xe2\x86\x82).
 /// Perl naturally strips bytes > 0x7F when building ASCII tag names.
 /// This mirrors that behavior by removing non-ASCII Unicode characters.
-fn strip_non_ascii(s: &str) -> String {
+pub(crate) fn strip_non_ascii(s: &str) -> String {
     s.chars().filter(|c| c.is_ascii()).collect()
 }
 
@@ -3072,7 +3140,7 @@ fn xml_elem_to_camel(s: &str) -> String {
 /// Normalize XML text content: trim outer whitespace and collapse internal whitespace sequences
 /// (including newlines from multi-line XMP text nodes) into single spaces.
 /// This matches ExifTool's XML text normalization behavior.
-fn normalize_xml_text(s: &str) -> String {
+pub(crate) fn normalize_xml_text(s: &str) -> String {
     let trimmed = s.trim();
     if !trimmed.contains('\n') && !trimmed.contains('\r') {
         // Fast path: no line breaks

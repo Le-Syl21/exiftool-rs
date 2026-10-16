@@ -1012,10 +1012,21 @@ fn compute_aperture(tags: &[Tag]) -> Option<Tag> {
 fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
     // Perl ImageSize ValueConv: RawImageCroppedSize (RAF) wins; ExifImageWidth/Height for
     // CR2/IIQ/EIP; otherwise the native ImageWidth/Height.
+    // ExifTool's ImageSize ValueConv is "W H" (what -n prints); "WxH" is its PrintConv.
+    let image_size = |w: String, h: String| {
+        mk_composite_raw(
+            "ImageSize",
+            "Image Size",
+            Value::String(format!("{w} {h}")),
+            format!("{w}x{h}"),
+        )
+    };
     if let Some(rcs) = find_tag_value(tags, "RawImageCroppedSize") {
-        let v = rcs.trim().replace(' ', "x");
-        if !v.is_empty() {
-            return Some(mk_composite("ImageSize", "Image Size", Value::String(v)));
+        let mut parts = rcs
+            .split(|c: char| c == 'x' || c.is_whitespace())
+            .filter(|p| !p.is_empty());
+        if let (Some(w), Some(h)) = (parts.next(), parts.next()) {
+            return Some(image_size(w.to_string(), h.to_string()));
         }
     }
     let ft = find_tag(tags, "FileType")
@@ -1033,11 +1044,7 @@ fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
                 .or_else(|| t.print_value.trim().parse().ok())
         });
         if let (Some(w), Some(h)) = (ew, eh) {
-            return Some(mk_composite(
-                "ImageSize",
-                "Image Size",
-                Value::String(format!("{}x{}", w, h)),
-            ));
+            return Some(image_size(w.to_string(), h.to_string()));
         }
     }
     let width = find_tag(tags, "ImageWidth").and_then(|t| {
@@ -1053,11 +1060,7 @@ fn compute_image_size(tags: &[Tag]) -> Option<Tag> {
 
     let (width, height) = (width?, height?);
 
-    Some(mk_composite(
-        "ImageSize",
-        "Image Size",
-        Value::String(format!("{}x{}", width, height)),
-    ))
+    Some(image_size(width.to_string(), height.to_string()))
 }
 
 /// Perl: Require => 'ImageSize', ValueConv => 'my @d = ($val =~ /\d+/g); $d[0] * $d[1] / 1000000'

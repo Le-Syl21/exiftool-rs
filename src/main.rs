@@ -147,7 +147,7 @@ fn main() {
     let mut show_groups = false;
     // Group family selected by -G<n>/-g<n> (0 = information type, 1 = location,
     // 2 = category, 3 = document).
-    let mut group_family: u8 = 0;
+    let mut group_families: Vec<u8> = vec![0];
     let mut short_names = false;
     let mut write_tags: Vec<(String, String)> = Vec::new();
     let mut delete_tags: Vec<String> = Vec::new();
@@ -213,16 +213,22 @@ fn main() {
             "-X" | "-xml" => xml_output = true,
             "-g" | "--group" | "-g0" => {
                 show_groups = true;
-                group_family = 0;
+                group_families = vec![0];
             }
-            "-n" | "--num" | "-num" => options.print_conv = false,
+            "-n" | "--num" | "-num" => {
+                options.print_conv = false;
+                NUMERIC_JSON.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
             "-s" | "--short" => short_names = true,
             "-S" | "-veryShort" => {
                 short_names = true;
             } // -S = -s without padding
             "-f" => options.fast_scan = 1,
             "-F" => options.fast_scan = 2,
-            "-b" | "-binary" => binary_output = true,
+            "-b" | "-binary" => {
+                binary_output = true;
+                BINARY_JSON.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
             "-r" | "-recurse" => recursive = true,
             "-overwrite_original" => overwrite_original = true,
             "-a" | "-duplicates" => options.duplicates = true,
@@ -311,15 +317,14 @@ fn main() {
                     _ => 1,
                 };
             }
-            "-G" | "-G0" | "-G1" | "-G2" | "-G3" | "-G4" | "-G5" | "-G6" | "-g1" | "-g2"
-            | "-g3" | "-g4" | "-g5" | "-g6" => {
+            "-g1" | "-g2" | "-g3" | "-g4" | "-g5" | "-g6" => {
                 show_groups = true;
-                // Trailing digit; a bare -G selects family 0.
-                group_family = arg
-                    .as_bytes()
-                    .last()
-                    .filter(|b| b.is_ascii_digit())
-                    .map_or(0, |b| b - b'0');
+                group_families = vec![arg.as_bytes()[2] - b'0'];
+            }
+            // -G, -G1, -G0:1:4 ...: one or more family numbers joined by ':'.
+            spec if spec.starts_with("-G") && parse_group_families(&spec[2..]).is_some() => {
+                show_groups = true;
+                group_families = parse_group_families(&spec[2..]).unwrap();
             }
             "-geolocate" | "-geolocation" => {
                 // Reverse geocoding is automatic when GPS is present
@@ -400,7 +405,8 @@ fn main() {
             "-scanForXMP" | "-scanforxmp" => {
                 scan_for_xmp = true;
             }
-            "-struct" | "-s2" | "-s1" => short_names = true,
+            "-struct" => options.struct_output = true,
+            "-s2" | "-s1" => short_names = true,
             "-use" | "-useMWG" | "-usemwg" => {
                 options.use_mwg = true;
             }
@@ -712,7 +718,13 @@ fn main() {
 
     // Stay-open mode: read commands from stdin
     if stay_open {
-        run_stay_open(options, show_groups, group_family, short_names, json_output);
+        run_stay_open(
+            options,
+            show_groups,
+            group_families,
+            short_names,
+            json_output,
+        );
         return;
     }
 
@@ -906,8 +918,8 @@ fn main() {
         return;
     }
 
-    // Binary output mode
-    if binary_output {
+    // Binary output mode (-b alone dumps the values; with -j they are base64 members)
+    if binary_output && !json_output {
         print_binary(&et, &files);
         return;
     }
@@ -940,7 +952,7 @@ fn main() {
             &et,
             &files,
             show_groups,
-            group_family,
+            &group_families,
             et.options().extract_embedded == 0,
             lang.as_deref(),
         );
@@ -1006,7 +1018,7 @@ fn main() {
                 &et,
                 &files,
                 show_groups,
-                group_family,
+                &group_families,
                 short_names,
                 sort_tags,
                 show_tag_ids,
@@ -1045,6 +1057,24 @@ fn suppress_value_lang(xmp_file: bool, tag: &exiftool_rs::Tag) -> bool {
     xmp_file && tag.group.family0 != "XMP" && tag.group.family0 != "Composite"
 }
 
+/// `-b` together with `-j`: binary values become `base64:` strings.
+static BINARY_JSON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// `-n` together with `-j`: values are printed without PrintConv.
+static NUMERIC_JSON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Family numbers of a `-G<n>[:<n>...]` option (`""` is a bare `-G`, family 0).
+fn parse_group_families(spec: &str) -> Option<Vec<u8>> {
+    if spec.is_empty() {
+        return Some(vec![0]);
+    }
+    spec.split(':')
+        .map(|part| match part.as_bytes() {
+            [d] if d.is_ascii_digit() && *d <= b'7' => Some(d - b'0'),
+            _ => None,
+        })
+        .collect()
+}
+
 fn group_for_family(tag: &exiftool_rs::Tag, family: u8) -> &str {
     match family {
         0 => &tag.group.family0,
@@ -1054,6 +1084,56 @@ fn group_for_family(tag: &exiftool_rs::Tag, family: u8) -> &str {
     }
 }
 
+/// Group label for `-G<families>`: the requested family names joined by ':',
+/// dropping a name equal to the one before it (`File:FileType`, not
+/// `File:File:FileType`). Family 4 is ExifTool's instance number: the second
+/// tag of a name is `Copy1`, the third `Copy2`; the first has no label.
+/// `copies` counts names across one file's tags and must be fresh per file.
+fn group_label(
+    tag: &exiftool_rs::Tag,
+    families: &[u8],
+    copies: &mut std::collections::HashMap<String, usize>,
+) -> String {
+    let instance = copies.entry(tag.name.clone()).or_insert(0);
+    let copy = *instance;
+    *instance += 1;
+    let mut label = String::new();
+    let mut last = String::new();
+    for &family in families {
+        let name = match family {
+            4 if copy == 0 => continue,
+            4 => format!("Copy{copy}"),
+            f => group_for_family(tag, f).to_string(),
+        };
+        if name.is_empty() || name == last {
+            continue;
+        }
+        if !label.is_empty() {
+            label.push(':');
+        }
+        label.push_str(&name);
+        last = name;
+    }
+    label
+}
+
+fn base64_encode(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let n =
+            chunk.iter().fold(0u32, |acc, b| (acc << 8) | u32::from(*b)) << (8 * (3 - chunk.len()));
+        for i in 0..4 {
+            if i <= chunk.len() {
+                out.push(TABLE[((n >> (18 - 6 * i)) & 63) as usize] as char);
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
 // ============================================================================
 // Stay-open mode
 // ============================================================================
@@ -1061,7 +1141,7 @@ fn group_for_family(tag: &exiftool_rs::Tag, family: u8) -> &str {
 fn run_stay_open(
     options: Options,
     show_groups: bool,
-    group_family: u8,
+    group_families: Vec<u8>,
     short_names: bool,
     json: bool,
 ) {
@@ -1099,16 +1179,17 @@ fn run_stay_open(
                                     file,
                                     false,
                                     show_groups,
-                                    group_family,
+                                    &group_families,
                                     et.options().extract_embedded == 0,
                                     None,
                                 );
                             } else {
+                                let mut copies = std::collections::HashMap::new();
                                 for tag in &tags {
                                     if show_groups {
                                         println!(
                                             "[{}] {} : {}",
-                                            group_for_family(tag, group_family),
+                                            group_label(tag, &group_families, &mut copies),
                                             pad_display(&tag.name, 32),
                                             tag.print_value
                                         );
@@ -1350,7 +1431,7 @@ fn print_text_full(
     et: &ExifTool,
     files: &[String],
     show_groups: bool,
-    group_family: u8,
+    group_families: &[u8],
     short_names: bool,
     sort_tags: bool,
     show_tag_ids: bool,
@@ -1382,6 +1463,7 @@ fn print_text_full(
                     println!("======== {}", file);
                 }
                 let xmp_file = file_is_xmp(&tags);
+                let mut copies = std::collections::HashMap::new();
                 for tag in &tags {
                     let val_raw = tag.display_value(numeric);
                     let mut val = sanitize_display_value(&val_raw);
@@ -1418,7 +1500,7 @@ fn print_text_full(
                         println!(
                             "{}[{}] {} : {}",
                             id_prefix,
-                            group_for_family(tag, group_family),
+                            group_label(tag, group_families, &mut copies),
                             pad_display(&tag.name, 32),
                             val
                         );
@@ -1757,6 +1839,23 @@ fn json_is_number(s: &str) -> bool {
 /// is what ExifTool prints for them. The per-element strings are `print_value`'s
 /// own segments, so any per-element PrintConv (ComponentsConfiguration → Y/Cb/Cr,
 /// PLUS vocab URIs → phrases) is already reflected in each array element.
+/// Under `-n` the print join no longer identifies list tags, since PrintConv
+/// may have rewritten every element. A list of strings is a List=>1 tag (XMP
+/// bags and sequences, IPTC repeats); a list of numbers is a multi-count EXIF
+/// value that ExifTool prints space-joined.
+fn json_list_elements_numeric(tag: &exiftool_rs::Tag) -> Option<Vec<String>> {
+    if let exiftool_rs::Value::List(items) = &tag.raw_value {
+        if !items.is_empty()
+            && items
+                .iter()
+                .all(|v| matches!(v, exiftool_rs::Value::String(_)))
+        {
+            return Some(items.iter().map(|v| v.to_display_string()).collect());
+        }
+    }
+    None
+}
+
 fn json_list_elements(tag: &exiftool_rs::Tag) -> Option<Vec<String>> {
     if let exiftool_rs::Value::List(items) = &tag.raw_value {
         let elems: Vec<String> = items.iter().map(|v| v.to_display_string()).collect();
@@ -1771,16 +1870,22 @@ fn print_json_all(
     et: &ExifTool,
     files: &[String],
     show_groups: bool,
-    group_family: u8,
+    group_families: &[u8],
     dedup: bool,
     lang: Option<&str>,
 ) {
     print!("[");
     for (idx, file) in files.iter().enumerate() {
         match et.extract_info(file) {
-            Ok(tags) => {
-                print_json_tags(&tags, file, idx > 0, show_groups, group_family, dedup, lang)
-            }
+            Ok(tags) => print_json_tags(
+                &tags,
+                file,
+                idx > 0,
+                show_groups,
+                group_families,
+                dedup,
+                lang,
+            ),
             Err(e) => eprintln!("Error: {} - {}", file, e),
         }
     }
@@ -1793,7 +1898,7 @@ fn print_json_tags(
     filename: &str,
     prepend_comma: bool,
     show_groups: bool,
-    group_family: u8,
+    group_families: &[u8],
     dedup: bool,
     lang: Option<&str>,
 ) {
@@ -1826,10 +1931,15 @@ fn print_json_tags(
     // carries the document, so nothing collides and the rule is inert.
     let keyed: Vec<(String, &exiftool_rs::Tag)> = {
         let mut seen = std::collections::HashSet::new();
+        let mut copies = std::collections::HashMap::new();
         tags.iter()
             .filter_map(|tag| {
                 let key = if show_groups {
-                    format!("{}:{}", group_for_family(tag, group_family), tag.name)
+                    format!(
+                        "{}:{}",
+                        group_label(tag, group_families, &mut copies),
+                        tag.name
+                    )
                 } else {
                     tag.name.clone()
                 };
@@ -1856,8 +1966,26 @@ fn print_json_tags(
                     &tag.print_value,
                 )
             });
-        let value_str = translated.as_deref().unwrap_or(tag.print_value.as_str());
+        let numeric = NUMERIC_JSON.load(std::sync::atomic::Ordering::Relaxed);
+        let displayed = tag.display_value(numeric);
+        let value_str = translated.as_deref().unwrap_or(displayed.as_str());
         let comma = if i + 1 < keyed.len() { "," } else { "" };
+        // -b: a binary value is emitted as "base64:..." instead of its placeholder.
+        if BINARY_JSON.load(std::sync::atomic::Ordering::Relaxed)
+            && value_str.starts_with("(Binary data ")
+        {
+            if let exiftool_rs::Value::Binary(bytes) | exiftool_rs::Value::Undefined(bytes) =
+                &tag.raw_value
+            {
+                println!(
+                    "  \"{}\": \"base64:{}\"{}",
+                    key,
+                    base64_encode(bytes),
+                    comma
+                );
+                continue;
+            }
+        }
         // ExifTool's FormatJSON prints an ARRAY-ref value as a JSON array `[...]`
         // (unless `$joinLists`, only set by -sep/-List — never in default mode).
         // The faithful reconstruction of "value is an array ref at print time" is:
@@ -1868,7 +1996,22 @@ fn print_json_tags(
         // print_value is NOT the element join and they stay scalar (as ExifTool
         // emits them). BitsPerSample ("8, 8, 8"), ComponentsConfiguration
         // ("Y, Cb, Cr, -"), Keywords, Subject, … all keep the join and array.
-        if let Some(elems) = json_list_elements(tag) {
+        // -struct: a structure (or a list holding one) prints as nested JSON.
+        if tag.raw_value.has_struct() {
+            println!(
+                "  \"{}\": {}{}",
+                key,
+                json_struct_value(&tag.raw_value),
+                comma
+            );
+            continue;
+        }
+        let elements = if numeric {
+            json_list_elements_numeric(tag)
+        } else {
+            json_list_elements(tag)
+        };
+        if let Some(elems) = elements {
             print!("  \"{}\": [", key);
             for (j, el) in elems.iter().enumerate() {
                 let sep = if j + 1 < elems.len() { "," } else { "" };
@@ -2231,6 +2374,34 @@ fn sanitize_display_value(s: &str) -> String {
     // Remove trailing whitespace
     let trimmed = result.trim_end();
     trimmed.to_string()
+}
+
+/// JSON text of a structured value: objects keep ExifTool's sorted field order,
+/// lists become arrays, scalars follow the same number/boolean typing as tags.
+fn json_struct_value(value: &exiftool_rs::Value) -> String {
+    match value {
+        exiftool_rs::Value::Struct(fields) => {
+            let inner: Vec<String> = fields
+                .iter()
+                .map(|(k, v)| format!("\"{}\": {}", escape_json(k), json_struct_value(v)))
+                .collect();
+            format!("{{{}}}", inner.join(", "))
+        }
+        exiftool_rs::Value::List(items) => {
+            let inner: Vec<String> = items.iter().map(json_struct_value).collect();
+            format!("[{}]", inner.join(","))
+        }
+        scalar => {
+            let text = scalar.to_display_string();
+            if json_is_number(&text) {
+                text
+            } else if text.eq_ignore_ascii_case("true") || text.eq_ignore_ascii_case("false") {
+                text.to_ascii_lowercase()
+            } else {
+                format!("\"{}\"", escape_json(&text))
+            }
+        }
+    }
 }
 
 /// Escape a string for JSON, mirroring ExifTool's EscapeJSON (exiftool:3817-3821):
