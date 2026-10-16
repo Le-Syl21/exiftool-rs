@@ -344,7 +344,36 @@ impl ExifReader {
                 }
             }
         }
+        Self::value_conv_undefined(&mut tags);
         Ok(tags)
+    }
+
+    /// ValueConv of the undefined-typed EXIF tags ExifTool reads as text or
+    /// numbers (Exif.pm): version strings are ASCII, `FileSource`/`SceneType`
+    /// are one byte, `ComponentsConfiguration` is a byte list. `-n` and JSON
+    /// output read `raw_value`, so a raw `Undefined` would print as binary.
+    fn value_conv_undefined(tags: &mut [Tag]) {
+        for tag in tags.iter_mut() {
+            let Value::Undefined(bytes) = &tag.raw_value else {
+                continue;
+            };
+            let converted = match tag.name.as_str() {
+                "ExifVersion" | "FlashpixVersion" | "InteropVersion" => Value::String(
+                    String::from_utf8_lossy(bytes)
+                        .trim_end_matches('\0')
+                        .to_string(),
+                ),
+                "FileSource" | "SceneType" => match bytes.first() {
+                    Some(b) => Value::U8(*b),
+                    None => continue,
+                },
+                "ComponentsConfiguration" => {
+                    Value::List(bytes.iter().map(|b| Value::U8(*b)).collect())
+                }
+                _ => continue,
+            };
+            tag.raw_value = converted;
+        }
     }
 
     /// ExifTool raises ExifByteOrder at file level, not from IFD0.
@@ -363,7 +392,14 @@ impl ExifReader {
                 family2: "Image".to_string(),
                 family3: "Main".into(),
             },
-            raw_value: Value::String(bo_str.to_string()),
+            // Raw is the two-letter code; the long form is PrintConv (ExifTool.pm %byteOrder).
+            raw_value: Value::String(
+                match byte_order {
+                    ByteOrderMark::LittleEndian => "II",
+                    ByteOrderMark::BigEndian => "MM",
+                }
+                .to_string(),
+            ),
             print_value: bo_str.to_string(),
             priority: 0,
         }
@@ -922,7 +958,15 @@ impl ExifReader {
                                     family2: "Image".into(),
                                     family3: "Main".into(),
                                 },
-                                raw_value: Value::String(mn_bo_str.into()),
+                                // Raw is the two-letter code; the long form is PrintConv.
+                                raw_value: Value::String(
+                                    if mn_bo == ByteOrderMark::LittleEndian {
+                                        "II"
+                                    } else {
+                                        "MM"
+                                    }
+                                    .into(),
+                                ),
                                 print_value: mn_bo_str.into(),
                                 priority: 0,
                             });

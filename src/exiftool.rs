@@ -40,6 +40,11 @@ pub struct Options {
     /// Reverse-geocode `Geolocation*` tags from GPS coordinates
     /// (ExifTool's `Geolocation` API option). Off by default, like ExifTool.
     pub geolocation: bool,
+    /// Output structured XMP (`-struct`): a struct-valued property becomes one
+    /// tag holding a [`Value::Struct`] (or a list of them) instead of its
+    /// flattened fields, and every list-valued XMP tag is reported as a list
+    /// even with a single item. Off by default, like ExifTool.
+    pub struct_output: bool,
 }
 
 impl Default for Options {
@@ -54,6 +59,7 @@ impl Default for Options {
             process_compressed: false,
             use_mwg: false,
             geolocation: false,
+            struct_output: false,
         }
     }
 }
@@ -1163,6 +1169,8 @@ impl ExifTool {
         crate::metadata::exif::set_keep_duplicates(
             self.options.duplicates || self.options.extract_embedded > 0,
         );
+        crate::metadata::xmp::set_struct_output(self.options.struct_output);
+        crate::metadata::xmp_struct::reset_suppressed();
         // Propagate process_compressed to format readers via thread-local
         crate::formats::pdf::set_process_compressed(self.options.process_compressed);
 
@@ -1280,6 +1288,8 @@ impl ExifTool {
             pre.push(file_tag("FileName", Value::String(fname.to_string())));
         }
         if let Some(dir) = path.parent().and_then(|p| p.to_str()) {
+            // ExifTool reports "." for a bare file name (ExifTool.pm:2830).
+            let dir = if dir.is_empty() { "." } else { dir };
             pre.push(file_tag("Directory", Value::String(dir.to_string())));
         }
 
@@ -1367,9 +1377,9 @@ impl ExifTool {
                 family2: "Other".into(),
                 family3: "Main".into(),
             },
-            raw_value: Value::String(format!("{:?}", file_type)),
-            // ExifTool's FileType value is the short code ("JPEG"), not the
-            // human-readable description ("JPEG image").
+            // ExifTool's FileType value is the short code ("JPEG") in both raw
+            // and print form, not the enum variant ("Jpeg") or the description.
+            raw_value: Value::String(ft_code.clone()),
             print_value: ft_code.clone(),
             priority: 1,
         });
@@ -1377,10 +1387,11 @@ impl ExifTool {
         // Use the canonical (first) extension from the FileType, matching Perl ExifTool behavior.
         // EXE subtypes emit FileTypeExtension even when empty (ExifTool sets ext='').
         if !ext_str.is_empty() || file_type == FileType::Exe {
-            pre.push(file_tag(
-                "FileTypeExtension",
-                Value::String(ext_str.clone()),
-            ));
+            // ExifTool stores the upper-case extension and lower-cases it in
+            // PrintConv (ExifTool.pm: `FileTypeExtension => { PrintConv => 'lc $val' }`).
+            let mut tag = file_tag("FileTypeExtension", Value::String(ext_str.to_uppercase()));
+            tag.print_value = ext_str.to_lowercase();
+            pre.push(tag);
         }
 
         pre.push(Tag {
@@ -1512,7 +1523,15 @@ impl ExifTool {
                 && file_type != FileType::Vrd
                 && file_type != FileType::Crw
             {
-                pre.push(file_tag("ExifByteOrder", Value::String(bo_str.to_string())));
+                // Raw value is the two-letter code ("II"); the long form is PrintConv.
+                let code = if bo_str.starts_with("Little") {
+                    "II"
+                } else {
+                    "MM"
+                };
+                let mut tag = file_tag("ExifByteOrder", Value::String(code.to_string()));
+                tag.print_value = bo_str.to_string();
+                pre.push(tag);
             }
         }
 
@@ -1597,8 +1616,16 @@ impl ExifTool {
         let gps = crate::composite::gps_coordinates(&tags);
         tags.extend(gps);
 
-        // Compute composite tags
-        let composite = crate::composite::compute_composite_tags(&tags);
+        // Compute composite tags. Under -struct the flattened XMP fields that
+        // structures replaced still feed composites such as Composite:Flash.
+        let suppressed = crate::metadata::xmp_struct::suppressed();
+        let composite = if suppressed.is_empty() {
+            crate::composite::compute_composite_tags(&tags)
+        } else {
+            let mut with_suppressed = tags.clone();
+            with_suppressed.extend(suppressed);
+            crate::composite::compute_composite_tags(&with_suppressed)
+        };
         tags.extend(composite);
 
         // Composite GPSAltitude (GPS.pm:406) claims the "GPSAltitude" name whenever
@@ -3913,6 +3940,7 @@ mod tests {
             process_compressed: true,
             use_mwg: true,
             geolocation: true,
+            struct_output: true,
         };
         let et = ExifTool::with_options(opts.clone());
         assert!(et.options().duplicates);

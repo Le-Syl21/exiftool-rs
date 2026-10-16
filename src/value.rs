@@ -29,6 +29,9 @@ pub enum Value {
     List(Vec<Value>),
     /// Undefined/opaque bytes with a semantic type hint
     Undefined(Vec<u8>),
+    /// An XMP structure (`-struct`): named fields in ExifTool's sorted order.
+    /// Values are strings, lists or nested structures.
+    Struct(Vec<(String, Value)>),
 }
 
 impl Value {
@@ -108,6 +111,46 @@ impl Value {
                     data.len()
                 )
             }
+            Value::Struct(_) => self.serialize_struct(),
+        }
+    }
+
+    /// ExifTool's text form of a structure (XMP.pm SerializeStruct):
+    /// `{Field=value,List=[a,b],Nested={...}}`, with `,`, `|`, `]` and `}`
+    /// inside a scalar escaped by a leading `|`.
+    pub fn serialize_struct(&self) -> String {
+        fn escape(s: &str) -> String {
+            let mut out = String::with_capacity(s.len());
+            for c in s.chars() {
+                if matches!(c, ',' | '|' | ']' | '}') {
+                    out.push('|');
+                }
+                out.push(c);
+            }
+            out
+        }
+        match self {
+            Value::Struct(fields) => {
+                let inner: Vec<String> = fields
+                    .iter()
+                    .map(|(k, v)| format!("{}={}", k, v.serialize_struct()))
+                    .collect();
+                format!("{{{}}}", inner.join(","))
+            }
+            Value::List(items) => {
+                let inner: Vec<String> = items.iter().map(Value::serialize_struct).collect();
+                format!("[{}]", inner.join(","))
+            }
+            other => escape(&other.to_display_string()),
+        }
+    }
+
+    /// Whether this value is, or contains, a structure.
+    pub fn has_struct(&self) -> bool {
+        match self {
+            Value::Struct(_) => true,
+            Value::List(items) => items.iter().any(Value::has_struct),
+            _ => false,
         }
     }
 

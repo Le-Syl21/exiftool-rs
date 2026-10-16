@@ -4,6 +4,36 @@ All notable changes to `exiftool-rs` are documented here.
 
 ## [Unreleased]
 
+Parity work under `-j -a -G0:1:4 -n -struct -b -u -U`, the flags the
+dng-compare project extracts with, measured against Perl ExifTool 13.59.
+
+### Added
+
+- `-struct` (`Options::struct_output`): structured XMP output. A property
+  whose value is a structure, or a list holding one, becomes one tag with a
+  `Value::Struct` (or a list of them) instead of its flattened fields; every
+  list-valued XMP tag is reported as a list even with one item; language
+  alternatives inside structures expand to `Field` and `Field-lang`; fields
+  from a foreign namespace in an open structure are qualified
+  (`XMP-exif:Flash`). Implemented as a tree pass (`metadata::xmp_struct`)
+  over the packet that re-reads it without the structure roots, so the
+  streaming reader and its flat-name overrides stay untouched. Composites
+  still see the replaced flattened fields (`Composite:Flash`).
+- `Value::Struct` with ExifTool's text serialisation (`{Key=Value,List=[a,b]}`).
+- `-G0:1:4` and any other family combination: labels joined by `:`, a name
+  equal to the previous one dropped (`File:FileType`), family 4 as ExifTool's
+  `CopyN` instance number.
+- `-b` together with `-j` emits binary values as `base64:` strings instead of
+  switching to the raw binary dump.
+- `-n` is honoured by `-j` output (JSON used to print PrintConv values).
+- `tests/dng_compare_parity.rs`: synthetic DNG and Lightroom-style XMP
+  fixtures checked against Perl 13.59 values.
+
+### Changed
+
+- Breaking: `Value` has a new variant, `Value::Struct`, so an exhaustive
+  `match` on it needs an arm for it.
+
 ### Fixed
 
 - `write_info` no longer overwrites a file that happens to be named like its
@@ -11,6 +41,27 @@ All notable changes to `exiftool-rs` are documented here.
   final rename fails (#19). The temporary file now gets a fresh name, created
   exclusively next to the destination, and is removed on any failure. A
   rewritten file keeps its permissions.
+- A top-level `rdf:Description` named by `rdf:nodeID` and referenced nowhere
+  had every list in it read twice (`Ann, Ann, Bob`); it is now read like any
+  other Description.
+- Numeric (`-n`) values of the pseudo tags: `FileType` is the short code
+  (`DNG`, not the enum name `Dng`); `FileTypeExtension` is upper-case raw and
+  lower-case print; `ExifByteOrder` and `MakerNoteByteOrder` are `II`/`MM`
+  raw; `Directory` is `.` for a bare file name; `ImageSize` is `W H` raw and
+  `WxH` print.
+- Equal repeated items of a flattened XMP list field were collapsed to one
+  (`What: "Correction"` for two masks); every occurrence is kept.
+- ValueConv under `-n` for undefined-typed EXIF tags (`ExifVersion`,
+  `FlashpixVersion`, `InteropVersion`, `FileSource`, `SceneType`,
+  `ComponentsConfiguration`), XMP dates, PLUS vocabulary codes and rational
+  lists (`aux:LensInfo`).
+
+### Known gaps
+
+- Many composites and MakerNotes still carry PrintConv text as their raw
+  value under `-n`; `-U` unknown MakerNote tags are far less complete than
+  Perl; `CopyN` follows discovery order rather than ExifTool's priority
+  displacement; blank-node (`rdf:nodeID`) structures are not rebuilt.
 
 ## [0.10.0] - 2026-10-16
 

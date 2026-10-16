@@ -7,6 +7,7 @@ pub mod nikon_decrypt;
 pub mod sony_decrypt;
 pub mod sony_sr2;
 pub mod xmp;
+pub mod xmp_struct;
 
 pub use exif::ExifReader;
 pub use iptc::IptcReader;
