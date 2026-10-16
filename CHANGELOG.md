@@ -2,7 +2,15 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
-## [Unreleased]
+## [0.10.0] - 2026-10-16
+
+### Changed
+
+- Breaking: the format writers in `writer` (TIFF, PNG, GIF, PDF, PSD, WebP,
+  JP2/JXL and others) take new arguments, and a raw value such as
+  `ColorSpace=2` for a conversion with no fallback is now rejected, as
+  ExifTool rejects it.
+- Dependencies updated; the GUI uses egui and eframe 0.37.
 
 ### Fixed
 
@@ -43,13 +51,56 @@ All notable changes to `exiftool-rs` are documented here.
   `EXIF:*` spelling did.
 - Writing an XMP sidecar edits the packet in place instead of replacing it
   with the written properties alone, so the rest of the file survives.
-- The write matrix of the parity audit counts 118 ISO cases out of 460, up
-  from 29; silent no-ops drop from 137 to 47, and none is left on HEIF or
-  AVIF (all 26 HEIF cases are ISO, `QuickTime:Title`, which neither tool
-  writes there, aside). 43 cases that wrote nothing or something wrong are
-  now refused with an error. The matrix ignores `MediaDataSize` and
-  `MediaDataOffset`, which depend on the writer's layout, and reads our
-  output with duplicates, as it reads Perl's with `-a`.
+- Every write now really lands, checked end to end by the parity audit's
+  write matrix: 418 of 460 cases are identical to ExifTool 13.59, up from
+  29, with no silent no-op, refused write or broken file left (114 silent
+  no-ops and 64 broken files before). The other 37 cases have no Perl
+  reference (ExifTool does not write ID3, Vorbis comments or Matroska, and
+  refuses the truncated NEF/ARW samples) and are checked by re-reading
+  alone. 5 known mismatches remain, all on files damaged at the source:
+  GE.jpg, whose bogus maker-note offsets ExifTool repairs by rebuilding the
+  maker note while we keep it as it is, and a Ricoh.jpg value that points at
+  layout-dependent bytes.
+- JPEG: EXIF is edited in place instead of rebuilt, keeping the byte order,
+  IFD1 and its thumbnail, the Interop IFD and valid maker-note offsets
+  (Perl used to warn "Invalid PrintIM header" or "Bad ExifIFD directory" on
+  our output). GPS tags are written, `GPS:all` deletes the GPS IFD, an
+  unqualified delete only reaches the tag's write group, and a new EXIF
+  block takes its resolution from JFIF, as ExifTool does. AFCP and MPF
+  offsets follow any change in size.
+- IPTC: the encoder is a port of ExifTool's `DoWriteIPTC`, so the record
+  bytes and the digest match ExifTool's. Only the IPTC resource of the
+  Photoshop block is edited; the other resources and IPTCDigest were lost.
+  Times without a zone use the local zone and "Latin" text is cp1252, as in
+  ExifTool. IPTC in AFCP, FotoStation, PhotoMechanic and MIE trailers is
+  edited along the whole trailer chain.
+- XMP: packets are edited in place everywhere (including UTF-16 packets and
+  extended XMP, which is merged and removed with `XMP:all`), and each tag
+  goes to the namespace ExifTool picks, from a table generated from its
+  sources (`XMP:Description` went to `xmp` instead of `dc`). The inverse
+  conversions of the XMP tables are ported, so the 54 tags we refused are
+  written. An ungrouped tag is created in its preferred family and replaced
+  wherever another family already holds it, as `SetNewValue` does.
+- TIFF and TIFF-based RAW (DNG, CR2, NEF, ARW) can add and delete tags, not
+  only replace existing ones; image data stays at its offsets.
+- PNG text chunks are replaced instead of duplicated and can be deleted;
+  EXIF and XMP go to their own chunks. GIF comments are found by walking
+  the block structure. PDF edits are written as an incremental update, as
+  ExifTool does, instead of splicing bytes and breaking the xref table.
+  PSD, WebP, JP2 and JXL edit their existing EXIF, IPTC and XMP instead of
+  rebuilding them from the new values alone.
+- QuickTime (MOV, MP4, M4A): deletions are applied, other ItemList tags
+  are kept, UserData and Keys are edited, XMP goes where ExifTool reads it,
+  and `stco`/`co64` chunk offsets are relocated. ID3 frames are edited in
+  place (v2.2 to 2.4, ID3v1 kept in sync, AIFF `ID3 ` chunk); FLAC and
+  Ogg (Vorbis, Opus, FLAC) comments are edited, re-paged and re-checksummed;
+  Matroska writes its title and tags and keeps its index consistent.
+- Reading: maker-note tables are chosen as ExifTool chooses them once Make,
+  Model or Software are changed or deleted (they come from IFD0 only, and a
+  missing value reads as empty), with Canon, Nikon, Pentax, Ricoh and Sony
+  model conditions ported. MIE trailer directories are decoded, PDF
+  reading uses the last revision, and empty ID3v1 fields read as ExifTool
+  reads them.
 
 ### Added
 
