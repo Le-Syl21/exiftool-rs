@@ -7,3 +7,7 @@ tests/expected/** text eol=lf
 tests/expected_values/** text eol=lf
 tests/expected_groups/** text eol=lf
 tests/expected_multi/** text eol=lf
+tests/expected_heif/** text eol=lf
+tests/expected_jpeg_exif/** text eol=lf
+tests/expected_jpeg_trailers/** text eol=lf
+tests/expected_media/** text eol=lf
