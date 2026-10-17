@@ -828,37 +828,12 @@ impl XmpReader {
                                 // Top-level nodeID Description that IS referenced inline elsewhere:
                                 // suppress direct emission here (props will be emitted when the inline ref is processed).
                                 suppress_direct_emit_depth = Some(path.len());
-                            } else {
-                                // Top-level nodeID Description NOT referenced inline anywhere:
-                                // emit all its blank-node properties directly now.
-                                if let Some(bn_props) = blank_node_props.get(nid.as_str()) {
-                                    for (prop_ns, prop_local, prop_val) in bn_props.clone() {
-                                        let prop_prefix = xmp_group_prefix(&prop_ns, &cur_ns);
-                                        let prop_prefix = prop_prefix.as_str();
-                                        let category = namespace_category(prop_prefix);
-                                        let remapped = remap_xmp_tag_name(prop_prefix, &prop_local);
-                                        tags.push(Tag {
-                                            id: TagId::Text(format!(
-                                                "{}:{}",
-                                                prop_prefix, prop_local
-                                            )),
-                                            name: remapped.clone(),
-                                            description: remapped,
-                                            group: TagGroup {
-                                                family0: "XMP".to_string(),
-                                                family1: format!("XMP-{}", prop_prefix),
-                                                family2: category.to_string(),
-                                                family3: "Main".into(),
-                                            },
-                                            raw_value: parse_xmp_value(&prop_val),
-                                            print_value: prop_val.clone(),
-                                            priority: 0,
-                                        });
-                                    }
-                                }
-                                // Suppress the rest of the Description processing (already emitted)
-                                suppress_direct_emit_depth = Some(path.len());
                             }
+                            // A top-level nodeID Description that nothing references
+                            // inline is read like any other Description: its
+                            // properties, lists included, go through the normal path.
+                            // (Emitting them here from the flattened pre-pass as well
+                            // gave every list in it twice.)
                         }
                     }
 
@@ -3890,5 +3865,37 @@ mod gcontainer_order_tests {
                 "DirectoryItemSemantic"
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod node_id_description_tests {
+    use super::XmpReader;
+
+    fn creators(about: &str) -> Vec<(String, String)> {
+        let xmp = format!(
+            "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">\
+             <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" \
+             xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\
+             <rdf:Description {about}>\
+             <dc:creator><rdf:Seq><rdf:li>Ann</rdf:li><rdf:li>Bob</rdf:li></rdf:Seq></dc:creator>\
+             </rdf:Description></rdf:RDF></x:xmpmeta>"
+        );
+        XmpReader::read(xmp.as_bytes())
+            .expect("valid XMP")
+            .into_iter()
+            .filter(|t| t.name == "Creator")
+            .map(|t| (t.group.family1, t.print_value))
+            .collect()
+    }
+
+    // A top-level Description named by rdf:nodeID and referenced nowhere is an
+    // ordinary Description: its list comes out once, as with rdf:about.
+    // (XMP2.xmp once its title is rewritten; it used to read the list twice.)
+    #[test]
+    fn an_unreferenced_node_id_description_reads_like_rdf_about() {
+        let expected = vec![("XMP-dc".to_string(), "Ann, Bob".to_string())];
+        assert_eq!(creators("rdf:about=\"\""), expected);
+        assert_eq!(creators("rdf:nodeID=\"anon0\""), expected);
     }
 }
