@@ -2,10 +2,11 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
-## [Unreleased]
+## [0.11.0] - 2026-10-17
 
 Parity work under `-j -a -G0:1:4 -n -struct -b -u -U`, the flags the
-dng-compare project extracts with, measured against Perl ExifTool 13.59.
+dng-compare project extracts with, measured against Perl ExifTool 13.59
+(#20, by Alexy Khrabrov).
 
 ### Added
 
@@ -33,6 +34,10 @@ dng-compare project extracts with, measured against Perl ExifTool 13.59.
 
 - Breaking: `Value` has a new variant, `Value::Struct`, so an exhaustive
   `match` on it needs an arm for it.
+- Breaking, once: `Value`, `Error` and `FileType` are now
+  `#[non_exhaustive]`. A `match` on them needs a `_` arm, and in exchange a
+  future variant (a new value kind, error or file format) no longer breaks
+  anyone's build, so it can ship in a patch release.
 
 ### Fixed
 
