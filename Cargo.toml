@@ -71,6 +71,8 @@ encoding_rs = "0.8"
 flate2 = "1"
 brotli = "9"
 unicode-width = "0.2"
+# Temporary files created exclusively next to the destination, removed on failure.
+tempfile = "3.27"
 
 # GUI dependencies (optional)
 # eframe 0.35 flipped its default renderer to wgpu; its D3D12 backend fails to

@@ -2,6 +2,16 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- `write_info` no longer overwrites a file that happens to be named like its
+  temporary file, and no longer leaves its temporary file behind when the
+  final rename fails (#19). The temporary file now gets a fresh name, created
+  exclusively next to the destination, and is removed on any failure. A
+  rewritten file keeps its permissions.
+
 ## [0.10.0] - 2026-10-16
 
 ### Changed

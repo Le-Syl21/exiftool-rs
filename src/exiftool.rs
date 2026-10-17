@@ -316,11 +316,7 @@ impl ExifTool {
             )));
         }
 
-        // Write to temp file first, then rename (atomic)
-        let temp_path = dst_path.with_extension("exiftool_tmp");
-        fs::write(&temp_path, &output).map_err(Error::Io)?;
-        fs::rename(&temp_path, dst_path).map_err(Error::Io)?;
-
+        write_replacing(dst_path, &output)?;
         Ok(applied)
     }
 
@@ -3749,9 +3745,117 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
     tags
 }
 
+/// Write `bytes` to `dst` through a temporary file in the same directory,
+/// renamed over `dst` once complete, so a reader never sees half a file.
+///
+/// The temporary file gets a fresh name and is created exclusively, so it can
+/// never be a file someone else left there, and it is removed again if the
+/// write or the rename fails. It takes the permissions of the file it
+/// replaces, or the ones `fs::write` would give a new file.
+fn write_replacing(dst: &Path, bytes: &[u8]) -> Result<()> {
+    use std::io::Write;
+
+    let dir = match dst.parent() {
+        Some(p) if !p.as_os_str().is_empty() => p,
+        _ => Path::new("."),
+    };
+    let mut builder = tempfile::Builder::new();
+    builder.prefix(".exiftool-").suffix(".tmp");
+    let replaced = fs::metadata(dst)
+        .ok()
+        .filter(|meta| meta.is_file())
+        .map(|meta| meta.permissions());
+    // tempfile defaults to 0600; a new file gets 0666 less the umask.
+    #[cfg(unix)]
+    if replaced.is_none() {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(fs::Permissions::from_mode(0o666));
+    }
+    let mut temp = builder.tempfile_in(dir).map_err(Error::Io)?;
+    if let Some(permissions) = replaced {
+        // Set after creation, so the umask does not narrow them.
+        temp.as_file()
+            .set_permissions(permissions)
+            .map_err(Error::Io)?;
+    }
+    temp.write_all(bytes).map_err(Error::Io)?;
+    // On failure the error hands the file back, and dropping it deletes it.
+    temp.persist(dst).map_err(|e| Error::Io(e.error))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fixture() -> &'static Path {
+        Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/images/GPS.jpg"))
+    }
+
+    /// Everything in `dir` but the names given, so a test sees what was left behind.
+    fn leftovers(dir: &Path, expected: &[&str]) -> Vec<String> {
+        let mut names: Vec<String> = fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|n| !expected.contains(&n.as_str()))
+            .collect();
+        names.sort();
+        names
+    }
+
+    // Issue #19: a file that happens to carry the old fixed temporary name is
+    // someone else's, and must survive a write next to it.
+    #[test]
+    fn write_info_leaves_a_neighbour_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let neighbour = dir.path().join("out.exiftool_tmp");
+        fs::write(&neighbour, b"KEEP ME").unwrap();
+        let out = dir.path().join("out.jpg");
+
+        ExifTool::new().write_info(fixture(), &out).unwrap();
+
+        assert_eq!(fs::read(&neighbour).unwrap(), b"KEEP ME");
+        assert_eq!(fs::read(&out).unwrap(), fs::read(fixture()).unwrap());
+        assert!(leftovers(dir.path(), &["out.jpg", "out.exiftool_tmp"]).is_empty());
+    }
+
+    // Issue #19: when the rename fails, the temporary file goes too.
+    #[test]
+    fn write_info_cleans_up_when_the_rename_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let blocked = dir.path().join("blocked.jpg");
+        fs::create_dir(&blocked).unwrap();
+
+        assert!(ExifTool::new().write_info(fixture(), &blocked).is_err());
+
+        assert!(blocked.is_dir());
+        assert_eq!(
+            leftovers(dir.path(), &["blocked.jpg"]),
+            Vec::<String>::new()
+        );
+    }
+
+    // A rewritten file keeps its permissions; a new one gets the usual ones,
+    // not tempfile's private 0600.
+    #[cfg(unix)]
+    #[test]
+    fn write_info_keeps_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+
+        let mode = |p: &Path| fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        let reference = dir.path().join("reference");
+        fs::write(&reference, b"").unwrap();
+        let fresh = dir.path().join("fresh.jpg");
+        ExifTool::new().write_info(fixture(), &fresh).unwrap();
+        assert_eq!(mode(&fresh), mode(&reference), "as fs::write would make it");
+
+        let kept = dir.path().join("kept.jpg");
+        fs::copy(fixture(), &kept).unwrap();
+        fs::set_permissions(&kept, fs::Permissions::from_mode(0o664)).unwrap();
+        ExifTool::new().write_info(&kept, &kept).unwrap();
+        assert_eq!(mode(&kept), 0o664);
+    }
 
     #[test]
     fn new_has_default_options() {

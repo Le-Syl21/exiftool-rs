@@ -1020,6 +1020,7 @@ dependencies = [
  "noto-fonts-dl",
  "regex-lite",
  "rfd",
+ "tempfile",
  "thiserror 2.0.21",
  "unicode-width",
  "winres",
