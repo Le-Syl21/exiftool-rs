@@ -115,33 +115,44 @@ impl Value {
         }
     }
 
-    /// ExifTool's text form of a structure (XMP.pm SerializeStruct):
-    /// `{Field=value,List=[a,b],Nested={...}}`, with `,`, `|`, `]` and `}`
-    /// inside a scalar escaped by a leading `|`.
+    /// ExifTool's text form of a structure (XMPStruct.pl SerializeStruct):
+    /// `{Field=value,List=[a,b],Nested={...}}`. Inside a scalar, `,`, `|` and
+    /// the bracket that closes the enclosing structure or list are escaped by
+    /// a leading `|`, as is a leading `[`, `{` or whitespace.
     pub fn serialize_struct(&self) -> String {
-        fn escape(s: &str) -> String {
-            let mut out = String::with_capacity(s.len());
-            for c in s.chars() {
-                if matches!(c, ',' | '|' | ']' | '}') {
-                    out.push('|');
-                }
-                out.push(c);
-            }
-            out
-        }
+        self.serialize_struct_in(None)
+    }
+
+    fn serialize_struct_in(&self, closing: Option<char>) -> String {
         match self {
             Value::Struct(fields) => {
                 let inner: Vec<String> = fields
                     .iter()
-                    .map(|(k, v)| format!("{}={}", k, v.serialize_struct()))
+                    .map(|(k, v)| format!("{}={}", k, v.serialize_struct_in(Some('}'))))
                     .collect();
                 format!("{{{}}}", inner.join(","))
             }
             Value::List(items) => {
-                let inner: Vec<String> = items.iter().map(Value::serialize_struct).collect();
+                let inner: Vec<String> = items
+                    .iter()
+                    .map(|v| v.serialize_struct_in(Some(']')))
+                    .collect();
                 format!("[{}]", inner.join(","))
             }
-            other => escape(&other.to_display_string()),
+            other => {
+                let text = other.to_display_string();
+                let mut out = String::with_capacity(text.len() + 1);
+                for c in text.chars() {
+                    if c == ',' || c == '|' || Some(c) == closing {
+                        out.push('|');
+                    }
+                    out.push(c);
+                }
+                if out.starts_with(|c: char| c.is_whitespace() || c == '[' || c == '{') {
+                    out.insert(0, '|');
+                }
+                out
+            }
         }
     }
 
@@ -557,5 +568,20 @@ mod tests {
     fn format_g15_very_small_negative() {
         let s = format_g15(-5.5e-10);
         assert!(s.starts_with("-5.5e-"), "got: {}", s);
+    }
+
+    #[test]
+    fn serialize_struct_escapes_like_exiftool() {
+        let s = Value::Struct(vec![
+            ("A".into(), Value::String("x,y|z}w]v".into())),
+            ("B".into(), Value::List(vec![Value::String("p]q}r".into())])),
+            ("C".into(), Value::String("[lead".into())),
+            ("D".into(), Value::String(" sp".into())),
+        ]);
+        // As XMPStruct.pl: only the enclosing closing bracket is escaped.
+        assert_eq!(
+            s.serialize_struct(),
+            "{A=x|,y||z|}w]v,B=[p|]q}r],C=|[lead,D=| sp}"
+        );
     }
 }
