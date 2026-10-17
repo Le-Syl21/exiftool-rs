@@ -2,6 +2,7 @@ use std::io;
 
 /// All errors that can occur in exiftool operations.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
     #[error("I/O error: {0}")]
     Io(#[from] io::Error),

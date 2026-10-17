@@ -2,6 +2,7 @@ use std::fmt;
 
 /// Represents a metadata tag value, which can be of various types.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Value {
     /// ASCII/UTF-8 string
     String(String),

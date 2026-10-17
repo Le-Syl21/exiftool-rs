@@ -6,6 +6,7 @@
 /// Known file types that exiftool can process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[allow(non_camel_case_types)]
+#[non_exhaustive]
 pub enum FileType {
     // ===== Images - Standard =====
     Jpeg,
