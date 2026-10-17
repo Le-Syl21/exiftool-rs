@@ -295,12 +295,15 @@ impl ExifTool {
     /// If `dst_path` is the same as `src_path`, the file is modified in-place
     /// (via a temporary file).
     ///
-    /// Returns the number of queued requests that took effect, checked by
-    /// reading the result back: a written tag must be there with its new
-    /// value, a deleted tag or group must be gone. A request the writer for
+    /// Returns the number of queued requests that changed the file, checked
+    /// by reading the result back: a written tag must be there with its new
+    /// value, a deleted tag or group must be gone. Deleting a tag the file
+    /// does not have changes nothing, so it is not counted, but it is not an
+    /// error either: like ExifTool's "1 image files unchanged", the call
+    /// returns `Ok(0)` and still writes `dst_path`. A request the writer for
     /// this file type cannot apply is not counted, and when none of the
     /// queued requests can be applied the call fails without writing
-    /// anything. (Deleting a tag the file does not have counts as done.)
+    /// anything.
     pub fn write_info<P: AsRef<Path>, Q: AsRef<Path>>(
         &self,
         src_path: P,
@@ -312,8 +315,8 @@ impl ExifTool {
 
         let file_type = self.detect_file_type(&data, src_path)?;
         let output = self.apply_changes(&data, file_type)?;
-        let applied = self.count_applied(&data, &output, src_path, file_type);
-        if applied == 0 && !self.new_values.is_empty() {
+        let (applied, satisfied) = self.count_applied(&data, &output, src_path, file_type);
+        if !satisfied && !self.new_values.is_empty() {
             let requested: Vec<String> = self.new_values.iter().map(NewValue::describe).collect();
             return Err(Error::UnsupportedFileType(format!(
                 "none of the requested changes could be written to this {} file ({})",
@@ -327,8 +330,16 @@ impl ExifTool {
     }
 
     /// How many queued requests the rewrite of `before` into `after` carried
-    /// out, judged by what a reader sees in each.
-    fn count_applied(&self, before: &[u8], after: &[u8], path: &Path, file_type: FileType) -> u32 {
+    /// out, judged by what a reader sees in each, and whether any request
+    /// holds in `after` at all (a deletion of something already absent holds
+    /// without being counted).
+    fn count_applied(
+        &self,
+        before: &[u8],
+        after: &[u8],
+        path: &Path,
+        file_type: FileType,
+    ) -> (u32, bool) {
         let keep = |t: &Tag| {
             // `File` stays: a GIF or PNG comment lives there.
             !matches!(
@@ -349,18 +360,31 @@ impl ExifTool {
                 .map(|v| v.into_iter().filter(keep).collect())
         };
         let Some(after) = read(after) else {
-            return 0;
+            return (0, false);
         };
         let before = read(before).unwrap_or_default();
-        self.new_values
-            .iter()
-            .filter(
-                |nv| match tiff_exif_all_applied(nv, file_type, &before, &after) {
-                    Some(done) => done,
-                    None => request_applied(nv, &before, &after),
-                },
-            )
-            .count() as u32
+        let holds = |nv: &NewValue, from: &[Tag], to: &[Tag]| match tiff_exif_all_applied(
+            nv, file_type, from, to,
+        ) {
+            Some(done) => done,
+            None => request_applied(nv, from, to),
+        };
+        let mut changed = 0;
+        let mut satisfied = false;
+        for nv in &self.new_values {
+            if !holds(nv, &before, &after) {
+                continue;
+            }
+            satisfied = true;
+            // ExifTool reports a file "unchanged" when the only edit deletes
+            // a tag it did not have; writing a value always counts, even the
+            // value already there.
+            let already_gone = nv.value.is_none() && request_applied(nv, &before, &before);
+            if !already_gone {
+                changed += 1;
+            }
+        }
+        (changed, satisfied)
     }
 
     /// Apply queued changes to in-memory data.

@@ -2,6 +2,16 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- **Breaking:** `write_info` counts only the requests that changed the file.
+  Deleting a tag the file does not have used to count as done; it now counts
+  as nothing, the way ExifTool reports "1 image files unchanged": the call
+  returns `Ok(0)`, is not an error, and still writes the output. Writing a
+  value still counts even when the tag already had it, as in ExifTool (#21).
+
 ## [0.11.0] - 2026-10-17
 
 Parity work under `-j -a -G0:1:4 -n -struct -b -u -U`, the flags the

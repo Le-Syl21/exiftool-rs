@@ -10,8 +10,12 @@
 //! tags and dropping `XMPToolkit`, which names the writing tool).
 //!
 //! Fixtures: `issue17.heic` is the reporter's 4110-byte sample (synthetic
-//! metadata); `HEIF_meta.avif` and `HEIF_plain.avif` were encoded with
-//! libheif/aom for these tests, with and without the same metadata.
+//! metadata); `tests/issue21/` holds the issue #21 pair (synthetic metadata),
+//! identical but for the Exif item's extent length, 96 in `issue21.heic` and 0
+//! in `issue21_zero_extent.heic`, kept out of the parity corpus because
+//! ExifTool cannot read Exif stored in `idat`; `HEIF_meta.avif` and
+//! `HEIF_plain.avif` were encoded with libheif/aom for these tests, with and
+//! without the same metadata.
 
 use exiftool_rs::ExifTool;
 use std::path::{Path, PathBuf};
@@ -163,11 +167,16 @@ fn heif_writes_match_exiftool() {
         let ext = Path::new(image).extension().unwrap().to_str().unwrap();
         let (res, dst) = write(image, &ops, &format!("{id}.{ext}"));
         let n = res.unwrap_or_else(|e| panic!("{id}: {e}"));
-        assert_eq!(
-            n as usize,
-            ops.len(),
-            "{id}: every request should be applied"
-        );
+        // Deleting from a file with no EXIF or XMP (QuickTime.heic,
+        // HEIF_plain.avif) changes nothing, which ExifTool reports as
+        // "1 image files unchanged".
+        let empty = snapshot(&Path::new("tests/images").join(image)).is_empty();
+        let changed = if empty && case == "deleteall" {
+            0
+        } else {
+            ops.len()
+        };
+        assert_eq!(n as usize, changed, "{id}: every request should be applied");
         let expected: Vec<String> =
             std::fs::read_to_string(format!("tests/expected_heif/{id}.txt"))
                 .unwrap()
@@ -210,11 +219,12 @@ fn issue17_deletions_leave_no_trace_of_the_values() {
             String::from_utf8_lossy(needle)
         );
     }
-    // And writing it again is a no-op that still reports the deletions as done.
+    // And writing it again is a no-op: nothing changed, as ExifTool's
+    // "1 image files unchanged", and still no error.
     let mut et = ExifTool::new();
     et.set_new_value("EXIF:all", None);
     let again = tmp("issue17-again.heic");
-    assert_eq!(et.write_info(&dst, &again).unwrap(), 1);
+    assert_eq!(et.write_info(&dst, &again).unwrap(), 0);
     assert_eq!(std::fs::read(&again).unwrap(), out);
 }
 
@@ -229,6 +239,43 @@ fn a_request_nothing_can_apply_is_an_error() {
         "issue17.heic",
         &[("IPTC:City", Some("Paris")), ("IFD0:Artist", Some("X"))],
         "mixed.heic",
+    );
+    assert_eq!(res.unwrap(), 1);
+}
+
+#[test]
+fn deleting_an_absent_tag_changes_nothing() {
+    // A zero extent length reads as an empty Exif item, as in ExifTool (which
+    // writes that zero itself when it empties an item): the file has no Make.
+    // ExifTool answers "1 image files unchanged", so nothing is counted, it
+    // is not an error, and the output is still written, unchanged.
+    let (res, dst) = write(
+        "../issue21/issue21_zero_extent.heic",
+        &[("IFD0:Make", None)],
+        "z.heic",
+    );
+    assert_eq!(res.unwrap(), 0);
+    assert_eq!(
+        std::fs::read(&dst).unwrap(),
+        std::fs::read("tests/issue21/issue21_zero_extent.heic").unwrap()
+    );
+    // With the extent length given, the same Make is there and is deleted.
+    let (res, dst) = write("../issue21/issue21.heic", &[("IFD0:Make", None)], "e.heic");
+    assert_eq!(res.unwrap(), 1);
+    let left = snapshot(&dst);
+    assert!(
+        !left.iter().any(|t| t.starts_with("IFD0:Make=")),
+        "{left:?}"
+    );
+    assert!(
+        left.iter().any(|t| t.starts_with("IFD0:Artist=")),
+        "{left:?}"
+    );
+    // Only the deletion that removes something counts.
+    let (res, _) = write(
+        "../issue21/issue21.heic",
+        &[("IFD0:Make", None), ("IFD0:Copyright", None)],
+        "e2.heic",
     );
     assert_eq!(res.unwrap(), 1);
 }
