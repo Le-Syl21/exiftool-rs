@@ -2,7 +2,7 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
-## [Unreleased]
+## [0.13.0] - 2026-10-19
 
 PNG writing brought in line with ExifTool 13.59, chunk by chunk (#22).
 
