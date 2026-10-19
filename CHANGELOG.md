@@ -2,6 +2,46 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [Unreleased]
+
+PNG writing brought in line with ExifTool 13.59, chunk by chunk (#22).
+
+### Changed
+
+- **Breaking (low-level writer API):** `writer::png_writer::PngTextChanges`
+  has three new fields, `delete_icc_profile`, `delete_physical_pixel` and
+  `delete_everything`; a struct literal needs them (or `..Default::default()`).
+
+### Fixed
+
+- `PNG:all` deletes what ExifTool deletes: every textual tag, the tIME
+  (`ModifyDate`), gAMA (`Gamma`) and sRGB (`SRGBRendering`) chunks, and a
+  text chunk whose `XML:com.adobe.xmp` keyword carries a language code (read
+  as `PNG:XMLcomadobexmp`, an ordinary text tag for ExifTool). It keeps the
+  XMP packet, the raw profiles, iCCP, pHYs and the image data, byte for byte.
+  A tag deleted with the group and also written comes back as a new chunk.
+  It used to fail with "none of the requested changes could be written",
+  because the image header tags the PNG group also names were still there.
+- `PNG:ModifyDate`, `PNG:Gamma` and `PNG:SRGBRendering` are written and
+  deleted in their own chunks (tIME, gAMA, sRGB), with ExifTool's
+  conversions; they used to become tEXt chunks of those names. New gAMA and
+  sRGB chunks go before PLTE.
+- The `XML:com.adobe.xmp` keyword is the XMP packet in tEXt and zTXt chunks
+  too, and in a compressed iTXt chunk: `XMP:all` deletes it, an XMP edit
+  rewrites it as an uncompressed iTXt chunk (it used to add a second packet,
+  or fail on a compressed one).
+- `all` also deletes iCCP, pHYs, the SEAL chunk, every raw profile and the
+  data after IEND; `EXIF:all` deletes `Raw profile type exif`, `XMP:all`
+  `Raw profile type xmp`. `ICC_Profile:all` and `PNG-pHYs:all` delete iCCP
+  and pHYs.
+- A text tag is matched through ExifTool's tag names (`CreationTime` is the
+  `Creation Time` keyword, `Description-fr` the French iTXt chunk, which
+  `PNG:Description` no longer deletes), and a new one gets its keyword.
+- Reading: zTXt chunks, compressed iTXt chunks, gAMA (`Gamma`), iCCP
+  (`ProfileName` and the ICC profile), raw profiles (as EXIF, XMP or ICC),
+  language-specific text tags (`Description-fr`), and ExifTool's names for
+  the `Software`, `Warning` (`PNGWarning`) and unknown keywords.
+
 ## [0.12.0] - 2026-10-17
 
 ### Changed

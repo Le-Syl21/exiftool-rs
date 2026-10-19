@@ -363,12 +363,13 @@ impl ExifTool {
             return (0, false);
         };
         let before = read(before).unwrap_or_default();
-        let holds = |nv: &NewValue, from: &[Tag], to: &[Tag]| match tiff_exif_all_applied(
-            nv, file_type, from, to,
-        ) {
-            Some(done) => done,
-            None => request_applied(nv, from, to),
-        };
+        let holds =
+            |nv: &NewValue, from: &[Tag], to: &[Tag]| match png_group_deleted(nv, file_type, to)
+                .or_else(|| tiff_exif_all_applied(nv, file_type, from, to))
+            {
+                Some(done) => done,
+                None => request_applied(nv, from, to),
+            };
         let mut changed = 0;
         let mut satisfied = false;
         for nv in &self.new_values {
@@ -379,7 +380,9 @@ impl ExifTool {
             // ExifTool reports a file "unchanged" when the only edit deletes
             // a tag it did not have; writing a value always counts, even the
             // value already there.
-            let already_gone = nv.value.is_none() && request_applied(nv, &before, &before);
+            let already_gone = nv.value.is_none()
+                && png_group_deleted(nv, file_type, &before)
+                    .unwrap_or_else(|| request_applied(nv, &before, &before));
             if !already_gone {
                 changed += 1;
             }
@@ -885,6 +888,17 @@ impl ExifTool {
         let mut others: Vec<NewValue> = Vec::new();
         for nv in &self.new_values {
             let group = nv.group.as_deref().unwrap_or("");
+            if nv.value.is_none() && is_all(&nv.tag) {
+                // The PNG-only groups ExifTool deletes as a whole.
+                if group.eq_ignore_ascii_case("ICC_Profile") {
+                    text.delete_icc_profile = true;
+                    continue;
+                }
+                if group.eq_ignore_ascii_case("PNG-pHYs") {
+                    text.delete_physical_pixel = true;
+                    continue;
+                }
+            }
             if !(group.is_empty() || group.eq_ignore_ascii_case("PNG")) {
                 others.push(nv.clone());
                 continue;
@@ -893,7 +907,10 @@ impl ExifTool {
                 None if is_all(&nv.tag) => {
                     text.delete_all = true;
                     if group.is_empty() {
-                        // `-all=`: the XMP and EXIF go too.
+                        // `-all=`: every group goes, the XMP and EXIF too.
+                        text.delete_icc_profile = true;
+                        text.delete_physical_pixel = true;
+                        text.delete_everything = true;
                         others.push(nv.clone());
                     }
                 }
@@ -3058,6 +3075,37 @@ fn tiff_exif_all_applied(
     }
     let in_exif_ifd = |t: &&Tag| matches!(t.group.family1.as_str(), "ExifIFD" | "InteropIFD");
     Some(before.iter().any(|t| in_exif_ifd(&t)) && !after.iter().any(|t| in_exif_ifd(&t)))
+}
+
+/// Is a PNG group deletion done, judged from what `tags` still holds?
+/// `PNG:all` reaches the textual tags and the tIME/gAMA/sRGB chunks, not
+/// the image header the PNG group also names; `all` reaches every group
+/// ExifTool deletes in a PNG (PNG, PNG-pHYs, ICC_Profile, EXIF, XMP, ...).
+/// `None` for any other request.
+fn png_group_deleted(nv: &NewValue, file_type: FileType, tags: &[Tag]) -> Option<bool> {
+    if file_type != FileType::Png || nv.value.is_some() || !is_all(&nv.tag) {
+        return None;
+    }
+    let png = |t: &Tag| t.group.family1 == "PNG" && !crate::formats::png::kept_by_png_all(&t.name);
+    let phys = |t: &Tag| t.group.family1 == "PNG-pHYs";
+    let icc = |t: &Tag| t.group.family0 == "ICC_Profile";
+    let g = nv.group.as_deref().unwrap_or("").to_ascii_lowercase();
+    let hit: Box<dyn Fn(&Tag) -> bool> = match g.as_str() {
+        "" | "*" | "all" => Box::new(|t: &Tag| {
+            png(t)
+                || phys(t)
+                || icc(t)
+                || matches!(
+                    t.group.family0.as_str(),
+                    "EXIF" | "XMP" | "IPTC" | "MakerNotes"
+                )
+        }),
+        "png" => Box::new(png),
+        "png-phys" => Box::new(phys),
+        "icc_profile" => Box::new(icc),
+        _ => return None,
+    };
+    Some(!tags.iter().any(hit))
 }
 
 fn request_applied(nv: &NewValue, before: &[Tag], after: &[Tag]) -> bool {

@@ -1,0 +1,27 @@
+# Write cases of tests/png_write.rs: a name, then the edits (Tag=value, or
+# Tag= to delete), tab-separated. make_expected.py runs them with ExifTool.
+del-png-all	PNG:all=
+del-modifydate	PNG:ModifyDate=
+set-modifydate	PNG:ModifyDate=2025:01:02 03:04:05
+set-modifydate-zone	PNG:ModifyDate=2025:01:02 03:04:05+02:00
+del-all	all=
+del-xmp-all	XMP:all=
+del-exif-all	EXIF:all=
+del-xmlcomadobexmp	PNG:XMLcomadobexmp=
+issue22	PNG:all=	EXIF:all=	XMP:all=
+del-gamma	PNG:Gamma=
+set-gamma	PNG:Gamma=2.4
+set-srgb	PNG:SRGBRendering=Saturation
+del-srgb	PNG:SRGBRendering=
+del-author	PNG:Author=
+set-author	PNG:Author=Changed author
+set-title	PNG:Title=Added title
+del-description	PNG:Description=
+del-description-fr	PNG:Description-fr=
+set-description-fr	PNG:Description-fr=Nouvelle description
+del-png-all-set-author	PNG:all=	PNG:Author=New author
+del-png-all-set-modifydate	PNG:all=	PNG:ModifyDate=2025:01:02 03:04:05
+del-png-all-set-gamma	PNG:all=	PNG:Gamma=1.8
+del-icc	ICC_Profile:all=
+del-phys	PNG-pHYs:all=
+set-xmp-title	XMP:Title=Fixture XMP title

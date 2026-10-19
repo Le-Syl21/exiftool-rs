@@ -673,7 +673,7 @@ fn encode_base64(data: &[u8]) -> String {
 
 /// Writer.pl `InverseDateTime($val)` (no DateFormat option): any date and
 /// time → `YYYY:mm:dd HH:MM:SS[.ss][zone]`. `None` when ExifTool warns.
-fn inverse_date_time(val: &str) -> Option<String> {
+pub(crate) fn inverse_date_time(val: &str) -> Option<String> {
     let mut v = val.to_string();
     let mut tz = String::new();
     // s/([-+])(\d{1,2}):?(\d{2})\s*(DST)?$//i

@@ -137,15 +137,25 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                     text_after_idat_count += 1;
                 }
                 if let Some(null_pos) = chunk_data.iter().position(|&b| b == 0) {
-                    let key = crate::encoding::decode_latin1(&chunk_data[..null_pos]);
-                    let val = crate::encoding::decode_latin1(&chunk_data[null_pos + 1..]);
-                    // Check for XMP in tEXt chunk
-                    if key == "XML:com.adobe.xmp" {
-                        if let Ok(xmp_tags) = crate::metadata::XmpReader::read(val.as_bytes()) {
-                            tags.extend(xmp_tags);
-                        }
-                    } else {
-                        tags.push(make_png_text_tag(&key, &val));
+                    push_text(
+                        &chunk_data[..null_pos],
+                        &chunk_data[null_pos + 1..],
+                        "",
+                        false,
+                        &mut tags,
+                    );
+                }
+            }
+
+            // zTXt - Compressed text: keyword, NUL, compression method, data
+            b"zTXt" => {
+                if found_idat {
+                    text_after_idat_count += 1;
+                }
+                if let Some(null_pos) = chunk_data.iter().position(|&b| b == 0) {
+                    let packed = chunk_data.get(null_pos + 2..).unwrap_or_default();
+                    if let Some(text) = inflate(packed) {
+                        push_text(&chunk_data[..null_pos], &text, "", false, &mut tags);
                     }
                 }
             }
@@ -156,6 +166,46 @@ pub fn read_png(data: &[u8]) -> Result<Vec<Tag>> {
                     text_after_idat_count += 1;
                 }
                 parse_itxt_into(chunk_data, &mut tags);
+            }
+
+            // gAMA - Gamma: ExifTool reports the decoding gamma, the inverse
+            // of the stored one (PNG.pm `int(1e9/$a+0.5)/1e4`).
+            b"gAMA" if chunk_len >= 4 => {
+                let a = u32::from_be_bytes([
+                    chunk_data[0],
+                    chunk_data[1],
+                    chunk_data[2],
+                    chunk_data[3],
+                ]);
+                let value = if a == 0 {
+                    Value::U32(0)
+                } else {
+                    Value::F64((1e9 / f64::from(a) + 0.5).floor() / 1e4)
+                };
+                tags.push(make_png_tag("Gamma", "Gamma", value));
+            }
+
+            // iCCP - ICC profile: name, NUL, compression method, deflated profile
+            b"iCCP" => {
+                if let Some(null_pos) = chunk_data.iter().position(|&b| b == 0) {
+                    let name = crate::encoding::decode_latin1(&chunk_data[..null_pos]);
+                    tags.push(make_png_tag(
+                        "ProfileName",
+                        "Profile Name",
+                        Value::String(name),
+                    ));
+                    let packed = chunk_data.get(null_pos + 2..).unwrap_or_default();
+                    if let Some(profile) = inflate(packed) {
+                        match crate::formats::icc::read_icc(&profile) {
+                            Ok(icc_tags) => tags.extend(icc_tags),
+                            Err(_) => tags.push(make_png_tag(
+                                "ICC_Profile",
+                                "ICC Profile",
+                                Value::Binary(profile),
+                            )),
+                        }
+                    }
+                }
             }
 
             // eXIf - EXIF data (PNG 1.5+)
@@ -289,20 +339,51 @@ fn make_png_phys_tag(name: &str, description: &str, value: Value) -> Tag {
     t
 }
 
+/// The text tags of PNG.pm `TextualData` (the directories, XMP and raw
+/// profiles, aside): chunk keyword and tag name.
+pub(crate) const TEXT_TAGS: &[(&str, &str)] = &[
+    ("Artist", "Artist"),
+    ("Author", "Author"),
+    ("Collection", "Collection"),
+    ("Comment", "Comment"),
+    ("Copyright", "Copyright"),
+    ("Creation Time", "CreationTime"),
+    ("Description", "Description"),
+    ("Disclaimer", "Disclaimer"),
+    ("Document", "Document"),
+    ("Label", "Label"),
+    ("Make", "Make"),
+    ("Model", "Model"),
+    ("Software", "Software"),
+    ("Source", "Source"),
+    ("TimeStamp", "TimeStamp"),
+    ("Title", "Title"),
+    ("Warning", "PNGWarning"),
+    ("aesthetic_score", "AestheticScore"),
+    ("create-date", "CreateDate"),
+    ("modify-date", "ModDate"),
+    ("parameters", "parameters"),
+];
+
+/// The name of the known text tag a keyword holds: ExifTool looks the
+/// keyword up as is, then with its first letter capitalized (`FoundPNG`).
+pub(crate) fn text_tag_name(key: &str) -> Option<&'static str> {
+    let find = |k: &str| TEXT_TAGS.iter().find(|(kw, _)| *kw == k).map(|(_, n)| *n);
+    find(key).or_else(|| {
+        let mut c = key.chars();
+        let first = c.next()?;
+        find(&(first.to_uppercase().collect::<String>() + c.as_str()))
+    })
+}
+
 fn make_png_text_tag(key: &str, value: &str) -> Tag {
-    // Map standard PNG tEXt keys to Perl ExifTool tag names (from Perl PNG.pm TextualData)
-    let mapped_name = match key.to_lowercase().as_str() {
-        "comment" => "Comment",
-        "author" => "Author",
-        "copyright" => "Copyright",
-        "creation time" => "CreationTime",
-        "description" => "Description",
-        "disclaimer" => "Disclaimer",
-        "software" => "Creator",
-        "source" => "Source",
-        "title" => "Title",
-        "warning" => "Warning",
-        _ => key,
+    let unknown;
+    let mapped_name = match text_tag_name(key) {
+        Some(n) => n,
+        None => {
+            unknown = unknown_tag_name(key);
+            unknown.as_str()
+        }
     };
     Tag {
         id: TagId::Text(mapped_name.to_string()),
@@ -325,6 +406,36 @@ fn make_png_text_tag(key: &str, value: &str) -> Tag {
     }
 }
 
+/// The name ExifTool gives an unknown keyword: white space removed with the
+/// next letter capitalized (`s/\s+(.)/\u$1/g`), then `MakeTagName`.
+fn unknown_tag_name(key: &str) -> String {
+    let mut name = String::new();
+    let mut up = false;
+    for c in key.chars() {
+        if c.is_whitespace() {
+            up = true;
+            continue;
+        }
+        if up {
+            name.extend(c.to_uppercase());
+            up = false;
+        } else {
+            name.push(c);
+        }
+    }
+    let mut name: String = name
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+        .collect();
+    if let Some(f) = name.get(..1) {
+        name = f.to_ascii_uppercase() + &name[1..];
+    }
+    if name.len() < 2 || name.starts_with(|c: char| c == '-' || c.is_ascii_digit()) {
+        name = format!("Tag{name}");
+    }
+    name
+}
+
 fn parse_itxt_into(data: &[u8], tags: &mut Vec<Tag>) {
     // iTXt: keyword\0 compression_flag\0 compression_method\0 language\0 translated_keyword\0 text
     let null_pos = match data.iter().position(|&b| b == 0) {
@@ -338,15 +449,15 @@ fn parse_itxt_into(data: &[u8], tags: &mut Vec<Tag>) {
         return;
     }
 
-    let _compression_flag = rest[0];
-    let _compression_method = rest[1];
+    let compressed = rest[0] != 0;
     let rest = &rest[2..];
 
-    // Skip language tag
+    // Language tag
     let null_pos = match rest.iter().position(|&b| b == 0) {
         Some(p) => p,
         None => return,
     };
+    let lang = crate::encoding::decode_latin1(&rest[..null_pos]);
     let rest = &rest[null_pos + 1..];
 
     // Skip translated keyword
@@ -355,16 +466,170 @@ fn parse_itxt_into(data: &[u8], tags: &mut Vec<Tag>) {
         None => return,
     };
     let text_slice = &rest[null_pos + 1..];
+    let inflated;
+    let text_slice = if compressed {
+        match inflate(text_slice) {
+            Some(t) => {
+                inflated = t;
+                &inflated[..]
+            }
+            None => return,
+        }
+    } else {
+        text_slice
+    };
+    push_text(key.as_bytes(), text_slice, &lang, true, tags);
+}
 
-    let text = crate::encoding::decode_utf8_or_latin1(text_slice).to_string();
-
-    // Check for XMP in iTXt
-    if key == "XML:com.adobe.xmp" {
-        if let Ok(xmp_tags) = crate::metadata::XmpReader::read(text.as_bytes()) {
+/// A tEXt, zTXt or iTXt value, as ExifTool's `FoundPNG` files it: the
+/// `XML:com.adobe.xmp` keyword holds an XMP packet, other keywords a text
+/// tag. A language code makes the XMP keyword an unknown tag (`GetLangInfo`
+/// has no alternate-language form of a directory), named like any unknown
+/// keyword. tEXt and zTXt are Latin-1, iTXt is UTF-8 (`utf8`).
+fn push_text(key: &[u8], value: &[u8], lang: &str, utf8: bool, tags: &mut Vec<Tag>) {
+    if key == b"XML:com.adobe.xmp" && lang.is_empty() {
+        if let Ok(xmp_tags) = crate::metadata::XmpReader::read(value) {
             tags.extend(xmp_tags);
+        }
+        return;
+    }
+    if let Some(kind) = key.strip_prefix(b"Raw profile type ") {
+        if lang.is_empty() && RAW_PROFILES.contains(&kind) {
+            read_raw_profile(kind, value, tags);
             return;
         }
     }
+    let decode = |b: &[u8]| {
+        if utf8 {
+            crate::encoding::decode_utf8_or_latin1(b).to_string()
+        } else {
+            crate::encoding::decode_latin1(b)
+        }
+    };
+    let key = decode(key);
+    let mut tag = make_png_text_tag(&key, &decode(value));
+    if key.starts_with("Raw profile type ") {
+        // An unknown profile is binary data (`$$tagInfo{Binary}`).
+        tag.raw_value = Value::Binary(value.to_vec());
+        tag.print_value = tag.raw_value.to_display_string();
+    } else if !lang.is_empty() && text_tag_name(&key).is_some() {
+        // A known tag in another language: `Title-fr` (PNG.pm
+        // `StandardLangCase`: the second subtag upper-case when it has two
+        // letters).
+        let lang = standard_lang_case(lang);
+        tag.name = format!("{}-{lang}", tag.name);
+        tag.id = TagId::Text(tag.name.clone());
+    }
+    tags.push(tag);
+}
 
-    tags.push(make_png_text_tag(&key, &text));
+/// PNG.pm `StandardLangCase`: lower case, but for a two-letter second
+/// subtag after a primary one of 2-3 letters (or `x`/`i`), in upper case.
+fn standard_lang_case(lang: &str) -> String {
+    let lc = lang.to_ascii_lowercase();
+    if let Some((first, rest)) = lc.split_once('-') {
+        let primary = (2..=3).contains(&first.len())
+            && first.bytes().all(|c| c.is_ascii_alphabetic())
+            || first == "x"
+            || first == "i";
+        let b = rest.as_bytes();
+        let region = b.len() >= 2
+            && b[..2].iter().all(u8::is_ascii_alphabetic)
+            && b.get(2)
+                .is_none_or(|c| !(c.is_ascii_alphanumeric() || *c == b'_'));
+        if primary && region {
+            return format!("{first}-{}{}", rest[..2].to_ascii_uppercase(), &rest[2..]);
+        }
+    }
+    lc
+}
+
+/// The raw profiles ExifTool decodes (PNG.pm `TextualData`).
+const RAW_PROFILES: &[&[u8]] = &[b"APP1", b"exif", b"icc", b"icm", b"iptc", b"xmp", b"8bim"];
+
+/// PNG.pm `ProcessProfile`: a hex-encoded profile (`\n<type>\n<length>\n<hex>`),
+/// read as the directory it holds. IPTC and Photoshop profiles are not read.
+fn read_raw_profile(kind: &[u8], text: &[u8], tags: &mut Vec<Tag>) {
+    let Some(rest) = text.strip_prefix(b"\n") else {
+        return;
+    };
+    let Some(nl) = rest.iter().position(|&b| b == b'\n') else {
+        return;
+    };
+    let rest = &rest[nl + 1..];
+    let start = rest
+        .iter()
+        .position(|b| !b.is_ascii_whitespace())
+        .unwrap_or(rest.len());
+    let rest = &rest[start..];
+    let digits = rest.iter().take_while(|b| b.is_ascii_digit()).count();
+    if digits == 0 || rest.get(digits) != Some(&b'\n') {
+        return;
+    }
+    let hex: Vec<u8> = rest[digits + 1..]
+        .iter()
+        .copied()
+        .filter(|b| !b.is_ascii_whitespace())
+        .collect();
+    let nibble = |c: u8| (c as char).to_digit(16).unwrap_or(0) as u8;
+    let data: Vec<u8> = hex
+        .chunks(2)
+        .map(|p| nibble(p[0]) << 4 | p.get(1).map_or(0, |&c| nibble(c)))
+        .collect();
+    match kind {
+        b"exif" | b"APP1" => {
+            if let Some(xmp) = data.strip_prefix(b"http://ns.adobe.com/xap/1.0/\0") {
+                if let Ok(t) = crate::metadata::XmpReader::read(xmp) {
+                    tags.extend(t);
+                }
+                return;
+            }
+            let tiff = data.strip_prefix(b"Exif\0\0").unwrap_or(&data);
+            if tiff.starts_with(b"MM\0\x2a") || tiff.starts_with(b"II\x2a\0") {
+                if let Ok(t) = ExifReader::read(tiff) {
+                    tags.extend(t);
+                }
+            }
+        }
+        b"xmp" => {
+            if let Ok(t) = crate::metadata::XmpReader::read(&data) {
+                tags.extend(t);
+            }
+        }
+        b"icc" | b"icm" => {
+            if let Ok(t) = crate::formats::icc::read_icc(&data) {
+                tags.extend(t);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// A zlib stream, inflated.
+fn inflate(data: &[u8]) -> Option<Vec<u8>> {
+    use std::io::Read;
+    let mut out = Vec::new();
+    flate2::read::ZlibDecoder::new(data)
+        .read_to_end(&mut out)
+        .ok()?;
+    Some(out)
+}
+
+/// Is `name` a PNG tag that `PNG:all` leaves alone? `PNG:all` deletes the
+/// textual tags and the writable chunks (tIME, gAMA, sRGB); the image header,
+/// the background colour and the iCCP profile name stay.
+pub(crate) fn kept_by_png_all(name: &str) -> bool {
+    matches!(
+        name,
+        "ImageWidth"
+            | "ImageHeight"
+            | "BitDepth"
+            | "ColorType"
+            | "Compression"
+            | "Filter"
+            | "Interlace"
+            | "BackgroundColor"
+            | "ProfileName"
+            | "ICC_Profile"
+    )
 }
