@@ -1375,7 +1375,13 @@ fn run_write_mode(
             None
         };
 
-        match et.write_info(file, &dst) {
+        let result = et.write_info(file, &dst);
+        // Requests that did not take effect, as ExifTool's "Tag 'X' is not
+        // defined" before its summary line.
+        for warning in et.write_warnings() {
+            eprintln!("Warning: {warning}");
+        }
+        match result {
             Ok(n) => {
                 _total_written += n;
 

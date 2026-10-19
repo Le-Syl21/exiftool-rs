@@ -235,16 +235,28 @@ fn matroska_title() {
 }
 
 #[test]
-fn unwritable_requests_are_errors() {
-    // Nothing of these can be written: an error, and no output file.
+fn unwritable_requests_are_skipped() {
+    // Nothing of these can be written: as ExifTool 13.59 does with a request
+    // it cannot apply (`-IPTC:City=x` on a MOV: "1 image files copied"), the
+    // output is an unchanged copy, nothing is counted, and a warning says
+    // what was skipped.
     for (src, op) in [
         ("MP3.mp3", ("EXIF:Artist", Some("x"))),
         ("FLAC.flac", ("XMP:Title", Some("x"))),
         ("QuickTime.mov", ("IPTC:City", Some("x"))),
     ] {
-        std::fs::remove_file(tmp(&format!("err_{src}"))).ok();
-        let (out, r) = write(src, &format!("err_{src}"), &[op]);
-        assert!(r.is_err(), "{src} {op:?}");
-        assert!(!out.exists(), "{src}: an output was written");
+        let mut et = ExifTool::new();
+        et.set_new_value(op.0, op.1);
+        let out = tmp(&format!("skip_{src}"));
+        let input = Path::new("tests/images").join(src);
+        assert_eq!(et.write_info(&input, &out).unwrap(), 0, "{src} {op:?}");
+        assert_eq!(
+            std::fs::read(&out).unwrap(),
+            std::fs::read(&input).unwrap(),
+            "{src}"
+        );
+        let warnings = et.write_warnings();
+        assert_eq!(warnings.len(), 1, "{src}: {warnings:?}");
+        assert!(warnings[0].contains(op.0), "{src}: {warnings:?}");
     }
 }

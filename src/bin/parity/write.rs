@@ -735,7 +735,15 @@ fn run_file(script: &Path, src: &Path, input_perl: TagMap, work: &Path) -> Vec<C
         for e in &case.edits {
             et.set_new_value(&e.spec(), e.value.as_deref());
         }
-        ours_res.push(et.write_info(src, &out));
+        let mut res = et.write_info(src, &out);
+        // Every edit skipped: `write_info` hands back an unchanged copy, as
+        // ExifTool does, but for the verdicts that is a refusal, not a
+        // silent no-op (the warnings say nothing was written).
+        let warnings = et.write_warnings();
+        if matches!(res, Ok(0)) && !case.edits.is_empty() && warnings.len() == case.edits.len() {
+            res = Err(exiftool_rs::Error::UnsupportedFileType(warnings.join("; ")));
+        }
+        ours_res.push(res);
         let star = if case.edits.iter().any(Edit::is_group_delete) {
             let p = work.join(format!("{k}-star.{ext}"));
             let mut et = exiftool_rs::ExifTool::new();

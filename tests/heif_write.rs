@@ -229,11 +229,15 @@ fn issue17_deletions_leave_no_trace_of_the_values() {
 }
 
 #[test]
-fn a_request_nothing_can_apply_is_an_error() {
-    // HEIF has no IPTC: nothing is written, and no output file appears.
+fn a_request_nothing_can_apply_is_skipped() {
+    // HEIF has no IPTC: as ExifTool 13.59 ("1 image files copied"), the
+    // output is an unchanged copy and nothing is counted.
     let (res, dst) = write("issue17.heic", &[("IPTC:City", Some("Paris"))], "nope.heic");
-    assert!(res.is_err());
-    assert!(!dst.exists());
+    assert_eq!(res.unwrap(), 0);
+    assert_eq!(
+        std::fs::read(&dst).unwrap(),
+        std::fs::read("tests/images/issue17.heic").unwrap()
+    );
     // Mixed with one that works, only the one that works is counted.
     let (res, _) = write(
         "issue17.heic",
@@ -301,7 +305,7 @@ fn counts_are_honest_for_other_formats() {
     let (res, _) = write("QuickTime.mov", &[("XMP:all", None)], "qt.mov");
     assert_eq!(res.unwrap(), 1);
     let (res, _) = write("QuickTime.mov", &[("IPTC:City", Some("x"))], "qt2.mov");
-    assert!(res.is_err(), "{res:?}");
+    assert_eq!(res.unwrap(), 0);
 
     // PNG: a text write lands and is counted.
     let (res, _) = write("PNG.png", &[("Comment", Some("hi"))], "c.png");

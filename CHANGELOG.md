@@ -2,6 +2,27 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [Unreleased]
+
+### Added
+
+- `ExifTool::write_warnings()`: the warnings of the last `write_info` call,
+  one per queued request that did not take effect (a tag ExifTool does not
+  define, one the file type cannot hold, or one our writer does not handle).
+  The CLI prints them as `Warning: ...` lines, as ExifTool prints
+  "Tag 'X' is not defined".
+
+### Changed
+
+- A request that does not take effect no longer fails the whole write when
+  it is the only one (#22 follow-up). As ExifTool 13.59 does (`-Foo=bar`, or
+  `-PNG:XMLcomadobexmp=` on the `XML:com.adobe.xmp` iTXt chunk with a
+  language code: "Warning: Tag ... is not defined", "1 image files copied"),
+  `write_info` to a new destination writes an unchanged copy and returns
+  `Ok(0)`, with the skipped requests in `write_warnings()`. In place, it
+  still fails and leaves the file alone (ExifTool's "Nothing to do."). Mixed
+  with requests that do apply, those are written and counted, as before.
+
 ## [0.13.0] - 2026-10-19
 
 PNG writing brought in line with ExifTool 13.59, chunk by chunk (#22).

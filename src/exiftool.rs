@@ -88,12 +88,17 @@ pub struct NewValue {
 }
 
 impl NewValue {
-    /// `-Group:Tag=value`, as the request would be written on a command line.
-    fn describe(&self) -> String {
-        let name = match &self.group {
+    /// `Group:Tag`, as ExifTool names it in a warning.
+    fn name(&self) -> String {
+        match &self.group {
             Some(g) => format!("{g}:{}", self.tag),
             None => self.tag.clone(),
-        };
+        }
+    }
+
+    /// `-Group:Tag=value`, as the request would be written on a command line.
+    fn describe(&self) -> String {
+        let name = self.name();
         match &self.value {
             Some(v) => format!("{name}={v}"),
             None => format!("{name}= (delete)"),
@@ -132,6 +137,8 @@ impl NewValue {
 pub struct ExifTool {
     options: Options,
     new_values: Vec<NewValue>,
+    /// What the last `write_info` call skipped (see [`ExifTool::write_warnings`]).
+    write_warnings: std::sync::Mutex<Vec<String>>,
 }
 
 /// Result of metadata extraction: maps tag names to display values.
@@ -140,10 +147,7 @@ pub type ImageInfo = HashMap<String, String>;
 impl ExifTool {
     /// Create a new ExifTool instance with default options.
     pub fn new() -> Self {
-        Self {
-            options: Options::default(),
-            new_values: Vec::new(),
-        }
+        Self::with_options(Options::default())
     }
 
     /// Create a new ExifTool instance with custom options.
@@ -151,6 +155,7 @@ impl ExifTool {
         Self {
             options,
             new_values: Vec::new(),
+            write_warnings: std::sync::Mutex::new(Vec::new()),
         }
     }
 
@@ -300,10 +305,18 @@ impl ExifTool {
     /// value, a deleted tag or group must be gone. Deleting a tag the file
     /// does not have changes nothing, so it is not counted, but it is not an
     /// error either: like ExifTool's "1 image files unchanged", the call
-    /// returns `Ok(0)` and still writes `dst_path`. A request the writer for
-    /// this file type cannot apply is not counted, and when none of the
-    /// queued requests can be applied the call fails without writing
-    /// anything.
+    /// returns `Ok(0)` and still writes `dst_path`.
+    ///
+    /// A request that does not take effect (a tag ExifTool does not define,
+    /// one this file type cannot hold, or one the writer for this file type
+    /// does not handle) is skipped with a warning, which
+    /// [`write_warnings`](Self::write_warnings) returns, and is not counted;
+    /// the other requests are still written, as ExifTool warns
+    /// "Tag 'X' is not defined" and writes the rest. When none of the queued
+    /// requests takes effect, a distinct `dst_path` gets an unchanged copy of
+    /// the source and the call returns `Ok(0)` (ExifTool's "1 image files
+    /// copied"); in place, the call fails and leaves the file alone
+    /// (ExifTool's "Nothing to do.").
     pub fn write_info<P: AsRef<Path>, Q: AsRef<Path>>(
         &self,
         src_path: P,
@@ -311,35 +324,84 @@ impl ExifTool {
     ) -> Result<u32> {
         let src_path = src_path.as_ref();
         let dst_path = dst_path.as_ref();
+        self.set_write_warnings(Vec::new());
         let data = fs::read(src_path).map_err(Error::Io)?;
 
         let file_type = self.detect_file_type(&data, src_path)?;
         let output = self.apply_changes(&data, file_type)?;
-        let (applied, satisfied) = self.count_applied(&data, &output, src_path, file_type);
-        if !satisfied && !self.new_values.is_empty() {
-            let requested: Vec<String> = self.new_values.iter().map(NewValue::describe).collect();
-            return Err(Error::UnsupportedFileType(format!(
-                "none of the requested changes could be written to this {} file ({})",
-                file_type,
-                requested.join(", ")
-            )));
+        let (applied, skipped) = match self.count_applied(&data, &output, src_path, file_type) {
+            Some(counted) => counted,
+            None if self.new_values.is_empty() => (0, Vec::new()),
+            // The rewrite cannot be read back: nothing is known to hold.
+            None => {
+                let requested: Vec<String> =
+                    self.new_values.iter().map(NewValue::describe).collect();
+                return Err(Error::UnsupportedFileType(format!(
+                    "none of the requested changes could be written to this {} file ({})",
+                    file_type,
+                    requested.join(", ")
+                )));
+            }
+        };
+        self.set_write_warnings(
+            skipped
+                .iter()
+                .map(|nv| {
+                    format!(
+                        "Tag '{}' was not written: not defined, or not writable in this {} file",
+                        nv.name(),
+                        file_type
+                    )
+                })
+                .collect(),
+        );
+        let nothing_done = !self.new_values.is_empty() && skipped.len() == self.new_values.len();
+        if nothing_done {
+            if same_file(src_path, dst_path) {
+                let requested: Vec<String> =
+                    self.new_values.iter().map(NewValue::describe).collect();
+                return Err(Error::UnsupportedFileType(format!(
+                    "nothing to do: none of the requested changes could be written to this {} file ({})",
+                    file_type,
+                    requested.join(", ")
+                )));
+            }
+            write_replacing(dst_path, &data)?;
+            return Ok(0);
         }
 
         write_replacing(dst_path, &output)?;
         Ok(applied)
     }
 
+    /// The warnings of the last [`write_info`](Self::write_info) call: one
+    /// per queued request that did not take effect, as ExifTool warns
+    /// "Tag 'X' is not defined". Empty when every request was applied (or
+    /// already held, such as deleting a tag the file does not have).
+    pub fn write_warnings(&self) -> Vec<String> {
+        self.write_warnings
+            .lock()
+            .map(|w| w.clone())
+            .unwrap_or_default()
+    }
+
+    fn set_write_warnings(&self, warnings: Vec<String>) {
+        if let Ok(mut w) = self.write_warnings.lock() {
+            *w = warnings;
+        }
+    }
+
     /// How many queued requests the rewrite of `before` into `after` carried
-    /// out, judged by what a reader sees in each, and whether any request
-    /// holds in `after` at all (a deletion of something already absent holds
-    /// without being counted).
+    /// out, judged by what a reader sees in each, and the requests that do
+    /// not hold in `after` (a deletion of something already absent holds
+    /// without being counted). `None` when `after` cannot be read back.
     fn count_applied(
         &self,
         before: &[u8],
         after: &[u8],
         path: &Path,
         file_type: FileType,
-    ) -> (u32, bool) {
+    ) -> Option<(u32, Vec<&NewValue>)> {
         let keep = |t: &Tag| {
             // `File` stays: a GIF or PNG comment lives there.
             !matches!(
@@ -359,9 +421,7 @@ impl ExifTool {
                 .ok()
                 .map(|v| v.into_iter().filter(keep).collect())
         };
-        let Some(after) = read(after) else {
-            return (0, false);
-        };
+        let after = read(after)?;
         let before = read(before).unwrap_or_default();
         let holds =
             |nv: &NewValue, from: &[Tag], to: &[Tag]| match png_group_deleted(nv, file_type, to)
@@ -371,12 +431,12 @@ impl ExifTool {
                 None => request_applied(nv, from, to),
             };
         let mut changed = 0;
-        let mut satisfied = false;
+        let mut skipped = Vec::new();
         for nv in &self.new_values {
             if !holds(nv, &before, &after) {
+                skipped.push(nv);
                 continue;
             }
-            satisfied = true;
             // ExifTool reports a file "unchanged" when the only edit deletes
             // a tag it did not have; writing a value always counts, even the
             // value already there.
@@ -387,7 +447,7 @@ impl ExifTool {
                 changed += 1;
             }
         }
-        (changed, satisfied)
+        Some((changed, skipped))
     }
 
     /// Apply queued changes to in-memory data.
@@ -3851,6 +3911,14 @@ fn compute_text_tags(data: &[u8], is_csv: bool) -> Vec<Tag> {
 /// never be a file someone else left there, and it is removed again if the
 /// write or the rename fails. It takes the permissions of the file it
 /// replaces, or the ones `fs::write` would give a new file.
+/// Do `a` and `b` name the same file (the destination may not exist yet)?
+fn same_file(a: &Path, b: &Path) -> bool {
+    match (fs::canonicalize(a), fs::canonicalize(b)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => a == b,
+    }
+}
+
 fn write_replacing(dst: &Path, bytes: &[u8]) -> Result<()> {
     use std::io::Write;
 

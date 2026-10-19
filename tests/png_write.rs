@@ -23,12 +23,6 @@ const DIVERGENT: &[(&str, &str, &str)] = &[
          change, so the count says so",
     ),
     (
-        "lang",
-        "del-xmlcomadobexmp",
-        "ExifTool warns that PNG:XMLcomadobexmp is not defined and copies the \
-         file; a request nothing can apply is an error here",
-    ),
-    (
         "sink",
         "set-xmp-title",
         "ExifTool also edits the XMP of a `Raw profile type xmp` chunk; raw \
@@ -218,11 +212,56 @@ fn issue22_leaves_no_text_or_timestamp() {
     }
 }
 
-/// A date ExifTool refuses (no time) is not written, and is reported so.
+/// `PNG:XMLcomadobexmp` (the `XML:com.adobe.xmp` iTXt chunk with a language
+/// code) is not a tag ExifTool can write: with `-Author= -PNG:XMLcomadobexmp=`
+/// ExifTool 13.59 warns "Tag 'PNG:XMLcomadobexmp' is not defined", deletes
+/// Author and keeps the chunk; alone, it copies the file unchanged.
+#[test]
+fn undefined_png_tag_is_skipped_with_a_warning() {
+    let mut et = ExifTool::new();
+    et.set_new_value("Author", None);
+    et.set_new_value("PNG:XMLcomadobexmp", None);
+    let dst = tmp("undefined-with-author.png");
+    assert_eq!(et.write_info(fixture("lang"), &dst).unwrap(), 1);
+    let warnings = et.write_warnings();
+    assert_eq!(warnings.len(), 1, "{warnings:?}");
+    assert!(warnings[0].contains("'PNG:XMLcomadobexmp'"), "{warnings:?}");
+    let out = chunks(&std::fs::read(&dst).unwrap());
+    assert!(
+        !out.iter().any(|c| c.starts_with("tEXt[Author]")),
+        "{out:?}"
+    );
+    let src = chunks(&std::fs::read(fixture("lang")).unwrap());
+    let xmp = |l: &[String]| {
+        l.iter()
+            .find(|c| c.starts_with("iTXt[XML:com.adobe.xmp]"))
+            .cloned()
+    };
+    assert_eq!(xmp(&out), xmp(&src));
+
+    let mut et = ExifTool::new();
+    et.set_new_value("PNG:XMLcomadobexmp", None);
+    let dst = tmp("undefined-alone.png");
+    assert_eq!(et.write_info(fixture("lang"), &dst).unwrap(), 0);
+    assert_eq!(
+        std::fs::read(&dst).unwrap(),
+        std::fs::read(fixture("lang")).unwrap()
+    );
+    assert_eq!(et.write_warnings().len(), 1);
+}
+
+/// A date ExifTool refuses (no time) is not written, and is reported so: as
+/// ExifTool 13.59 ("Warning: Invalid date/time ...", "1 image files
+/// copied"), the output is an unchanged copy, with a warning.
 #[test]
 fn invalid_modify_date_is_refused() {
     let dst = tmp("bad-date.png");
     let mut et = ExifTool::new();
     et.set_new_value("PNG:ModifyDate", Some("2025:01:02"));
-    assert!(et.write_info(fixture("text"), &dst).is_err());
+    assert_eq!(et.write_info(fixture("text"), &dst).unwrap(), 0);
+    assert_eq!(
+        std::fs::read(&dst).unwrap(),
+        std::fs::read(fixture("text")).unwrap()
+    );
+    assert_eq!(et.write_warnings().len(), 1);
 }
