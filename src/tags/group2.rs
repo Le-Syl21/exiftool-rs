@@ -13,6 +13,9 @@
 //! ambiguous key defers to whatever the parser already chose: the parser knows
 //! which table the tag came from, and a name lookup does not.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+
 use super::group2_generated::{
     Family2Entry, FAMILY2_BY_G0_G1_NAME, FAMILY2_BY_G0_NAME, FAMILY2_BY_NAME,
     XMP_NAMESPACE_FAMILY2, XMP_NAMESPACE_RAW_KEYS, XMP_OWN_FAMILY2_BY_NAME,
@@ -22,10 +25,29 @@ use super::group2_generated::{
 const SEP: char = '\u{1}';
 
 fn lookup<'a>(table: &'a [Family2Entry], key: &str) -> Option<&'a [&'static str]> {
-    table
-        .binary_search_by(|(k, _)| (*k).cmp(key))
-        .ok()
-        .map(|i| table[i].1)
+    // The tables are static and large, and the same few keys recur for every tag
+    // of every file, so remember each answer (as an index) per table. The memo is
+    // per thread and emptied if it ever grows past MEMO_LIMIT, since XMP can mint
+    // arbitrary tag names.
+    const MEMO_LIMIT: usize = 1 << 16;
+    thread_local! {
+        static MEMO: RefCell<HashMap<usize, HashMap<String, Option<usize>>>> =
+            RefCell::new(HashMap::new());
+    }
+    let found = MEMO.with(|memo| {
+        let mut memo = memo.borrow_mut();
+        if memo.values().map(HashMap::len).sum::<usize>() > MEMO_LIMIT {
+            memo.clear();
+        }
+        let per_table = memo.entry(table.as_ptr() as usize).or_default();
+        if let Some(&hit) = per_table.get(key) {
+            return hit;
+        }
+        let hit = table.binary_search_by(|(k, _)| (*k).cmp(key)).ok();
+        per_table.insert(key.to_string(), hit);
+        hit
+    });
+    found.map(|i| table[i].1)
 }
 
 /// Canon tag names carried by more than one Canon binary sub-table with
