@@ -35,6 +35,11 @@ PNG writing brought in line with ExifTool 13.59, chunk by chunk (#22).
 
 ### Fixed
 
+- Olympus ORF files are read again (#24). ORF swaps the TIFF magic 42 for
+  0x4F52 (`IIRO`, `MMOR`) or 0x5352 (`IIRS`); detection never looked at
+  those headers and the TIFF reader rejected them, so every ORF came back as
+  `UnsupportedFileType`. Both now accept them, as ExifTool does.
+
 - `PNG:all` deletes what ExifTool deletes: every textual tag, the tIME
   (`ModifyDate`), gAMA (`Gamma`) and sRGB (`SRGBRendering`) chunks, and a
   text chunk whose `XML:com.adobe.xmp` keyword carries a language code (read
