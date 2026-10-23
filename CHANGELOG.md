@@ -2,7 +2,7 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
-## [Unreleased]
+## [0.14.0] - 2026-10-23
 
 ### Added
 
