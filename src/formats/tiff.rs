@@ -29,8 +29,10 @@ pub fn read_tiff(data: &[u8]) -> Result<Vec<Tag>> {
     };
 
     let mut tags = match magic {
-        // Standard TIFF
-        42 => ExifReader::read(data)?,
+        // Standard TIFF, and Olympus ORF which only changes the magic
+        42 | crate::metadata::exif::ORF_MAGIC_RO | crate::metadata::exif::ORF_MAGIC_RS => {
+            ExifReader::read(data)?
+        }
         // BigTIFF (magic 43) - IFD offset is 8 bytes at offset 8
         43 => {
             // BigTIFF has a different IFD structure:

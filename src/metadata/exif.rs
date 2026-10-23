@@ -212,6 +212,11 @@ fn type_size(data_type: u16) -> Option<usize> {
 }
 
 /// Parse a TIFF header from raw bytes.
+/// TIFF magic of Olympus ORF files: "IIRO" / "MMOR".
+pub const ORF_MAGIC_RO: u16 = 0x4F52;
+/// TIFF magic of Olympus ORF files: "IIRS".
+pub const ORF_MAGIC_RS: u16 = 0x5352;
+
 pub fn parse_tiff_header(data: &[u8]) -> Result<TiffHeader> {
     if data.len() < 8 {
         return Err(Error::InvalidTiffHeader);
@@ -228,7 +233,8 @@ pub fn parse_tiff_header(data: &[u8]) -> Result<TiffHeader> {
         ByteOrderMark::BigEndian => BigEndian::read_u16(&data[2..4]),
     };
 
-    if magic != 42 {
+    // Olympus ORF uses 0x4F52 or 0x5352 in place of 42, with a standard IFD layout.
+    if !matches!(magic, 42 | ORF_MAGIC_RO | ORF_MAGIC_RS) {
         return Err(Error::InvalidTiffHeader);
     }
 

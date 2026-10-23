@@ -1244,19 +1244,15 @@ pub fn detect_from_magic(header: &[u8]) -> Option<FileType> {
             if header.len() >= 12 && is_be && &header[8..12] == b"MMMM" {
                 return Some(FileType::Iiq);
             }
-            // ORF: "IIRO" or "IIRS" (Olympus)
-            if header.len() >= 4
-                && is_le
-                && header[0] == b'I'
-                && header[1] == b'I'
-                && header.len() >= 8
-            {
-                // Check for ORF signature at specific offsets (Olympus uses standard TIFF with specific patterns)
-                // For now, fall through to generic TIFF and detect by extension
-            }
             // BigTIFF: magic 43 instead of 42
             // (handled below)
             return Some(FileType::Tiff);
+        }
+        // ORF: Olympus replaces magic 42 with 0x4F52 ("IIRO", "MMOR") or
+        // 0x5352 ("IIRS"); ExifTool.pm DoProcessTIFF keys ORF on these.
+        if header.starts_with(b"IIRO") || header.starts_with(b"IIRS") || header.starts_with(b"MMOR")
+        {
+            return Some(FileType::Orf);
         }
         // BigTIFF: "II" + 0x2B or "MM" + 0x002B
         let is_btf_le =
