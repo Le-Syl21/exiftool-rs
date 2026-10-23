@@ -188,7 +188,8 @@ fn emit_hdrp_makernote(b64_value: &str, tags: &mut Vec<Tag>) {
     // Emit HDRPlusMakerNote as a binary tag (ExifTool shows "(Binary data N bytes...)").
     // ExifTool stores the raw base64 STRING (it isn't base64-decoded for this tag),
     // so N is the length of that string, not the decoded byte count.
-    let raw_bytes = b64_value.trim().len();
+    let b64_value = b64_value.trim();
+    let raw_bytes = b64_value.len();
     let print = format!(
         "(Binary data {} bytes, use -b option to extract)",
         raw_bytes
@@ -203,7 +204,8 @@ fn emit_hdrp_makernote(b64_value: &str, tags: &mut Vec<Tag>) {
             family2: "Other".into(),
             family3: "Main".into(),
         },
-        raw_value: Value::String(b64_value.to_string()),
+        // Binary, as in ExifTool: `-n` shows the placeholder, `-b` the base64 text.
+        raw_value: Value::Binary(b64_value.as_bytes().to_vec()),
         print_value: print,
         priority: 0,
     });
