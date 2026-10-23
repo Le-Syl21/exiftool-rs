@@ -295,7 +295,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // Both tags must EXIST. Date can be empty (result: " 00:00:00Z")
     if find_tag(tags, "GPSDateStamp").is_some() && find_tag(tags, "GPSTimeStamp").is_some() {
         let date = find_tag_value(tags, "GPSDateStamp").unwrap_or_default();
-        let time = find_tag_value(tags, "GPSTimeStamp").unwrap_or_default();
+        // Perl requires the ValueConv value, not the rounded PrintConv one.
+        let time = find_tag(tags, "GPSTimeStamp")
+            .map(|t| t.raw_value.to_display_string())
+            .unwrap_or_default();
         if !time.is_empty() {
             composite.push(mk_composite(
                 "GPSDateTime",
@@ -869,12 +872,12 @@ pub fn gps_coordinates(tags: &[Tag]) -> Vec<Tag> {
                 if negative { neg_ref } else { pos_ref }
             )
         };
-        let mut t = mk_composite_raw(
-            coord,
-            src.description.clone().as_str(),
-            src.raw_value.clone(),
-            print,
-        );
+        // The ValueConv's result is what -n shows: signed decimal degrees.
+        let raw = match &src.raw_value {
+            Value::F64(v) if negative => Value::F64(-v),
+            other => other.clone(),
+        };
+        let mut t = mk_composite_raw(coord, src.description.clone().as_str(), raw, print);
         t.group.family2 = "Location".into();
         out.push(t);
     }
@@ -941,10 +944,17 @@ fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
         return None;
     }
 
-    Some(mk_composite(
+    // ValueConv is "$val[0] $val[1]", the two values `-n` shows.
+    let raw = format!(
+        "{} {}",
+        lat_tag.raw_value.to_display_string(),
+        lon_tag.raw_value.to_display_string()
+    );
+    Some(mk_composite_raw(
         "GPSPosition",
         "GPS Position",
-        Value::String(format!("{}, {}", lat, lon)),
+        Value::String(raw),
+        format!("{}, {}", lat, lon),
     ))
 }
 
@@ -958,14 +968,13 @@ fn compute_gps_altitude(tags: &[Tag]) -> Option<Tag> {
     let trunc = (meters.abs() * 10.0).trunc() / 10.0;
     let pos = if below { "Below" } else { "Above" };
 
-    let mut t = mk_composite(
+    // ValueConv is `$val[1] ? -$val[0] : $val[0]`, which is what -n shows.
+    let signed = if below { -meters.abs() } else { meters };
+    let mut t = mk_composite_raw(
         "GPSAltitude",
         "GPS Altitude",
-        Value::String(format!(
-            "{} m {} Sea Level",
-            crate::value::format_g15(trunc),
-            pos
-        )),
+        Value::F64(signed),
+        format!("{} m {} Sea Level", crate::value::format_g15(trunc), pos),
     );
     // ExifTool's Composite GPSAltitude overrides the plain EXIF GPSAltitude tag.
     t.priority = 1;
@@ -2306,6 +2315,8 @@ fn parse_gps_decimal(value: &Value, reference: &str) -> Option<f64> {
             deg + min / 60.0 + sec / 3600.0
         }
         Value::URational(n, d) if *d > 0 => *n as f64 / *d as f64,
+        // Already ToDegrees'd by the EXIF reader.
+        Value::F64(v) => *v,
         _ => return None,
     };
     let sign = if reference == "S" || reference == "W" {

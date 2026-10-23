@@ -1,0 +1,132 @@
+gps_tokyo.jpg	print	GPS:GPSVersionID	2.3.0.0
+gps_tokyo.jpg	print	GPS:GPSLatitudeRef	North
+gps_tokyo.jpg	print	GPS:GPSLatitude	35 deg 40' 30.52"
+gps_tokyo.jpg	print	GPS:GPSLongitudeRef	East
+gps_tokyo.jpg	print	GPS:GPSLongitude	139 deg 43' 9.42"
+gps_tokyo.jpg	print	GPS:GPSAltitudeRef	Above Sea Level
+gps_tokyo.jpg	print	GPS:GPSAltitude	38.5 m
+gps_tokyo.jpg	print	GPS:GPSTimeStamp	05:03:24.5
+gps_tokyo.jpg	print	GPS:GPSDateStamp	2026:10:07
+gps_tokyo.jpg	print	Composite:GPSAltitude	38.5 m Above Sea Level
+gps_tokyo.jpg	print	Composite:GPSDateTime	2026:10:07 05:03:24.5Z
+gps_tokyo.jpg	print	Composite:GPSLatitude	35 deg 40' 30.52" N
+gps_tokyo.jpg	print	Composite:GPSLongitude	139 deg 43' 9.42" E
+gps_tokyo.jpg	print	Composite:GPSPosition	35 deg 40' 30.52" N, 139 deg 43' 9.42" E
+gps_tokyo.jpg	numeric	GPS:GPSVersionID	2 3 0 0
+gps_tokyo.jpg	numeric	GPS:GPSLatitudeRef	N
+gps_tokyo.jpg	numeric	GPS:GPSLatitude	35.675145
+gps_tokyo.jpg	numeric	GPS:GPSLongitudeRef	E
+gps_tokyo.jpg	numeric	GPS:GPSLongitude	139.719283333333
+gps_tokyo.jpg	numeric	GPS:GPSAltitudeRef	0
+gps_tokyo.jpg	numeric	GPS:GPSAltitude	38.5
+gps_tokyo.jpg	numeric	GPS:GPSTimeStamp	05:03:24.5
+gps_tokyo.jpg	numeric	GPS:GPSDateStamp	2026:10:07
+gps_tokyo.jpg	numeric	Composite:GPSAltitude	38.5
+gps_tokyo.jpg	numeric	Composite:GPSDateTime	2026:10:07 05:03:24.5Z
+gps_tokyo.jpg	numeric	Composite:GPSLatitude	35.675145
+gps_tokyo.jpg	numeric	Composite:GPSLongitude	139.719283333333
+gps_tokyo.jpg	numeric	Composite:GPSPosition	35.675145 139.719283333333
+gps_tokyo.cr3	print	GPS:GPSVersionID	2.3.0.0
+gps_tokyo.cr3	print	GPS:GPSLatitudeRef	North
+gps_tokyo.cr3	print	GPS:GPSLatitude	35 deg 40' 30.52"
+gps_tokyo.cr3	print	GPS:GPSLongitudeRef	East
+gps_tokyo.cr3	print	GPS:GPSLongitude	139 deg 43' 9.42"
+gps_tokyo.cr3	print	GPS:GPSAltitudeRef	Above Sea Level
+gps_tokyo.cr3	print	GPS:GPSAltitude	38.5 m
+gps_tokyo.cr3	print	GPS:GPSTimeStamp	05:03:24.5
+gps_tokyo.cr3	print	GPS:GPSDateStamp	2026:10:07
+gps_tokyo.cr3	print	Composite:GPSAltitude	38.5 m Above Sea Level
+gps_tokyo.cr3	print	Composite:GPSDateTime	2026:10:07 05:03:24.5Z
+gps_tokyo.cr3	print	Composite:GPSLatitude	35 deg 40' 30.52" N
+gps_tokyo.cr3	print	Composite:GPSLongitude	139 deg 43' 9.42" E
+gps_tokyo.cr3	print	Composite:GPSPosition	35 deg 40' 30.52" N, 139 deg 43' 9.42" E
+gps_tokyo.cr3	numeric	GPS:GPSVersionID	2 3 0 0
+gps_tokyo.cr3	numeric	GPS:GPSLatitudeRef	N
+gps_tokyo.cr3	numeric	GPS:GPSLatitude	35.675145
+gps_tokyo.cr3	numeric	GPS:GPSLongitudeRef	E
+gps_tokyo.cr3	numeric	GPS:GPSLongitude	139.719283333333
+gps_tokyo.cr3	numeric	GPS:GPSAltitudeRef	0
+gps_tokyo.cr3	numeric	GPS:GPSAltitude	38.5
+gps_tokyo.cr3	numeric	GPS:GPSTimeStamp	05:03:24.5
+gps_tokyo.cr3	numeric	GPS:GPSDateStamp	2026:10:07
+gps_tokyo.cr3	numeric	Composite:GPSAltitude	38.5
+gps_tokyo.cr3	numeric	Composite:GPSDateTime	2026:10:07 05:03:24.5Z
+gps_tokyo.cr3	numeric	Composite:GPSLatitude	35.675145
+gps_tokyo.cr3	numeric	Composite:GPSLongitude	139.719283333333
+gps_tokyo.cr3	numeric	Composite:GPSPosition	35.675145 139.719283333333
+gps_southwest.jpg	print	GPS:GPSVersionID	2.3.0.0
+gps_southwest.jpg	print	GPS:GPSLatitudeRef	South
+gps_southwest.jpg	print	GPS:GPSLatitude	33 deg 51' 36.00"
+gps_southwest.jpg	print	GPS:GPSLongitudeRef	West
+gps_southwest.jpg	print	GPS:GPSLongitude	151 deg 12' 35.99"
+gps_southwest.jpg	print	GPS:GPSAltitudeRef	Below Sea Level
+gps_southwest.jpg	print	GPS:GPSAltitude	12 m
+gps_southwest.jpg	print	GPS:GPSTimeStamp	23:59:59.123457
+gps_southwest.jpg	print	GPS:GPSDateStamp	2026:10:08
+gps_southwest.jpg	print	Composite:GPSAltitude	12 m Below Sea Level
+gps_southwest.jpg	print	Composite:GPSDateTime	2026:10:08 23:59:59.1234567Z
+gps_southwest.jpg	print	Composite:GPSLatitude	33 deg 51' 36.00" S
+gps_southwest.jpg	print	Composite:GPSLongitude	151 deg 12' 35.99" W
+gps_southwest.jpg	print	Composite:GPSPosition	33 deg 51' 36.00" S, 151 deg 12' 35.99" W
+gps_southwest.jpg	numeric	GPS:GPSVersionID	2 3 0 0
+gps_southwest.jpg	numeric	GPS:GPSLatitudeRef	S
+gps_southwest.jpg	numeric	GPS:GPSLatitude	33.86
+gps_southwest.jpg	numeric	GPS:GPSLongitudeRef	W
+gps_southwest.jpg	numeric	GPS:GPSLongitude	151.209997222222
+gps_southwest.jpg	numeric	GPS:GPSAltitudeRef	1
+gps_southwest.jpg	numeric	GPS:GPSAltitude	12
+gps_southwest.jpg	numeric	GPS:GPSTimeStamp	23:59:59.1234567
+gps_southwest.jpg	numeric	GPS:GPSDateStamp	2026:10:08
+gps_southwest.jpg	numeric	Composite:GPSAltitude	-12
+gps_southwest.jpg	numeric	Composite:GPSDateTime	2026:10:08 23:59:59.1234567Z
+gps_southwest.jpg	numeric	Composite:GPSLatitude	-33.86
+gps_southwest.jpg	numeric	Composite:GPSLongitude	-151.209997222222
+gps_southwest.jpg	numeric	Composite:GPSPosition	-33.86 -151.209997222222
+gps_southwest.cr3	print	GPS:GPSVersionID	2.3.0.0
+gps_southwest.cr3	print	GPS:GPSLatitudeRef	South
+gps_southwest.cr3	print	GPS:GPSLatitude	33 deg 51' 36.00"
+gps_southwest.cr3	print	GPS:GPSLongitudeRef	West
+gps_southwest.cr3	print	GPS:GPSLongitude	151 deg 12' 35.99"
+gps_southwest.cr3	print	GPS:GPSAltitudeRef	Below Sea Level
+gps_southwest.cr3	print	GPS:GPSAltitude	12 m
+gps_southwest.cr3	print	GPS:GPSTimeStamp	23:59:59.123457
+gps_southwest.cr3	print	GPS:GPSDateStamp	2026:10:08
+gps_southwest.cr3	print	Composite:GPSAltitude	12 m Below Sea Level
+gps_southwest.cr3	print	Composite:GPSDateTime	2026:10:08 23:59:59.1234567Z
+gps_southwest.cr3	print	Composite:GPSLatitude	33 deg 51' 36.00" S
+gps_southwest.cr3	print	Composite:GPSLongitude	151 deg 12' 35.99" W
+gps_southwest.cr3	print	Composite:GPSPosition	33 deg 51' 36.00" S, 151 deg 12' 35.99" W
+gps_southwest.cr3	numeric	GPS:GPSVersionID	2 3 0 0
+gps_southwest.cr3	numeric	GPS:GPSLatitudeRef	S
+gps_southwest.cr3	numeric	GPS:GPSLatitude	33.86
+gps_southwest.cr3	numeric	GPS:GPSLongitudeRef	W
+gps_southwest.cr3	numeric	GPS:GPSLongitude	151.209997222222
+gps_southwest.cr3	numeric	GPS:GPSAltitudeRef	1
+gps_southwest.cr3	numeric	GPS:GPSAltitude	12
+gps_southwest.cr3	numeric	GPS:GPSTimeStamp	23:59:59.1234567
+gps_southwest.cr3	numeric	GPS:GPSDateStamp	2026:10:08
+gps_southwest.cr3	numeric	Composite:GPSAltitude	-12
+gps_southwest.cr3	numeric	Composite:GPSDateTime	2026:10:08 23:59:59.1234567Z
+gps_southwest.cr3	numeric	Composite:GPSLatitude	-33.86
+gps_southwest.cr3	numeric	Composite:GPSLongitude	-151.209997222222
+gps_southwest.cr3	numeric	Composite:GPSPosition	-33.86 -151.209997222222
+GPS.jpg	print	GPS:GPSVersionID	2.0.0.0
+GPS.jpg	print	GPS:GPSLatitudeRef	North
+GPS.jpg	print	GPS:GPSLatitude	54 deg 59' 22.80"
+GPS.jpg	print	GPS:GPSLongitudeRef	West
+GPS.jpg	print	GPS:GPSLongitude	1 deg 54' 51.00"
+GPS.jpg	print	GPS:GPSTimeStamp	14:58:24
+GPS.jpg	print	GPS:GPSMapDatum	WGS84
+GPS.jpg	print	Composite:GPSLatitude	54 deg 59' 22.80" N
+GPS.jpg	print	Composite:GPSLongitude	1 deg 54' 51.00" W
+GPS.jpg	print	Composite:GPSPosition	54 deg 59' 22.80" N, 1 deg 54' 51.00" W
+GPS.jpg	numeric	GPS:GPSVersionID	2 0 0 0
+GPS.jpg	numeric	GPS:GPSLatitudeRef	N
+GPS.jpg	numeric	GPS:GPSLatitude	54.9896666666667
+GPS.jpg	numeric	GPS:GPSLongitudeRef	W
+GPS.jpg	numeric	GPS:GPSLongitude	1.91416666666667
+GPS.jpg	numeric	GPS:GPSTimeStamp	14:58:24
+GPS.jpg	numeric	GPS:GPSMapDatum	WGS84
+GPS.jpg	numeric	Composite:GPSLatitude	54.9896666666667
+GPS.jpg	numeric	Composite:GPSLongitude	-1.91416666666667
+GPS.jpg	numeric	Composite:GPSPosition	54.9896666666667 -1.91416666666667

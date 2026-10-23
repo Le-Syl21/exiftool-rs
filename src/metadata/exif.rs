@@ -791,35 +791,7 @@ impl ExifReader {
             }
         }
 
-        // GPS.pm:17-21 `%coordConv` — GPSLatitude and GPSLongitude print through
-        // `ToDMS($self, $val, 1)`, which normalises fractional minutes into
-        // seconds and does NOT append the hemisphere reference. The ref belongs to
-        // the Composite of the same name (GPS.pm:367-405), whose PrintConv is
-        // `ToDMS($self, $val, 1, "N"/"E")`; see `composite::gps_coordinates`.
-        for coord in ["GPSLatitude", "GPSLongitude"] {
-            if let Some(t) = tags.iter_mut().find(|t| t.name == coord) {
-                let parts: Vec<f64> = t
-                    .raw_value
-                    .to_display_string()
-                    .split_whitespace()
-                    .filter_map(|s| s.parse::<f64>().ok())
-                    .collect();
-                if parts.len() == 3 {
-                    let dec = parts[0] + parts[1] / 60.0 + parts[2] / 3600.0;
-                    let deg = dec.floor();
-                    let rem = (dec - deg) * 60.0;
-                    let min = rem.floor();
-                    let sec = (rem - min) * 60.0;
-                    t.print_value = format!("{} deg {}' {:.2}\"", deg as i64, min as i64, sec);
-                }
-            }
-            // Undefined coordinate rationals (0/0 0/0 0/0) yield an empty value.
-            if let Some(t) = tags.iter_mut().find(|t| t.name == coord) {
-                if t.print_value.split_whitespace().all(|p| p == "undef") {
-                    t.print_value = String::new();
-                }
-            }
-        }
+        Self::convert_gps_coordinates(&mut tags);
 
         // ExifTool uses the full-resolution sub-IFD (SubfileType = "Full-resolution
         // image") for the primary image dimensions. When such a sub-IFD exists (e.g. the
@@ -1767,6 +1739,53 @@ impl ExifReader {
         })
     }
 
+    /// GPS.pm:17-21 `%coordConv` — GPSLatitude and GPSLongitude print through
+    /// `ToDMS($self, $val, 1)`, which normalises fractional minutes into
+    /// seconds and does NOT append the hemisphere reference. The ref belongs to
+    /// the Composite of the same name (GPS.pm:367-405), whose PrintConv is
+    /// `ToDMS($self, $val, 1, "N"/"E")`; see `composite::gps_coordinates`.
+    ///
+    /// The ValueConv is `ToDegrees`, so the value `-n` shows is the unsigned
+    /// decimal degrees (degrees + minutes / 60 + seconds / 3600); `raw_value`
+    /// is set to that. Run this on every GPS IFD, including the one inside a
+    /// CR3's CMT4 box. GPSTimeStamp gets its ValueConv here too.
+    fn convert_gps_coordinates(tags: &mut [Tag]) {
+        // GPSTimeStamp: the ValueConv result is `HH:MM:SS[.ff]`, which is
+        // what `-n` shows; the PrintConv only rounds the fraction.
+        if let Some(t) = tags
+            .iter_mut()
+            .find(|t| t.name == "GPSTimeStamp" && t.group.family1 == "GPS")
+        {
+            if let Some(v) = crate::tags::exif::convert_time_stamp(&t.raw_value.to_display_string())
+            {
+                t.print_value = crate::tags::exif::print_time_stamp(&v);
+                t.raw_value = Value::String(v);
+            }
+        }
+        for coord in ["GPSLatitude", "GPSLongitude"] {
+            if let Some(t) = tags.iter_mut().find(|t| t.name == coord) {
+                let parts: Vec<f64> = t
+                    .raw_value
+                    .to_display_string()
+                    .split_whitespace()
+                    .filter_map(|s| s.parse::<f64>().ok())
+                    .collect();
+                if parts.len() == 3 {
+                    // GPS.pm ToDegrees, in its order of operations.
+                    let dec = parts[0] + (parts[1] + parts[2] / 60.0) / 60.0;
+                    t.print_value = to_dms(dec);
+                    t.raw_value = Value::F64(dec);
+                }
+            }
+            // Undefined coordinate rationals (0/0 0/0 0/0) yield an empty value.
+            if let Some(t) = tags.iter_mut().find(|t| t.name == coord) {
+                if t.print_value.split_whitespace().all(|p| p == "undef") {
+                    t.print_value = String::new();
+                }
+            }
+        }
+    }
+
     /// Parse a TIFF where IFD0 is treated as a named IFD (e.g. "GPS", "ExifIFD").
     /// Used for CR3 CMT4 (GPS-only TIFF) and CMT2 (ExifIFD-only TIFF).
     /// Does no MakerNote/IFD1 processing.
@@ -1782,6 +1801,9 @@ impl ExifReader {
         // CanonRaw.cr3; CMT3 goes through the maker-note path and raises none).
         tags.push(Self::exif_byte_order_tag(header.byte_order));
         let _ = Self::read_ifd(data, &header, header.ifd0_offset, ifd_name, &mut tags);
+        if ifd_name == "GPS" {
+            Self::convert_gps_coordinates(&mut tags);
+        }
         tags
     }
 
@@ -1802,6 +1824,25 @@ impl ExifReader {
         let _ = Self::read_ifd(data, &header, offset, ifd_name, &mut tags);
         tags
     }
+}
+
+/// GPS.pm ToDMS with `$doPrintConv` 1 and no reference: `%d deg %d' %.2f"`.
+/// Seconds are rounded to two places before the carry into minutes and
+/// degrees, so 59.999 seconds becomes 0.00 of the next minute.
+fn to_dms(dec: f64) -> String {
+    let mut deg = dec.trunc();
+    let mut min = ((dec - deg) * 60.0).trunc();
+    let sec = (dec - deg - min / 60.0) * 3600.0;
+    let mut sec = format!("{sec:.2}").parse::<f64>().unwrap_or(sec);
+    if sec >= 60.0 {
+        sec -= 60.0;
+        min += 1.0;
+        if min >= 60.0 {
+            min -= 60.0;
+            deg += 1.0;
+        }
+    }
+    format!("{} deg {}' {:.2}\"", deg as i64, min as i64, sec)
 }
 
 fn parse_ifd_entry(data: &[u8], offset: usize, byte_order: ByteOrderMark) -> IfdEntry {

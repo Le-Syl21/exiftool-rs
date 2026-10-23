@@ -139,25 +139,10 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 other => format!("Unknown ({})", other),
             });
         }
-        // GPSTimeStamp (3 rationals H M S): ExifTool ConvertTimeStamp -> "HH:MM:SS[.ff]"
+        // GPSTimeStamp (3 rationals H M S): ConvertTimeStamp, then PrintTimeStamp
         ("GPS", 0x0007) => {
-            let parts: Vec<f64> = value
-                .to_display_string()
-                .split_whitespace()
-                .filter_map(|s| s.parse::<f64>().ok())
-                .collect();
-            if parts.len() == 3 {
-                let total = (parts[0] * 60.0 + parts[1]) * 60.0 + parts[2];
-                let h = (total / 3600.0).floor();
-                let rem = total - h * 3600.0;
-                let m = (rem / 60.0).floor();
-                let secs = rem - m * 60.0;
-                // %012.9f then trim trailing zeros and a bare decimal point.
-                let mut ss = format!("{:012.9}", secs);
-                if ss.contains('.') {
-                    ss = ss.trim_end_matches('0').trim_end_matches('.').to_string();
-                }
-                return Some(format!("{:02}:{:02}:{}", h as i64, m as i64, ss));
+            if let Some(v) = convert_time_stamp(&value.to_display_string()) {
+                return Some(print_time_stamp(&v));
             }
         }
         // GPSVersionID, DNGVersion, DNGBackwardVersion: join components with "."
@@ -844,6 +829,57 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
         _ => {}
     }
     None
+}
+
+/// GPS.pm ConvertTimeStamp, the ValueConv of GPSTimeStamp: "H M S" (the three
+/// rationals) to "HH:MM:SS[.fraction]", with the seconds carried into the
+/// minutes and hours when they round up to 60. This is the value `-n` shows.
+pub(crate) fn convert_time_stamp(val: &str) -> Option<String> {
+    let parts: Vec<f64> = val
+        .split_whitespace()
+        .filter_map(|s| s.parse::<f64>().ok())
+        .collect();
+    if parts.len() != 3 {
+        return None;
+    }
+    let mut f = (parts[0] * 60.0 + parts[1]) * 60.0 + parts[2];
+    let mut h = (f / 3600.0).floor();
+    f -= h * 3600.0;
+    let mut m = (f / 60.0).floor();
+    f -= m * 60.0;
+    let mut ss = format!("{f:012.9}");
+    if ss.parse::<f64>().is_ok_and(|v| v >= 60.0) {
+        ss = "00".to_string();
+        m += 1.0;
+        if m >= 60.0 {
+            m -= 60.0;
+            h += 1.0;
+        }
+    } else {
+        // s/\.?0+$// : trailing zeros, and the point they follow
+        ss = ss.trim_end_matches('0').trim_end_matches('.').to_string();
+    }
+    Some(format!("{:02}:{:02}:{}", h as i64, m as i64, ss))
+}
+
+/// GPS.pm PrintTimeStamp, the PrintConv of GPSTimeStamp: a fractional seconds
+/// field is rounded to the nearest microsecond.
+pub(crate) fn print_time_stamp(val: &str) -> String {
+    let Some((head, secs)) = val.rsplit_once(':') else {
+        return val.to_string();
+    };
+    let digits = |s: &str| s.bytes().all(|b| b.is_ascii_digit());
+    match secs.split_once('.') {
+        Some((whole, frac))
+            if whole.len() == 2 && digits(whole) && !frac.is_empty() && digits(frac) =>
+        {
+            let s = secs.parse::<f64>().unwrap_or(0.0);
+            let s = (s * 1_000_000.0 + 0.5).floor() / 1_000_000.0;
+            let pad = if s < 10.0 { "0" } else { "" };
+            format!("{head}:{pad}{s}")
+        }
+        _ => val.to_string(),
+    }
 }
 
 /// Format a double or list of doubles with Perl-style %.15g precision and space separator.
