@@ -33,7 +33,22 @@ PNG writing brought in line with ExifTool 13.59, chunk by chunk (#22).
   has three new fields, `delete_icc_profile`, `delete_physical_pixel` and
   `delete_everything`; a struct literal needs them (or `..Default::default()`).
 
+### Performance
+
+- JPEG trailers are found the way ExifTool's ProcessTrailers finds them,
+  walking back from the end of the file, instead of scanning the whole image
+  for each trailer signature: about 10× faster on a corpus of camera JPEGs.
+  Composite tags avoid repeated lookups and clones, Deflate goes through
+  `flate2`, and Google HDR+ maker notes parse about 5× faster (#23, thanks
+  @jmoiron).
+
 ### Fixed
+
+- GPS composites and tags match ExifTool in numeric mode (`-n`) and on
+  unknown values (#23): `GPSLatitude`/`GPSLongitude` are signed decimal
+  degrees, `GPSPosition` is the two numbers, `GPSAltitude` is signed metres,
+  `GPSDateTime` is built from the unrounded time stamp, and an unknown
+  `GPSLatitudeRef`-style value prints as `Unknown (x)` instead of vanishing.
 
 - Olympus ORF files are read again (#24). ORF swaps the TIFF magic 42 for
   0x4F52 (`IIRO`, `MMOR`) or 0x5352 (`IIRS`); detection never looked at

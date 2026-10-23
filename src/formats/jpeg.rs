@@ -1221,10 +1221,13 @@ fn is_mie_trailer_tail(tail: &[u8]) -> bool {
     let sig = b"~\0\x04\0zmie";
     let flag = |b: u8| b == 0x10 || b == 0x18;
     // ~\0\x04\0zmie ~\0\0\x06 .{4} [\x10\x18] \x04
-    if n >= 18 && &tail[n - 18..n - 10] == sig && &tail[n - 10..n - 6] == b"~\0\0\x06" {
-        if flag(tail[n - 2]) && tail[n - 1] == 4 {
-            return true;
-        }
+    if n >= 18
+        && &tail[n - 18..n - 10] == sig
+        && &tail[n - 10..n - 6] == b"~\0\0\x06"
+        && flag(tail[n - 2])
+        && tail[n - 1] == 4
+    {
+        return true;
     }
     // ~\0\x04\0zmie ~\0\0\x0a .{8} [\x10\x18] \x08
     n >= 22

@@ -3885,7 +3885,7 @@ mod attribute_whitespace_tests {
             out,
             "<a GCamera:HdrPlusMakernote=\"HDRP-PLACEHOLDER-0\" b=\"1\"/>"
         );
-        assert_eq!(taken, [big.clone()]);
+        assert_eq!(taken, std::slice::from_ref(&big));
         assert_eq!(hoisted_value(&taken, "HDRP-PLACEHOLDER-0"), big);
         assert_eq!(hoisted_value(&taken, "other"), "other");
     }
