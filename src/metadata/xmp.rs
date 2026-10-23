@@ -213,6 +213,59 @@ fn emit_hdrp_makernote(b64_value: &str, tags: &mut Vec<Tag>) {
     tags.extend(hdrp_tags);
 }
 
+/// Values shorter than this are left for the XML parser.
+const HOIST_MIN_LEN: usize = 1024;
+
+/// Swap the (often 100 KB+) base64 value of a `HdrPlusMakernote` / `hdrp_makernote`
+/// attribute for a short placeholder, so the XML lexer does not walk it one
+/// character at a time. Returns the rewritten XML and the values taken out, in
+/// order; `hoisted_value` maps a placeholder back. Only values made purely of
+/// base64 characters are taken, so nothing in them is subject to XML
+/// unescaping or whitespace normalisation.
+fn hoist_hdrp_values(xml: &str) -> (std::borrow::Cow<'_, str>, Vec<String>) {
+    let mut out = String::new();
+    let mut taken = Vec::new();
+    let mut last = 0;
+    let mut from = 0;
+    const NEEDLES: [&str; 2] = ["GCamera:HdrPlusMakernote=\"", "GCamera:hdrp_makernote=\""];
+    while let Some((at, needle)) = NEEDLES
+        .iter()
+        .filter_map(|n| xml[from..].find(n).map(|i| (from + i, *n)))
+        .min_by_key(|(i, _)| *i)
+    {
+        let start = at + needle.len();
+        let Some(len) = xml[start..].find('"') else {
+            break;
+        };
+        let value = &xml[start..start + len];
+        from = start + len;
+        let b64 =
+            |c: u8| c.is_ascii_alphanumeric() || matches!(c, b'+' | b'/' | b'=' | b'_' | b'-');
+        if value.len() >= HOIST_MIN_LEN && value.bytes().all(b64) {
+            out.push_str(&xml[last..start]);
+            out.push_str(&hdrp_placeholder(taken.len()));
+            last = start + len;
+            taken.push(value.to_string());
+        }
+    }
+    if taken.is_empty() {
+        return (std::borrow::Cow::Borrowed(xml), taken);
+    }
+    out.push_str(&xml[last..]);
+    (std::borrow::Cow::Owned(out), taken)
+}
+
+fn hdrp_placeholder(i: usize) -> String {
+    format!("HDRP-PLACEHOLDER-{i}")
+}
+
+fn hoisted_value<'a>(taken: &'a [String], v: &'a str) -> &'a str {
+    v.strip_prefix("HDRP-PLACEHOLDER-")
+        .and_then(|i| i.parse::<usize>().ok())
+        .and_then(|i| taken.get(i))
+        .map_or(v, |s| s.as_str())
+}
+
 impl XmpReader {
     /// Parse XMP metadata from an XML byte slice.
     pub fn read(data: &[u8]) -> Result<Vec<Tag>> {
@@ -260,7 +313,8 @@ impl XmpReader {
 
         // Pre-pass: collect rdf:nodeID-mapped bag/seq values for later reference resolution.
         // Also strip invalid XML chars from xpacket processing instructions.
-        let xml_sanitized: String = sanitize_xmp_xml(xml_data);
+        let (xml_data, hoisted) = hoist_hdrp_values(xml_data);
+        let xml_sanitized: String = sanitize_xmp_xml(&xml_data);
         let xml_clean: String = fix_malformed_xml(&xml_sanitized);
         // Keep attribute newlines/tabs alive through XML attribute-value
         // normalisation, which ExifTool does not apply.
@@ -737,7 +791,10 @@ impl XmpReader {
                                     && group_prefix == "GCamera"
                                     && is_hdrp_makernote_attr(&attr.name.local_name)
                                 {
-                                    emit_hdrp_makernote(&attr.value, &mut tags);
+                                    emit_hdrp_makernote(
+                                        hoisted_value(&hoisted, &attr.value),
+                                        &mut tags,
+                                    );
                                     continue;
                                 }
 
@@ -3817,6 +3874,37 @@ fn collect_blank_node_properties(
 #[cfg(test)]
 mod attribute_whitespace_tests {
     use super::escape_attribute_whitespace as esc;
+    use super::{hoist_hdrp_values, hoisted_value, HOIST_MIN_LEN};
+
+    #[test]
+    fn long_hdrp_values_are_hoisted_and_restored() {
+        let big = "QUJD".repeat(HOIST_MIN_LEN);
+        let xml = format!("<a GCamera:HdrPlusMakernote=\"{big}\" b=\"1\"/>");
+        let (out, taken) = hoist_hdrp_values(&xml);
+        assert_eq!(
+            out,
+            "<a GCamera:HdrPlusMakernote=\"HDRP-PLACEHOLDER-0\" b=\"1\"/>"
+        );
+        assert_eq!(taken, [big.clone()]);
+        assert_eq!(hoisted_value(&taken, "HDRP-PLACEHOLDER-0"), big);
+        assert_eq!(hoisted_value(&taken, "other"), "other");
+    }
+
+    #[test]
+    fn short_or_non_base64_hdrp_values_stay_in_the_xml() {
+        let short = "<a GCamera:HdrPlusMakernote=\"QUJD\"/>";
+        assert!(matches!(
+            hoist_hdrp_values(short).0,
+            std::borrow::Cow::Borrowed(_)
+        ));
+        let spaced = format!(
+            "<a GCamera:hdrp_makernote=\"{} x\"/>",
+            "A".repeat(HOIST_MIN_LEN)
+        );
+        assert!(hoist_hdrp_values(&spaced).1.is_empty());
+        let other = format!("<a Foo:Makernote=\"{}\"/>", "A".repeat(HOIST_MIN_LEN));
+        assert!(hoist_hdrp_values(&other).1.is_empty());
+    }
 
     #[test]
     fn literal_whitespace_in_an_attribute_becomes_a_character_reference() {
