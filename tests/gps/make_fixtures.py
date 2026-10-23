@@ -6,7 +6,9 @@ Run from the repository root: python3 tests/gps/make_fixtures.py
 139/1 43157/1000 0/1, 38.5 m above sea level. `southwest` is in the southern
 and western hemispheres, 12 m below sea level, with seconds that round (36.00
 and 35.99), and a time stamp whose fraction is longer than the six digits
-PrintConv keeps. Each has a date stamp, so GPSDateTime is built. A JPEG keeps its GPS IFD behind a pointer in IFD0; a CR3 keeps it
+PrintConv keeps. Each has a date stamp, so GPSDateTime is built. The status and measure mode are
+known values in `tokyo` and unknown ones in `southwest` (empty, and "9"), which
+PrintConv shows as "Unknown (...)". A JPEG keeps its GPS IFD behind a pointer in IFD0; a CR3 keeps it
 as IFD0 of the standalone TIFF in its CMT4 box, which takes a different route
 through the EXIF reader.
 """
@@ -52,6 +54,8 @@ def gps_entries(p):
         (5, 1, 1, bytes([p["below_sea_level"]])),
         rationals(6, [p["altitude"]]),
         rationals(7, p["time"]),
+        ascii_(9, p["status"]),
+        ascii_(10, p["mode"]),
         ascii_(0x1D, p["date"]),
     ]
 
@@ -94,6 +98,8 @@ PLACES = {
         altitude=(385, 10),
         time=[(5, 1), (3, 1), (245, 10)],
         date="2026:10:07",
+        status="A",
+        mode="3",
     ),
     "southwest": dict(
         lat_ref="S",
@@ -104,6 +110,8 @@ PLACES = {
         altitude=(12, 1),
         time=[(23, 1), (59, 1), (591234567, 10000000)],
         date="2026:10:08",
+        status="",
+        mode="9",
     ),
 }
 

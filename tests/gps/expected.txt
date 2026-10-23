@@ -6,6 +6,8 @@ gps_tokyo.jpg	print	GPS:GPSLongitude	139 deg 43' 9.42"
 gps_tokyo.jpg	print	GPS:GPSAltitudeRef	Above Sea Level
 gps_tokyo.jpg	print	GPS:GPSAltitude	38.5 m
 gps_tokyo.jpg	print	GPS:GPSTimeStamp	05:03:24.5
+gps_tokyo.jpg	print	GPS:GPSStatus	Measurement Active
+gps_tokyo.jpg	print	GPS:GPSMeasureMode	3-Dimensional Measurement
 gps_tokyo.jpg	print	GPS:GPSDateStamp	2026:10:07
 gps_tokyo.jpg	print	Composite:GPSAltitude	38.5 m Above Sea Level
 gps_tokyo.jpg	print	Composite:GPSDateTime	2026:10:07 05:03:24.5Z
@@ -20,6 +22,8 @@ gps_tokyo.jpg	numeric	GPS:GPSLongitude	139.719283333333
 gps_tokyo.jpg	numeric	GPS:GPSAltitudeRef	0
 gps_tokyo.jpg	numeric	GPS:GPSAltitude	38.5
 gps_tokyo.jpg	numeric	GPS:GPSTimeStamp	05:03:24.5
+gps_tokyo.jpg	numeric	GPS:GPSStatus	A
+gps_tokyo.jpg	numeric	GPS:GPSMeasureMode	3
 gps_tokyo.jpg	numeric	GPS:GPSDateStamp	2026:10:07
 gps_tokyo.jpg	numeric	Composite:GPSAltitude	38.5
 gps_tokyo.jpg	numeric	Composite:GPSDateTime	2026:10:07 05:03:24.5Z
@@ -34,6 +38,8 @@ gps_tokyo.cr3	print	GPS:GPSLongitude	139 deg 43' 9.42"
 gps_tokyo.cr3	print	GPS:GPSAltitudeRef	Above Sea Level
 gps_tokyo.cr3	print	GPS:GPSAltitude	38.5 m
 gps_tokyo.cr3	print	GPS:GPSTimeStamp	05:03:24.5
+gps_tokyo.cr3	print	GPS:GPSStatus	Measurement Active
+gps_tokyo.cr3	print	GPS:GPSMeasureMode	3-Dimensional Measurement
 gps_tokyo.cr3	print	GPS:GPSDateStamp	2026:10:07
 gps_tokyo.cr3	print	Composite:GPSAltitude	38.5 m Above Sea Level
 gps_tokyo.cr3	print	Composite:GPSDateTime	2026:10:07 05:03:24.5Z
@@ -48,6 +54,8 @@ gps_tokyo.cr3	numeric	GPS:GPSLongitude	139.719283333333
 gps_tokyo.cr3	numeric	GPS:GPSAltitudeRef	0
 gps_tokyo.cr3	numeric	GPS:GPSAltitude	38.5
 gps_tokyo.cr3	numeric	GPS:GPSTimeStamp	05:03:24.5
+gps_tokyo.cr3	numeric	GPS:GPSStatus	A
+gps_tokyo.cr3	numeric	GPS:GPSMeasureMode	3
 gps_tokyo.cr3	numeric	GPS:GPSDateStamp	2026:10:07
 gps_tokyo.cr3	numeric	Composite:GPSAltitude	38.5
 gps_tokyo.cr3	numeric	Composite:GPSDateTime	2026:10:07 05:03:24.5Z
@@ -62,6 +70,8 @@ gps_southwest.jpg	print	GPS:GPSLongitude	151 deg 12' 35.99"
 gps_southwest.jpg	print	GPS:GPSAltitudeRef	Below Sea Level
 gps_southwest.jpg	print	GPS:GPSAltitude	12 m
 gps_southwest.jpg	print	GPS:GPSTimeStamp	23:59:59.123457
+gps_southwest.jpg	print	GPS:GPSStatus	Unknown ()
+gps_southwest.jpg	print	GPS:GPSMeasureMode	Unknown (9)
 gps_southwest.jpg	print	GPS:GPSDateStamp	2026:10:08
 gps_southwest.jpg	print	Composite:GPSAltitude	12 m Below Sea Level
 gps_southwest.jpg	print	Composite:GPSDateTime	2026:10:08 23:59:59.1234567Z
@@ -76,6 +86,8 @@ gps_southwest.jpg	numeric	GPS:GPSLongitude	151.209997222222
 gps_southwest.jpg	numeric	GPS:GPSAltitudeRef	1
 gps_southwest.jpg	numeric	GPS:GPSAltitude	12
 gps_southwest.jpg	numeric	GPS:GPSTimeStamp	23:59:59.1234567
+gps_southwest.jpg	numeric	GPS:GPSStatus	
+gps_southwest.jpg	numeric	GPS:GPSMeasureMode	9
 gps_southwest.jpg	numeric	GPS:GPSDateStamp	2026:10:08
 gps_southwest.jpg	numeric	Composite:GPSAltitude	-12
 gps_southwest.jpg	numeric	Composite:GPSDateTime	2026:10:08 23:59:59.1234567Z
@@ -90,6 +102,8 @@ gps_southwest.cr3	print	GPS:GPSLongitude	151 deg 12' 35.99"
 gps_southwest.cr3	print	GPS:GPSAltitudeRef	Below Sea Level
 gps_southwest.cr3	print	GPS:GPSAltitude	12 m
 gps_southwest.cr3	print	GPS:GPSTimeStamp	23:59:59.123457
+gps_southwest.cr3	print	GPS:GPSStatus	Unknown ()
+gps_southwest.cr3	print	GPS:GPSMeasureMode	Unknown (9)
 gps_southwest.cr3	print	GPS:GPSDateStamp	2026:10:08
 gps_southwest.cr3	print	Composite:GPSAltitude	12 m Below Sea Level
 gps_southwest.cr3	print	Composite:GPSDateTime	2026:10:08 23:59:59.1234567Z
@@ -104,6 +118,8 @@ gps_southwest.cr3	numeric	GPS:GPSLongitude	151.209997222222
 gps_southwest.cr3	numeric	GPS:GPSAltitudeRef	1
 gps_southwest.cr3	numeric	GPS:GPSAltitude	12
 gps_southwest.cr3	numeric	GPS:GPSTimeStamp	23:59:59.1234567
+gps_southwest.cr3	numeric	GPS:GPSStatus	
+gps_southwest.cr3	numeric	GPS:GPSMeasureMode	9
 gps_southwest.cr3	numeric	GPS:GPSDateStamp	2026:10:08
 gps_southwest.cr3	numeric	Composite:GPSAltitude	-12
 gps_southwest.cr3	numeric	Composite:GPSDateTime	2026:10:08 23:59:59.1234567Z

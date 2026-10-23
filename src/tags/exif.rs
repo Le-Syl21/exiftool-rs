@@ -107,7 +107,7 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 match value.to_display_string().trim() {
                     "A" => "Measurement Active",
                     "V" => "Measurement Void",
-                    _ => return None,
+                    other => return Some(format!("Unknown ({})", other)),
                 }
                 .to_string(),
             );
@@ -117,7 +117,7 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 match value.to_display_string().trim() {
                     "2" => "2-Dimensional Measurement",
                     "3" => "3-Dimensional Measurement",
-                    _ => return None,
+                    other => return Some(format!("Unknown ({})", other)),
                 }
                 .to_string(),
             );
