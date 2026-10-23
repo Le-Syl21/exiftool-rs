@@ -851,27 +851,25 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
     // every trailer has been scanned. See `emit_nonstandard_iptc` below.
     let mut nonstd_iptc: Vec<(usize, Vec<Tag>)> = Vec::new();
 
-    // AFCP trailer (from Perl AFCP.pm). Perl locates it through
-    // ExifTool.pm:6999 `if ($buff =~ /AXS(!|\*).{8}$/s)`: the 12-byte EOF record
-    // sits at the end of the *trailer*, which is not necessarily the end of the
-    // file — other trailers (PhotoMechanic, CanonVRD, MIE, ...) may follow it.
-    // So scan backwards for the EOF record and validate it by checking that the
-    // start offset it carries points at the same "AXS!"/"AXS*" header
-    // (AFCP.pm:90 `$raf->Read($buff, 12) == 12 and $buff =~ /^$hdr/`).
-    {
-        let mut search_end = data.len();
-        while search_end >= 12 {
-            let found = data[..search_end].windows(4).rposition(|w| {
-                w[0] == b'A' && w[1] == b'X' && w[2] == b'S' && (w[3] == b'!' || w[3] == b'*')
-            });
-            let eof_rec = match found {
-                Some(p) => p,
-                None => break,
-            };
-            search_end = eof_rec;
-            if eof_rec + 12 > data.len() {
-                continue;
-            }
+    // Trailers. Like ExifTool.pm ProcessTrailers/IdentifyTrailer, walk the chain
+    // from the END of the file: look at the last 64 bytes to identify the trailer
+    // type, process it (which tells us where it starts), move the end back to that
+    // start and repeat. Nothing scans the file, so the cost does not depend on
+    // the size of the image. Trailers cannot start before the SOS marker.
+    let trailer_lower = sos_offset.unwrap_or(0);
+    let mut trailer_end = data.len();
+    let mut first_trailer_start = data.len();
+    while trailer_end > trailer_lower {
+        let tail = &data[trailer_end.saturating_sub(64)..trailer_end];
+        let tl = tail.len();
+        // Where the trailer processed below starts; stays None to end the chain.
+        let mut next_start: Option<usize> = None;
+        if tl >= 12
+            && &tail[tl - 12..tl - 9] == b"AXS"
+            && (tail[tl - 9] == b'!' || tail[tl - 9] == b'*')
+        {
+            // AFCP trailer (from Perl AFCP.pm): the 12-byte EOF record ends the trailer.
+            let eof_rec = trailer_end - 12;
             // AFCP.pm:88 — "AXS!" is big-endian, "AXS*" little-endian.
             let le = data[eof_rec + 3] == b'*';
             let rd32_afcp = |d: &[u8], off: usize| -> u32 {
@@ -892,10 +890,10 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
             // AFCP.pm:89 — the EOF record carries the start of the trailer.
             let start_pos = rd32_afcp(data, eof_rec + 4) as usize;
             if start_pos + 12 > data.len() || start_pos >= eof_rec {
-                continue;
+                break;
             }
             if data[start_pos..start_pos + 4] != data[eof_rec..eof_rec + 4] {
-                continue;
+                break;
             }
             // AFCP.pm:143 — header is tag(4) + version(2) + numEntries(2) + reserved(4).
             let num_entries = rd16_afcp(data, start_pos + 6) as usize;
@@ -918,58 +916,15 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                     }
                 }
             }
-            break;
-        }
-    }
-
-    // PhotoMechanic trailer: "cbipcbbl" signature anywhere after SOS (from Perl PhotoMechanic.pm)
-    // The trailer can be followed by other trailers (CanonVRD, Samsung, etc.)
-    // so we scan the whole file forward for the "cbipcbbl" signature.
-    if let Some(pm_sig_pos) = data.windows(8).position(|w| w == b"cbipcbbl") {
-        // Layout: pm_data(size bytes) + size(4 BE) + "cbipcbbl"(8)
-        if pm_sig_pos >= 12 {
-            let size = u32::from_be_bytes([
-                data[pm_sig_pos - 4],
-                data[pm_sig_pos - 3],
-                data[pm_sig_pos - 2],
-                data[pm_sig_pos - 1],
-            ]) as usize;
-            if size > 0 && pm_sig_pos >= 4 + size {
-                let pm_data = &data[pm_sig_pos - 4 - size..pm_sig_pos - 4];
-                // PhotoMechanic data is in IPTC format (record 2, datasets 209+)
-                // But also contains standard IPTC records
-                if let Some(start) = pm_data.iter().position(|&b| b == 0x1C) {
-                    // PhotoMechanic.pm:38 reuses IPTC::ProcessIPTC, but on the
-                    // PhotoMechanic::Main table: record 2 goes to the SoftEdit
-                    // table, which IptcReader already maps to the PhotoMechanic
-                    // family-1 group with the SoftEdit print conversions.
-                    if let Ok(iptc_tags) = IptcReader::read(&pm_data[start..]) {
-                        tags.extend(iptc_tags);
-                    }
-                }
-            }
-        }
-    }
-
-    // FotoStation trailer: 0xa1b2c3d4 signature (from Perl FotoStation.pm)
-    // Blocks can appear anywhere in file (other trailers may follow them).
-    // Each block footer: tag(2) + size(4) + sig(4). The sig is the LAST 4 bytes of each block.
-    // We scan the entire file for all occurrences of the signature.
-    {
-        let fs_sig = [0xa1u8, 0xb2, 0xc3, 0xd4];
-        let mut search_start = 0usize;
-        while search_start + 4 <= data.len() {
-            let found = data[search_start..].windows(4).position(|w| w == fs_sig);
-            let sig_pos = match found {
-                Some(p) => search_start + p,
-                None => break,
-            };
-            search_start = sig_pos + 4; // next search starts after this sig
-
+            next_start = Some(start_pos);
+        } else if tail.ends_with(&[0xa1, 0xb2, 0xc3, 0xd4]) {
+            // FotoStation trailer (from Perl FotoStation.pm): each block ends with
+            // tag(2) + size(4) + sig(4), and each block is one link of the chain.
+            let sig_pos = trailer_end - 4;
             // Footer is the 10 bytes ending at sig_pos+4: tag(2)+size(4)+sig(4)
             // footer starts at sig_pos-6
             if sig_pos < 6 {
-                continue;
+                break;
             }
             let footer_start = sig_pos - 6;
             let tag = u16::from_be_bytes([data[footer_start], data[footer_start + 1]]);
@@ -981,11 +936,11 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
             ]) as usize;
             // size includes the 10-byte footer. data portion = size - 10.
             if size < 10 {
-                continue;
+                break;
             }
             let block_end = sig_pos + 4; // end of this block
             if block_end < size {
-                continue;
+                break;
             }
             let block_start = block_end - size;
             let rec_data = &data[block_start..block_start + size - 10];
@@ -1089,15 +1044,114 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                 }
                 _ => {}
             }
+            next_start = Some(block_start);
+        } else if tail.ends_with(b"cbipcbbl") {
+            // PhotoMechanic trailer (from Perl PhotoMechanic.pm):
+            // pm_data(size bytes) + size(4 BE) + "cbipcbbl"(8)
+            let pm_sig_pos = trailer_end - 8;
+            if pm_sig_pos < 12 {
+                break;
+            }
+            let size = u32::from_be_bytes([
+                data[pm_sig_pos - 4],
+                data[pm_sig_pos - 3],
+                data[pm_sig_pos - 2],
+                data[pm_sig_pos - 1],
+            ]) as usize;
+            if size > 0 && pm_sig_pos >= 4 + size {
+                let pm_data = &data[pm_sig_pos - 4 - size..pm_sig_pos - 4];
+                // PhotoMechanic data is in IPTC format (record 2, datasets 209+)
+                // But also contains standard IPTC records
+                if let Some(start) = pm_data.iter().position(|&b| b == 0x1C) {
+                    // PhotoMechanic.pm:38 reuses IPTC::ProcessIPTC, but on the
+                    // PhotoMechanic::Main table: record 2 goes to the SoftEdit
+                    // table, which IptcReader already maps to the PhotoMechanic
+                    // family-1 group with the SoftEdit print conversions.
+                    if let Ok(iptc_tags) = IptcReader::read(&pm_data[start..]) {
+                        tags.extend(iptc_tags);
+                    }
+                }
+                next_start = Some(pm_sig_pos - 4 - size);
+            }
+        } else if tl == 64 && tail.starts_with(CANON_VRD_SIG) {
+            // CanonVRD trailer (from Perl CanonVRD.pm): the 64-byte footer starts
+            // with the signature; the header at the start of the trailer does too.
+            let sig = CANON_VRD_SIG;
+            let candidate = trailer_end - 0x40;
+            let footer_end = candidate + 0x40;
+            if footer_end > data.len() {
+                break;
+            }
+            let footer = &data[candidate..footer_end];
+            if footer.len() < 24 {
+                break;
+            }
+            let contained_len =
+                u32::from_be_bytes([footer[20], footer[21], footer[22], footer[23]]) as usize;
+            let total_len = contained_len.saturating_add(0x5c);
+            if !(0x60..=0x800000).contains(&total_len) {
+                break;
+            }
+            if footer_end < total_len {
+                break;
+            }
+            let vrd_start = footer_end - total_len;
+            if !data[vrd_start..].starts_with(sig) {
+                break;
+            }
+            // Verify: header at vrd_start, footer at vrd_start + 0x1c + contained_len
+            if vrd_start + 0x1c + contained_len != candidate {
+                break;
+            }
+            // Found valid VRD
+            let vrd_data = &data[vrd_start..footer_end];
+            tags.extend(parse_canon_vrd(vrd_data, total_len));
+            next_start = Some(vrd_start);
+        } else if is_mie_trailer_tail(tail) {
+            // MIE trailer (from Perl MIE.pm): groups are found backwards via their
+            // 10-byte footers.
+            let Some(mie_pos) = mie_trailer_start(data, trailer_end) else {
+                break;
+            };
+            let mie_data = &data[mie_pos..trailer_end];
+            let mut mie_iptc = Vec::new();
+            tags.extend(parse_mie_trailer(mie_data, &mut mie_iptc));
+            // A MIE IPTC directory is a non-standard one, numbered with the
+            // others by its place in the trailer chain.
+            nonstd_iptc.extend(mie_iptc.into_iter().map(|(at, t)| (mie_pos + at, t)));
+            next_start = Some(mie_pos);
+        } else if tail.ends_with(b"\0\0QDIOBS") {
+            // Samsung trailer (from Perl Samsung.pm::ProcessSamsung).
+            let block_end = trailer_end - 2; // rewind before 'BS'
+            tags.extend(parse_samsung_seft(data, block_end));
+            next_start = samsung_dir_start(data, block_end);
+        } else if tail.ends_with(VIVO_FOOTER) {
+            // Vivo trailer (Trailer.pm ProcessVivo): the footer does not record the
+            // trailer length, so Perl scans for its start, "streamdata" or `vivo{"`
+            // (limited to 1e7 bytes). This is the only scan, and only Vivo files pay.
+            let lo = trailer_end.saturating_sub(10_000_000).max(trailer_lower);
+            next_start = data[lo..trailer_end]
+                .windows(10)
+                .position(|w| w == b"streamdata" || w.starts_with(b"vivo{\""))
+                .map(|p| lo + p);
+            if let Some(start) = next_start {
+                process_vivo_json(&data[start..trailer_end], &mut tags);
+            }
+        }
+        match next_start {
+            Some(s) if s >= trailer_lower && s < trailer_end => {
+                trailer_end = s;
+                first_trailer_start = s;
+            }
+            _ => break,
         }
     }
 
     // FotoStation/PhotoMechanic trailers: scan for Photoshop segments after SOS
     // These are APP13 segments embedded after the image data
     {
-        if let Some(sp) = sos_offset {
-            // Scan rest of file for additional Photoshop segments
-            let rest = &data[sp..];
+        if first_trailer_start < data.len() {
+            let rest = &data[first_trailer_start..];
             // Look for "Photoshop 3.0\0" or "cbipcbbl" markers
             if let Some(ps_pos) = rest.windows(14).position(|w| w == PHOTOSHOP_HEADER) {
                 let ps_data = &rest[ps_pos + PHOTOSHOP_HEADER.len()..];
@@ -1111,119 +1165,6 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
                 }
             }
         }
-    }
-
-    // CanonVRD trailer: search for "CANON OPTIONAL DATA\0" footer (from Perl CanonVRD.pm)
-    // The trailer has a 0x1c-byte header and 0x40-byte footer, both starting with the sig.
-    // In JPEG the VRD may not be the last thing in the file; other trailers can follow it.
-    // We scan backwards for the signature, treating each 0x40-byte candidate as a footer.
-    // Footer bytes 20-23 (BE uint32) = contained data size; total = contained + 0x5c.
-    {
-        let sig = CANON_VRD_SIG;
-        let sig_len = sig.len(); // 20 bytes
-        let mut search_end = data.len();
-        'vrd_scan: while search_end >= sig_len + 0x40 {
-            let found = data[..search_end].windows(sig_len).rposition(|w| w == sig);
-            let candidate = match found {
-                Some(p) => p,
-                None => break,
-            };
-            search_end = candidate; // advance backwards for next iteration
-            let footer_end = candidate + 0x40;
-            if footer_end > data.len() {
-                continue;
-            }
-            let footer = &data[candidate..footer_end];
-            if footer.len() < 24 {
-                continue;
-            }
-            let contained_len =
-                u32::from_be_bytes([footer[20], footer[21], footer[22], footer[23]]) as usize;
-            let total_len = contained_len.saturating_add(0x5c);
-            if !(0x60..=0x800000).contains(&total_len) {
-                continue;
-            }
-            if footer_end < total_len {
-                continue;
-            }
-            let vrd_start = footer_end - total_len;
-            if !data[vrd_start..].starts_with(sig) {
-                continue;
-            }
-            // Verify: header at vrd_start, footer at vrd_start + 0x1c + contained_len
-            if vrd_start + 0x1c + contained_len != candidate {
-                continue;
-            }
-            // Found valid VRD
-            let vrd_data = &data[vrd_start..footer_end];
-            tags.extend(parse_canon_vrd(vrd_data, total_len));
-            break 'vrd_scan;
-        }
-    }
-
-    // Samsung trailer: "QDIOBS" or "\0\0SEFT" signature (from Perl Samsung.pm::ProcessSamsung).
-    // Format: data blocks + SEFH directory + [QDIO block] + "QDIOBS" terminator.
-    // SEFH directory: "SEFH" + u32le_version + u32le_count + (count * 12-byte entries).
-    // Each entry: u16_padding + u16le_type + u32le_noff + u32le_size.
-    // Each block: u32le_type_marker + u32le_namelen + name + data.
-    if let Some(qdiobs_pos) = data.windows(6).rposition(|w| w == b"QDIOBS") {
-        // JSON data follows "QDIOBSvivo" or similar prefix in the Vivo-style trailer block.
-        let after = &data[qdiobs_pos + 6..];
-        if let Some(json_start) = after.iter().position(|&b| b == b'{') {
-            let json_data = &after[json_start..];
-            let mut depth = 0usize;
-            let mut json_end = None;
-            for (i, &b) in json_data.iter().enumerate() {
-                match b {
-                    b'{' => depth += 1,
-                    b'}' => {
-                        depth = depth.saturating_sub(1);
-                        if depth == 0 {
-                            json_end = Some(i + 1);
-                            break;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            if let Some(end) = json_end {
-                let json_str =
-                    crate::encoding::decode_utf8_or_latin1(&json_data[..end]).to_string();
-                tags.push(crate::tag::Tag {
-                    id: crate::tag::TagId::Text("JSONInfo".into()),
-                    name: "JSONInfo".into(),
-                    description: "JSON Info".into(),
-                    // Trailer.pm:17-27 — the JSONInfo written after the "vivo{"
-                    // marker belongs to %Image::ExifTool::Trailer::Vivo,
-                    // `GROUPS => { 0 => 'Trailer', 1 => 'Vivo', 2 => 'Image' }`.
-                    group: crate::tag::TagGroup {
-                        family0: "Trailer".into(),
-                        family1: "Vivo".into(),
-                        family2: "Image".into(),
-                        family3: "Main".into(),
-                    },
-                    raw_value: crate::value::Value::String(json_str.clone()),
-                    print_value: json_str,
-                    priority: 0,
-                });
-            }
-        }
-
-        // Parse SEFT/SEFH directory structure backward from QDIOBS.
-        // Walk backward through {data}{4-byte size LE}{4-char type} blocks.
-        // QDIOBS: rewind 2 bytes (before 'BS'), so effective end = qdiobs_pos + 4.
-        let block_end = qdiobs_pos + 4; // position of "QDIOB" end = position of 'BS'
-        tags.extend(parse_samsung_seft(data, block_end));
-    }
-
-    // MIE trailer: scan for "~\x10\x04\xfe" outer MIE group signature (from Perl MIE.pm).
-    if let Some(mie_pos) = data.windows(4).rposition(|w| w == b"\x7e\x10\x04\xfe") {
-        let mie_data = &data[mie_pos..];
-        let mut mie_iptc = Vec::new();
-        tags.extend(parse_mie_trailer(mie_data, &mut mie_iptc));
-        // A MIE IPTC directory is a non-standard one, numbered with the
-        // others by its place in the trailer chain.
-        nonstd_iptc.extend(mie_iptc.into_iter().map(|(at, t)| (mie_pos + at, t)));
     }
 
     // IPTCDigest Warning: compare stored IPTCDigest with CurrentIPTCDigest
@@ -1268,6 +1209,159 @@ pub fn read_jpeg_with_ee(data: &[u8], extract_embedded: u8) -> Result<Vec<Tag>> 
     }
 
     Ok(tags)
+}
+
+/// Footer of a Vivo trailer (ExifTool.pm IdentifyTrailer).
+const VIVO_FOOTER: &[u8] = b"\xff\xff\xff\xff\x1b*9HWfu\x84\x93\xa2\xb1";
+
+/// ExifTool.pm IdentifyTrailer: does the tail (last <=64 bytes before the current
+/// trailer end) look like the end of a MIE trailer?
+fn is_mie_trailer_tail(tail: &[u8]) -> bool {
+    let n = tail.len();
+    let sig = b"~\0\x04\0zmie";
+    let flag = |b: u8| b == 0x10 || b == 0x18;
+    // ~\0\x04\0zmie ~\0\0\x06 .{4} [\x10\x18] \x04
+    if n >= 18 && &tail[n - 18..n - 10] == sig && &tail[n - 10..n - 6] == b"~\0\0\x06" {
+        if flag(tail[n - 2]) && tail[n - 1] == 4 {
+            return true;
+        }
+    }
+    // ~\0\x04\0zmie ~\0\0\x0a .{8} [\x10\x18] \x08
+    n >= 22
+        && &tail[n - 22..n - 14] == sig
+        && &tail[n - 14..n - 10] == b"~\0\0\x0a"
+        && flag(tail[n - 2])
+        && tail[n - 1] == 8
+}
+
+/// MIE.pm ProcessMIE (trailer mode): walk MIE groups backwards from `end` using the
+/// length in each group's 10-byte footer; returns the start of the first group.
+fn mie_trailer_start(data: &[u8], end: usize) -> Option<usize> {
+    let mut cur = end;
+    let mut first = None;
+    while cur >= 10 && cur <= data.len() {
+        let b = &data[cur - 10..cur];
+        let (flag, wide) = (b[8], b[9]);
+        let ok = (flag == 0x10 || flag == 0x18)
+            && ((wide == 4 && &b[0..4] == b"~\0\0\x06") || wide == 8);
+        if !ok {
+            break;
+        }
+        let be = flag == 0x10;
+        let len = if wide == 4 {
+            let a = [b[4], b[5], b[6], b[7]];
+            (if be {
+                u32::from_be_bytes(a)
+            } else {
+                u32::from_le_bytes(a)
+            }) as u64
+        } else {
+            let a = [b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]];
+            if be {
+                u64::from_be_bytes(a)
+            } else {
+                u64::from_le_bytes(a)
+            }
+        };
+        if len < 12 || len > cur as u64 {
+            break;
+        }
+        let len = len as usize;
+        if wide == 8 && (len < 14 || &data[cur - 14..cur - 10] != b"~\0\0\x0a") {
+            break;
+        }
+        cur -= len;
+        first = Some(cur);
+    }
+    first
+}
+
+/// Start of a Samsung trailer: the directory block is found by walking the
+/// {data}{size LE}{type} blocks backwards from `block_end` (as parse_samsung_seft),
+/// and the data blocks precede it by up to the largest "negative offset" in its
+/// entries (Samsung.pm ProcessSamsung: `DataPos = $dirPos - $firstBlock`).
+fn samsung_dir_start(data: &[u8], block_end: usize) -> Option<usize> {
+    let mut cur_end = block_end;
+    for _ in 0..10 {
+        if cur_end < 8 || cur_end > data.len() {
+            return None;
+        }
+        let footer_pos = cur_end - 8;
+        let size = u32::from_le_bytes([
+            data[footer_pos],
+            data[footer_pos + 1],
+            data[footer_pos + 2],
+            data[footer_pos + 3],
+        ]) as usize;
+        if footer_pos < size {
+            return None;
+        }
+        let block_start = footer_pos - size;
+        if &data[footer_pos + 4..footer_pos + 8] == b"SEFT" {
+            let sefh = block_start
+                + data[block_start..footer_pos]
+                    .windows(4)
+                    .position(|w| w == b"SEFH")?;
+            let rd = |off: usize| -> Option<usize> {
+                let b = data.get(off..off + 4)?;
+                Some(u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)
+            };
+            let count = rd(sefh + 8)?;
+            if count > 100 {
+                return None;
+            }
+            let mut first_block = 0;
+            for i in 0..count {
+                first_block = first_block.max(rd(sefh + 12 + i * 12 + 4)?);
+            }
+            return block_start.checked_sub(first_block);
+        }
+        cur_end = block_start;
+    }
+    None
+}
+
+/// Vivo trailer (Trailer.pm ProcessVivo): `after` is the trailer from its `vivo{"`
+/// marker to the end; the JSON info is the first balanced `{...}` in it.
+fn process_vivo_json(after: &[u8], tags: &mut Vec<crate::tag::Tag>) {
+    if let Some(json_start) = after.iter().position(|&b| b == b'{') {
+        let json_data = &after[json_start..];
+        let mut depth = 0usize;
+        let mut json_end = None;
+        for (i, &b) in json_data.iter().enumerate() {
+            match b {
+                b'{' => depth += 1,
+                b'}' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        json_end = Some(i + 1);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        if let Some(end) = json_end {
+            let json_str = crate::encoding::decode_utf8_or_latin1(&json_data[..end]).to_string();
+            tags.push(crate::tag::Tag {
+                id: crate::tag::TagId::Text("JSONInfo".into()),
+                name: "JSONInfo".into(),
+                description: "JSON Info".into(),
+                // Trailer.pm:17-27 — the JSONInfo written after the "vivo{"
+                // marker belongs to %Image::ExifTool::Trailer::Vivo,
+                // `GROUPS => { 0 => 'Trailer', 1 => 'Vivo', 2 => 'Image' }`.
+                group: crate::tag::TagGroup {
+                    family0: "Trailer".into(),
+                    family1: "Vivo".into(),
+                    family2: "Image".into(),
+                    family3: "Main".into(),
+                },
+                raw_value: crate::value::Value::String(json_str.clone()),
+                print_value: json_str,
+                priority: 0,
+            });
+        }
+    }
 }
 
 /// Parse NITF APP6 segment (National Imagery Transmission Format).

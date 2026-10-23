@@ -16,9 +16,43 @@ pub(crate) fn set_file_len(len: usize) {
     FILE_LEN.with(|c| c.set(Some(len)));
 }
 
+/// The base tags followed by the composites computed so far, which is what
+/// several composite helpers search. Cloning that list for each helper was the
+/// dominant cost of reading a file, so build it once and append composites as
+/// they appear.
+struct TagsPlusComposites<'a> {
+    base: &'a [Tag],
+    all: Option<Vec<Tag>>,
+    synced: usize,
+}
+
+impl<'a> TagsPlusComposites<'a> {
+    fn new(base: &'a [Tag]) -> Self {
+        Self {
+            base,
+            all: None,
+            synced: 0,
+        }
+    }
+
+    /// `base` followed by every tag in `composite`.
+    fn view(&mut self, composite: &[Tag]) -> &[Tag] {
+        if composite.len() < self.synced {
+            // the composite list shrank; start over rather than serve stale tags
+            self.all = None;
+            self.synced = 0;
+        }
+        let all = self.all.get_or_insert_with(|| self.base.to_vec());
+        all.extend(composite[self.synced..].iter().cloned());
+        self.synced = composite.len();
+        all
+    }
+}
+
 /// Generate composite tags from existing tags.
 pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     let mut composite = Vec::new();
+    let mut with_composites = TagsPlusComposites::new(tags);
 
     // Canon-specific composites first — they produce ISO, WB_RGGBLevels, FlashType, etc.
     // that are needed by later composites (LightValue needs ISO, RedBalance needs WB_RGGBLevels)
@@ -108,9 +142,8 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
 
     // ImageSize: Width x Height
     {
-        let mut all: Vec<Tag> = tags.to_vec();
-        all.extend(composite.iter().cloned());
-        if let Some(mut sz) = compute_image_size(&all) {
+        let all = with_composites.view(&composite);
+        if let Some(mut sz) = compute_image_size(all) {
             // The computed ImageSize is authoritative over an extracted same-named tag
             // (e.g. an APP12 PictureInfo ImageSize), matching ExifTool's Composite priority.
             sz.priority = 1;
@@ -120,9 +153,8 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
 
     // Megapixels (needs ImageSize composite)
     {
-        let mut all: Vec<Tag> = tags.to_vec();
-        all.extend(composite.iter().cloned());
-        if let Some(mut mp) = compute_megapixels(&all) {
+        let all = with_composites.view(&composite);
+        if let Some(mut mp) = compute_megapixels(all) {
             mp.priority = 1;
             composite.push(mp);
         }
@@ -131,9 +163,8 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // LightValue
     // LightValue (needs ShutterSpeed composite)
     {
-        let mut all: Vec<Tag> = tags.to_vec();
-        all.extend(composite.iter().cloned());
-        if let Some(lv) = compute_light_value(&all) {
+        let all = with_composites.view(&composite);
+        if let Some(lv) = compute_light_value(all) {
             composite.push(lv);
         }
     }
@@ -188,24 +219,20 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
 
     // RedBalance + BlueBalance — search in raw tags + Canon composites (which may include WB_RGGBLevels)
     {
-        let mut all_for_wb: Vec<Tag> = tags.to_vec();
-        all_for_wb.extend(composite.iter().cloned());
-        if let Some(wb_tags) = compute_wb_balance(&all_for_wb) {
+        let all_for_wb = with_composites.view(&composite);
+        if let Some(wb_tags) = compute_wb_balance(all_for_wb) {
             composite.extend(wb_tags);
         }
     }
 
     // DOF (Depth of Field) — needs CircleOfConfusion from 35efl composites
     {
-        let mut all_tags: Vec<&Tag> = tags.iter().collect();
-        let comp_refs: Vec<&Tag> = composite.iter().collect();
-        all_tags.extend(comp_refs);
-        let all_slice: Vec<Tag> = all_tags.into_iter().cloned().collect();
-        if let Some(dof_tags) = compute_dof(&all_slice) {
+        let all_slice = with_composites.view(&composite);
+        if let Some(dof_tags) = compute_dof(all_slice) {
             composite.extend(dof_tags);
         }
         // HyperfocalDistance (needs CircleOfConfusion from composites)
-        if let Some(hd) = compute_hyperfocal(&all_slice) {
+        if let Some(hd) = compute_hyperfocal(all_slice) {
             composite.push(hd);
         }
     }
@@ -268,7 +295,10 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     // Both tags must EXIST. Date can be empty (result: " 00:00:00Z")
     if find_tag(tags, "GPSDateStamp").is_some() && find_tag(tags, "GPSTimeStamp").is_some() {
         let date = find_tag_value(tags, "GPSDateStamp").unwrap_or_default();
-        let time = find_tag_value(tags, "GPSTimeStamp").unwrap_or_default();
+        // Perl requires the ValueConv value, not the rounded PrintConv one.
+        let time = find_tag(tags, "GPSTimeStamp")
+            .map(|t| t.raw_value.to_display_string())
+            .unwrap_or_default();
         if !time.is_empty() {
             composite.push(mk_composite(
                 "GPSDateTime",
@@ -842,12 +872,12 @@ pub fn gps_coordinates(tags: &[Tag]) -> Vec<Tag> {
                 if negative { neg_ref } else { pos_ref }
             )
         };
-        let mut t = mk_composite_raw(
-            coord,
-            src.description.clone().as_str(),
-            src.raw_value.clone(),
-            print,
-        );
+        // The ValueConv's result is what -n shows: signed decimal degrees.
+        let raw = match &src.raw_value {
+            Value::F64(v) if negative => Value::F64(-v),
+            other => other.clone(),
+        };
+        let mut t = mk_composite_raw(coord, src.description.clone().as_str(), raw, print);
         t.group.family2 = "Location".into();
         out.push(t);
     }
@@ -914,10 +944,17 @@ fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
         return None;
     }
 
-    Some(mk_composite(
+    // ValueConv is "$val[0] $val[1]", the two values `-n` shows.
+    let raw = format!(
+        "{} {}",
+        lat_tag.raw_value.to_display_string(),
+        lon_tag.raw_value.to_display_string()
+    );
+    Some(mk_composite_raw(
         "GPSPosition",
         "GPS Position",
-        Value::String(format!("{}, {}", lat, lon)),
+        Value::String(raw),
+        format!("{}, {}", lat, lon),
     ))
 }
 
@@ -931,14 +968,13 @@ fn compute_gps_altitude(tags: &[Tag]) -> Option<Tag> {
     let trunc = (meters.abs() * 10.0).trunc() / 10.0;
     let pos = if below { "Below" } else { "Above" };
 
-    let mut t = mk_composite(
+    // ValueConv is `$val[1] ? -$val[0] : $val[0]`, which is what -n shows.
+    let signed = if below { -meters.abs() } else { meters };
+    let mut t = mk_composite_raw(
         "GPSAltitude",
         "GPS Altitude",
-        Value::String(format!(
-            "{} m {} Sea Level",
-            crate::value::format_g15(trunc),
-            pos
-        )),
+        Value::F64(signed),
+        format!("{} m {} Sea Level", crate::value::format_g15(trunc), pos),
     );
     // ExifTool's Composite GPSAltitude overrides the plain EXIF GPSAltitude tag.
     t.priority = 1;
@@ -2279,6 +2315,8 @@ fn parse_gps_decimal(value: &Value, reference: &str) -> Option<f64> {
             deg + min / 60.0 + sec / 3600.0
         }
         Value::URational(n, d) if *d > 0 => *n as f64 / *d as f64,
+        // Already ToDegrees'd by the EXIF reader.
+        Value::F64(v) => *v,
         _ => return None,
     };
     let sign = if reference == "S" || reference == "W" {

@@ -175,347 +175,15 @@ fn hdrp_decrypt(data: &[u8]) -> Option<Vec<u8>> {
 }
 
 // ============================================================================
-// DEFLATE decompressor (RFC 1951) + gzip wrapper (RFC 1952)
+// gzip wrapper (RFC 1952) over flate2
 // ============================================================================
 
-struct BitReader<'a> {
-    data: &'a [u8],
-    pos: usize, // next byte to load into bit buffer
-    bits: u32,  // LSB-first bit buffer
-    nbits: u32, // number of valid bits in buffer
-}
-
-impl<'a> BitReader<'a> {
-    fn new(data: &'a [u8]) -> Self {
-        BitReader {
-            data,
-            pos: 0,
-            bits: 0,
-            nbits: 0,
-        }
-    }
-
-    fn fill(&mut self) {
-        while self.nbits <= 24 && self.pos < self.data.len() {
-            self.bits |= (self.data[self.pos] as u32) << self.nbits;
-            self.pos += 1;
-            self.nbits += 8;
-        }
-    }
-
-    fn read_bits(&mut self, n: u32) -> Option<u32> {
-        if n == 0 {
-            return Some(0);
-        }
-        self.fill();
-        if self.nbits < n {
-            return None;
-        }
-        let val = self.bits & ((1u32 << n) - 1);
-        self.bits >>= n;
-        self.nbits -= n;
-        Some(val)
-    }
-
-    /// Align to byte boundary, discarding partial-byte bits.
-    fn align_byte(&mut self) {
-        let rem = self.nbits & 7;
-        if rem != 0 {
-            self.bits >>= rem;
-            self.nbits -= rem;
-        }
-    }
-
-    /// Read one byte at byte boundary.
-    /// Call align_byte() first if needed.
-    fn read_aligned_byte(&mut self) -> Option<u8> {
-        if self.nbits >= 8 {
-            let b = (self.bits & 0xff) as u8;
-            self.bits >>= 8;
-            self.nbits -= 8;
-            Some(b)
-        } else {
-            // Buffer empty or partial - should be 0 after align_byte
-            if self.pos < self.data.len() {
-                let b = self.data[self.pos];
-                self.pos += 1;
-                Some(b)
-            } else {
-                None
-            }
-        }
-    }
-
-    /// Read 2-byte LE u16 at byte boundary.
-    fn read_aligned_u16_le(&mut self) -> Option<u16> {
-        let lo = self.read_aligned_byte()? as u16;
-        let hi = self.read_aligned_byte()? as u16;
-        Some(lo | (hi << 8))
-    }
-}
-
-/// Build a Huffman decode table.
-/// `lengths[i]` = bit length for symbol i.
-/// Returns (table, max_bits) where table is indexed by reversed bit pattern.
-fn build_huffman(lengths: &[u8]) -> Option<(Vec<(u16, u8)>, u8)> {
-    let max_bits = *lengths.iter().max()? as usize;
-    if max_bits == 0 {
-        return Some((vec![], 0));
-    }
-
-    // Count symbols at each bit length
-    let mut bl_count = vec![0u32; max_bits + 1];
-    for &l in lengths {
-        if l > 0 {
-            bl_count[l as usize] += 1;
-        }
-    }
-
-    // Compute starting codes
-    let mut next_code = vec![0u32; max_bits + 2];
-    let mut code = 0u32;
-    for bits in 1..=max_bits {
-        code = (code + bl_count[bits - 1]) << 1;
-        next_code[bits] = code;
-    }
-
-    // Build table: for each symbol, store (symbol, length)
-    // Table indexed by reversed code (so we can peek max_bits and reverse)
-    let table_size = 1usize << max_bits;
-    let mut table: Vec<(u16, u8)> = vec![(0xffff, 0); table_size];
-
-    for (sym, &len) in lengths.iter().enumerate() {
-        if len == 0 {
-            continue;
-        }
-        let c = next_code[len as usize];
-        next_code[len as usize] += 1;
-        // Reverse the code bits so we can use LSB-first bit reading
-        let rev = reverse_bits(c, len);
-        // Fill all entries that start with this code
-        let step = 1usize << len;
-        let mut idx = rev as usize;
-        while idx < table_size {
-            table[idx] = (sym as u16, len);
-            idx += step;
-        }
-    }
-    Some((table, max_bits as u8))
-}
-
-fn reverse_bits(v: u32, n: u8) -> u32 {
-    let mut r = 0u32;
-    let mut v = v;
-    for _ in 0..n {
-        r = (r << 1) | (v & 1);
-        v >>= 1;
-    }
-    r
-}
-
-fn huffman_decode(br: &mut BitReader, table: &[(u16, u8)], max_bits: u8) -> Option<u16> {
-    br.fill();
-    if max_bits == 0 {
-        return None;
-    }
-    let peeked = br.bits & ((1 << max_bits) - 1);
-    let (sym, len) = table[peeked as usize];
-    if len == 0 || sym == 0xffff || len as u32 > br.nbits {
-        return None;
-    }
-    br.bits >>= len;
-    br.nbits -= len as u32;
-    Some(sym)
-}
-
-// RFC 1951 fixed Huffman code lengths
-fn fixed_literal_lengths() -> Vec<u8> {
-    let mut v = Vec::with_capacity(288);
-    for i in 0u16..288 {
-        let l = if i < 144 {
-            8
-        } else if i < 256 {
-            9
-        } else if i < 280 {
-            7
-        } else {
-            8
-        };
-        v.push(l);
-    }
-    v
-}
-
-fn fixed_distance_lengths() -> Vec<u8> {
-    vec![5u8; 32]
-}
-
-// Length/distance decode tables from RFC 1951
-fn decode_length(code: u16, br: &mut BitReader) -> Option<u16> {
-    if code < 257 {
-        return None;
-    }
-    if code == 285 {
-        return Some(258);
-    }
-    let extra_bits_table = [
-        0u32, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0,
-    ];
-    let base_table = [
-        3u16, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99,
-        115, 131, 163, 195, 227, 258,
-    ];
-    let idx = (code - 257) as usize;
-    if idx >= 29 {
-        return None;
-    }
-    let extra = br.read_bits(extra_bits_table[idx])?;
-    Some(base_table[idx] + extra as u16)
-}
-
-fn decode_distance(code: u16, br: &mut BitReader) -> Option<u32> {
-    if code >= 30 {
-        return None;
-    }
-    let extra_bits_table = [
-        0u32, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12,
-        12, 13, 13,
-    ];
-    let base_table = [
-        1u32, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025,
-        1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
-    ];
-    let extra = br.read_bits(extra_bits_table[code as usize])?;
-    Some(base_table[code as usize] + extra)
-}
-
-fn inflate_block(
-    br: &mut BitReader,
-    lit_table: &[(u16, u8)],
-    lit_max: u8,
-    dist_table: &[(u16, u8)],
-    dist_max: u8,
-    out: &mut Vec<u8>,
-) -> Option<bool> {
-    loop {
-        let sym = huffman_decode(br, lit_table, lit_max)?;
-        if sym < 256 {
-            out.push(sym as u8);
-        } else if sym == 256 {
-            return Some(false); // end of block
-        } else {
-            let length = decode_length(sym, br)? as usize;
-            let dist_code = huffman_decode(br, dist_table, dist_max)?;
-            let dist = decode_distance(dist_code, br)? as usize;
-            if dist > out.len() {
-                return None;
-            }
-            let start = out.len() - dist;
-            for i in 0..length {
-                let b = out[start + i % dist];
-                out.push(b);
-            }
-        }
-    }
-}
-
 fn deflate_decompress(data: &[u8]) -> Option<Vec<u8>> {
-    let mut br = BitReader::new(data);
+    use std::io::Read;
     let mut out = Vec::new();
-
-    loop {
-        let bfinal = br.read_bits(1)?;
-        let btype = br.read_bits(2)?;
-
-        match btype {
-            0 => {
-                // Stored block
-                br.align_byte();
-                let len = br.read_aligned_u16_le()? as usize;
-                let nlen = br.read_aligned_u16_le()? as usize;
-                if (len ^ nlen) & 0xffff != 0xffff {
-                    return None;
-                }
-                for _ in 0..len {
-                    out.push(br.read_aligned_byte()?);
-                }
-            }
-            1 => {
-                // Fixed Huffman
-                let lit_lens = fixed_literal_lengths();
-                let dist_lens = fixed_distance_lengths();
-                let (lit_table, lit_max) = build_huffman(&lit_lens)?;
-                let (dist_table, dist_max) = build_huffman(&dist_lens)?;
-                inflate_block(
-                    &mut br,
-                    &lit_table,
-                    lit_max,
-                    &dist_table,
-                    dist_max,
-                    &mut out,
-                )?;
-            }
-            2 => {
-                // Dynamic Huffman
-                let hlit = br.read_bits(5)? as usize + 257;
-                let hdist = br.read_bits(5)? as usize + 1;
-                let hclen = br.read_bits(4)? as usize + 4;
-
-                // Code length alphabet order
-                let cl_order = [
-                    16usize, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
-                ];
-                let mut cl_lengths = vec![0u8; 19];
-                for i in 0..hclen {
-                    cl_lengths[cl_order[i]] = br.read_bits(3)? as u8;
-                }
-                let (cl_table, cl_max) = build_huffman(&cl_lengths)?;
-
-                // Decode literal/length + distance code lengths
-                let total = hlit + hdist;
-                let mut all_lengths = Vec::with_capacity(total);
-                while all_lengths.len() < total {
-                    let code = huffman_decode(&mut br, &cl_table, cl_max)?;
-                    match code {
-                        0..=15 => all_lengths.push(code as u8),
-                        16 => {
-                            let extra = br.read_bits(2)? as usize + 3;
-                            let last = *all_lengths.last()?;
-                            for _ in 0..extra {
-                                all_lengths.push(last);
-                            }
-                        }
-                        17 => {
-                            let extra = br.read_bits(3)? as usize + 3;
-                            all_lengths.resize(all_lengths.len() + extra, 0);
-                        }
-                        18 => {
-                            let extra = br.read_bits(7)? as usize + 11;
-                            all_lengths.resize(all_lengths.len() + extra, 0);
-                        }
-                        _ => return None,
-                    }
-                }
-                let lit_lens = &all_lengths[..hlit];
-                let dist_lens = &all_lengths[hlit..hlit + hdist];
-                let (lit_table, lit_max) = build_huffman(lit_lens)?;
-                let (dist_table, dist_max) = build_huffman(dist_lens)?;
-                inflate_block(
-                    &mut br,
-                    &lit_table,
-                    lit_max,
-                    &dist_table,
-                    dist_max,
-                    &mut out,
-                )?;
-            }
-            _ => return None,
-        }
-
-        if bfinal == 1 {
-            break;
-        }
-    }
+    flate2::read::DeflateDecoder::new(data)
+        .read_to_end(&mut out)
+        .ok()?;
     Some(out)
 }
 
@@ -772,6 +440,15 @@ fn make_tag(name: &str, group2: &str, raw: Value, print: String) -> Tag {
     }
 }
 
+/// True if some known field lives below `path` (so recursing into it can yield tags).
+fn has_known_descendant(path: &str) -> bool {
+    HDRP_FIELDS.iter().any(|d| {
+        d.path.len() > path.len()
+            && d.path.as_bytes()[path.len()] == b'-'
+            && d.path.starts_with(path)
+    })
+}
+
 /// Parse protobuf data recursively, collecting tags.
 /// `prefix` is the dot-separated path built so far (e.g. "" at top, "12-" inside field 12).
 fn parse_protobuf(data: &[u8], prefix: &str, tags: &mut Vec<Tag>) {
@@ -886,12 +563,16 @@ fn parse_protobuf(data: &[u8], prefix: &str, tags: &mut Vec<Tag>) {
                         }
                         _ => {
                             // Try to recurse as sub-message
-                            parse_protobuf(bytes, &format!("{}-", path), tags);
+                            if has_known_descendant(&path) {
+                                parse_protobuf(bytes, &format!("{}-", path), tags);
+                            }
                         }
                     }
                 } else {
                     // Unknown field - try to recurse as sub-message to find known sub-fields
-                    parse_protobuf(bytes, &format!("{}-", path), tags);
+                    if has_known_descendant(&path) {
+                        parse_protobuf(bytes, &format!("{}-", path), tags);
+                    }
                 }
             }
             5 => {
@@ -1025,13 +706,6 @@ mod tests {
         let encoded = "SERS"; // first 3 bytes of "HDRP..."
         let decoded = base64_decode(encoded);
         assert!(decoded.is_some());
-    }
-
-    #[test]
-    fn test_reverse_bits() {
-        assert_eq!(reverse_bits(0b101, 3), 0b101);
-        assert_eq!(reverse_bits(0b001, 3), 0b100);
-        assert_eq!(reverse_bits(0b110, 3), 0b011);
     }
 
     #[test]
