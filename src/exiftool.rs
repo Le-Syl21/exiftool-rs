@@ -221,12 +221,32 @@ impl ExifTool {
         src_path: P,
         tags_to_copy: Option<&[&str]>,
     ) -> Result<u32> {
-        let src_tags = self.extract_info(src_path)?;
+        // SetNewValuesFromFile reads every tag of the source, duplicates
+        // included: without them a composite (GPSLatitude) hides the EXIF
+        // tag of the same name, and composites are not copied.
+        let reader = ExifTool::with_options(Options {
+            duplicates: true,
+            ..self.options.clone()
+        });
+        let src_tags = reader.extract_info(src_path)?;
         let mut count = 0u32;
 
         for tag in &src_tags {
             // Skip file-level tags that shouldn't be copied
-            if tag.group.family0 == "File" || tag.group.family0 == "Composite" {
+            if matches!(
+                tag.group.family0.as_str(),
+                "File" | "Composite" | "ExifTool"
+            ) {
+                continue;
+            }
+            // SetNewValuesFromFile leaves the protected and unsafe tags
+            // (ComponentsConfiguration, ExifImageWidth, ...) unless they are
+            // asked for by name.
+            if tags_to_copy.is_none()
+                && tag.group.family0 == "EXIF"
+                && crate::writer::exif_edit::tag_spec(&tag.name)
+                    .is_some_and(|s| s.info.protected != 0)
+            {
                 continue;
             }
             // Skip binary/undefined data and empty values

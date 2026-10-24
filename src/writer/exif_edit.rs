@@ -28,6 +28,8 @@ use std::ops::Range;
 
 use crate::error::{Error, Result};
 use crate::metadata::exif::ByteOrderMark;
+use crate::tags::exif_write_generated::{ExifConv, ExifWriteInfo, EXIF_WRITE_TAGS};
+use crate::writer::xmp_tags;
 
 /// The EXIF directories this editor understands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -914,51 +916,60 @@ pub struct TagSpec {
     pub tag: u16,
     /// TIFF type.
     pub format: u16,
+    /// The row of the generated write table (Exif.pm / GPS.pm).
+    pub info: &'static ExifWriteInfo,
 }
 
-/// The tags this crate can write to EXIF, by (case-insensitive) name.
-pub fn tag_spec(name: &str) -> Option<TagSpec> {
-    let (ifd, tag, format) = match name.to_ascii_lowercase().as_str() {
-        "imagedescription" => (Ifd::Ifd0, 0x010E, 2),
-        "make" => (Ifd::Ifd0, 0x010F, 2),
-        "model" => (Ifd::Ifd0, 0x0110, 2),
-        "orientation" => (Ifd::Ifd0, 0x0112, 3),
-        "xresolution" => (Ifd::Ifd0, 0x011A, 5),
-        "yresolution" => (Ifd::Ifd0, 0x011B, 5),
-        "resolutionunit" => (Ifd::Ifd0, 0x0128, 3),
-        "software" => (Ifd::Ifd0, 0x0131, 2),
-        "modifydate" | "datetime" => (Ifd::Ifd0, 0x0132, 2),
-        "artist" => (Ifd::Ifd0, 0x013B, 2),
-        "copyright" => (Ifd::Ifd0, 0x8298, 2),
-        "datetimeoriginal" => (Ifd::ExifIfd, 0x9003, 2),
-        "createdate" | "datetimedigitized" => (Ifd::ExifIfd, 0x9004, 2),
-        "usercomment" => (Ifd::ExifIfd, 0x9286, 7),
-        "imageuniqueid" => (Ifd::ExifIfd, 0xA420, 2),
-        "ownername" | "cameraownername" => (Ifd::ExifIfd, 0xA430, 2),
-        "serialnumber" | "bodyserialnumber" => (Ifd::ExifIfd, 0xA431, 2),
-        "lensmake" => (Ifd::ExifIfd, 0xA433, 2),
-        "lensmodel" => (Ifd::ExifIfd, 0xA434, 2),
-        "lensserialnumber" => (Ifd::ExifIfd, 0xA435, 2),
-        "gpsversionid" => (Ifd::Gps, 0x0000, 1),
-        "gpslatituderef" => (Ifd::Gps, 0x0001, 2),
-        "gpslatitude" => (Ifd::Gps, 0x0002, 5),
-        "gpslongituderef" => (Ifd::Gps, 0x0003, 2),
-        "gpslongitude" => (Ifd::Gps, 0x0004, 5),
-        "gpsaltituderef" => (Ifd::Gps, 0x0005, 1),
-        "gpsaltitude" => (Ifd::Gps, 0x0006, 5),
+/// The TIFF type of an ExifTool `Writable` format.
+fn tiff_type(format: &str) -> Option<u16> {
+    Some(match format {
+        "int8u" => 1,
+        "string" => 2,
+        "int16u" => 3,
+        "int32u" => 4,
+        "rational64u" => 5,
+        "undef" => 7,
+        "int16s" => 8,
+        "int32s" => 9,
+        "rational64s" => 10,
+        "float" => 11,
+        "double" => 12,
         _ => return None,
+    })
+}
+
+/// The directories, in the order a tag defined in several of them is
+/// created: the main image's first.
+const GROUP_ORDER: [&str; 5] = ["IFD0", "ExifIFD", "GPS", "InteropIFD", "IFD1"];
+
+/// The tags this crate can write to EXIF, by (case-insensitive) name: every
+/// writable tag of Exif.pm and GPS.pm whose inverse conversion is ported.
+pub fn tag_spec(name: &str) -> Option<TagSpec> {
+    // Names older versions of this crate accepted, kept for compatibility.
+    let name = match name.to_ascii_lowercase().as_str() {
+        "datetime" => "ModifyDate",
+        "datetimedigitized" => "CreateDate",
+        "cameraownername" => "OwnerName",
+        "bodyserialnumber" => "SerialNumber",
+        _ => name,
     };
-    Some(TagSpec { ifd, tag, format })
+    let info = EXIF_WRITE_TAGS
+        .iter()
+        .filter(|t| t.name.eq_ignore_ascii_case(name) && t.conv != ExifConv::Unported)
+        .min_by_key(|t| GROUP_ORDER.iter().position(|g| *g == t.group))?;
+    Some(TagSpec {
+        ifd: Ifd::from_group(info.group)?,
+        tag: info.tag,
+        format: tiff_type(info.format)?,
+        info,
+    })
 }
 
 /// Encode `value` for `spec` in byte order `bo`, applying the inverse
-/// conversions ExifTool applies to the same input. `None` when the value is
-/// not valid for the tag.
+/// conversions ExifTool applies to the same input (Writer.pl `ConvInv`,
+/// then WriteExif.pl's formatting). `None` when the value is not valid for
+/// the tag.
 pub fn encode_value(spec: &TagSpec, value: &str, bo: ByteOrderMark) -> Option<Vec<u8>> {
-    let u16b = |v: u16| match bo {
-        ByteOrderMark::LittleEndian => v.to_le_bytes().to_vec(),
-        ByteOrderMark::BigEndian => v.to_be_bytes().to_vec(),
-    };
     let u32b = |v: u32| match bo {
         ByteOrderMark::LittleEndian => v.to_le_bytes(),
         ByteOrderMark::BigEndian => v.to_be_bytes(),
@@ -968,6 +979,7 @@ pub fn encode_value(spec: &TagSpec, value: &str, bo: ByteOrderMark) -> Option<Ve
         [u32b(n), u32b(d)].concat()
     };
     let v = value.trim();
+    // The GPS tags whose conversions are tied to the number format.
     match (spec.ifd, spec.tag) {
         // GPSVersionID: "2.3.0.0" or "2 3 0 0".
         (Ifd::Gps, 0x0000) => {
@@ -976,14 +988,148 @@ pub fn encode_value(spec: &TagSpec, value: &str, bo: ByteOrderMark) -> Option<Ve
                 .filter(|s| !s.is_empty())
                 .map(|s| s.parse().ok())
                 .collect::<Option<_>>()?;
-            (parts.len() == 4).then_some(parts)
+            return (parts.len() == 4).then_some(parts);
         }
         // GPSLatitudeRef / GPSLongitudeRef (GPS.pm %printConvLatRef/LonRef).
-        (Ifd::Gps, 0x0001) => coordinate_ref(v, 'N', 'S').map(|c| vec![c as u8, 0]),
-        (Ifd::Gps, 0x0003) => coordinate_ref(v, 'E', 'W').map(|c| vec![c as u8, 0]),
+        (Ifd::Gps, 0x0001) | (Ifd::Gps, 0x0013) => {
+            return coordinate_ref(v, 'N', 'S').map(|c| vec![c as u8, 0]);
+        }
+        (Ifd::Gps, 0x0003) | (Ifd::Gps, 0x0015) => {
+            return coordinate_ref(v, 'E', 'W').map(|c| vec![c as u8, 0]);
+        }
+        // GPSAltitudeRef: 0/1, "Above/Below Sea Level", or a signed number.
+        (Ifd::Gps, 0x0005) => {
+            let l = v.to_ascii_lowercase();
+            return if l == "above sea level" {
+                Some(vec![0])
+            } else if l == "below sea level" || l.starts_with('-') {
+                Some(vec![1])
+            } else if l.starts_with(|c: char| c.is_ascii_digit() || c == '+') {
+                let n: f64 = l.trim_start_matches('+').parse().ok()?;
+                Some(vec![if n == 1.0 { 1 } else { 0 }])
+            } else {
+                None
+            };
+        }
+        _ => {}
+    }
+    let info = spec.info;
+    // PrintConvInv: the tag's code, or the inverse of its PrintConv hash
+    // (item by item for a list, as ComponentsConfiguration's "Y, Cb, Cr, -").
+    let lookup = |w: &str| -> Option<String> {
+        match info
+            .print_inv
+            .iter()
+            .find(|(p, _)| p.eq_ignore_ascii_case(w))
+        {
+            Some((_, raw)) => Some(raw.to_string()),
+            None if info.print_strict && !info.print_inv.iter().any(|(_, r)| *r == w) => None,
+            None => Some(w.to_string()),
+        }
+    };
+    let v = if !info.print_inv.is_empty() && info.count > 1 && v.contains(',') {
+        v.split(',')
+            .map(|w| lookup(w.trim()))
+            .collect::<Option<Vec<_>>>()?
+            .join(" ")
+    } else if !info.print_inv.is_empty() {
+        match info
+            .print_inv
+            .iter()
+            .find(|(p, _)| p.eq_ignore_ascii_case(v))
+        {
+            Some((_, raw)) => raw.to_string(),
+            // ReverseLookup: a hash without OTHER takes its printed values
+            // only, or the raw value itself.
+            None if info.print_strict && !info.print_inv.iter().any(|(_, r)| *r == v) => {
+                return None
+            }
+            None => v.to_string(),
+        }
+    } else {
+        v.to_string()
+    };
+    let v = match info.conv {
+        ExifConv::None | ExifConv::Utf8 | ExifConv::Copyright => v,
+        ExifConv::Unported => return None,
+        ExifConv::DateTime => exif_date_time(&v)?,
+        ExifConv::StripMm => xmp_tags::strip_suffix_unit(&v, "mm"),
+        ExifConv::StripM => xmp_tags::strip_suffix_unit(&v, "m"),
+        ExifConv::StripC => v.replacen(" C", "", 1).replacen('C', "", 1),
+        ExifConv::ConvertParameter => xmp_tags::convert_parameter(&v)?,
+        ExifConv::DotsToSpaces => v.replace('.', " "),
+        ExifConv::RemoveCommas => v.replace(',', ""),
+        ExifConv::DashesToSpaces => v.replace('-', " "),
+        ExifConv::ExifVersion | ExifConv::FlashpixVersion => {
+            let d: String = v.chars().filter(|c| *c != '.').collect();
+            let d = if d.len() == 3 && info.conv == ExifConv::ExifVersion {
+                format!("0{d}")
+            } else {
+                d
+            };
+            (d.len() == 4 && d.bytes().all(|c| c.is_ascii_digit())).then_some(d)?
+        }
+        ExifConv::SubSec => {
+            let t = v.trim_end();
+            if !t.is_empty() && t.bytes().all(|c| c.is_ascii_digit()) {
+                t.to_string()
+            } else {
+                let frac = v.split_once('.')?.1;
+                let digits: String = frac.chars().take_while(char::is_ascii_digit).collect();
+                (!digits.is_empty()).then_some(digits)?
+            }
+        }
+        ExifConv::Apex => {
+            let f: f64 = v.parse().ok()?;
+            let a = if f > 0.0 { 2.0 * f.log2() } else { 0.0 };
+            a.to_string()
+        }
+        ExifConv::ShutterApex => {
+            let f: f64 = xmp_tags::convert_fraction(&v).parse().ok()?;
+            let a = if f > 0.0 { -f.log2() } else { -100.0 };
+            a.to_string()
+        }
+        ExifConv::LensInfo => xmp_tags::convert_lens_info(&v),
+        ExifConv::OffsetTime => offset_time(&v)?,
+        ExifConv::GpsDateStamp => gps_date_stamp(&v)?,
+        // Encoded below, together with their number format.
+        ExifConv::Ucs2
+        | ExifConv::Hex
+        | ExifConv::ChrIfSmall
+        | ExifConv::Chr
+        | ExifConv::ExifText
+        | ExifConv::GpsLat
+        | ExifConv::GpsLon
+        | ExifConv::GpsAltitude
+        | ExifConv::GpsTimeStamp => v,
+    };
+    match info.conv {
+        ExifConv::Ucs2 => {
+            let mut d: Vec<u8> = v.encode_utf16().flat_map(u16::to_le_bytes).collect();
+            d.extend_from_slice(&[0, 0]);
+            return Some(d);
+        }
+        ExifConv::Hex => {
+            let h = v.as_bytes();
+            if h.len() % 2 != 0 {
+                return None;
+            }
+            return h
+                .chunks(2)
+                .map(|c| u8::from_str_radix(std::str::from_utf8(c).ok()?, 16).ok())
+                .collect();
+        }
+        ExifConv::ChrIfSmall => {
+            return Some(match v.parse::<u32>() {
+                Ok(n) if n < 256 => vec![n as u8],
+                _ => v.into_bytes(),
+            });
+        }
+        ExifConv::Chr => return Some(vec![(v.parse::<i64>().ok()? & 0xff) as u8]),
+        ExifConv::ExifText => return Some(encode_exif_text(&v, bo)),
         // GPSLatitude / GPSLongitude: ToDegrees, then ToDMS, then rationals.
-        (Ifd::Gps, 0x0002) | (Ifd::Gps, 0x0004) => {
-            let deg = to_degrees(v)?.abs();
+        ExifConv::GpsLat | ExifConv::GpsLon => {
+            let deg = to_degrees(&v)?.abs();
             let d = deg.trunc();
             let m = ((deg - d) * 60.0).trunc();
             let mut s = (deg - d - m / 60.0) * 3600.0;
@@ -999,55 +1145,184 @@ pub fn encode_value(spec: &TagSpec, value: &str, bo: ByteOrderMark) -> Option<Ve
                     d += 1.0;
                 }
             }
-            Some([rat(d), rat(m), rat(s)].concat())
-        }
-        // GPSAltitudeRef: 0/1, "Above/Below Sea Level", or a signed number.
-        (Ifd::Gps, 0x0005) => {
-            let l = v.to_ascii_lowercase();
-            if l == "above sea level" {
-                Some(vec![0])
-            } else if l == "below sea level" || l.starts_with('-') {
-                Some(vec![1])
-            } else if l.starts_with(|c: char| c.is_ascii_digit() || c == '+') {
-                let n: f64 = l.trim_start_matches('+').parse().ok()?;
-                Some(vec![if n == 1.0 { 1 } else { 0 }])
-            } else {
-                None
-            }
+            return Some([rat(d), rat(m), rat(s)].concat());
         }
         // GPSAltitude: an unsigned number, "m" suffix allowed.
-        (Ifd::Gps, 0x0006) => {
+        ExifConv::GpsAltitude => {
             let n: f64 = v.trim_end_matches('m').trim().parse().ok()?;
-            Some(rat(n.abs()))
+            return Some(rat(n.abs()));
         }
-        _ => match spec.format {
-            2 => {
-                let mut d = v.as_bytes().to_vec();
-                d.push(0);
-                Some(d)
+        // GPSTimeStamp: HH:MM:SS[.ss], a date before it ignored.
+        ExifConv::GpsTimeStamp => {
+            let nums: Vec<f64> = v
+                .split(|c: char| !(c.is_ascii_digit() || c == '.'))
+                .filter(|s| !s.is_empty())
+                .map(|s| s.parse().ok())
+                .collect::<Option<_>>()?;
+            let hms = match nums.len() {
+                3 => &nums[..],
+                6 => &nums[3..],
+                _ => return None,
+            };
+            return Some(hms.iter().flat_map(|&x| rat(x)).collect());
+        }
+        _ => {}
+    }
+    encode_formatted(info, &v, bo)
+}
+
+/// WriteExif.pl's formatting of a converted value by the tag's `Writable`
+/// format: a string gets its null terminator, `undef` is stored as it is,
+/// and numbers are written one per space-separated word.
+fn encode_formatted(info: &ExifWriteInfo, v: &str, bo: ByteOrderMark) -> Option<Vec<u8>> {
+    let le = bo == ByteOrderMark::LittleEndian;
+    match info.format {
+        "string" => {
+            let mut d = v.as_bytes().to_vec();
+            d.push(0);
+            Some(d)
+        }
+        "undef" if info.value_format == "undef" => Some(v.as_bytes().to_vec()),
+        "undef" => encode_formatted_as(info, info.value_format, v, le),
+        format => encode_formatted_as(info, format, v, le),
+    }
+}
+
+/// Numbers, one per space-separated word, in `format`.
+fn encode_formatted_as(info: &ExifWriteInfo, format: &str, v: &str, le: bool) -> Option<Vec<u8>> {
+    let words: Vec<&str> = v.split_whitespace().collect();
+    if words.is_empty() || (info.count > 0 && words.len() != info.count as usize) {
+        return None;
+    }
+    let mut out = Vec::new();
+    for w in words {
+        out.extend(encode_number(format, w, le)?);
+    }
+    Some(out)
+}
+
+/// One number in a TIFF number format.
+fn encode_number(format: &str, w: &str, le: bool) -> Option<Vec<u8>> {
+    macro_rules! bytes {
+        ($v:expr) => {
+            if le {
+                $v.to_le_bytes().to_vec()
+            } else {
+                $v.to_be_bytes().to_vec()
             }
-            3 => {
-                let n: u16 = v.parse().ok()?;
-                Some(u16b(n))
-            }
-            5 => {
-                if let Some((a, b)) = v.split_once('/') {
-                    let n: u32 = a.trim().parse().ok()?;
-                    let d: u32 = b.trim().parse().ok()?;
-                    Some([u32b(n), u32b(d)].concat())
-                } else {
-                    let f: f64 = v.parse().ok()?;
-                    (f >= 0.0).then(|| rat(f))
+        };
+    }
+    let int = |w: &str| -> Option<i64> {
+        w.parse::<i64>().ok().or_else(|| {
+            w.parse::<f64>()
+                .ok()
+                .filter(|f| f.fract() == 0.0)
+                .map(|f| f as i64)
+        })
+    };
+    Some(match format {
+        "int8u" => vec![u8::try_from(int(w)?).ok()?],
+        "int16u" => bytes!(u16::try_from(int(w)?).ok()?),
+        "int32u" => bytes!(u32::try_from(int(w)?).ok()?),
+        "int16s" => bytes!(i16::try_from(int(w)?).ok()?),
+        "int32s" => bytes!(i32::try_from(int(w)?).ok()?),
+        "float" => bytes!(w.parse::<f32>().ok()?),
+        "double" => bytes!(w.parse::<f64>().ok()?),
+        "rational64u" | "rational64s" => {
+            let signed = format == "rational64s";
+            let (n, d): (i64, i64) = if let Some((a, b)) = w.split_once('/') {
+                (a.trim().parse().ok()?, b.trim().parse().ok()?)
+            } else {
+                let f: f64 = w.parse().ok()?;
+                if !signed && f < 0.0 {
+                    return None;
                 }
+                let max = if signed {
+                    i32::MAX as f64
+                } else {
+                    u32::MAX as f64
+                };
+                let (n, d) = rationalize(f.abs(), max);
+                (if f < 0.0 { -(n as i64) } else { n as i64 }, d as i64)
+            };
+            if signed {
+                [
+                    bytes!(i32::try_from(n).ok()?),
+                    bytes!(i32::try_from(d).ok()?),
+                ]
+                .concat()
+            } else {
+                [
+                    bytes!(u32::try_from(n).ok()?),
+                    bytes!(u32::try_from(d).ok()?),
+                ]
+                .concat()
             }
-            7 => {
-                // UserComment: character code + text.
-                let mut d = b"ASCII\0\0\0".to_vec();
-                d.extend_from_slice(v.as_bytes());
-                Some(d)
-            }
-            _ => None,
-        },
+        }
+        _ => return None,
+    })
+}
+
+/// `InverseDateTime($val, 0)`: any date and time, as `YYYY:mm:dd HH:MM:SS`
+/// with fractional seconds kept and the time zone removed.
+fn exif_date_time(v: &str) -> Option<String> {
+    let d = xmp_tags::inverse_date_time(v)?;
+    let end = d
+        .char_indices()
+        .skip(19)
+        .find(|(_, c)| matches!(c, '+' | '-' | 'Z'))
+        .map_or(d.len(), |(i, _)| i);
+    Some(d[..end].to_string())
+}
+
+/// Exif.pm `InverseOffsetTime`: `+HH:MM` (`Z` for UTC).
+fn offset_time(v: &str) -> Option<String> {
+    let v = v.trim();
+    if v.eq_ignore_ascii_case("z") {
+        return Some("+00:00".into());
+    }
+    let (sign, rest) = v.split_at(1);
+    if sign != "+" && sign != "-" {
+        return None;
+    }
+    let digits: String = rest.chars().filter(|c| *c != ':').collect();
+    if !(3..=4).contains(&digits.len()) || !digits.bytes().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let (h, m) = digits.split_at(digits.len() - 2);
+    Some(format!("{sign}{:02}:{m}", h.parse::<u32>().ok()?))
+}
+
+/// GPS.pm GPSDateStamp: the date as `YYYY:mm:dd`.
+fn gps_date_stamp(v: &str) -> Option<String> {
+    let nums: Vec<&str> = v
+        .split(|c: char| !c.is_ascii_digit())
+        .filter(|s| !s.is_empty())
+        .collect();
+    if nums.len() < 3 || nums[0].len() != 4 {
+        return None;
+    }
+    let m: u32 = nums[1].parse().ok()?;
+    let d: u32 = nums[2].parse().ok()?;
+    ((1..=12).contains(&m) && (1..=31).contains(&d)).then(|| format!("{}:{m:02}:{d:02}", nums[0]))
+}
+
+/// Exif.pm `EncodeExifText`: `ASCII` for plain ASCII text, `UNICODE` (UCS-2
+/// in the block's byte order) otherwise.
+fn encode_exif_text(v: &str, bo: ByteOrderMark) -> Vec<u8> {
+    if v.is_ascii() {
+        let mut d = b"ASCII\0\0\0".to_vec();
+        d.extend_from_slice(v.as_bytes());
+        d
+    } else {
+        let mut d = b"UNICODE\0".to_vec();
+        for u in v.encode_utf16() {
+            d.extend(match bo {
+                ByteOrderMark::LittleEndian => u.to_le_bytes(),
+                ByteOrderMark::BigEndian => u.to_be_bytes(),
+            });
+        }
+        d
     }
 }
 
@@ -1122,11 +1397,16 @@ fn to_degrees(v: &str) -> Option<f64> {
 
 /// Writer.pl `Rationalize` with the unsigned maximum used for rational64u.
 pub fn rationalize_unsigned(val: f64) -> (u32, u32) {
+    let (n, d) = rationalize(val.abs(), u32::MAX as f64);
+    (n as u32, d as u32)
+}
+
+/// Writer.pl `Rationalize` of a non-negative value, numerator and
+/// denominator at most `max`.
+fn rationalize(val: f64, max: f64) -> (f64, f64) {
     if val == 0.0 || !val.is_finite() {
-        return (0, 1);
+        return (0.0, 1.0);
     }
-    let val = val.abs();
-    let max = u32::MAX as f64;
     let mut fracs: Vec<f64> = Vec::new();
     let mut frac = val;
     let mut best: Option<(f64, f64)> = None;
@@ -1142,11 +1422,7 @@ pub fn rationalize_unsigned(val: f64) -> (u32, u32) {
             if best.is_some() {
                 break;
             }
-            return if val < 1.0 {
-                (1, u32::MAX)
-            } else {
-                (u32::MAX, 1)
-            };
+            return if val < 1.0 { (1.0, max) } else { (max, 1.0) };
         }
         best = Some((n, d));
         let err = (n / d - val) / val;
@@ -1161,8 +1437,7 @@ pub fn rationalize_unsigned(val: f64) -> (u32, u32) {
         }
         frac = 1.0 / frac;
     }
-    let (n, d) = best.unwrap_or((0.0, 1.0));
-    (n as u32, d as u32)
+    best.unwrap_or((0.0, 1.0))
 }
 
 #[cfg(test)]

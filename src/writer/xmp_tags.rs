@@ -341,7 +341,7 @@ fn perl_number(v: &str) -> Option<f64> {
 
 /// Exif.pm `ConvertParameter`: Normal 0, Low/Soft 1, High/Hard 2 (or the
 /// sign of a number).
-fn convert_parameter(v: &str) -> Option<String> {
+pub(crate) fn convert_parameter(v: &str) -> Option<String> {
     let float = is_perl_float(v).then(|| v.parse::<f64>().ok()).flatten();
     // A word starting with one of these letters (`\b` then the letter).
     let word_starts = |letters: &[u8]| {
@@ -364,7 +364,7 @@ fn convert_parameter(v: &str) -> Option<String> {
 }
 
 /// `$val=~s/\s*<unit>$//`.
-fn strip_suffix_unit(v: &str, unit: &str) -> String {
+pub(crate) fn strip_suffix_unit(v: &str, unit: &str) -> String {
     match v.strip_suffix(unit) {
         Some(rest) => rest.trim_end().to_string(),
         None => v.to_string(),
@@ -372,7 +372,7 @@ fn strip_suffix_unit(v: &str, unit: &str) -> String {
 }
 
 /// Exif.pm `ConvertFraction`: the first `n/d` becomes its value.
-fn convert_fraction(v: &str) -> String {
+pub(crate) fn convert_fraction(v: &str) -> String {
     let b = v.as_bytes();
     for i in 0..b.len() {
         let start = i;
@@ -527,7 +527,7 @@ fn first_unsigned_number(v: &str) -> Option<String> {
 
 /// Exif.pm `ConvertLensInfo`: `12-20mm f/3.8-4.5` → `12 20 3.8 4.5`
 /// (`GetLensInfo`, `?` for an unknown value); other values as they are.
-fn convert_lens_info(v: &str) -> String {
+pub(crate) fn convert_lens_info(v: &str) -> String {
     // /($pat)(?:-($pat))?\s*mm.*?(?:[fF]\/?\s*)($pat)(?:-($pat))?/, $pat = \d+(?:\.\d+)?|\?
     let b = v.as_bytes();
     let num = |i: usize| -> Option<usize> {

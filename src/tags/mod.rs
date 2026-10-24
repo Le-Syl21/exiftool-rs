@@ -6,6 +6,7 @@ pub mod canon_sub;
 pub mod conv_expr;
 pub mod conv_tables_generated;
 pub mod exif;
+pub mod exif_write_generated;
 pub mod generated;
 pub mod group2;
 pub mod group2_generated;
