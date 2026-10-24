@@ -11,6 +11,8 @@
 use strict;
 use warnings;
 use File::Find;
+# Reads an OTHER routine back as text.
+use B::Deparse;
 # The emitted offsets count bytes, as a Rust str does.
 use bytes ();
 # Reading a package hash by name needs symbolic references.
@@ -41,6 +43,36 @@ my @dropped;   # conversions not emitted, reported at the end
 my %all_str_convs;      # conversions keyed by the value as a string
 my %all_list_convs;     # one conversion per element of a multi-value tag
 my $total_str_entries = 0;
+
+# How ExifTool prints a value its PrintConv hash has no entry for
+# (ExifTool.pm:3614-3634): `Unknown ($val)`, or `Unknown (0x..)` for a
+# PrintHex tag -- unless the hash hands the miss to a BITMASK or an OTHER
+# routine that prints something. Bit 0 says the table can print that
+# `Unknown` itself, bit 1 that the tag is PrintHex. A table is only trusted to
+# be the whole hash when the tag converts the value it is given: a RawConv,
+# ValueConv or Mask changes the value first, and a quoted number key is one
+# the scan above cannot read. Most OTHER routines only translate a value being
+# written, `return undef unless $inv` (Exif's %flash, GPS's references), and
+# reading leaves the miss to `Unknown` as well; that is read from the loaded
+# routine, since the scan of a written-out hash stops at the routine's end.
+sub miss_flags {
+    my ($body, $hash) = @_;
+    my $closed = 1;
+    if (ref $hash) {
+        $closed = 0 if exists $$hash{BITMASK};
+        if (exists $$hash{OTHER}) {
+            my $code = ref $$hash{OTHER} eq 'CODE'
+                ? B::Deparse->new->coderef2text($$hash{OTHER}) : '';
+            $closed = 0 unless $code =~
+                /my\s*\(\s*\$val\s*,\s*\$inv\s*\)\s*=\s*\@_;\s*return\s+undef\s+unless\s+\$inv\b/;
+        }
+    } else {
+        $closed = 0 if $hash =~ /\b(?:OTHER|BITMASK)\b/ or $hash =~ /['"]-?\d/;
+    }
+    $closed = 0 if $body =~ /\b(?:RawConv|ValueConv|Mask)\s*=>/;
+    my $hex = $body =~ /\bPrintHex\s*=>\s*1|\bFlags\s*=>[^,}]*\bPrintHex\b/ ? 2 : 0;
+    return $closed | $hex;
+}
 
 for my $file (@pm_files) {
     open my $fh, '<', $file or next;
@@ -200,6 +232,7 @@ for my $file (@pm_files) {
                 tag_id => $tag_id,
                 tag_name => $name,
                 conv => \%conv,
+                flags => miss_flags($body, $conv_body),
             };
             $total_entries += scalar keys %conv;
             $total_tags++;
@@ -233,6 +266,7 @@ for my $file (@pm_files) {
                         tag_id => $tag_id,
                         tag_name => $name,
                         conv => \%conv,
+                        flags => miss_flags($body, $runtime),
                     };
                     $total_entries += scalar keys %conv;
                     $total_tags++;
@@ -256,6 +290,7 @@ for my $file (@pm_files) {
                         tag_id => $tag_id,
                         tag_name => $name,
                         conv => \%conv,
+                        flags => miss_flags($body, $hash_body),
                     };
                     $total_entries += scalar keys %conv;
                     $total_tags++;
@@ -315,7 +350,7 @@ sub table_id {
 }
 
 # (module, tag) -> table. Tags sorted within a module for a binary search.
-my (@modules, @mod_end, @tag_ids, @tag_tabs, @tag_names, %module_index);
+my (@modules, @mod_end, @tag_ids, @tag_tabs, @tag_flags, @tag_names, %module_index);
 my %list_modules = map { $all_list_convs{$_}{module} => 1 } keys %all_list_convs;
 for my $module (sort(keys %{{ %by_module, %list_modules }})) {
     my $first = @tag_ids;
@@ -335,6 +370,7 @@ for my $module (sort(keys %{{ %by_module, %list_modules }})) {
             if @tag_ids > $first and $tag_ids[-1] >= $tag->{tag_id};
         push @tag_ids, $tag->{tag_id};
         push @tag_tabs, table_id($tag->{conv});
+        push @tag_flags, $tag->{flags} || 0;
         push @tag_names, $tag->{tag_name};
     }
     $module_index{$module} = scalar @modules;
@@ -469,6 +505,10 @@ print "#[rustfmt::skip]\nstatic TAG_TAB: [u16; ", scalar @tag_tabs, "] = [\n";
 printf "    %d, // %s\n", $tag_tabs[$_], $tag_names[$_] for 0 .. $#tag_tabs;
 print "];\n\n";
 
+print "/// How each tag prints a value its table has no entry for: bit 0, as\n";
+print "/// `Unknown (value)`; bit 1, with the value in hex (PrintHex).\n";
+emit_ints('TAG_FLAGS', 8, @tag_flags);
+
 emit_blob("/// Tag names with a conversion. Name `n` converts with table `NAME_TAB[n]`:\n"
         . "/// that of the first module to define it, in `Module::decimal id` order.\n",
           'NAMES', 'NAME_END', \@names);
@@ -536,6 +576,26 @@ pub fn print_conv(module: &str, tag_id: u16, value: i64) -> Option<&'static str>
     let tags = span(&MOD_END, find(&MODULE_SLOTS, MODULES, &MODULE_END, module)?);
     let i = TAG_IDS[tags.clone()].binary_search(&tag_id).ok()?;
     convert(TAG_TAB[tags.start + i], value)
+}
+
+/// Print `value` with the tag's PrintConv hash as ExifTool does, a miss
+/// included (ExifTool.pm:3614-3634): the entry for `value`, else `Unknown
+/// (value)` -- `Unknown (0x..)` for a PrintHex tag. `None` when the module has
+/// no table for the tag, or when its hash hands a miss to a BITMASK or an
+/// OTHER routine, which the table does not hold.
+#[must_use]
+pub fn print_conv_or_unknown(module: &str, tag_id: u16, value: i64) -> Option<String> {
+    let tags = span(&MOD_END, find(&MODULE_SLOTS, MODULES, &MODULE_END, module)?);
+    let i = tags.start + TAG_IDS[tags.clone()].binary_search(&tag_id).ok()?;
+    if let Some(s) = convert(TAG_TAB[i], value) {
+        return Some(s.to_string());
+    }
+    match TAG_FLAGS[i] {
+        1 => Some(format!("Unknown ({value})")),
+        3 if value >= 0 => Some(format!("Unknown (0x{value:x})")),
+        3 => Some(format!("Unknown ({value})")),
+        _ => None,
+    }
 }
 
 /// Look up print conversion by tag name and numeric value.

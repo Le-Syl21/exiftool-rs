@@ -1541,6 +1541,25 @@ impl ExifReader {
                         }
                     }
                 }
+                // Exif.pm converts these as it reads them, so the numeric
+                // value is the text too: UserComment's RawConv
+                // ConvertExifText (warning about a character code it does not
+                // know) and the XP* tags' ValueConv from UCS-2.
+                if ifd_name != "GPS" {
+                    if let Value::Undefined(ref bytes) = value {
+                        if entry.tag == 0x9286 {
+                            let (text, invalid) = exif_tags::convert_exif_text(bytes);
+                            if invalid {
+                                tags.push(crate::tag::warning_tag(
+                                    "Invalid EXIF text encoding for UserComment",
+                                ));
+                            }
+                            value = Value::String(text);
+                        } else if (0x9c9b..=0x9c9f).contains(&entry.tag) {
+                            value = Value::String(exif_tags::decode_xp_text(bytes));
+                        }
+                    }
+                }
                 let tag_info = exif_tags::lookup(ifd_name, entry.tag);
                 let (name, description, family2) = match tag_info {
                     Some(info) => (
@@ -1623,19 +1642,7 @@ impl ExifReader {
                     // -u mode: show unknown tags but use standard display for values
                     value.to_display_string()
                 } else {
-                    exif_tags::print_conv(ifd_name, entry.tag, &value)
-                        .or_else(|| {
-                            // Fallback to generated print conversions
-                            value
-                                .as_u64()
-                                .and_then(|v| {
-                                    crate::tags::print_conv_generated::print_conv_by_name(
-                                        &name, v as i64,
-                                    )
-                                })
-                                .map(|s| s.to_string())
-                        })
-                        .unwrap_or_else(|| value.to_display_string())
+                    exif_tags::print_value(ifd_name, entry.tag, &value)
                 };
 
                 // Priority the Exif tables state themselves, whether as an
@@ -1890,6 +1897,13 @@ fn read_ifd_value(data: &[u8], entry: &IfdEntry, byte_order: ByteOrderMark) -> O
     // ApplicationNotes (0x02BC): always read as raw binary (XMP data)
     if entry.tag == 0x02BC {
         return Some(Value::Binary(value_data.to_vec()));
+    }
+
+    // UserComment (0x9286) and the Windows XP* tags (0x9c9b-0x9c9f) state
+    // `Format => 'undef'` (Exif.pm): their bytes, whatever type the entry
+    // gives -- Windows writes the XP* tags as BYTE.
+    if matches!(entry.tag, 0x9286 | 0x9c9b..=0x9c9f) {
+        return Some(Value::Undefined(value_data.to_vec()));
     }
 
     match entry.data_type {

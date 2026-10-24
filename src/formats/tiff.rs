@@ -1658,16 +1658,7 @@ fn read_bigtiff_ifd(data: &[u8], ifd_offset: usize, is_le: bool) -> Result<Vec<T
             }
         };
 
-        let print_value = exif_tags::print_conv("IFD0", tag, &value)
-            .or_else(|| {
-                value
-                    .as_u64()
-                    .and_then(|v| {
-                        crate::tags::print_conv_generated::print_conv_by_name(&name, v as i64)
-                    })
-                    .map(|s| s.to_string())
-            })
-            .unwrap_or_else(|| value.to_display_string());
+        let print_value = exif_tags::print_value("IFD0", tag, &value);
 
         tags.push(Tag {
             id: TagId::Numeric(tag),
