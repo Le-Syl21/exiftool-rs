@@ -29,6 +29,8 @@ pub enum Value {
     ArrayRef(Rc<RefCell<Vec<Value>>>),
     /// A reference to a hash: Composite dependencies, structures.
     HashRef(Rc<RefCell<Hash>>),
+    /// A reference to code: a Perl sub or a ported (native) one.
+    Code(Rc<crate::interp::eval::Code>),
 }
 
 /// A Perl hash. Insertion order is kept for reproducibility, but nothing may
@@ -56,7 +58,7 @@ impl Value {
     }
 
     pub fn is_ref(&self) -> bool {
-        matches!(self, Value::ScalarRef(_) | Value::ArrayRef(_) | Value::HashRef(_))
+        matches!(self, Value::ScalarRef(_) | Value::ArrayRef(_) | Value::HashRef(_) | Value::Code(_))
     }
 
     /// The string form (perl's `sv_2pv`): undef is empty, integers in decimal,
@@ -88,6 +90,7 @@ impl Value {
             Value::ScalarRef(r) => Number::Int(Rc::as_ptr(r) as i64),
             Value::ArrayRef(r) => Number::Int(Rc::as_ptr(r) as *const u8 as i64),
             Value::HashRef(r) => Number::Int(Rc::as_ptr(r) as *const u8 as i64),
+            Value::Code(r) => Number::Int(Rc::as_ptr(r) as *const u8 as i64),
         }
     }
 
@@ -299,9 +302,16 @@ impl fmt::Display for Value {
             Value::UInt(u) => write!(f, "{u}"),
             Value::Num(n) => f.write_str(&format_nv(*n)),
             Value::Str(s) => f.write_str(&String::from_utf8_lossy(s)),
-            Value::ScalarRef(r) => write!(f, "SCALAR({:p})", Rc::as_ptr(r)),
+            Value::ScalarRef(r) => {
+                let kind = if r.borrow().is_ref() { "REF" } else { "SCALAR" };
+                write!(f, "{kind}({:p})", Rc::as_ptr(r))
+            }
             Value::ArrayRef(r) => write!(f, "ARRAY({:p})", Rc::as_ptr(r)),
-            Value::HashRef(r) => write!(f, "HASH({:p})", Rc::as_ptr(r)),
+            Value::HashRef(r) => match &r.borrow().blessed {
+                Some(class) => write!(f, "{class}=HASH({:p})", Rc::as_ptr(r)),
+                None => write!(f, "HASH({:p})", Rc::as_ptr(r)),
+            },
+            Value::Code(r) => write!(f, "CODE({:p})", Rc::as_ptr(r)),
         }
     }
 }
@@ -317,6 +327,7 @@ impl fmt::Debug for Value {
             Value::ScalarRef(r) => write!(f, "\\{:?}", r.borrow()),
             Value::ArrayRef(r) => write!(f, "{:?}", r.borrow()),
             Value::HashRef(r) => write!(f, "{:?}", r.borrow()),
+            Value::Code(_) => f.write_str("CODE"),
         }
     }
 }
@@ -357,6 +368,8 @@ pub mod indexmap_lite {
         keys: Vec<Rc<[u8]>>,
         index: HashMap<Rc<[u8]>, usize>,
         values: Vec<Value>,
+        /// The package this hash is blessed into (`bless`).
+        pub blessed: Option<Rc<str>>,
     }
 
     impl IndexMap {
@@ -373,6 +386,23 @@ pub mod indexmap_lite {
                 self.keys.push(key);
                 self.values.push(v);
             }
+        }
+
+        pub fn get_mut(&mut self, k: &[u8]) -> Option<&mut Value> {
+            match self.index.get(k) {
+                Some(&i) => Some(&mut self.values[i]),
+                None => None,
+            }
+        }
+
+        pub fn values(&self) -> impl Iterator<Item = &Value> {
+            self.values.iter()
+        }
+
+        pub fn clear(&mut self) {
+            self.keys.clear();
+            self.index.clear();
+            self.values.clear();
         }
 
         pub fn contains(&self, k: &[u8]) -> bool {

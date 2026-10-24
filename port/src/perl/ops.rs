@@ -27,34 +27,59 @@ fn numeric(v: &Value) -> Number {
     v.to_number()
 }
 
-pub fn add(a: &Value, b: &Value) -> Value {
-    let (x, y) = (numeric(a), numeric(b));
-    if let (Some(i), Some(j)) = (iv_able(x), iv_able(y)) {
-        if let Some(r) = i.checked_add(j) {
-            return Value::Int(r);
+/// An operand as perl's integer arithmetic sees it (IV, UV, or a float
+/// with an integral value in their range), widened to i128.
+fn int_able(n: Number) -> Option<i128> {
+    match n {
+        Number::Int(i) => Some(i as i128),
+        Number::UInt(u) => Some(u as i128),
+        Number::Float(f) => {
+            if f.fract() == 0.0 && f >= -9.223372036854776e18 && f < 1.8446744073709552e19 {
+                Some(f as i128)
+            } else {
+                None
+            }
         }
     }
-    Value::Num(x.as_f64() + y.as_f64())
+}
+
+/// An integer result: IV when it fits, UV when positive and it fits, NV
+/// otherwise (perl's pp_add and friends).
+fn from_i128(r: i128) -> Value {
+    if r >= i64::MIN as i128 && r <= i64::MAX as i128 {
+        Value::Int(r as i64)
+    } else if r >= 0 && r <= u64::MAX as i128 {
+        Value::UInt(r as u64)
+    } else {
+        Value::Num(r as f64)
+    }
+}
+
+fn int_op(a: &Value, b: &Value, op: fn(i128, i128) -> Option<i128>, float: fn(f64, f64) -> f64) -> Value {
+    let (x, y) = (numeric(a), numeric(b));
+    // An undefined operand is not integer-valued for perl (SvIV_please
+    // fails): the float path runs.
+    if a.is_undef() || b.is_undef() {
+        return Value::Num(float(x.as_f64(), y.as_f64()));
+    }
+    if let (Some(i), Some(j)) = (int_able(x), int_able(y)) {
+        if let Some(r) = op(i, j) {
+            return from_i128(r);
+        }
+    }
+    Value::Num(float(x.as_f64(), y.as_f64()))
+}
+
+pub fn add(a: &Value, b: &Value) -> Value {
+    int_op(a, b, |i, j| i.checked_add(j), |x, y| x + y)
 }
 
 pub fn sub(a: &Value, b: &Value) -> Value {
-    let (x, y) = (numeric(a), numeric(b));
-    if let (Some(i), Some(j)) = (iv_able(x), iv_able(y)) {
-        if let Some(r) = i.checked_sub(j) {
-            return Value::Int(r);
-        }
-    }
-    Value::Num(x.as_f64() - y.as_f64())
+    int_op(a, b, |i, j| i.checked_sub(j), |x, y| x - y)
 }
 
 pub fn mul(a: &Value, b: &Value) -> Value {
-    let (x, y) = (numeric(a), numeric(b));
-    if let (Some(i), Some(j)) = (iv_able(x), iv_able(y)) {
-        if let Some(r) = i.checked_mul(j) {
-            return Value::Int(r);
-        }
-    }
-    Value::Num(x.as_f64() * y.as_f64())
+    int_op(a, b, |i, j| i.checked_mul(j), |x, y| x * y)
 }
 
 /// `/`: always a float division, but an integral result is kept exact when
@@ -65,10 +90,12 @@ pub fn div(a: &Value, b: &Value) -> Result<Value, String> {
     if y.as_f64() == 0.0 {
         return Err("Illegal division by zero".into());
     }
-    if let (Some(i), Some(j)) = (iv_able(x), iv_able(y)) {
-        if j != 0 && i % j == 0 {
-            if let Some(r) = i.checked_div(j) {
-                return Ok(Value::Int(r));
+    // perl tries an exact integer division first on 64-bit builds
+    // (PERL_TRY_UV_DIVIDE), so large integers keep every digit.
+    if !a.is_undef() && !b.is_undef() {
+        if let (Some(i), Some(j)) = (int_able(x), int_able(y)) {
+            if j != 0 && i % j == 0 {
+                return Ok(from_i128(i / j));
             }
         }
     }

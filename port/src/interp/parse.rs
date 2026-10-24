@@ -14,11 +14,16 @@ use crate::perl::Value;
 pub struct ParseError {
     pub msg: String,
     pub line: usize,
+    /// The text after the error, for perl's `near "..."`.
+    pub near: String,
+    /// A fatal compile error with its own message (perl's "Search pattern
+    /// not terminated"), rather than a "syntax error".
+    pub fatal: bool,
 }
 
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} at line {}", self.msg, self.line)
+        write!(f, "{}, near \"{}\" at line {}", self.msg, self.near, self.line)
     }
 }
 
@@ -53,7 +58,7 @@ const NAMED_UNARY: &[&str] = &[
     "int", "sqrt", "log", "exp", "sin", "cos", "quotemeta", "rand", "srand", "exists", "delete", "each", "keys",
     "values", "shift", "pop", "chomp", "chop", "chdir", "rmdir", "readlink", "undef", "study", "pos", "exit",
     "umask", "localtime", "gmtime", "alarm", "sleep", "require", "caller", "lock", "fc", "close", "fileno",
-    "chroot", "readline", "uc", "lc", "eof",
+    "chroot", "readline", "uc", "lc", "eof", "getpwuid", "getgrgid",
 ];
 
 /// Builtins taking a list.
@@ -90,7 +95,11 @@ impl<'a> Parser<'a> {
     fn err(&self, msg: &str) -> ParseError {
         let line = 1 + self.s[..self.pos.min(self.s.len())].iter().filter(|&&b| b == b'\n').count();
         let near: String = String::from_utf8_lossy(&self.s[self.pos.min(self.s.len())..(self.pos + 20).min(self.s.len())]).into();
-        ParseError { msg: format!("{msg}, near \"{near}\""), line }
+        ParseError { msg: msg.to_string(), line, near, fatal: false }
+    }
+
+    fn fatal(&self, msg: &str) -> ParseError {
+        ParseError { fatal: true, ..self.err(msg) }
     }
 
     fn at(&self, i: usize) -> u8 {
@@ -327,6 +336,7 @@ impl<'a> Parser<'a> {
                 self.pos += name.len();
                 let args = if self.starts(";") { None } else { Some(self.expr()?) };
                 self.eat(";");
+                let name = if word == Some("no") { format!("no {name}") } else { name.to_string() };
                 return Ok(Some(Stmt::Use(Rc::from(name), args)));
             }
             Some("BEGIN") | Some("END") | Some("INIT") => {
@@ -373,7 +383,29 @@ impl<'a> Parser<'a> {
         if self.eat(";") || self.pos >= self.s.len() || self.at(0) == b'}' {
             Ok(())
         } else {
-            Err(self.err("syntax error"))
+            Err(self.unexpected())
+        }
+    }
+
+    /// The error for a token where an operator was expected. perl's lexer
+    /// reads the token first, so an unterminated string or pattern reports
+    /// that rather than a syntax error.
+    fn unexpected(&mut self) -> ParseError {
+        let save = self.pos;
+        let c = self.at(0);
+        let e = if c == b'"' || c == b'\'' {
+            self.pos += 1;
+            self.delimited(c).err()
+        } else if let Some(w @ ("m" | "s" | "tr" | "y" | "qr" | "q" | "qq")) = self.peek_ident() {
+            self.pos += w.len();
+            self.quote_like(w).err()
+        } else {
+            None
+        };
+        self.pos = save;
+        match e {
+            Some(e) if e.fatal => e,
+            _ => self.err("syntax error"),
         }
     }
 
@@ -783,8 +815,22 @@ impl<'a> Parser<'a> {
         let target = Some(Box::new(e));
         Ok(match rhs {
             Expr::Match { target: None, neg: _, pat } => Expr::Match { target, neg, pat },
-            Expr::Subst { target: None, pat, repl } => Expr::Subst { target, pat, repl },
-            Expr::Trans { target: None, search, repl, flags } => Expr::Trans { target, search, repl, flags },
+            Expr::Subst { target: None, pat, repl } => {
+                let e = Expr::Subst { target, pat, repl };
+                if neg {
+                    Expr::Un(UnOp::Not, Box::new(e))
+                } else {
+                    e
+                }
+            }
+            Expr::Trans { target: None, search, repl, flags } => {
+                let e = Expr::Trans { target, search, repl, flags };
+                if neg {
+                    Expr::Un(UnOp::Not, Box::new(e))
+                } else {
+                    e
+                }
+            }
             // `$x =~ $re`: the expression is the pattern.
             other => Expr::Match { target, neg, pat: Pat { parts: vec![Part::Scalar(other)], flags: Rc::from("") } },
         })
@@ -1060,7 +1106,7 @@ impl<'a> Parser<'a> {
             b'`' => Err(self.err("backticks are not supported")),
             b'/' => {
                 self.pos += 1;
-                let raw = self.delimited(b'/')?;
+                let raw = self.delimited_or(b'/', "Search pattern not terminated")?;
                 let flags = self.regex_flags();
                 Ok(Expr::Match { target: None, neg: false, pat: self.pattern(&raw, flags)? })
             }
@@ -1224,6 +1270,14 @@ impl<'a> Parser<'a> {
     /// The text up to the closing delimiter (the opening one consumed),
     /// with backslashes kept. Bracketing delimiters nest.
     fn delimited(&mut self, open: u8) -> R<Vec<u8>> {
+        let msg = match open {
+            b'"' => "Can't find string terminator '\"' anywhere before EOF".to_string(),
+            o => format!("Can't find string terminator \"{}\" anywhere before EOF", closing(o) as char),
+        };
+        self.delimited_or(open, &msg)
+    }
+
+    fn delimited_or(&mut self, open: u8, unterminated: &str) -> R<Vec<u8>> {
         let close = closing(open);
         let mut depth = 0;
         let mut out = Vec::new();
@@ -1249,7 +1303,7 @@ impl<'a> Parser<'a> {
             out.push(c);
             self.pos += 1;
         }
-        Err(self.err("unterminated string"))
+        Err(self.fatal(unterminated))
     }
 
     fn regex_flags(&mut self) -> Rc<str> {
@@ -1271,8 +1325,22 @@ impl<'a> Parser<'a> {
     fn quote_like(&mut self, word: &str) -> R<Expr> {
         self.ws();
         let open = self.at(0);
+        if open == 0 {
+            return Err(self.fatal(match word {
+                "m" | "qr" => "Search pattern not terminated",
+                "s" => "Substitution pattern not terminated",
+                "tr" | "y" => "Transliteration pattern not terminated",
+                _ => "Can't find string terminator anywhere before EOF",
+            }));
+        }
         self.pos += 1;
-        let first = self.delimited(open)?;
+        let first = match word {
+            "m" | "qr" => self.delimited_or(open, "Search pattern not terminated")?,
+            "s" => self.delimited_or(open, "Substitution pattern not terminated")?,
+            "tr" | "y" => self.delimited_or(open, "Transliteration pattern not terminated")?,
+            _ => self.delimited(open)?,
+        };
+        let second_msg = if word == "s" { "Substitution replacement not terminated" } else { "Transliteration replacement not terminated" };
         match word {
             "q" => Ok(Expr::Const(Value::bytes(single_quoted(&first, closing(open))))),
             "qq" => self.interp_expr(&first),
@@ -1292,10 +1360,13 @@ impl<'a> Parser<'a> {
                 let second = if open != closing(open) {
                     self.ws();
                     let o2 = self.at(0);
+                    if o2 == 0 {
+                        return Err(self.fatal(second_msg));
+                    }
                     self.pos += 1;
-                    self.delimited(o2)?
+                    self.delimited_or(o2, second_msg)?
                 } else {
-                    self.delimited(open)?
+                    self.delimited_or(open, second_msg)?
                 };
                 let flags = self.regex_flags();
                 if word == "s" {
@@ -1334,6 +1405,9 @@ impl<'a> Parser<'a> {
             }
             let d = self.s.get(k).copied().unwrap_or(0);
             let immediate = k == save;
+            if d == 0 && matches!(id, "m" | "s" | "tr" | "y" | "qr") {
+                return self.quote_like(id);
+            }
             if !d.is_ascii_alphanumeric() && d != b'_' && !d.is_ascii_whitespace() && d != 0 && d != b'=' && d != b',' && d != b';' && d != b')' && (immediate || matches!(d, b'{' | b'/' | b'(' | b'[' | b'<' | b'!' | b'|')) {
                 return self.quote_like(id);
             }
@@ -1679,7 +1753,23 @@ impl<'a> Parser<'a> {
                 let save = self.pos;
                 self.pos += 1;
                 self.ws();
-                if let Some(id) = self.peek_ident() {
+                let id = match self.peek_ident() {
+                    Some(id) => Some(id),
+                    None => {
+                        // ${3}, ${^WARNING_BITS}
+                        let r = self.rest();
+                        let n = r.iter().take_while(|c| c.is_ascii_digit()).count();
+                        if n > 0 {
+                            std::str::from_utf8(&r[..n]).ok()
+                        } else if r.first() == Some(&b'^') {
+                            let m = 1 + r[1..].iter().take_while(|&&c| ident_char(c)).count();
+                            std::str::from_utf8(&r[..m]).ok()
+                        } else {
+                            None
+                        }
+                    }
+                };
+                if let Some(id) = id {
                     let after = self.pos + id.len();
                     let mut k = after;
                     while k < self.s.len() && self.s[k].is_ascii_whitespace() {
@@ -1851,7 +1941,7 @@ impl<'a> Parser<'a> {
                     flush(&mut lit, &mut parts);
                     let src = &raw[i..end];
                     let mut sub = Parser { s: src, pos: 0, package: self.package.clone() };
-                    let e = sub.postfix().map_err(|e| ParseError { msg: format!("in string: {}", e.msg), line: e.line })?;
+                    let e = sub.postfix()?;
                     parts.push(Part::Scalar(e));
                     i = end;
                     continue;
@@ -1862,7 +1952,7 @@ impl<'a> Parser<'a> {
                     flush(&mut lit, &mut parts);
                     let src = &raw[i..end];
                     let mut sub = Parser { s: src, pos: 0, package: self.package.clone() };
-                    let e = sub.postfix().map_err(|e| ParseError { msg: format!("in string: {}", e.msg), line: e.line })?;
+                    let e = sub.postfix()?;
                     parts.push(Part::Array(e));
                     i = end;
                     continue;

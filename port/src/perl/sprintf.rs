@@ -212,8 +212,11 @@ fn format_one(conv: u8, spec: &Spec, v: &Value) -> Option<Vec<u8>> {
 fn int_string(v: &Value, spec: &Spec) -> String {
     let digits_and_sign = match v.to_number() {
         Number::Int(i) => (i.unsigned_abs().to_string(), i < 0),
-        // A UV prints in full with %d.
-        Number::UInt(u) => (u.to_string(), false),
+        // %d reads a UV as an IV: 2**64-1 prints as -1.
+        Number::UInt(u) => {
+            let i = u as i64;
+            (i.unsigned_abs().to_string(), i < 0)
+        }
         Number::Float(f) => {
             // perl's I_V cast: below IV_MIN saturates to IV_MIN; above IV_MAX
             // goes through UV (saturating at UV_MAX), then is read as an IV,
