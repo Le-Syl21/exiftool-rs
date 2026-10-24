@@ -4,7 +4,9 @@
 
 pub mod ops;
 pub mod pack;
+pub mod regex;
 pub mod sprintf;
+pub mod tr;
 pub mod value;
 
 pub use value::{Number, Value};

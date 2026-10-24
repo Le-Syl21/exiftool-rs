@@ -187,3 +187,77 @@ fn pack_unpack_match_perl() {
     }
     assert!(failures.is_empty(), "{} mismatches:\n{}", failures.len(), failures.join("\n"));
 }
+
+#[test]
+fn tr_matches_perl() {
+    if !perl_available() {
+        return;
+    }
+    // (subject, search, replace, flags) as ExifTool writes them.
+    let cases: &[(&str, &str, &str, &str)] = &[
+        ("a\\0b\\0c", "\\0", "", "d"),
+        ("Ab-1_x!? z", "-_a-zA-Z0-9", "", "dc"),
+        ("1,2,3", ",", " ", ""),
+        ("1,2,3", ",", "", ""),
+        ("aabbccdd", "a-c", "A-C", "s"),
+        ("hello world", "a-y", "b-z", ""),
+        ("a-b-c", "\\-", "_", ""),
+        ("2010:01:02", ":", "-", ""),
+        ("abc\\x01\\x7f", "\\x00-\\x1f\\x7f", ".", ""),
+        ("abcdef", "a-f", "AB", ""),
+        ("abcdef", "a-f", "AB", "d"),
+        ("x  y   z", " ", "", "s"),
+        ("x  y   z", " ", " ", "s"),
+        ("A1b2", "0-9", "", "cd"),
+        ("1.2.3", ".", " ", ""),
+    ];
+    let mut script = String::from("no warnings;\n");
+    for (s, a, b, f) in cases {
+        script.push_str(&format!(
+            "{{ my $s = \"{s}\"; my $n = ($s =~ tr/{a}/{b}/{f}); print unpack('H*', $s), ' ', $n, \"\\x1e\\x1f\"; }}\n"
+        ));
+    }
+    let out = Command::new("perl").arg("-e").arg(&script).output().unwrap();
+    let expected = split_sep(&out.stdout);
+    let mut failures = Vec::new();
+    for (k, (s, a, b, f)) in cases.iter().enumerate() {
+        // The subject is a double-quoted perl string: expand its escapes the
+        // same way for our side.
+        let subject = perl_dq(s);
+        let (res, n) = exiftool_port::perl::tr::tr(&subject, a.as_bytes(), b.as_bytes(), f);
+        let ours = format!("{} {n}", res.iter().map(|x| format!("{x:02x}")).collect::<String>());
+        if ours.as_bytes() != &expected[k][..] {
+            failures.push(format!("tr/{a}/{b}/{f} on {s:?}: perl {:?}, ours {ours:?}", String::from_utf8_lossy(&expected[k])));
+        }
+    }
+    assert!(failures.is_empty(), "{} mismatches:\n{}", failures.len(), failures.join("\n"));
+}
+
+/// The escapes of a double-quoted perl string used in the cases above.
+fn perl_dq(s: &str) -> Vec<u8> {
+    let b = s.as_bytes();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'\\' && i + 1 < b.len() {
+            match b[i + 1] {
+                b'0' => {
+                    out.push(0);
+                    i += 2;
+                }
+                b'x' => {
+                    out.push(u8::from_str_radix(&s[i + 2..i + 4], 16).unwrap());
+                    i += 4;
+                }
+                c => {
+                    out.push(c);
+                    i += 2;
+                }
+            }
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    out
+}
