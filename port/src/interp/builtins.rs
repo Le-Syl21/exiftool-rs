@@ -433,9 +433,15 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 None => Value::Undef,
             })
         }
-        "exit" => die("exit called"),
+        "exit" => {
+            let code = match args.first() {
+                Some(a) => it.scalar(a, scope)?.to_i64() as i32,
+                None => 0,
+            };
+            Err(Flow::Exit(code))
+        }
         "sleep" => one(Value::Int(0)),
-        "do" | "open" | "close" | "binmode" | "unlink" | "mkdir" | "rmdir" | "opendir" | "readdir" | "closedir" | "system" | "exec" | "select" | "seek" | "read" | "sysread" | "eof" | "readline" | "fileno" | "chdir" | "rename" | "stat" | "lstat" => {
+        "do" | "mkdir" | "rmdir" | "opendir" | "readdir" | "closedir" | "system" | "exec" | "readline" | "chdir" | "rename" | "stat" | "lstat" => {
             die(format!("{name} is not available in this context"))
         }
         _ => unreachable!(),

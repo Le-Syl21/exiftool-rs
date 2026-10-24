@@ -5,4 +5,6 @@
 //! `docs/port/ARCHITECTURE.md`.
 
 pub mod interp;
+pub mod modules;
 pub mod perl;
+pub mod runtime;

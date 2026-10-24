@@ -185,8 +185,11 @@ pub enum Expr {
     Last(Option<Rc<str>>),
     Next(Option<Rc<str>>),
     Wantarray,
-    /// `print`/`printf` with an optional filehandle name.
-    Print { printf: bool, fh: Option<Rc<str>>, args: Vec<Expr> },
+    /// `print`/`printf` with an optional filehandle: a bareword is a
+    /// `Const("*NAME")`, otherwise the expression holding the handle.
+    Print { printf: bool, fh: Option<P<Expr>>, args: Vec<Expr> },
+    /// `<FH>`, `<$fh>`
+    ReadLine(P<Expr>),
 }
 
 #[derive(Debug, Clone)]
@@ -209,4 +212,6 @@ pub enum Stmt {
     Package(Rc<str>, Option<Block>),
     /// `use`/`no`: kept for `use vars`/`use constant`-like effects.
     Use(Rc<str>, Option<Expr>),
+    /// `END { ... }`: run when the program ends.
+    End(Rc<Block>),
 }

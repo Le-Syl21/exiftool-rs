@@ -15,6 +15,8 @@ use super::parse;
 
 #[path = "builtins.rs"]
 mod builtins;
+#[path = "io.rs"]
+pub mod io;
 use crate::perl::ops;
 use crate::perl::value::Hash;
 use crate::perl::Value;
@@ -27,6 +29,8 @@ pub enum Flow {
     Return(Vec<Value>),
     Last(Option<Rc<str>>),
     Next(Option<Rc<str>>),
+    /// `exit CODE`
+    Exit(i32),
 }
 
 pub type ER<T> = Result<T, Flow>;
@@ -279,6 +283,14 @@ pub struct Interp {
     eval_count: usize,
     /// `use strict` (refs and subs) in effect.
     pub strict: bool,
+    /// Bareword filehandles, by qualified name.
+    handles: HashMap<Rc<str>, io::HandleRc>,
+    /// Write STDOUT/STDERR to the process's streams instead of buffers.
+    pub passthrough: bool,
+    /// `END` blocks, run by `run_end_blocks`.
+    end_blocks: Vec<(Rc<Block>, Rc<Scope>)>,
+    /// Set by `exit`.
+    pub exit_code: Option<i32>,
 }
 
 impl Default for Interp {
@@ -323,6 +335,10 @@ impl Interp {
             stderr: Vec::new(),
             eval_count: 0,
             strict: true,
+            handles: HashMap::new(),
+            passthrough: false,
+            end_blocks: Vec::new(),
+            exit_code: None,
         };
         i.set_scalar("main::\"", Value::str(" "));
         i.set_scalar("main::,", Value::Undef);
@@ -466,6 +482,11 @@ impl Interp {
         match r {
             Ok(v) | Err(Flow::Return(v)) => Ok(fit(v, want)),
             Err(Flow::Die(e)) => Err(e),
+            Err(Flow::Exit(code)) => {
+                // exit ends the program: the caller sees it in exit_code.
+                self.exit_code = Some(code);
+                Err(Value::str("exit\n"))
+            }
             Err(Flow::Last(_)) | Err(Flow::Next(_)) => Err(Value::str("Can't \"last\" outside a loop block\n")),
         }
     }
@@ -485,6 +506,24 @@ impl Interp {
         let b = Rc::new(block);
         self.cache.insert(code.to_vec(), b.clone());
         Ok(b)
+    }
+
+    /// Run the `END` blocks, last defined first.
+    pub fn run_end_blocks(&mut self) -> ER<()> {
+        while let Some((b, scope)) = self.end_blocks.pop() {
+            self.run_block(&b, &scope, Want::Void)?;
+        }
+        Ok(())
+    }
+
+    /// Flush every open output handle.
+    pub fn flush_handles(&mut self) {
+        for h in self.handles.values() {
+            if let Some(io::Output::File(f)) = &mut h.borrow_mut().output {
+                use std::io::Write;
+                let _ = f.flush();
+            }
+        }
     }
 
     /// Call a code value with arguments.
@@ -680,6 +719,10 @@ impl Interp {
                 Err(e) => Err(e),
             },
             Stmt::SubDef(_) => Ok(vec![]),
+            Stmt::End(b) => {
+                self.end_blocks.push((b.clone(), scope.clone()));
+                Ok(vec![])
+            }
             Stmt::Package(name, block) => match block {
                 None => {
                     self.package = name.clone();
@@ -734,7 +777,17 @@ impl Interp {
                             }
                         }
                     }
-                    other => self.require(other)?,
+                    other => {
+                        self.require(other)?;
+                        // use Module LIST: Module->import(LIST)
+                        if let Some(code) = self.find_method(other, "import") {
+                            let mut a = vec![Value::str(other)];
+                            if let Some(x) = args {
+                                a.extend(self.list(x, scope)?);
+                            }
+                            self.call(&code, a, Want::Void)?;
+                        }
+                    }
                 }
                 Ok(vec![])
             }
@@ -962,6 +1015,7 @@ impl Interp {
             }
             Expr::Call { .. } | Expr::Method { .. } | Expr::CallRef(..) => self.eval_call(e, scope, Want::List),
             Expr::Match { .. } => self.do_match(e, scope, Want::List),
+            Expr::ReadLine(h) => self.readline(h, scope, Want::List),
             Expr::Do(b) => self.run_block(b, scope, Want::List),
             Expr::Eval(b) => self.eval_block(b, scope, Want::List),
             Expr::EvalStr(code) => self.eval_str_expr(code, scope, Want::List),
@@ -1154,6 +1208,7 @@ impl Interp {
             }
             Expr::Last(l) => Err(Flow::Last(l.clone())),
             Expr::Next(l) => Err(Flow::Next(l.clone())),
+            Expr::ReadLine(h) => Ok(self.readline(h, scope, Want::Scalar)?.pop().unwrap_or_default()),
             Expr::Wantarray => Ok(match self.want_stack.last() {
                 Some(Want::List) => Value::Int(1),
                 Some(Want::Scalar) => Value::Int(0),
@@ -1181,12 +1236,21 @@ impl Interp {
                     }
                     o
                 };
-                if fh.as_deref() == Some("STDERR") {
-                    self.stderr.extend_from_slice(&out);
-                } else {
-                    self.stdout.extend_from_slice(&out);
+                let mut out = out;
+                if !*printf {
+                    out.extend_from_slice(&self.get_scalar("main::\\").to_bytes());
                 }
-                Ok(Value::Int(1))
+                let h = match fh {
+                    Some(e) => {
+                        let v = self.scalar(e, scope)?;
+                        self.handle_of(&v, false)
+                    }
+                    None => self.handle_of(&Value::str("*STDOUT"), false),
+                };
+                Ok(Value::from(match h {
+                    Some(h) => self.write_handle(&h, &out),
+                    None => false,
+                }))
             }
         }
     }
@@ -2201,6 +2265,9 @@ impl Interp {
         match e {
             Expr::Call { name, args, amp } => {
                 if !*amp && !name.contains("::") {
+                    if let Some(r) = io::call(self, name, args, scope, want) {
+                        return r;
+                    }
                     if let Some(r) = builtins::call(self, name, args, scope, want) {
                         return r;
                     }

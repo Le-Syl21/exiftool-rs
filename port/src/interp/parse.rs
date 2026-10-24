@@ -70,6 +70,9 @@ const LIST_OPS: &[&str] = &[
     "lcfirst", "vec", "formline", "waitpid", "stat", "lstat",
 ];
 
+/// Builtins whose first argument may be a bareword filehandle.
+const FH_FUNCS: &[&str] = &["open", "close", "binmode", "eof", "read", "sysread", "seek", "tell", "fileno", "truncate", "flock", "readline", "select", "opendir", "readdir", "closedir", "syswrite", "sysseek"];
+
 /// Builtins that may be called without arguments and take none.
 const NO_ARGS: &[&str] = &["time", "times", "wait", "wantarray"];
 
@@ -284,6 +287,11 @@ impl<'a> Parser<'a> {
                 self.expect("(")?;
                 let cond = if self.starts(")") { None } else { Some(self.expr()?) };
                 self.expect(")")?;
+                // while (<FH>) is while (defined($_ = <FH>))
+                let cond = cond.map(|c| match c {
+                    Expr::ReadLine(_) => Expr::Call { name: Rc::from("defined"), args: vec![Expr::Assign(None, Box::new(Expr::Scalar(Rc::from("_"))), Box::new(c))], amp: false },
+                    c => c,
+                });
                 let body = self.block()?;
                 return Ok(Some(Stmt::While { label, cond, body, until, post: false }));
             }
@@ -343,7 +351,11 @@ impl<'a> Parser<'a> {
                 let save = self.pos;
                 self.pos += word.unwrap().len();
                 if self.starts("{") {
-                    return Ok(Some(Stmt::Block(None, self.block()?)));
+                    let b = self.block()?;
+                    if word == Some("END") {
+                        return Ok(Some(Stmt::End(Rc::new(b))));
+                    }
+                    return Ok(Some(Stmt::Block(None, b)));
                 }
                 self.pos = save;
             }
@@ -1113,6 +1125,29 @@ impl<'a> Parser<'a> {
             b'<' if self.rest().starts_with(b"<<") && (self.at(2) == b'"' || self.at(2) == b'\'' || self.at(2) == b'~' || ident_start(self.at(2))) => {
                 self.heredoc()
             }
+            b'<' => {
+                // <FH>, <$fh>, <>
+                let r = self.rest();
+                let end = r.iter().position(|&b| b == b'>').ok_or_else(|| self.err("syntax error"))?;
+                let inner = std::str::from_utf8(&r[1..end]).unwrap_or("").to_string();
+                self.pos += end + 1;
+                let h = if let Some(v) = inner.strip_prefix('$') {
+                    Expr::Scalar(Rc::from(v))
+                } else if inner.is_empty() {
+                    Expr::Const(Value::str("*STDIN"))
+                } else {
+                    Expr::Const(Value::str(&format!("*{inner}")))
+                };
+                Ok(Expr::ReadLine(Box::new(h)))
+            }
+            b'*' if ident_start(self.at(1)) => {
+                // A glob: *NAME (a filehandle here).
+                self.pos += 1;
+                let id = self.peek_ident().unwrap();
+                self.pos += id.len();
+                let name = if id.contains("::") || matches!(id, "STDIN" | "STDOUT" | "STDERR") { id.to_string() } else { format!("{}::{id}", self.package) };
+                Ok(Expr::Const(Value::str(&format!("*{name}"))))
+            }
             b'0'..=b'9' => self.number(),
             b'.' if self.at(1).is_ascii_digit() => self.number(),
             _ if ident_start(c) || (c == b':' && self.at(1) == b':') => self.word_term(),
@@ -1504,13 +1539,7 @@ impl<'a> Parser<'a> {
                 if paren {
                     self.pos += 1;
                 }
-                let mut fh = None;
-                if let Some(h) = self.peek_ident() {
-                    if matches!(h, "STDOUT" | "STDERR") {
-                        self.pos += h.len();
-                        fh = Some(Rc::from(h));
-                    }
-                }
+                let fh = self.print_handle()?;
                 let args = if paren {
                     let e = if self.starts(")") { Expr::List(vec![]) } else { self.expr()? };
                     self.expect(")")?;
@@ -1520,9 +1549,35 @@ impl<'a> Parser<'a> {
                 } else {
                     flatten_list(self.comma()?)
                 };
-                return Ok(Expr::Print { printf: id == "printf", fh, args });
+                return Ok(Expr::Print { printf: id == "printf", fh: fh.map(Box::new), args });
             }
             _ => {}
+        }
+        // Builtins whose first argument may be a bareword filehandle.
+        if FH_FUNCS.contains(&id) {
+            let paren = self.starts("(");
+            if paren {
+                self.pos += 1;
+            }
+            let mut args = Vec::new();
+            if let Some(h) = self.peek_ident() {
+                let after = self.pos + h.len();
+                let next = self.s[after..].iter().find(|c| !c.is_ascii_whitespace()).copied();
+                if !NAMED_UNARY.contains(&h) && !LIST_OPS.contains(&h) && h != "my" && matches!(next, Some(b',' | b')' | b';') | None) {
+                    self.pos = after;
+                    args.push(Expr::Const(Value::str(&format!("*{h}"))));
+                    self.eat(",");
+                }
+            }
+            if paren {
+                if !self.starts(")") {
+                    args.extend(flatten_list(self.expr()?));
+                }
+                self.expect(")")?;
+            } else if !self.at_terminator() && (args.is_empty() || self.term_follows()) && self.term_follows_op(true) {
+                args.extend(flatten_list(self.comma()?));
+            }
+            return Ok(Expr::Call { name: Rc::from(id), args, amp: false });
         }
         // Builtins and subs.
         let is_unary = NAMED_UNARY.contains(&id);
@@ -1556,6 +1611,49 @@ impl<'a> Parser<'a> {
             return Ok(Expr::Call { name: Rc::from(id), args, amp: false });
         }
         Ok(Expr::Call { name: Rc::from(id), args: vec![], amp: true })
+    }
+
+    /// The filehandle of `print FH LIST`, `print $fh LIST`, `print {$fh}`.
+    fn print_handle(&mut self) -> R<Option<Expr>> {
+        self.ws();
+        if self.at(0) == b'{' {
+            self.pos += 1;
+            let e = self.expr()?;
+            self.expect("}")?;
+            return Ok(Some(e));
+        }
+        if let Some(h) = self.peek_ident() {
+            let after = self.pos + h.len();
+            let mut k = after;
+            while k < self.s.len() && self.s[k].is_ascii_whitespace() {
+                k += 1;
+            }
+            let next = self.s.get(k).copied().unwrap_or(0);
+            // A bareword followed by a term (not an operator or a comma).
+            let followed_by_term = k > after && matches!(next, b'"' | b'\'' | b'$' | b'@' | b'0'..=b'9') || next == b';' || next == 0 || next == b')';
+            if !NAMED_UNARY.contains(&h) && !LIST_OPS.contains(&h) && !matches!(h, "map" | "grep" | "sort" | "join" | "sprintf" | "scalar" | "reverse") && followed_by_term && (h.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_') || next != b'(') {
+                self.pos = after;
+                return Ok(Some(Expr::Const(Value::str(&format!("*{h}")))));
+            }
+        }
+        if self.at(0) == b'$' && ident_start(self.at(1)) {
+            // print $fh "..." : a scalar followed by a term without a comma.
+            let save = self.pos;
+            self.pos += 1;
+            let id = self.peek_ident().unwrap();
+            let after = self.pos + id.len();
+            let mut k = after;
+            while k < self.s.len() && self.s[k] == b' ' {
+                k += 1;
+            }
+            let next = self.s.get(k).copied().unwrap_or(0);
+            if k > after && matches!(next, b'"' | b'\'' | b'$' | b'@') {
+                self.pos = after;
+                return Ok(Some(Expr::Scalar(Rc::from(id))));
+            }
+            self.pos = save;
+        }
+        Ok(None)
     }
 
     /// Whether a term starts at the current position (for optional
