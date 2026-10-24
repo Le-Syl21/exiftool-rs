@@ -1,0 +1,19 @@
+[package]
+name = "exiftool-port"
+version = "0.0.0"
+edition = "2021"
+description = "Faithful Rust port of Perl ExifTool 13.59 (work in progress)"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Standalone while the port grows next to the current crate.
+[workspace]
+
+[lib]
+name = "exiftool_port"
+path = "src/lib.rs"
+
+[dependencies]
+# Perl-compatible regular expressions on bytes (backreferences, lookahead,
+# /s on binary data), as ExifTool's patterns and magic numbers need.
+pcre2 = "0.2"
