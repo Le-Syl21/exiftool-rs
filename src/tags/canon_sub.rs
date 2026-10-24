@@ -138,7 +138,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -159,7 +159,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -183,7 +183,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -208,7 +208,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -255,19 +255,25 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
     if let Some(v) = get(16) {
         // RawConv => '$val == 0x7fff ? undef : $val' (suppress 32767)
         if v != 0x7fff_u16 as i16 {
-            // ValueConv: CameraISO lookup
-            let pv = match v {
-                0 => "n/a".to_string(),
-                14 => "Auto High".to_string(),
-                15 => "Auto".to_string(),
-                16 => "50".to_string(),
-                17 => "100".to_string(),
-                18 => "200".to_string(),
-                19 => "400".to_string(),
-                20 => "800".to_string(),
-                _ => v.to_string(),
+            // ValueConv: Image::ExifTool::Canon::CameraISO (Canon.pm:10466), a
+            // speed or the name of a code; there is no PrintConv.
+            let iso = if v & 0x4000 != 0 {
+                Value::I16(v & 0x3fff)
+            } else {
+                match v {
+                    0 => Value::String("n/a".into()),
+                    14 => Value::String("Auto High".into()),
+                    15 => Value::String("Auto".into()),
+                    16 => Value::I16(50),
+                    17 => Value::I16(100),
+                    18 => Value::I16(200),
+                    19 => Value::I16(400),
+                    20 => Value::I16(800),
+                    _ => Value::String(format!("Unknown ({v})")),
+                }
             };
-            tags.push(mkt("CameraISO", Value::I16(v), pv));
+            let pv = iso.to_display_string();
+            tags.push(mkt("CameraISO", iso, pv));
         }
     }
     if let Some(v) = get(17) {
@@ -281,7 +287,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -303,7 +309,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -345,7 +351,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -361,15 +367,26 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| v.to_string())
             };
-            tags.push(mkt("LensType", Value::I16(v), pv));
+            // Format int16u (Canon.pm:2502).
+            tags.push(mkt("LensType", Value::U16(v as u16), pv));
         }
     }
-    if let Some(v) = get(23) {
-        // Perl Canon CameraSettings: PrintConv => '"$val mm"'
-        tags.push(mkt("MaxFocalLength", Value::I16(v), format!("{} mm", v)));
-    }
-    if let Some(v) = get(24) {
-        tags.push(mkt("MinFocalLength", Value::I16(v), format!("{} mm", v)));
+    // Canon.pm:2511-2529 indices 23 and 24 -- Max/MinFocalLength, Format int16u,
+    // ValueConv '$val / ($$self{FocalUnits} || 1)', PrintConv '"$val mm"'.
+    // FocalUnits is index 25 of this same block.
+    let focal_units = match get(25) {
+        Some(fu) if fu != 0 => f64::from(fu),
+        _ => 1.0,
+    };
+    for (index, name) in [(23, "MaxFocalLength"), (24, "MinFocalLength")] {
+        if let Some(v) = get(index) {
+            let fl = f64::from(v as u16) / focal_units;
+            tags.push(mkt(
+                name,
+                Value::F64(fl),
+                format!("{} mm", crate::value::format_g15(fl)),
+            ));
+        }
     }
     if let Some(v) = get(25) {
         // Perl Canon: PrintConv => '"$val/mm"'
@@ -404,7 +421,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 _ => "",
             };
             let pv = if pv.is_empty() {
-                v.to_string()
+                format!("Unknown ({})", v)
             } else {
                 pv.to_string()
             };
@@ -422,7 +439,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 _ => "",
             };
             let pv = if pv.is_empty() {
-                v.to_string()
+                format!("Unknown ({})", v)
             } else {
                 pv.to_string()
             };
@@ -445,7 +462,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 _ => "",
             };
             let pv = if pv.is_empty() {
-                v.to_string()
+                format!("Unknown ({})", v)
             } else {
                 pv.to_string()
             };
@@ -471,7 +488,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 _ => "",
             };
             let pv = if pv.is_empty() {
-                v.to_string()
+                format!("Unknown ({})", v)
             } else {
                 pv.to_string()
             };
@@ -492,7 +509,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
                 _ => "",
             };
             let pv = if pv.is_empty() {
-                v.to_string()
+                format!("Unknown ({})", v)
             } else {
                 pv.to_string()
             };
@@ -509,7 +526,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown (0x{:x})", v as u16)
         } else {
             pv.to_string()
         };
@@ -528,7 +545,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -541,7 +558,7 @@ pub fn decode_camera_settings(values: &[i16]) -> Vec<Tag> {
             _ => "",
         };
         let pv = if pv.is_empty() {
-            v.to_string()
+            format!("Unknown ({})", v)
         } else {
             pv.to_string()
         };
@@ -595,11 +612,9 @@ pub fn decode_focal_length(values: &[u16], model: &str, focal_units: u16) -> Vec
     if focal_plane_size_valid(model) {
         for (index, name) in [(2, "FocalPlaneXSize"), (3, "FocalPlaneYSize")] {
             if let Some(&v) = values.get(index).filter(|&&v| v >= 40) {
-                tags.push(mkt(
-                    name,
-                    Value::U16(v),
-                    format!("{:.2} mm", v as f64 * 25.4 / 1000.0),
-                ));
+                // ValueConv '$val * 25.4 / 1000', PrintConv 'sprintf("%.2f mm",$val)'
+                let mm = f64::from(v) * 25.4 / 1000.0;
+                tags.push(mkt(name, Value::F64(mm), format!("{:.2} mm", mm)));
             }
         }
     }
@@ -730,7 +745,8 @@ fn mkt_pc(name: &str, v: i16) -> Tag {
     let pv = canon_cs_pc(name, v)
         .or_else(|| crate::tags::print_conv_generated::print_conv_by_name(name, v as i64))
         .map(str::to_string)
-        .unwrap_or_else(|| v.to_string());
+        // Each of these is a hash PrintConv, which prints a miss as "Unknown (val)".
+        .unwrap_or_else(|| format!("Unknown ({v})"));
     mkt(name, Value::I16(v), pv)
 }
 

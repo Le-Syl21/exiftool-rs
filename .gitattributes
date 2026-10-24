@@ -13,3 +13,4 @@ tests/expected_jpeg_trailers/** text eol=lf
 tests/expected_media/** text eol=lf
 tests/issue22/*.txt text eol=lf
 tests/gps/*.txt text eol=lf
+tests/issues/canon/*.txt text eol=lf

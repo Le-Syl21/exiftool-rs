@@ -1783,21 +1783,6 @@ impl ExifTool {
             }
         }
 
-        // Olympus post-processing: remove the generic "Lens" composite for Olympus cameras.
-        // In Perl, the "Lens" composite tag requires Canon:MinFocalLength (Canon namespace).
-        // Our composite.rs generates Lens for any manufacturer that has MinFocalLength +
-        // MaxFocalLength (e.g., Olympus Equipment sub-IFD).  Remove it for non-Canon cameras.
-        {
-            let make = tags
-                .iter()
-                .find(|t| t.name == "Make")
-                .map(|t| t.print_value.clone())
-                .unwrap_or_default();
-            if !make.to_uppercase().contains("CANON") {
-                tags.retain(|t| t.name != "Lens" || t.group.family0 != "Composite");
-            }
-        }
-
         // Priority-based deduplication: when the same tag name appears multiple times,
         // keep only the one with the highest priority (e.g., EXIF over JFIF, FFF over MakerNote).
         //

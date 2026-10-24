@@ -57,6 +57,26 @@ pub fn read_crw(data: &[u8]) -> Result<Vec<Tag>> {
         tags.retain(|t| t.name != "SerialNumber" || t.group.family0 != "MakerNotes");
     }
 
+    // Canon.pm:2721 FocalLength ValueConv '$val / ($$self{FocalUnits} || 1)',
+    // with the FocalUnits of the whole file (see the 0x1029 arm).
+    let focal_units = tags
+        .iter()
+        .find(|t| t.name == "FocalUnits" && t.group.family1 == "Canon")
+        .and_then(|t| t.raw_value.as_f64())
+        .filter(|&fu| fu != 0.0);
+    if let Some(fu) = focal_units {
+        for t in tags
+            .iter_mut()
+            .filter(|t| t.name == "FocalLength" && t.group.family1 == "Canon")
+        {
+            if let Some(fl) = t.raw_value.as_f64() {
+                let fl = fl / fu;
+                t.raw_value = Value::F64(fl);
+                t.print_value = format!("{} mm", crate::value::format_g15(fl));
+            }
+        }
+    }
+
     // Scan for embedded XMP trailer (outside the CIFF structure).
     // Perl ExifTool calls ProcessTrailers which finds XMP appended after the CIFF block.
     if let Some(xmp_start) = find_xmp(data) {
@@ -992,96 +1012,23 @@ fn parse_ciff_binary_subdir(tag_id: u16, data: &[u8], is_le: bool, tags: &mut Ve
             true
         }
         0x1029 => {
-            // CanonFocalLength (SubDirectory → Canon::FocalLength, FORMAT=int16u)
-            // 0=FocalType (PrintConv: 1=Fixed, 2=Zoom)
-            // 1=FocalLength (ValueConv val/FocalUnits)
-            // 2=FocalPlaneXSize (int16u, ValueConv val*25.4/1000)
-            // 3=FocalPlaneYSize (int16u, ValueConv val*25.4/1000)
-            //
-            // Canon::FocalLength GROUPS => { 2 => 'Image' } (Canon.pm line 2698);
-            // the `mk`/inline helpers default to Camera, so this arm's tags are
-            // re-stamped Image at the end.
-            let focal_start = tags.len();
-            if data.len() >= 2 {
-                let focal_type = ru16(data, 0);
-                let ft_str = match focal_type {
-                    1 => "Fixed".to_string(),
-                    2 => "Zoom".to_string(),
-                    _ => focal_type.to_string(),
-                };
-                // RawConv: '$val ? $val : undef' — skip if zero
-                if focal_type != 0 {
-                    tags.push(mk("FocalType", ft_str));
-                }
-            }
-            // FocalLength (index 1): ValueConv = val / FocalUnits
-            if data.len() >= 4 {
-                let fl_raw = ru16(data, 2);
-                let focal_units = ru16(data, 0);
-                let fu = if focal_units > 0 { focal_units } else { 1 };
-                if fl_raw > 0 {
-                    let fl_mm = fl_raw as f64 / fu as f64;
-                    tags.push(Tag {
-                        id: TagId::Text("FocalLength".into()),
-                        name: "FocalLength".into(),
-                        description: "Focal Length".into(),
-                        group: TagGroup {
-                            family0: "MakerNotes".into(),
-                            family1: group1.into(),
-                            family2: "Camera".into(),
-                            family3: "Main".into(),
-                        },
-                        raw_value: Value::F64(fl_mm),
-                        print_value: format!("{} mm", fl_mm as u32),
-                        priority: 0,
-                    });
-                }
-            }
-            if data.len() >= 6 {
-                let x_raw = ru16(data, 4);
-                if x_raw >= 40 {
-                    let x_mm = x_raw as f64 * 25.4 / 1000.0;
-                    let print_str = format!("{:.2} mm", x_mm);
-                    tags.push(Tag {
-                        id: TagId::Text("FocalPlaneXSize".into()),
-                        name: "FocalPlaneXSize".into(),
-                        description: "Focal Plane X Size".into(),
-                        group: TagGroup {
-                            family0: "MakerNotes".into(),
-                            family1: group1.into(),
-                            family2: "Camera".into(),
-                            family3: "Main".into(),
-                        },
-                        raw_value: Value::F64(x_mm),
-                        print_value: print_str,
-                        priority: 0,
-                    });
-                }
-            }
-            if data.len() >= 8 {
-                let y_raw = ru16(data, 6);
-                if y_raw >= 40 {
-                    let y_mm = y_raw as f64 * 25.4 / 1000.0;
-                    let print_str = format!("{:.2} mm", y_mm);
-                    tags.push(Tag {
-                        id: TagId::Text("FocalPlaneYSize".into()),
-                        name: "FocalPlaneYSize".into(),
-                        description: "Focal Plane Y Size".into(),
-                        group: TagGroup {
-                            family0: "MakerNotes".into(),
-                            family1: group1.into(),
-                            family2: "Camera".into(),
-                            family3: "Main".into(),
-                        },
-                        raw_value: Value::F64(y_mm),
-                        print_value: print_str,
-                        priority: 0,
-                    });
-                }
-            }
-            for t in &mut tags[focal_start..] {
-                t.group.family2 = "Image".into();
-            }
+            // CanonFocalLength: Canon::FocalLength, the same int16u block as
+            // maker-note tag 0x0002, read by the same decoder. Its FocalLength is
+            // '$val / ($$self{FocalUnits} || 1)' (Canon.pm:2721), a ValueConv
+            // ExifTool only evaluates once the whole file is read, so the
+            // FocalUnits of a CameraSettings block (0x102d) stored after this one
+            // still applies: read_crw divides it once every block is in. The
+            // FocalPlaneX/YSize Condition, on the other hand, sees the Model
+            // known by now.
+            let values: Vec<u16> = (0..data.len() / 2).map(|i| ru16(data, i * 2)).collect();
+            let model = tags
+                .iter()
+                .find(|t| t.name == "Model")
+                .map(|t| t.print_value.clone())
+                .unwrap_or_default();
+            tags.extend(crate::tags::canon_sub::decode_focal_length(
+                &values, &model, 0,
+            ));
             true
         }
         _ => false,
