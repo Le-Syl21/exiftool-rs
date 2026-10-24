@@ -59,6 +59,99 @@ pub fn print_conv_by_tag_name(name: &str, value: &Value) -> Option<String> {
     None
 }
 
+/// The printed form of a value read from an EXIF IFD: the hand-written
+/// conversion, else the tag's own PrintConv hash, else the value itself.
+///
+/// The hash is the one of the table the IFD is read with -- GPS::Main for the
+/// GPS IFD, Exif::Main for every other -- looked up by tag id, never by name: a
+/// name is shared with the tags of other modules, and the first of them to
+/// define one is not the table ExifTool converts with (Orientation 0 printed
+/// another module's "Horizontal (normal)"). A value the hash has no entry for
+/// prints as `Unknown (value)`, as ExifTool's does.
+pub fn print_value(ifd: &str, tag_id: u16, value: &Value) -> String {
+    if let Some(s) = print_conv(ifd, tag_id, value) {
+        return s;
+    }
+    let module = if ifd == "GPS" { "GPS" } else { "Exif" };
+    value
+        .as_u64()
+        .and_then(|v| i64::try_from(v).ok())
+        .and_then(|v| super::print_conv_generated::print_conv_or_unknown(module, tag_id, v))
+        .unwrap_or_else(|| value.to_display_string())
+}
+
+/// Exif.pm ConvertExifText, as UserComment's RawConv calls it: the text of a
+/// value that starts with an 8-byte character code, and whether that code was
+/// one ExifTool does not recognize -- it then warns "Invalid EXIF text
+/// encoding" and keeps the whole value, code included, as the text.
+pub fn convert_exif_text(data: &[u8]) -> (String, bool) {
+    // `return $val if length($val) < 8`
+    if data.len() < 8 {
+        return (
+            crate::encoding::decode_utf8_or_latin1(data).to_string(),
+            false,
+        );
+    }
+    let (id, body) = data.split_at(8);
+    let nul_or_blank = |b: &u8| *b == 0 || *b == b' ';
+    // /^(ASCII)?(\0|[\0 ]+$)/: no code, or ASCII, then a NUL or only padding.
+    let ascii = |rest: &[u8]| rest.first() == Some(&0) || rest.iter().all(nul_or_blank);
+    let (text, invalid) = if ascii(id) || (id.starts_with(b"ASCII") && ascii(&id[5..])) {
+        // Truncate at the null terminator (`$str =~ s/\0.*//s`).
+        let body = body.split(|&b| b == 0).next().unwrap_or_default();
+        (
+            crate::encoding::decode_utf8_or_latin1(body).to_string(),
+            false,
+        )
+    } else if id.starts_with(b"UNICODE") && nul_or_blank(&id[7]) {
+        // UTF-16 in whichever byte order the text itself shows, since
+        // MicrosoftPhoto writes little-endian even in big-endian EXIF.
+        let val = super::conv_expr::Val::Binary(body.to_vec());
+        let text = super::conv_expr::eval("$self->Decode($val,\"UTF16\",\"Unknown\")", &val)
+            .map(|v| v.as_string())
+            .unwrap_or_else(|| {
+                let units: Vec<u16> = body
+                    .chunks_exact(2)
+                    .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                    .collect();
+                String::from_utf16_lossy(&units)
+            });
+        (text, false)
+    } else if id.starts_with(b"JIS") && id[3..].iter().all(nul_or_blank) {
+        // No JIS decoder: the text up to its terminator, as it is.
+        let body = body.split(|&b| b == 0).next().unwrap_or_default();
+        (
+            crate::encoding::decode_utf8_or_latin1(body).to_string(),
+            false,
+        )
+    } else {
+        // `$str = $id . $str`
+        (
+            crate::encoding::decode_utf8_or_latin1(data).to_string(),
+            true,
+        )
+    };
+    // `$str =~ s/ +$//`
+    (text.trim_end_matches(' ').to_string(), invalid)
+}
+
+/// The text of a Windows Explorer XP* tag (0x9c9b-0x9c9f): ExifTool reads
+/// them as `undef` whatever type the entry states, and converts them with
+/// `$self->Decode($val,"UCS2","II")`, UCS-2 little-endian up to the first NUL.
+pub fn decode_xp_text(data: &[u8]) -> String {
+    let val = super::conv_expr::Val::Binary(data.to_vec());
+    super::conv_expr::eval("$self->Decode($val,\"UCS2\",\"II\")", &val)
+        .map(|v| v.as_string())
+        .unwrap_or_else(|| {
+            let units: Vec<u16> = data
+                .chunks_exact(2)
+                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .take_while(|&u| u != 0)
+                .collect();
+            String::from_utf16_lossy(&units)
+        })
+}
+
 /// Lookup tag name from generated tables (fallback for unknown tags).
 pub fn lookup_generated(tag_id: u16) -> Option<(&'static str, &'static str)> {
     super::generated::GENERATED_EXIF_TAGS
@@ -396,28 +489,12 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 }
             }
         }
-        // UserComment — 8-byte charset ID prefix, then the comment text.
+        // UserComment — 8-byte charset ID prefix, then the comment text. The
+        // EXIF reader converts it as it reads it (a RawConv); this covers a
+        // value still holding its bytes.
         ("ExifIFD", 0x9286) => {
             if let Value::Undefined(ref data) = value {
-                if data.len() >= 8 {
-                    let (charset, body) = data.split_at(8);
-                    let text = if charset.starts_with(b"UNICODE") {
-                        let u16s: Vec<u16> = body
-                            .chunks_exact(2)
-                            .map(|c| u16::from_be_bytes([c[0], c[1]]))
-                            .collect();
-                        String::from_utf16_lossy(&u16s)
-                    } else {
-                        // ConvertExifText: for an ASCII/undefined header, truncate the
-                        // text at the first null ($str =~ s/\0.*//s).
-                        let body = match body.iter().position(|&b| b == 0) {
-                            Some(p) => &body[..p],
-                            None => body,
-                        };
-                        crate::encoding::decode_utf8_or_latin1(body).to_string()
-                    };
-                    return Some(text.trim_end_matches(['\0', ' ']).to_string());
-                }
+                return Some(convert_exif_text(data).0);
             }
         }
         // RawDataUniqueID (0xc65d): undef[16] → uppercase hex (ValueConv uc(unpack H*)).
@@ -455,14 +532,17 @@ pub fn print_conv(ifd: &str, tag_id: u16, value: &Value) -> Option<String> {
                 });
             }
         }
-        // GPS Altitude Ref
+        // GPS Altitude Ref. Its OTHER routine only translates a value being
+        // written, so a value read that the hash lacks is `Unknown`.
         ("GPS", 0x0005) => {
             if let Some(v) = value.as_u64() {
                 return Some(
                     match v {
                         0 => "Above Sea Level",
                         1 => "Below Sea Level",
-                        _ => return None,
+                        2 => "Positive Sea Level (sea-level ref)",
+                        3 => "Negative Sea Level (sea-level ref)",
+                        _ => return Some(format!("Unknown ({v})")),
                     }
                     .to_string(),
                 );

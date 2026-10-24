@@ -1,0 +1,52 @@
+unicode.tif	print	IFD0:XPKeywords	旅行;Paris
+unicode.tif	numeric	IFD0:XPKeywords	旅行;Paris
+empty.tif	print	IFD0:XPKeywords	
+empty.tif	numeric	IFD0:XPKeywords	
+plain.tif	print	ExifTool:Warning	Invalid EXIF text encoding for UserComment
+plain.tif	print	ExifIFD:UserComment	oplus_DEMO_TEXT
+plain.tif	numeric	ExifTool:Warning	Invalid EXIF text encoding for UserComment
+plain.tif	numeric	ExifIFD:UserComment	oplus_DEMO_TEXT
+ascii.tif	print	ExifIFD:UserComment	oplus_DEMO_TEXT
+ascii.tif	numeric	ExifIFD:UserComment	oplus_DEMO_TEXT
+orientation0.tif	print	IFD0:Orientation	Unknown (0)
+orientation0.tif	numeric	IFD0:Orientation	0
+orientation1.tif	print	IFD0:Orientation	Horizontal (normal)
+orientation1.tif	numeric	IFD0:Orientation	1
+orientation6.tif	print	IFD0:Orientation	Rotate 90 CW
+orientation6.tif	numeric	IFD0:Orientation	6
+orientation9.tif	print	IFD0:Orientation	Unknown (9)
+orientation9.tif	numeric	IFD0:Orientation	9
+unknown_values.tif	print	IFD0:Compression	JPEG
+unknown_values.tif	print	IFD0:Orientation	Unknown (0)
+unknown_values.tif	print	IFD0:ResolutionUnit	Unknown (5)
+unknown_values.tif	print	IFD0:YCbCrPositioning	Unknown (7)
+unknown_values.tif	print	ExifIFD:ExposureProgram	Unknown (77)
+unknown_values.tif	print	ExifIFD:MeteringMode	Unknown (200)
+unknown_values.tif	print	ExifIFD:Flash	Unknown (0x99)
+unknown_values.tif	print	ExifIFD:ColorSpace	Unknown (0x7)
+unknown_values.tif	print	ExifIFD:ExposureMode	Unknown (9)
+unknown_values.tif	print	GPS:GPSAltitudeRef	Unknown (5)
+unknown_values.tif	print	GPS:GPSDifferential	Unknown (9)
+unknown_values.tif	numeric	IFD0:Compression	99
+unknown_values.tif	numeric	IFD0:Orientation	0
+unknown_values.tif	numeric	IFD0:ResolutionUnit	5
+unknown_values.tif	numeric	IFD0:YCbCrPositioning	7
+unknown_values.tif	numeric	ExifIFD:ExposureProgram	77
+unknown_values.tif	numeric	ExifIFD:MeteringMode	200
+unknown_values.tif	numeric	ExifIFD:Flash	153
+unknown_values.tif	numeric	ExifIFD:ColorSpace	7
+unknown_values.tif	numeric	ExifIFD:ExposureMode	9
+unknown_values.tif	numeric	GPS:GPSAltitudeRef	5
+unknown_values.tif	numeric	GPS:GPSDifferential	9
+xp_unicode.tif	print	ExifIFD:UserComment	héllo wörld
+xp_unicode.tif	print	IFD0:XPTitle	Tïtle
+xp_unicode.tif	print	IFD0:XPComment	Comment
+xp_unicode.tif	print	IFD0:XPAuthor	Auth中
+xp_unicode.tif	print	IFD0:XPKeywords	a;b
+xp_unicode.tif	print	IFD0:XPSubject	Subject
+xp_unicode.tif	numeric	ExifIFD:UserComment	héllo wörld
+xp_unicode.tif	numeric	IFD0:XPTitle	Tïtle
+xp_unicode.tif	numeric	IFD0:XPComment	Comment
+xp_unicode.tif	numeric	IFD0:XPAuthor	Auth中
+xp_unicode.tif	numeric	IFD0:XPKeywords	a;b
+xp_unicode.tif	numeric	IFD0:XPSubject	Subject
