@@ -1,0 +1,156 @@
+focal.crw	print	File:FileType	CRW
+focal.crw	print	File:FileTypeExtension	crw
+focal.crw	print	File:MIMEType	image/x-canon-crw
+focal.crw	print	Canon:MacroMode	Unknown (0)
+focal.crw	print	Canon:SelfTimer	Off
+focal.crw	print	Canon:Quality	Unknown (0)
+focal.crw	print	Canon:CanonFlashMode	Off
+focal.crw	print	Canon:ContinuousDrive	Single
+focal.crw	print	Canon:FocusMode	One-shot AF
+focal.crw	print	Canon:RecordMode	Unknown (0)
+focal.crw	print	Canon:CanonImageSize	Large
+focal.crw	print	Canon:EasyMode	Full auto
+focal.crw	print	Canon:DigitalZoom	None
+focal.crw	print	Canon:Contrast	Normal
+focal.crw	print	Canon:Saturation	Normal
+focal.crw	print	Canon:Sharpness	0
+focal.crw	print	Canon:CameraISO	n/a
+focal.crw	print	Canon:MeteringMode	Default
+focal.crw	print	Canon:FocusRange	Manual
+focal.crw	print	Canon:CanonExposureMode	Easy
+focal.crw	print	Canon:MaxFocalLength	0 mm
+focal.crw	print	Canon:MinFocalLength	0 mm
+focal.crw	print	Canon:FocalUnits	32/mm
+focal.crw	print	Canon:FocalType	Zoom
+focal.crw	print	Canon:FocalLength	7 mm
+focal.crw	print	Composite:DriveMode	Single-frame Shooting
+focal.crw	print	Composite:Lens	0.0 mm
+focal.crw	print	Composite:ShootingMode	Full auto
+focal.crw	print	Composite:Lens35efl	0.0 mm
+focal.crw	print	Composite:FocalLength35efl	7.0 mm
+focal.crw	numeric	File:FileType	CRW
+focal.crw	numeric	File:FileTypeExtension	CRW
+focal.crw	numeric	File:MIMEType	image/x-canon-crw
+focal.crw	numeric	Canon:MacroMode	0
+focal.crw	numeric	Canon:SelfTimer	0
+focal.crw	numeric	Canon:Quality	0
+focal.crw	numeric	Canon:CanonFlashMode	0
+focal.crw	numeric	Canon:ContinuousDrive	0
+focal.crw	numeric	Canon:FocusMode	0
+focal.crw	numeric	Canon:RecordMode	0
+focal.crw	numeric	Canon:CanonImageSize	0
+focal.crw	numeric	Canon:EasyMode	0
+focal.crw	numeric	Canon:DigitalZoom	0
+focal.crw	numeric	Canon:Contrast	0
+focal.crw	numeric	Canon:Saturation	0
+focal.crw	numeric	Canon:Sharpness	0
+focal.crw	numeric	Canon:CameraISO	n/a
+focal.crw	numeric	Canon:MeteringMode	0
+focal.crw	numeric	Canon:FocusRange	0
+focal.crw	numeric	Canon:CanonExposureMode	0
+focal.crw	numeric	Canon:MaxFocalLength	0
+focal.crw	numeric	Canon:MinFocalLength	0
+focal.crw	numeric	Canon:FocalUnits	32
+focal.crw	numeric	Canon:FocalType	2
+focal.crw	numeric	Canon:FocalLength	7
+focal.crw	numeric	Composite:DriveMode	2
+focal.crw	numeric	Composite:Lens	0
+focal.crw	numeric	Composite:ShootingMode	10
+focal.crw	numeric	Composite:Lens35efl	0
+focal.crw	numeric	Composite:FocalLength35efl	7
+iso.crw	print	File:FileType	CRW
+iso.crw	print	File:FileTypeExtension	crw
+iso.crw	print	File:MIMEType	image/x-canon-crw
+iso.crw	print	CanonRaw:Make	Canon
+iso.crw	print	CanonRaw:Model	Canon EOS 300D DIGITAL
+iso.crw	print	CanonRaw:BaseISO	100
+iso.crw	print	Canon:AutoISO	100
+iso.crw	print	Canon:BaseISO	400
+iso.crw	print	Composite:ISO	400
+iso.crw	numeric	File:FileType	CRW
+iso.crw	numeric	File:FileTypeExtension	CRW
+iso.crw	numeric	File:MIMEType	image/x-canon-crw
+iso.crw	numeric	CanonRaw:Make	Canon
+iso.crw	numeric	CanonRaw:Model	Canon EOS 300D DIGITAL
+iso.crw	numeric	CanonRaw:BaseISO	100
+iso.crw	numeric	Canon:AutoISO	100
+iso.crw	numeric	Canon:BaseISO	400
+iso.crw	numeric	Composite:ISO	400
+lens.tif	print	File:FileType	TIFF
+lens.tif	print	File:FileTypeExtension	tif
+lens.tif	print	File:MIMEType	image/tiff
+lens.tif	print	File:ExifByteOrder	Little-endian (Intel, II)
+lens.tif	print	IFD0:Make	Canon
+lens.tif	print	Canon:MacroMode	Unknown (0)
+lens.tif	print	Canon:SelfTimer	Off
+lens.tif	print	Canon:Quality	Unknown (0)
+lens.tif	print	Canon:CanonFlashMode	Off
+lens.tif	print	Canon:ContinuousDrive	Single
+lens.tif	print	Canon:FocusMode	One-shot AF
+lens.tif	print	Canon:RecordMode	Unknown (0)
+lens.tif	print	Canon:CanonImageSize	Large
+lens.tif	print	Canon:EasyMode	Full auto
+lens.tif	print	Canon:DigitalZoom	None
+lens.tif	print	Canon:Contrast	Normal
+lens.tif	print	Canon:Saturation	Normal
+lens.tif	print	Canon:Sharpness	0
+lens.tif	print	Canon:CameraISO	n/a
+lens.tif	print	Canon:MeteringMode	Default
+lens.tif	print	Canon:FocusRange	Manual
+lens.tif	print	Canon:CanonExposureMode	Easy
+lens.tif	print	Canon:LensType	n/a
+lens.tif	print	Canon:MaxFocalLength	21 mm
+lens.tif	print	Canon:MinFocalLength	7 mm
+lens.tif	print	Canon:FocalUnits	32/mm
+lens.tif	print	Canon:FocalType	Zoom
+lens.tif	print	Canon:FocalLength	7 mm
+lens.tif	print	Canon:FocalPlaneXSize	8.13 mm
+lens.tif	print	Canon:FocalPlaneYSize	6.10 mm
+lens.tif	print	Composite:DriveMode	Single-frame Shooting
+lens.tif	print	Composite:Lens	7.0 - 21.0 mm
+lens.tif	print	Composite:ShootingMode	Full auto
+lens.tif	print	Composite:LensID	Unknown 7-21mm
+lens.tif	print	Composite:ScaleFactor35efl	4.3
+lens.tif	print	Composite:Lens35efl	7.0 - 21.0 mm (35 mm equivalent: 29.8 - 89.4 mm)
+lens.tif	print	Composite:CircleOfConfusion	0.007 mm
+lens.tif	print	Composite:FOV	62.2 deg
+lens.tif	print	Composite:FocalLength35efl	7.0 mm (35 mm equivalent: 29.8 mm)
+lens.tif	numeric	File:FileType	TIFF
+lens.tif	numeric	File:FileTypeExtension	TIF
+lens.tif	numeric	File:MIMEType	image/tiff
+lens.tif	numeric	File:ExifByteOrder	II
+lens.tif	numeric	IFD0:Make	Canon
+lens.tif	numeric	Canon:MacroMode	0
+lens.tif	numeric	Canon:SelfTimer	0
+lens.tif	numeric	Canon:Quality	0
+lens.tif	numeric	Canon:CanonFlashMode	0
+lens.tif	numeric	Canon:ContinuousDrive	0
+lens.tif	numeric	Canon:FocusMode	0
+lens.tif	numeric	Canon:RecordMode	0
+lens.tif	numeric	Canon:CanonImageSize	0
+lens.tif	numeric	Canon:EasyMode	0
+lens.tif	numeric	Canon:DigitalZoom	0
+lens.tif	numeric	Canon:Contrast	0
+lens.tif	numeric	Canon:Saturation	0
+lens.tif	numeric	Canon:Sharpness	0
+lens.tif	numeric	Canon:CameraISO	n/a
+lens.tif	numeric	Canon:MeteringMode	0
+lens.tif	numeric	Canon:FocusRange	0
+lens.tif	numeric	Canon:CanonExposureMode	0
+lens.tif	numeric	Canon:LensType	65535
+lens.tif	numeric	Canon:MaxFocalLength	21
+lens.tif	numeric	Canon:MinFocalLength	7
+lens.tif	numeric	Canon:FocalUnits	32
+lens.tif	numeric	Canon:FocalType	2
+lens.tif	numeric	Canon:FocalLength	7
+lens.tif	numeric	Canon:FocalPlaneXSize	8.128
+lens.tif	numeric	Canon:FocalPlaneYSize	6.096
+lens.tif	numeric	Composite:DriveMode	2
+lens.tif	numeric	Composite:Lens	7
+lens.tif	numeric	Composite:ShootingMode	10
+lens.tif	numeric	Composite:LensID	65535
+lens.tif	numeric	Composite:ScaleFactor35efl	4.25852512850078
+lens.tif	numeric	Composite:Lens35efl	29.8096758995054
+lens.tif	numeric	Composite:CircleOfConfusion	0.00705555555555556
+lens.tif	numeric	Composite:FOV	62.2497964047472
+lens.tif	numeric	Composite:FocalLength35efl	29.8096758995055

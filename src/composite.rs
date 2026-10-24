@@ -210,12 +210,17 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         // Fallback: FocalLength35efl = FocalLength when no scale factor available
         // (Perl does: ValueConv => ($val[0] || 0) * ($val[1] || 1))
         let fl = find_tag_f64(tags, "FocalLength").unwrap_or(0.0);
-        composite.push(mk_composite(
+        composite.push(mk_composite_raw(
             "FocalLength35efl",
             "Focal Length (35mm equiv)",
-            Value::String(format!("{:.1} mm", fl)),
+            Value::F64(fl),
+            format!("{:.1} mm", fl),
         ));
     }
+    let scale = find_tag_f64(tags, "FocalLength")
+        .filter(|&fl| fl > 0.0)
+        .and_then(|fl| scale_factor_35efl(tags, fl));
+    composite.extend(compute_lens_composites(tags, scale));
 
     // RedBalance + BlueBalance — search in raw tags + Canon composites (which may include WB_RGGBLevels)
     {
@@ -1217,8 +1222,73 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         return None;
     }
 
+    let scale = scale_factor_35efl(tags, fl)?;
+
     let mut result = Vec::new();
 
+    // FocalLength35efl and FOV run their inputs through ToFloat (Exif.pm:4814,
+    // 4929), which reads back the string form of ScaleFactor35efl: 15
+    // significant digits, not the full double CircleOfConfusion gets.
+    let scale_str = crate::value::format_g15(scale).parse().unwrap_or(scale);
+    let fl35_val = fl * scale_str;
+
+    result.push(mk_composite_raw(
+        "ScaleFactor35efl",
+        "Scale Factor To 35 mm Equivalent",
+        Value::F64(scale),
+        format!("{:.1}", scale),
+    ));
+    result.push(mk_composite_raw(
+        "FocalLength35efl",
+        "Focal Length (35mm equivalent)",
+        Value::F64(fl35_val),
+        format!("{:.1} mm (35 mm equivalent: {:.1} mm)", fl, fl35_val),
+    ));
+
+    // CircleOfConfusion: Perl formula = sqrt(24²+36²) / (scale * 1440)
+    let coc = (24.0_f64.powi(2) + 36.0_f64.powi(2)).sqrt() / (scale * 1440.0);
+    result.push(mk_composite_raw(
+        "CircleOfConfusion",
+        "Circle of Confusion",
+        Value::F64(coc),
+        format!("{:.3} mm", coc),
+    ));
+
+    // FOV — Perl Exif::Composite FOV: atan2(36, 2*FL*ScaleFactor*corr), with a focus-
+    // distance correction and an optional field-width suffix.
+    {
+        let fd = find_tag_f64(tags, "FocusDistance").filter(|v| v.is_finite() && *v > 0.0);
+        let mut corr = 1.0;
+        if let Some(d_m) = fd {
+            let d = 1000.0 * d_m - fl;
+            if d > 0.0 {
+                corr += fl / d;
+            }
+        }
+        let fd2 = 36.0_f64.atan2(2.0 * fl * scale_str * corr);
+        // ExifTool uses the literal 3.14159 (not full-precision PI) for FOV; matching
+        // it exactly is required for value parity, so keep the approximate constant.
+        #[allow(clippy::approx_constant)]
+        let fov_deg = fd2 * 360.0 / 3.14159;
+        let mut fov_str = format!("{:.1} deg", fov_deg);
+        if let Some(d_m) = fd {
+            if d_m > 0.0 && d_m < 10000.0 {
+                let width = 2.0 * d_m * fd2.sin() / fd2.cos();
+                fov_str.push_str(&format!(" ({:.2} m)", width));
+            }
+        }
+        result.push(mk_composite_raw(
+            "FOV",
+            "Field of View",
+            Value::F64(fov_deg),
+            fov_str,
+        ));
+    }
+    Some(result)
+}
+
+/// ScaleFactor35efl for a focal length (Exif.pm CalcScaleFactor35efl).
+fn scale_factor_35efl(tags: &[Tag], fl: f64) -> Option<f64> {
     // Perl: sqrt(36*36+24*24) — full precision (43.266615305567875), not truncated.
     let diag35 = (36.0_f64 * 36.0 + 24.0 * 24.0).sqrt();
 
@@ -1301,84 +1371,46 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
         }
         diag35 / sensor_diag
     };
+    Some(scale)
+}
 
-    let fl35_val = fl * scale;
+/// Composite Lens, Lens35efl and LensID. None of them needs a scale factor:
+/// Lens35efl only Desires ScaleFactor35efl (Canon.pm), and LensID Requires
+/// LensType alone (Exif.pm).
+fn compute_lens_composites(tags: &[Tag], scale: Option<f64>) -> Vec<Tag> {
+    let mut result = Vec::new();
 
-    result.push(mk_composite(
-        "ScaleFactor35efl",
-        "Scale Factor To 35 mm Equivalent",
-        Value::String(format!("{:.1}", scale)),
-    ));
-    result.push(mk_composite(
-        "FocalLength35efl",
-        "Focal Length (35mm equivalent)",
-        Value::String(format!(
-            "{:.1} mm (35 mm equivalent: {:.1} mm)",
-            fl, fl35_val
-        )),
-    ));
-
-    // CircleOfConfusion: Perl formula = sqrt(24²+36²) / (scale * 1440)
-    let coc = (24.0_f64.powi(2) + 36.0_f64.powi(2)).sqrt() / (scale * 1440.0);
-    result.push(mk_composite_raw(
-        "CircleOfConfusion",
-        "Circle of Confusion",
-        Value::F64(coc),
-        format!("{:.3} mm", coc),
-    ));
-
-    // FOV — Perl Exif::Composite FOV: atan2(36, 2*FL*ScaleFactor*corr), with a focus-
-    // distance correction and an optional field-width suffix.
-    {
-        let fd = find_tag_f64(tags, "FocusDistance").filter(|v| v.is_finite() && *v > 0.0);
-        let mut corr = 1.0;
-        if let Some(d_m) = fd {
-            let d = 1000.0 * d_m - fl;
-            if d > 0.0 {
-                corr += fl / d;
-            }
-        }
-        let fd2 = 36.0_f64.atan2(2.0 * fl * scale * corr);
-        // ExifTool uses the literal 3.14159 (not full-precision PI) for FOV; matching
-        // it exactly is required for value parity, so keep the approximate constant.
-        #[allow(clippy::approx_constant)]
-        let fov_deg = fd2 * 360.0 / 3.14159;
-        let mut fov_str = format!("{:.1} deg", fov_deg);
-        if let Some(d_m) = fd {
-            if d_m > 0.0 && d_m < 10000.0 {
-                let width = 2.0 * d_m * fd2.sin() / fd2.cos();
-                fov_str.push_str(&format!(" ({:.2} m)", width));
-            }
-        }
-        result.push(mk_composite("FOV", "Field of View", Value::String(fov_str)));
-    }
-
-    // Lens + Lens35efl (Canon-specific)
-    let make = find_tag_value(tags, "Make").unwrap_or_default();
-    let min_fl = find_tag_f64(tags, "MinFocalLength");
-    let max_fl = find_tag_f64(tags, "MaxFocalLength");
-    if let (Some(min), Some(max)) = (min_fl, max_fl) {
-        if min > 0.0 && max > 0.0 && max > min {
-            result.push(mk_composite(
-                "Lens",
-                "Lens",
-                Value::String(format!("{:.1} - {:.1} mm", min, max)),
-            ));
-            // Lens35efl only for Canon
-            if make.contains("Canon") {
-                result.push(mk_composite(
-                    "Lens35efl",
-                    "Lens (35mm equivalent)",
-                    Value::String(format!(
-                        "{:.1} - {:.1} mm (35 mm equivalent: {:.1} - {:.1} mm)",
-                        min,
-                        max,
-                        min * scale,
-                        max * scale
-                    )),
-                ));
-            }
-        }
+    // Lens + Lens35efl (Canon.pm Composite): Require Canon:MinFocalLength and
+    // Canon:MaxFocalLength, ValueConv '$val[0]', PrintConv PrintFocalRange.
+    // Lens35efl Desires ScaleFactor35efl and only appends the 35 mm range when it
+    // has one.
+    let focal = |name| {
+        find_tag_in_group(tags, name, "Canon")
+            .filter(|t| t.group.family0 == "MakerNotes")
+            .and_then(|t| t.raw_value.as_f64())
+    };
+    if let (Some(min), Some(max)) = (focal("MinFocalLength"), focal("MaxFocalLength")) {
+        let lens_print = canon_focal_range(min, max, 1.0);
+        result.push(mk_composite_raw(
+            "Lens",
+            "Lens",
+            Value::F64(min),
+            lens_print.clone(),
+        ));
+        let print = match scale {
+            Some(s) => format!(
+                "{} (35 mm equivalent: {})",
+                lens_print,
+                canon_focal_range(min, max, s)
+            ),
+            None => lens_print,
+        };
+        result.push(mk_composite_raw(
+            "Lens35efl",
+            "Lens",
+            Value::F64(min * scale.unwrap_or(1.0)),
+            print,
+        ));
     }
 
     // LensID (Canon PrintLensID logic). Skip when a Nikon LensData hex lookup is
@@ -1408,17 +1440,36 @@ fn compute_35efl(tags: &[Tag]) -> Option<Vec<Tag>> {
             } else {
                 "Unknown".to_string()
             };
-            result.push(mk_composite("LensID", "Lens ID", Value::String(lens_str)));
+            // ValueConv '$val': the LensType value; only the print is a name.
+            result.push(mk_composite_raw(
+                "LensID",
+                "Lens ID",
+                lt.raw_value.clone(),
+                lens_str,
+            ));
         } else if !pv.is_empty() && pv != "0" && pv != "n/a" {
             // PrintLensID: a base "… Lens (key)" may have sub-variants disambiguated
             // by the actual FocalLength (Pentax "3 44" → "3 44.1", Sigma 0x145 → .1).
             let resolved =
                 disambiguate_lens_id(&pv, find_tag_f64(tags, "FocalLength")).unwrap_or(pv);
-            result.push(mk_composite("LensID", "Lens ID", Value::String(resolved)));
+            result.push(mk_composite_raw(
+                "LensID",
+                "Lens ID",
+                lt.raw_value.clone(),
+                resolved,
+            ));
         }
     }
+    result
+}
 
-    Some(result)
+/// Canon PrintFocalRange (Canon.pm): one focal length or a range, in mm.
+fn canon_focal_range(short: f64, long: f64, scale: f64) -> String {
+    if short == long {
+        format!("{:.1} mm", short * scale)
+    } else {
+        format!("{:.1} - {:.1} mm", short * scale, long * scale)
+    }
 }
 
 /// Parse focal range (short, long mm) from a lens name like
@@ -1537,8 +1588,11 @@ fn make_subsec_date(
 fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
     // Only if this is a Canon file
     // `$$et{Make} eq 'Canon'` (Exif.pm:5466): the whole Make, not a substring.
+    // A CRW gets them whatever its Make: CanonRaw.pm loads Canon.pm (line 22),
+    // whose AddCompositeTags runs at load time.
     let make = find_tag_value(tags, "Make").unwrap_or_default();
-    if make.trim_end() != "Canon" {
+    let crw = find_tag_value(tags, "FileType").is_some_and(|ft| ft == "CRW");
+    if make.trim_end() != "Canon" && !crw {
         return None;
     }
 
@@ -1548,17 +1602,18 @@ fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
     // over (ContinuousDrive, SelfTimer), then PrintConv.
     if let Some(cd) = find_tag_f64(tags, "ContinuousDrive") {
         let st = find_tag_f64(tags, "SelfTimer").unwrap_or(0.0);
-        let pv = if cd != 0.0 {
-            "Continuous Shooting"
+        let (v, pv) = if cd != 0.0 {
+            (0, "Continuous Shooting")
         } else if st != 0.0 {
-            "Self-timer Operation"
+            (1, "Self-timer Operation")
         } else {
-            "Single-frame Shooting"
+            (2, "Single-frame Shooting")
         };
-        result.push(mk_composite(
+        result.push(mk_composite_raw(
             "DriveMode",
             "Drive Mode",
-            Value::String(pv.to_string()),
+            Value::U16(v),
+            pv.to_string(),
         ));
     }
 
@@ -1571,21 +1626,20 @@ fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
             .and_then(|t| t.raw_value.as_f64())
             .map(|v| v != 0.0)
             .unwrap_or(false);
-        let print = if em_raw.is_some_and(|v| v != 0) {
-            if em_raw == Some(4) && bulb_set {
-                "Bulb".to_string()
-            } else {
-                em_tag.print_value.clone()
-            }
-        } else if let Some(easy) = find_tag(tags, "EasyMode") {
-            easy.print_value.clone()
-        } else {
-            em_tag.print_value.clone()
+        let easy = find_tag(tags, "EasyMode");
+        let (value, print) = match em_raw {
+            Some(4) if bulb_set => (Value::I32(7), "Bulb".to_string()),
+            Some(v) if v != 0 => (Value::I32(v as i32), em_tag.print_value.clone()),
+            _ => match easy.and_then(|e| Some((e, e.raw_value.as_f64()?))) {
+                Some((e, v)) => (Value::F64(v + 10.0), e.print_value.clone()),
+                None => (em_tag.raw_value.clone(), em_tag.print_value.clone()),
+            },
         };
-        result.push(mk_composite(
+        result.push(mk_composite_raw(
             "ShootingMode",
             "Shooting Mode",
-            Value::String(print),
+            value,
+            print,
         ));
     }
 
@@ -1642,25 +1696,28 @@ fn compute_canon_composites(tags: &[Tag]) -> Option<Vec<Tag>> {
     // the composite still has to be built when the Duplicates option is on — Perl
     // then reports it next to EXIF:ISO.
     if crate::metadata::exif::keep_duplicates() || find_tag(tags, "ISO").is_none() {
-        let camera_iso_str = find_tag_value(tags, "CameraISO");
-        let iso_val = camera_iso_str
-            .as_deref()
-            .and_then(|ci| ci.trim().parse::<f64>().ok())
-            .filter(|&v| v > 0.0);
-        let iso = iso_val.or_else(|| {
-            let base = find_tag_f64(tags, "BaseISO")?;
-            let auto = find_tag_f64(tags, "AutoISO")?;
-            if base > 0.0 && auto > 0.0 {
-                Some(base * auto / 100.0)
-            } else {
-                None
-            }
-        });
+        // Desire Canon:CameraISO, Canon:BaseISO and Canon:AutoISO: the group
+        // keeps CanonRaw:BaseISO (CIFF 0x101c) of a CRW out of it.
+        let canon = |name| {
+            find_tag_in_group(tags, name, "Canon").filter(|t| t.group.family0 == "MakerNotes")
+        };
+        let num = |name| canon(name).and_then(|t| t.raw_value.as_f64());
+        // `return $val[0] if $val[0] and $val[0] =~ /^\d+$/`
+        let iso = canon("CameraISO")
+            .map(|t| t.raw_value.to_display_string())
+            .filter(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()))
+            .and_then(|s| s.parse::<f64>().ok())
+            .filter(|&v| v != 0.0)
+            .or_else(|| {
+                let (base, auto) = (num("BaseISO")?, num("AutoISO")?);
+                (base != 0.0 && auto != 0.0).then(|| base * auto / 100.0)
+            });
         if let Some(iso_v) = iso {
-            result.push(mk_composite(
+            result.push(mk_composite_raw(
                 "ISO",
                 "ISO",
-                Value::String(format!("{:.0}", iso_v)),
+                Value::F64(iso_v),
+                format!("{:.0}", iso_v),
             ));
         }
     }
