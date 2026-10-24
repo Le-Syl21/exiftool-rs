@@ -136,7 +136,6 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
             Some(v) => v,
             None => break,
         };
-        let _attr_type = attr_type.to_string();
         pos = next;
 
         // Read size
@@ -338,8 +337,13 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
                 ]));
                 tags.push(mk("ScreenWindowWidth", Value::String(format_float(v))));
             }
+            // SubDirectory attributes (EXIF and XMP blocks written by
+            // PanoramaStudio) are not decoded here.
+            "exif" | "xmp" => {}
             _ => {
-                // Skip unknown attributes
+                if let Some(tag) = generic_attribute(&attr_name, attr_type, val_data) {
+                    tags.push(tag);
+                }
             }
         }
     }
@@ -364,6 +368,200 @@ pub fn read_openexr(data: &[u8]) -> crate::error::Result<Vec<Tag>> {
     }
 
     Ok(tags)
+}
+
+/// Name, family 2 group and PrintConv of the OpenEXR::Main entries that have
+/// one (OpenEXR.pm lines 47-171). Every other attribute keeps its own name,
+/// capitalized, in the table's default `Image` group.
+fn table_entry(attr: &str) -> Option<(&'static str, &'static str, Option<&'static str>)> {
+    Some(match attr {
+        "altitude" => ("GPSAltitude", "Location", None),
+        "aperture" => ("Aperture", "Image", Some("sprintf(\"%.1f\",$val)")),
+        "capDate" => (
+            "DateTimeOriginal",
+            "Time",
+            Some("$self->ConvertDateTime($val)"),
+        ),
+        "envmap" => ("EnvironmentMap", "Image", None),
+        "expTime" => (
+            "ExposureTime",
+            "Image",
+            Some("Image::ExifTool::Exif::PrintExposureTime($val)"),
+        ),
+        "focus" => ("FocusDistance", "Image", Some("\"$val m\"")),
+        "isoSpeed" => ("ISO", "Image", None),
+        "latitude" => (
+            "GPSLatitude",
+            "Location",
+            Some("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"N\")"),
+        ),
+        "longitude" => (
+            "GPSLongitude",
+            "Location",
+            Some("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"E\")"),
+        ),
+        "owner" => ("Owner", "Author", None),
+        "preview" => ("Preview", "Preview", None),
+        "utcOffset" => ("TimeZone", "Time", Some("TimeZoneString($val / 60)")),
+        "wrapmodes" => ("WrapModes", "Image", None),
+        "xDensity" => ("XResolution", "Image", None),
+        _ => return None,
+    })
+}
+
+/// The name ProcessEXR gives an attribute missing from its table: first
+/// letter of each word capitalized, then only `-_a-zA-Z0-9` kept
+/// (OpenEXR.pm lines 216-226).
+fn generated_name(attr: &str) -> String {
+    let mut name = String::with_capacity(attr.len());
+    let mut prev: Option<char> = None;
+    for c in attr.chars() {
+        let up = match prev {
+            None => true,
+            Some(p) => !p.is_ascii_alphabetic() && c.is_ascii_lowercase(),
+        };
+        name.push(if up { c.to_ascii_uppercase() } else { c });
+        prev = Some(c);
+    }
+    name.retain(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+    match name.len() {
+        0 => "Invalid".to_string(),
+        1 => format!("Tag{name}"),
+        _ => name,
+    }
+}
+
+/// Decode an attribute through ProcessEXR's `%formatType` (OpenEXR.pm lines
+/// 21-44): the types that map onto ExifTool formats are read as such, and any
+/// other type is kept as binary data.
+fn decode_value(attr_type: &str, d: &[u8]) -> Option<Value> {
+    let word = |i: usize| d.get(i * 4..i * 4 + 4).map(|b| [b[0], b[1], b[2], b[3]]);
+    let f32_at = |i: usize| word(i).map(|b| f32::from_le_bytes(b) as f64);
+    let i32_at = |i: usize| word(i).map(i32::from_le_bytes);
+    // ReadValue joins a multi-value read with spaces.
+    let floats = |n: usize| -> Option<Value> {
+        let v: Option<Vec<String>> = (0..n)
+            .map(|i| f32_at(i).map(crate::value::format_g15))
+            .collect();
+        Some(Value::String(v?.join(" ")))
+    };
+    let ints = |n: usize, unsigned: bool| -> Option<Value> {
+        let v: Option<Vec<String>> = (0..n)
+            .map(|i| {
+                word(i).map(|b| {
+                    if unsigned {
+                        u32::from_le_bytes(b).to_string()
+                    } else {
+                        i32::from_le_bytes(b).to_string()
+                    }
+                })
+            })
+            .collect();
+        Some(Value::String(v?.join(" ")))
+    };
+    Some(match attr_type {
+        "float" => Value::F64(f32_at(0)?),
+        "double" => Value::F64(f64::from_le_bytes(d.get(..8)?.try_into().ok()?)),
+        "int" => Value::I32(i32_at(0)?),
+        "compression" | "envmap" | "lineOrder" => Value::U8(*d.first()?),
+        "rational" => Value::IRational(i32_at(0)?, i32_at(1)?),
+        "box2f" => floats(4)?,
+        "chromaticities" => floats(8)?,
+        "m33f" => floats(9)?,
+        "m44f" => floats(16)?,
+        "v2f" => floats(2)?,
+        "v3f" => floats(3)?,
+        "box2i" => ints(4, false)?,
+        "keycode" => ints(7, false)?,
+        "v2i" => ints(2, false)?,
+        "v3i" => ints(3, false)?,
+        "timecode" => ints(2, true)?,
+        // ReadValue's `string` stops at the first null.
+        "string" => {
+            let end = d.iter().position(|&b| b == 0).unwrap_or(d.len());
+            Value::String(String::from_utf8_lossy(&d[..end]).into_owned())
+        }
+        "stringvector" => {
+            let mut items = Vec::new();
+            let mut p = 0;
+            while p + 4 <= d.len() {
+                let len = u32::from_le_bytes([d[p], d[p + 1], d[p + 2], d[p + 3]]) as usize;
+                if len > d.len() - p - 4 {
+                    break;
+                }
+                items.push(Value::String(
+                    String::from_utf8_lossy(&d[p + 4..p + 4 + len]).into_owned(),
+                ));
+                p += 4 + len;
+            }
+            Value::List(items)
+        }
+        "tiledesc" => {
+            if d.len() < 9 {
+                return None;
+            }
+            let x = u32::from_le_bytes([d[0], d[1], d[2], d[3]]);
+            let y = u32::from_le_bytes([d[4], d[5], d[6], d[7]]);
+            let mode = d[8];
+            let lvl = match mode & 0x0f {
+                0 => "One Level".to_string(),
+                1 => "MIMAP Levels".to_string(),
+                2 => "RIPMAP Levels".to_string(),
+                n => format!("Unknown Levels ({n})"),
+            };
+            let rnd = match mode >> 4 {
+                0 => "Round Down".to_string(),
+                1 => "Round Up".to_string(),
+                n => format!("Unknown Rounding ({n})"),
+            };
+            Value::String(format!("{x}x{y}; {lvl}; {rnd}"))
+        }
+        _ => Value::Binary(d.to_vec()),
+    })
+}
+
+/// An attribute without a dedicated decoder above: decoded by its type, named
+/// and converted as the OpenEXR::Main table says.
+fn generic_attribute(attr: &str, attr_type: &str, data: &[u8]) -> Option<Tag> {
+    use crate::tags::conv_expr::{eval, Val};
+    // An undecodable value is stored as '<bad>' (OpenEXR.pm line 293).
+    let raw = decode_value(attr_type, data).unwrap_or_else(|| Value::String("<bad>".into()));
+    let (name, group2, conv) = match table_entry(attr) {
+        Some((n, g, c)) => (n.to_string(), g, c),
+        None => (generated_name(attr), "Image", None),
+    };
+    let num = match &raw {
+        Value::F64(_) | Value::I32(_) | Value::U8(_) | Value::IRational(..) => raw.as_f64(),
+        _ => None,
+    };
+    let print = match (attr, conv, num) {
+        // `$val = int($val * 10) / 10`, then the sign becomes Above/Below.
+        ("altitude", _, Some(v)) => {
+            let s = crate::value::format_g15((v * 10.0).trunc() / 10.0);
+            match s.strip_prefix('-') {
+                Some(abs) => format!("{abs} m Below Sea Level"),
+                None => format!("{s} m Above Sea Level"),
+            }
+        }
+        ("envmap", _, Some(v)) => match v as i64 {
+            0 => "Latitude/Longitude".to_string(),
+            1 => "Cube".to_string(),
+            n => format!("Unknown ({n})"),
+        },
+        (_, Some(expr), _) => {
+            let val = match num {
+                Some(n) => Val::Num(n),
+                None => Val::Str(raw.to_display_string()),
+            };
+            eval(expr, &val)
+                .map(|v| v.as_string())
+                .unwrap_or_else(|| raw.to_display_string())
+        }
+        _ => raw.to_display_string(),
+    };
+    let mut tag = mk_with_print(&name, raw, print);
+    tag.group.family2 = group2.into();
+    Some(tag)
 }
 
 fn format_float(v: f32) -> String {
