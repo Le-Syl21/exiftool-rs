@@ -12,6 +12,7 @@ use crate::perl::value::{Number, Value};
 fn iv_able(n: Number) -> Option<i64> {
     match n {
         Number::Int(i) => Some(i),
+        Number::UInt(_) => None,
         Number::Float(f) => {
             if f.fract() == 0.0 && f >= -9.223372036854776e18 && f < 9.223372036854776e18 {
                 Some(f as i64)
@@ -120,6 +121,9 @@ pub fn num_cmp(a: &Value, b: &Value) -> Option<std::cmp::Ordering> {
     let (x, y) = (numeric(a), numeric(b));
     match (x, y) {
         (Number::Int(i), Number::Int(j)) => Some(i.cmp(&j)),
+        (Number::UInt(i), Number::UInt(j)) => Some(i.cmp(&j)),
+        (Number::UInt(_), Number::Int(_)) => Some(std::cmp::Ordering::Greater),
+        (Number::Int(_), Number::UInt(_)) => Some(std::cmp::Ordering::Less),
         _ => x.as_f64().partial_cmp(&y.as_f64()),
     }
 }
@@ -134,6 +138,7 @@ pub fn str_cmp(a: &Value, b: &Value) -> std::cmp::Ordering {
 pub fn to_uv(v: &Value) -> u64 {
     match numeric(v) {
         Number::Int(i) => i as u64,
+        Number::UInt(u) => u,
         Number::Float(f) => {
             if f < 0.0 {
                 (f.trunc() as i64) as u64
@@ -146,13 +151,12 @@ pub fn to_uv(v: &Value) -> u64 {
     }
 }
 
-/// A UV result as perl stores it: an IV when it fits, otherwise a float
-/// (perl keeps a UV, which prints the same digits).
+/// A UV result as perl stores it: an IV when it fits, otherwise a UV.
 pub fn from_uv(u: u64) -> Value {
     if u <= i64::MAX as u64 {
         Value::Int(u as i64)
     } else {
-        Value::Num(u as f64)
+        Value::UInt(u)
     }
 }
 
@@ -192,6 +196,7 @@ pub fn bit_not(a: &Value) -> Value {
 pub fn int(a: &Value) -> Value {
     match numeric(a) {
         Number::Int(i) => Value::Int(i),
+        Number::UInt(u) => Value::UInt(u),
         Number::Float(f) if f.is_finite() => {
             let t = f.trunc();
             match iv_able(Number::Float(t)) {
@@ -205,6 +210,7 @@ pub fn int(a: &Value) -> Value {
 
 pub fn abs(a: &Value) -> Value {
     match numeric(a) {
+        Number::UInt(u) => Value::UInt(u),
         Number::Int(i) if i != i64::MIN => Value::Int(i.abs()),
         n => Value::Num(n.as_f64().abs()),
     }

@@ -17,6 +17,8 @@ pub enum Value {
     Undef,
     /// An integer (perl's IV).
     Int(i64),
+    /// An unsigned integer above the IV range (perl's UV).
+    UInt(u64),
     /// A float (perl's NV).
     Num(f64),
     /// A string of bytes (perl's PV).
@@ -79,6 +81,7 @@ impl Value {
         match self {
             Value::Undef => Number::Int(0),
             Value::Int(i) => Number::Int(*i),
+            Value::UInt(u) => Number::UInt(*u),
             Value::Num(n) => Number::Float(*n),
             Value::Str(s) => grok_number(s).0,
             // A reference numifies to its address; nothing in ExifTool uses it.
@@ -103,6 +106,7 @@ impl Value {
         match self {
             Value::Undef => false,
             Value::Int(i) => *i != 0,
+            Value::UInt(u) => *u != 0,
             Value::Num(n) => *n != 0.0,
             Value::Str(s) => !(s.is_empty() || &s[..] == b"0"),
             _ => true,
@@ -113,7 +117,7 @@ impl Value {
     /// (perl's `looks_like_number`).
     pub fn looks_like_number(&self) -> bool {
         match self {
-            Value::Int(_) | Value::Num(_) => true,
+            Value::Int(_) | Value::UInt(_) | Value::Num(_) => true,
             Value::Str(s) => grok_number(s).1 == Grok::Whole,
             _ => false,
         }
@@ -124,6 +128,7 @@ impl Value {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Number {
     Int(i64),
+    UInt(u64),
     Float(f64),
 }
 
@@ -131,6 +136,7 @@ impl Number {
     pub fn as_f64(self) -> f64 {
         match self {
             Number::Int(i) => i as f64,
+            Number::UInt(u) => u as f64,
             Number::Float(f) => f,
         }
     }
@@ -139,6 +145,7 @@ impl Number {
     pub fn as_i64(self) -> i64 {
         match self {
             Number::Int(i) => i,
+            Number::UInt(u) => u as i64,
             Number::Float(f) if f.is_nan() => 0,
             Number::Float(f) => f as i64,
         }
@@ -147,6 +154,7 @@ impl Number {
     pub fn to_value(self) -> Value {
         match self {
             Number::Int(i) => Value::Int(i),
+            Number::UInt(u) => Value::UInt(u),
             Number::Float(f) => Value::Num(f),
         }
     }
@@ -242,6 +250,11 @@ pub fn grok_number(s: &[u8]) -> (Number, Grok) {
             }
             return (Number::Int(v), grok);
         }
+        if !neg {
+            if let Ok(v) = text.trim_start_matches('+').parse::<u64>() {
+                return (Number::UInt(v), grok);
+            }
+        }
     }
     (Number::Float(text.parse::<f64>().unwrap_or(0.0)), grok)
 }
@@ -283,6 +296,7 @@ impl fmt::Display for Value {
         match self {
             Value::Undef => Ok(()),
             Value::Int(i) => write!(f, "{i}"),
+            Value::UInt(u) => write!(f, "{u}"),
             Value::Num(n) => f.write_str(&format_nv(*n)),
             Value::Str(s) => f.write_str(&String::from_utf8_lossy(s)),
             Value::ScalarRef(r) => write!(f, "SCALAR({:p})", Rc::as_ptr(r)),
@@ -297,6 +311,7 @@ impl fmt::Debug for Value {
         match self {
             Value::Undef => f.write_str("undef"),
             Value::Int(i) => write!(f, "{i}"),
+            Value::UInt(u) => write!(f, "{u}"),
             Value::Num(n) => write!(f, "{}", format_nv(*n)),
             Value::Str(s) => write!(f, "{:?}", String::from_utf8_lossy(s)),
             Value::ScalarRef(r) => write!(f, "\\{:?}", r.borrow()),

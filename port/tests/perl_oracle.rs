@@ -111,3 +111,79 @@ fn split_sep(out: &[u8]) -> Vec<Vec<u8>> {
     }
     parts
 }
+
+#[test]
+fn pack_unpack_match_perl() {
+    if !perl_available() {
+        return;
+    }
+    let data: Vec<u8> = (0u8..=255).rev().chain(0u8..64).collect();
+    let templates = [
+        "C*", "c*", "n*", "N*", "v*", "V*", "s*", "S*", "l*", "L*", "q*", "Q*", "n!*", "v!*",
+        "N!*", "s>*", "l>*", "q<2", "H*", "h*", "H5", "B*", "b16", "a10", "A10", "Z10", "Z*",
+        "x3n2", "x5V", "f*", "d*", "f>2", "d>1", "C/a", "w*", "@10C3", "x2X1C", "a*",
+    ];
+    let hex: String = data.iter().map(|b| format!("{b:02x}")).collect();
+    let mut script = format!("no warnings; my $d = pack('H*', '{hex}');\n");
+    for t in templates {
+        script.push_str(&format!("print join(',', map {{ unpack('H*', $_) }} unpack('{t}', $d)), \"\\x1e\\x1f\";\n"));
+    }
+    let out = Command::new("perl").arg("-e").arg(&script).output().unwrap();
+    let expected = split_sep(&out.stdout);
+    let mut failures = Vec::new();
+    for (k, t) in templates.iter().enumerate() {
+        let ours = exiftool_port::perl::pack::unpack(t.as_bytes(), &data)
+            .map(|v| {
+                v.iter()
+                    .map(|x| x.to_bytes().iter().map(|b| format!("{b:02x}")).collect::<String>())
+                    .collect::<Vec<_>>()
+                    .join(",")
+                    .into_bytes()
+            })
+            .unwrap_or_else(|e| e.into_bytes());
+        if ours != expected[k] {
+            failures.push(format!(
+                "unpack({t:?}): perl {:?}\n    ours {:?}",
+                String::from_utf8_lossy(&expected[k]),
+                String::from_utf8_lossy(&ours)
+            ));
+        }
+    }
+    // pack: integers and strings back to bytes.
+    let cases: &[(&str, &[&str])] = &[
+        ("n*", &["1", "65535", "65536", "-1"]),
+        ("N", &["4294967296"]),
+        ("v2", &["258", "3"]),
+        ("C*", &["1", "255", "256", "-1", "3.9"]),
+        ("H*", &["0aFf3"]),
+        ("H4", &["ab"]),
+        ("A6", &["ab"]),
+        ("a6", &["ab"]),
+        ("Z4", &["abcdef"]),
+        ("Z*", &["ab"]),
+        ("C0U*", &["233", "8364"]),
+        ("w*", &["0", "127", "128", "16384"]),
+        ("f", &["1.5"]),
+        ("d>", &["-2.25"]),
+        ("s<", &["-2"]),
+        ("x2n", &["1"]),
+        ("B12", &["101100111"]),
+    ];
+    let mut script = String::from("no warnings;\n");
+    for (t, args) in cases {
+        let list: Vec<String> = args.iter().map(|a| perl_literal(a)).collect();
+        script.push_str(&format!("print unpack('H*', pack('{t}', {})), \"\\x1e\\x1f\";\n", list.join(", ")));
+    }
+    let out = Command::new("perl").arg("-e").arg(&script).output().unwrap();
+    let expected = split_sep(&out.stdout);
+    for (k, (t, args)) in cases.iter().enumerate() {
+        let vals: Vec<Value> = args.iter().map(|a| Value::str(a)).collect();
+        let ours: String = exiftool_port::perl::pack::pack(t.as_bytes(), &vals)
+            .map(|b| b.iter().map(|x| format!("{x:02x}")).collect())
+            .unwrap_or_else(|e| e);
+        if ours.as_bytes() != &expected[k][..] {
+            failures.push(format!("pack({t:?}, {args:?}): perl {:?}, ours {ours:?}", String::from_utf8_lossy(&expected[k])));
+        }
+    }
+    assert!(failures.is_empty(), "{} mismatches:\n{}", failures.len(), failures.join("\n"));
+}

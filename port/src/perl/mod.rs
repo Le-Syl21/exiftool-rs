@@ -3,6 +3,7 @@
 //! evaluates the code strings in ExifTool's tables.
 
 pub mod ops;
+pub mod pack;
 pub mod sprintf;
 pub mod value;
 
