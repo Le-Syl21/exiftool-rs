@@ -217,13 +217,12 @@ Each step can be tested as soon as it lands.
 The current crate stays on `main` for fixes until the port replaces it,
 as 1.0.
 
-## 8. Decisions to take
+## 8. Decisions (Sylvain, 2026-10-24)
 
-1. **Perl engine**: one interpreter for the tables, the CLI expressions and
-   the config file (proposed), or Rust code generated ahead of time for the
-   tables plus a smaller interpreter for user input.
-2. **Regex**: pcre2 (proposed; Perl-compatible on bytes, but a bundled C
-   library) or fancy-regex (pure Rust, but strings only, so bytes need
-   special handling).
-3. **`~/.ExifTool_config`**: supported through the Perl engine (proposed),
-   or out of scope.
+1. **One Perl-subset interpreter** for the tables, the CLI expressions and
+   the config file.
+2. **Regex**: before anything else, a short study of porting PCRE2 to a pure
+   Rust crate. It would be a project of its own, useful beyond exiftool-rs.
+   The port waits for its conclusion.
+3. **`~/.ExifTool_config` is in scope**: as a clone, exiftool-rs supports it,
+   through the Perl engine.
