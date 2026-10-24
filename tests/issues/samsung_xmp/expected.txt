@@ -1,0 +1,64 @@
+samsung.srw	print	File:FileType	SRW
+samsung.srw	print	File:FileTypeExtension	srw
+samsung.srw	print	File:MIMEType	image/x-samsung-srw
+samsung.srw	print	File:ExifByteOrder	Little-endian (Intel, II)
+samsung.srw	print	IFD0:Make	SAMSUNG
+samsung.srw	print	Samsung:FirmwareName	1.00
+samsung.srw	print	Samsung:LensType	Samsung NX 45mm F1.8
+samsung.srw	print	ExifIFD:LensModel	NX 45mm F1.8
+samsung.srw	print	Composite:LensID	Samsung NX 45mm F1.8
+samsung.srw	numeric	File:FileType	SRW
+samsung.srw	numeric	File:FileTypeExtension	SRW
+samsung.srw	numeric	File:MIMEType	image/x-samsung-srw
+samsung.srw	numeric	File:ExifByteOrder	II
+samsung.srw	numeric	IFD0:Make	SAMSUNG
+samsung.srw	numeric	Samsung:FirmwareName	1.00
+samsung.srw	numeric	Samsung:LensType	10
+samsung.srw	numeric	ExifIFD:LensModel	NX 45mm F1.8
+samsung.srw	numeric	Composite:LensID	10
+serial.srw	print	File:FileType	SRW
+serial.srw	print	File:FileTypeExtension	srw
+serial.srw	print	File:MIMEType	image/x-samsung-srw
+serial.srw	print	File:ExifByteOrder	Little-endian (Intel, II)
+serial.srw	print	IFD0:Make	SAMSUNG
+serial.srw	print	Samsung:FirmwareName	1.00
+serial.srw	print	Samsung:SerialNumber	DEMO123
+serial.srw	print	Samsung:LensType	Samsung NX 45mm F1.8
+serial.srw	print	ExifIFD:LensModel	NX 45mm F1.8
+serial.srw	print	Composite:LensID	Samsung NX 45mm F1.8
+serial.srw	numeric	File:FileType	SRW
+serial.srw	numeric	File:FileTypeExtension	SRW
+serial.srw	numeric	File:MIMEType	image/x-samsung-srw
+serial.srw	numeric	File:ExifByteOrder	II
+serial.srw	numeric	IFD0:Make	SAMSUNG
+serial.srw	numeric	Samsung:FirmwareName	1.00
+serial.srw	numeric	Samsung:SerialNumber	DEMO123
+serial.srw	numeric	Samsung:LensType	10
+serial.srw	numeric	ExifIFD:LensModel	NX 45mm F1.8
+serial.srw	numeric	Composite:LensID	10
+percent75.xmp	print	File:FileType	XMP
+percent75.xmp	print	File:FileTypeExtension	xmp
+percent75.xmp	print	File:MIMEType	application/rdf+xml
+percent75.xmp	print	XMP-microsoft:RatingPercent	75
+percent75.xmp	numeric	File:FileType	XMP
+percent75.xmp	numeric	File:FileTypeExtension	XMP
+percent75.xmp	numeric	File:MIMEType	application/rdf+xml
+percent75.xmp	numeric	XMP-microsoft:RatingPercent	75
+percent3.xmp	print	File:FileType	XMP
+percent3.xmp	print	File:FileTypeExtension	xmp
+percent3.xmp	print	File:MIMEType	application/rdf+xml
+percent3.xmp	print	XMP-microsoft:RatingPercent	3
+percent3.xmp	numeric	File:FileType	XMP
+percent3.xmp	numeric	File:FileTypeExtension	XMP
+percent3.xmp	numeric	File:MIMEType	application/rdf+xml
+percent3.xmp	numeric	XMP-microsoft:RatingPercent	3
+trailing-slash.xmp	print	ExifTool:Warning	[minor] Fixed incorrect URI for xmlns:MicrosoftPhoto
+trailing-slash.xmp	print	File:FileType	XMP
+trailing-slash.xmp	print	File:FileTypeExtension	xmp
+trailing-slash.xmp	print	File:MIMEType	application/rdf+xml
+trailing-slash.xmp	print	XMP-microsoft:RatingPercent	75
+trailing-slash.xmp	numeric	ExifTool:Warning	[minor] Fixed incorrect URI for xmlns:MicrosoftPhoto
+trailing-slash.xmp	numeric	File:FileType	XMP
+trailing-slash.xmp	numeric	File:FileTypeExtension	XMP
+trailing-slash.xmp	numeric	File:MIMEType	application/rdf+xml
+trailing-slash.xmp	numeric	XMP-microsoft:RatingPercent	75

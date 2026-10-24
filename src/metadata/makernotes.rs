@@ -8101,6 +8101,22 @@ fn read_makernote_ifd_with_base(
         if sigma_exposure_adjust && crate::metadata::exif::get_show_unknown() == 0 {
             continue;
         }
+        // Samsung::Type2 (Samsung.pm:404-409) names 0xa002 SerialNumber only
+        // under `Condition => '$$valPt =~ /^\w{5}/'` ("should be at least 5
+        // characters long"); otherwise the entry matches nothing and is an
+        // unknown tag. 0xa048 and 0xa050-0xa054 carry `Unknown => 1`
+        // (Samsung.pm:621-668). All of these are reported only with -u.
+        if manufacturer == Manufacturer::Samsung && crate::metadata::exif::get_show_unknown() == 0 {
+            let declared_unknown = matches!(tag_id, 0xa048 | 0xa050..=0xa054);
+            let no_serial = tag_id == 0xa002
+                && !(value_data.len() >= 5
+                    && value_data[..5]
+                        .iter()
+                        .all(|&b| b.is_ascii_alphanumeric() || b == b'_'));
+            if declared_unknown || no_serial {
+                continue;
+            }
+        }
         let (raw_name, raw_desc) = if sigma_exposure_adjust {
             ("ExposureAdjust", "Exposure Adjust")
         } else {
@@ -9781,6 +9797,26 @@ fn apply_mn_print_conv(manufacturer: Manufacturer, tag_id: u16, value: &Value) -
     use crate::tags::{nikon_conv, sony_conv};
 
     match manufacturer {
+        // Samsung::Type2 0xa003 LensType, `PrintConv => [ \%samsungLensTypes ]`
+        // with `Count => -1` (Samsung.pm:410-416): the hash converts the first
+        // number only, any further one prints as it is, and the parts are
+        // joined with "; " (ExifTool.pm:3683-3697). A number missing from the
+        // hash prints as "Unknown (N)".
+        Manufacturer::Samsung if tag_id == 0xa003 => {
+            let disp = value.to_display_string();
+            let mut parts = disp.split(' ');
+            let first = parts.next().filter(|p| !p.is_empty())?;
+            let lens = crate::tags::lens_tables_generated::SAMSUNGLENSTYPES
+                .iter()
+                .find(|(k, _)| *k == first)
+                .map_or_else(|| format!("Unknown ({first})"), |(_, v)| (*v).to_string());
+            Some(
+                std::iter::once(lens)
+                    .chain(parts.map(str::to_string))
+                    .collect::<Vec<_>>()
+                    .join("; "),
+            )
+        }
         Manufacturer::Casio | Manufacturer::CasioType2 => match tag_id {
             // FirmwareDate (0x2001): undef[18] "YYMM\0\0DDHH\0\0MMSS\0\0".
             0x2001 => {
