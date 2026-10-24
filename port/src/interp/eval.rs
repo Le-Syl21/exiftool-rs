@@ -641,23 +641,19 @@ impl Interp {
     }
 
     fn call_perl(&mut self, sub: &Rc<Sub>, scope: Rc<Scope>, arr: ArrayRc, want: Want) -> ER<Vec<Value>> {
-        {
-            {
-                scope.declare(b'@', "_", Binding::Array(arr));
-                let saved_pkg = std::mem::replace(&mut self.package, sub.package.clone());
-                let saved_match = self.last_match.clone();
-                let saved = self.saved.len();
-                self.want_stack.push(want);
-                let r = self.exec_block_in(&sub.body, scope, want);
-                self.want_stack.pop();
-                self.restore_locals(saved);
-                self.last_match = saved_match;
-                self.package = saved_pkg;
-                match r {
-                    Ok(v) | Err(Flow::Return(v)) => Ok(fit(v, want)),
-                    Err(e) => Err(e),
-                }
-            }
+        scope.declare(b'@', "_", Binding::Array(arr));
+        let saved_pkg = std::mem::replace(&mut self.package, sub.package.clone());
+        let saved_match = self.last_match.clone();
+        let saved = self.saved.len();
+        self.want_stack.push(want);
+        let r = self.exec_block_in(&sub.body, scope, want);
+        self.want_stack.pop();
+        self.restore_locals(saved);
+        self.last_match = saved_match;
+        self.package = saved_pkg;
+        match r {
+            Ok(v) | Err(Flow::Return(v)) => Ok(fit(v, want)),
+            Err(e) => Err(e),
         }
     }
 
@@ -666,7 +662,10 @@ impl Interp {
         let full = self.sub_key(name);
         match self.subs.get(&*full).cloned() {
             Some(c) => self.call(&c, args, want),
-            None => die(format!("Undefined subroutine &{full} called")),
+            None => match self.autoload(&full) {
+                Some(c) => self.call(&c, args, want),
+                None => die(format!("Undefined subroutine &{full} called")),
+            },
         }
     }
 
@@ -2466,7 +2465,10 @@ impl Interp {
                         self.pending_aliases = Some(al);
                         self.call(&c, a, want)
                     }
-                    None => die(format!("Undefined subroutine &{key} called")),
+                    None => match self.autoload(&key) {
+                        Some(c) => self.call(&c, a, want),
+                        None => die(format!("Undefined subroutine &{key} called")),
+                    },
                 }
             }
             Expr::CallRef(f, args) => {
@@ -2568,7 +2570,8 @@ impl Interp {
         if name.contains("::") {
             return self.call_named(name, args, want);
         }
-        match self.find_method(&class, name) {
+        let found = self.find_method(&class, name).or_else(|| self.find_autoload(&class, name));
+        match found {
             Some(c) => self.call(&c, args, want),
             None => {
                 if name == "isa" {
@@ -2585,6 +2588,26 @@ impl Interp {
                 die(format!("Can't locate object method \"{name}\" via package \"{class}\""))
             }
         }
+    }
+
+    /// perl's AUTOLOAD: a missing `Pkg::name` calls `Pkg::AUTOLOAD` with
+    /// `$Pkg::AUTOLOAD` set to the full name.
+    fn autoload(&mut self, full: &str) -> Option<Rc<Code>> {
+        let (pkg, _) = full.rsplit_once("::")?;
+        let code = self.subs.get(format!("{pkg}::AUTOLOAD").as_str()).cloned()?;
+        self.set_scalar(&format!("{pkg}::AUTOLOAD"), Value::str(full));
+        Some(code)
+    }
+
+    /// AUTOLOAD for a method, through the class and its parents.
+    fn find_autoload(&mut self, class: &str, name: &str) -> Option<Rc<Code>> {
+        let code = self.find_method(class, "AUTOLOAD")?;
+        let pkg = match &*code {
+            Code::Perl(sub, _) => sub.name.as_deref().and_then(|n| n.rsplit_once("::")).map(|(p, _)| p.to_string()).unwrap_or_else(|| class.to_string()),
+            Code::Native(n, _) => n.rsplit_once("::").map(|(p, _)| p.to_string()).unwrap_or_else(|| class.to_string()),
+        };
+        self.set_scalar(&format!("{pkg}::AUTOLOAD"), Value::str(&format!("{class}::{name}")));
+        Some(code)
     }
 
     fn class_isa(&self, class: &str, target: &str) -> bool {

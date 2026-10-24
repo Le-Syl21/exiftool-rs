@@ -17,6 +17,8 @@ path = "src/lib.rs"
 # Perl-compatible regular expressions on bytes (backreferences, lookahead,
 # /s on binary data), as ExifTool's patterns and magic numbers need.
 pcre2 = "0.2"
+# Digest::MD5
+md-5 = "0.10"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -73,7 +73,52 @@ fn basename(path: &[u8], suffixes: &[Vec<u8>]) -> Vec<u8> {
     base
 }
 
+fn md5(data: &[u8]) -> Vec<u8> {
+    use md5::{Digest, Md5};
+    Md5::digest(data).to_vec()
+}
+
+fn hex(b: &[u8]) -> String {
+    b.iter().map(|x| format!("{x:02x}")).collect()
+}
+
 pub fn register(it: &mut Interp) {
+    // Digest::MD5, functional and OO (the object keeps the data added).
+    it.define_native("Digest::MD5::md5", |_, a, _| ret(Value::bytes(md5(&a.iter().flat_map(|v| v.to_bytes().to_vec()).collect::<Vec<u8>>()))));
+    it.define_native("Digest::MD5::md5_hex", |_, a, _| ret(Value::str(&hex(&md5(&a.iter().flat_map(|v| v.to_bytes().to_vec()).collect::<Vec<u8>>())))));
+    it.define_native("Digest::MD5::new", |_, _, _| {
+        let h = Value::new_hash();
+        if let Value::HashRef(r) = &h {
+            r.borrow_mut().blessed = Some(std::rc::Rc::from("Digest::MD5"));
+        }
+        h.set("data", Value::str(""));
+        ret(h)
+    });
+    it.define_native("Digest::MD5::add", |_, a, _| {
+        let o = arg(&a, 0);
+        let mut d = o.get("data").to_bytes().to_vec();
+        for v in &a[1..] {
+            d.extend_from_slice(&v.to_bytes());
+        }
+        o.set("data", Value::bytes(d));
+        ret(o)
+    });
+    it.define_native("Digest::MD5::digest", |_, a, _| {
+        let o = arg(&a, 0);
+        let r = md5(&o.get("data").to_bytes());
+        o.set("data", Value::str(""));
+        ret(Value::bytes(r))
+    });
+    it.define_native("Digest::MD5::hexdigest", |_, a, _| {
+        let o = arg(&a, 0);
+        let r = md5(&o.get("data").to_bytes());
+        o.set("data", Value::str(""));
+        ret(Value::str(&hex(&r)))
+    });
+    // overload: no Perl objects here overload operators.
+    it.define_native("overload::Method", |_, _, _| ret(Value::Undef));
+    it.define_native("overload::Overloaded", |_, _, _| ret(Value::from(false)));
+    it.define_native("overload::StrVal", |_, a, _| ret(Value::str(&arg(&a, 0).to_string())));
     it.define_native("File::Basename::dirname", |_, a, _| ret(Value::bytes(dirname(&arg(&a, 0).to_bytes()))));
     it.define_native("File::Basename::basename", |_, a, _| {
         let sfx: Vec<Vec<u8>> = a.iter().skip(1).map(|v| v.to_bytes().to_vec()).collect();

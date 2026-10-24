@@ -1493,6 +1493,13 @@ impl<'a> Parser<'a> {
                     }
                 });
             }
+            "not" => {
+                // `not` where a term is expected: return not $x, ($a, not $b)
+                if self.starts(")") || self.at_terminator() {
+                    return Ok(Expr::Un(UnOp::Not, Box::new(Expr::Const(Value::Undef))));
+                }
+                return Ok(Expr::Un(UnOp::Not, Box::new(self.assign()?)));
+            }
             "sub" => {
                 self.skip_prototype();
                 let body = self.block()?;
@@ -1733,7 +1740,9 @@ impl<'a> Parser<'a> {
         let r = self.rest();
         match r.first() {
             None => false,
-            Some(b')' | b']' | b'}' | b';' | b',' | b':' | b'?' | b'=' | b'<' | b'>' | b'|' | b'&' | b'*' | b'^' | b'.' | b'!') => {
+            // &name / &$code is a term; && and &= are operators.
+            Some(b'&') => matches!(r.get(1), Some(c) if ident_start(*c) || *c == b'$' || *c == b'{' || *c == b':'),
+            Some(b')' | b']' | b'}' | b';' | b',' | b':' | b'?' | b'=' | b'<' | b'>' | b'|' | b'*' | b'^' | b'.' | b'!') => {
                 // `!` starts a term unless it is `!=`/`!~`.
                 r[0] == b'!' && !matches!(r.get(1), Some(b'=' | b'~'))
             }

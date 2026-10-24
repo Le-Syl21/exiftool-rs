@@ -536,9 +536,17 @@ fn defined(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> 
             let k = it.sub_key(name);
             it.subs.contains_key(&*k)
         }
+        // defined &$name / defined &{"name"}: whether the sub exists.
+        Some(Expr::CallRef(f, _)) => match it.scalar(f, scope)? {
+            Value::Code(_) => true,
+            v => {
+                let k = it.sub_key(&v.to_text());
+                it.subs.contains_key(&*k)
+            }
+        },
         Some(Expr::Array(c)) => !it.array_of(c, scope, false).map(|a| a.borrow().is_empty()).unwrap_or(true),
         Some(Expr::Hash(c)) => !it.hash_of(c, scope, false).map(|h| h.borrow().is_empty()).unwrap_or(true),
-        Some(e @ (Expr::Call { .. } | Expr::Method { .. } | Expr::CallRef(..))) => {
+        Some(e @ (Expr::Call { .. } | Expr::Method { .. })) => {
             let v = it.eval_call(e, scope, Want::Scalar)?;
             !v.last().map(|v| v.is_undef()).unwrap_or(true)
         }
