@@ -159,8 +159,8 @@ Only standard work goes to crates:
 - **Digests**: md5, sha.
 - **Dates**: strftime/strptime for `-d`.
 - **XML parsing**, where ExifTool uses its own parser only as a tokenizer.
-- **Regex**: pcre2, which supports Perl syntax including backreferences, on
-  bytes. This is still to be decided, see section 8.
+- **Regex**: the `pcre2` crate, which supports Perl syntax including
+  backreferences, on bytes (section 8).
 - **GUI**: the existing egui application, ported to the new API.
 
 The high-level Rust API (`ExifTool`, `Options`, `Tag`, `extract_info`,
@@ -221,8 +221,11 @@ as 1.0.
 
 1. **One Perl-subset interpreter** for the tables, the CLI expressions and
    the config file.
-2. **Regex**: before anything else, a short study of porting PCRE2 to a pure
-   Rust crate. It would be a project of its own, useful beyond exiftool-rs.
-   The port waits for its conclusion.
+2. **Regex: the `pcre2` crate** (bindings to the C library), behind our own
+   `PerlRegex` interface. Measured on ExifTool's 114 magic numbers against
+   the 194 test files: 0 differences with Perl. fancy-regex failed 41 of
+   them (`\0` octal) and differs on `$`, `\Q\E` and `[` inside a class. A
+   pure-Rust PCRE2 port was studied and set aside: "ne soyons pas plus
+   royaliste que le roi".
 3. **`~/.ExifTool_config` is in scope**: as a clone, exiftool-rs supports it,
    through the Perl engine.
