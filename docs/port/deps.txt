@@ -1,0 +1,188 @@
+ExifTool: BPG BigTIFF CanonRaw Charset GPS GeoTiff Geolocation Geotag HTML HtmlDump ICC_Profile JPEGDigest Lang MacOS Panasonic QuickTimeStream Shift Shortcuts Sony Validate XMP XMP2 XMPStruct 
+7Z: 
+AAC: FLAC 
+AES: 
+AFCP: Fixup IPTC 
+AIFF: ID3 
+APE: ID3 
+APP12: 
+ASF: Exif RIFF XMP 
+Apple: Exif PLIST XMPStruct 
+Audible: HTML 
+BMP: ICC_Profile 
+BPG: Exif ICC_Profile XMP 
+BZZ: 
+BigTIFF: Exif 
+BuildTagLookup: Canon Exif HTML IPTC MacOS Nikon Shortcuts Sony Validate XMP 
+CBOR: JSON XMP 
+Canon: CanonCustom CanonVRD Exif GPS 
+CanonCustom: Canon Exif 
+CanonRaw: Canon CanonCustom Exif 
+CanonVRD: Canon Exif XMP 
+CaptureOne: XMP ZIP 
+Casio: Exif PrintIM 
+Charset: 
+DICOM: 
+DJI: Exif GPS Protobuf XMP 
+DNG: CanonRaw Exif FujiFilm Kodak Leaf MakerNotes MinoltaRaw PanasonicRaw Sony 
+DPX: 
+DSF: 
+DV: 
+DarwinCore: XMP 
+DjVu: BZZ XMP 
+EXE: 
+Exif: ASF Canon DJI DNG Fixup GPS ICC_Profile IPTC JSON Jpeg2000 Kodak Leaf MakerNotes Microsoft Minolta Nikon PLIST Pentax Photoshop PrintIM Sigma Sony XMP 
+FITS: 
+FLAC: ID3 RIFF Vorbis 
+FLIF: Exif ICC_Profile XMP 
+FLIR: Charset Exif GPS 
+Fixup: 
+Flash: FLAC XMP 
+FlashPix: ASF Exif ICC_Profile Microsoft XMP 
+Font: Jpeg2000 PostScript XMP 
+FotoStation: IPTC 
+FujiFilm: Exif 
+GE: Exif 
+GIF: ICC_Profile Jpeg2000 XMP 
+GIMP: Exif ICC_Profile IPTC XMP 
+GM: GPS XMPStruct 
+GPS: Exif 
+Garmin: GPS 
+GeoTiff: 
+Geolocation: 
+Geotag: GPS 
+GoPro: QuickTime 
+Google: Protobuf XMP 
+H264: Exif GPS 
+HP: PrintIM 
+HTML: PostScript XMP 
+HtmlDump: HTML 
+ICC_Profile: 
+ICO: 
+ID3: APE ASF Jpeg2000 MPEG Olympus XMP 
+IPTC: 
+ISO: 
+ITC: 
+Import: Charset XMP 
+InDesign: 
+InfiRay: 
+JPEG: AFCP APP12 CanonRaw CanonVRD Casio DJI Exif FLIR FlashPix FotoStation GoPro HP ICC_Profile InfiRay JFIF Jpeg2000 Kodak MIE MPF Pentax PhotoMechanic Photoshop PrintIM Qualcomm Ricoh Samsung Scalado Stim Trailer Unknown XMP 
+JPEGDigest: 
+JSON: Import PLIST XMP 
+JVC: Exif 
+Jpeg2000: CBOR Exif ICC_Profile IPTC JSON Photoshop XMP 
+Kandao: 
+Kodak: Exif ICC_Profile 
+KyoceraRaw: 
+LIF: XMP 
+LNK: ASF Microsoft 
+Leaf: Exif ICC_Profile 
+LigoGPS: Import 
+Lytro: Import XMP 
+M2TS: H264 MISB MPEG 
+MIE: CanonVRD Exif GPS ICC_Profile ID3 IPTC XMP 
+MIFF: Exif ICC_Profile Photoshop XMP 
+MISB: 
+MNG: PNG 
+MOI: 
+MPC: APE FLAC ID3 
+MPEG: 
+MPF: Exif 
+MRC: 
+MWG: Exif XMP 
+MXF: GPS 
+MacOS: PLIST RSRC 
+MakerNotes: Apple Canon Casio DJI Exif FLIR FujiFilm GE Google HP JVC Kodak Minolta Motorola Nikon Nintendo Olympus Panasonic Pentax PhaseOne Reconyx Ricoh Samsung Sanyo Sigma Sony Unknown 
+Matroska: QuickTime XMP 
+Microsoft: FlashPix XMP 
+Minolta: Canon Exif PrintIM Sigma 
+MinoltaRaw: Exif Minolta 
+Motorola: Exif 
+Nikon: Exif GPS ICC_Profile IPTC NikonCapture NikonCustom NikonSettings PrintIM XMP 
+NikonCapture: Exif IPTC 
+NikonCustom: 
+NikonSettings: 
+Nintendo: Exif 
+OOXML: XMP ZIP 
+Ogg: FLAC ID3 Opus Theora Vorbis 
+Olympus: APP12 Exif Minolta PrintIM 
+OpenEXR: Exif GPS XMP 
+Opus: Vorbis 
+Other: Exif 
+PCAP: 
+PCX: 
+PDF: AES ICC_Profile Jpeg2000 Photoshop PostScript XMP 
+PGF: 
+PICT: ICC_Profile Photoshop 
+PLIST: ASF GPS JSON XMP 
+PLUS: XMP 
+PNG: Exif FlashPix ICC_Profile Jpeg2000 Photoshop Samsung XMP 
+PPM: 
+PSP: Exif 
+Palm: XMP 
+Panasonic: Exif Olympus PanasonicRaw PrintIM 
+PanasonicRaw: Exif GPS IPTC JPEG Olympus XMP 
+Parrot: 
+Pentax: Exif GPS HP PrintIM 
+PhaseOne: Exif 
+PhotoCD: 
+PhotoMechanic: Exif IPTC XMP 
+Photoshop: Exif ICC_Profile IPTC XMP 
+Plot: 
+PostScript: ICC_Profile Photoshop XMP 
+PrintIM: 
+Protobuf: 
+Qualcomm: 
+QuickTime: Audible CBOR Canon DJI Exif FLIR Font FujiFilm GM GPS GoPro ICC_Profile ID3 JPEG Jpeg2000 Kandao Kodak LigoGPS MIE Microsoft Minolta Nikon Olympus PLIST Panasonic Pentax QuickTimeStream Ricoh Samsung Sanyo XMP 
+QuickTimeStream: Canon DJI GM GoPro H264 Import PLIST Parrot QuickTime Sony XMP 
+RIFF: BMP Casio Exif ICC_Profile ID3 Jpeg2000 Nikon Olympus Pentax QuickTime Ricoh XMP 
+RSRC: Font Photoshop PostScript 
+RTF: Charset 
+Radiance: 
+Rawzor: 
+Real: Canon PostScript 
+Reconyx: 
+Red: 
+Ricoh: Exif GPS PrintIM 
+Samsung: Exif Fixup JSON Nikon 
+Sanyo: Exif PrintIM 
+Scalado: PLIST 
+Shift: 
+Shortcuts: 
+Sigma: Exif 
+SigmaRaw: Sigma 
+Sony: Exif GPS Minolta MinoltaRaw PrintIM SonyIDC 
+SonyIDC: Exif 
+Stim: 
+TNEF: ASF Microsoft 
+TagInfoXML: Lang XMP 
+TagLookup: XMP 
+Text: 
+Theora: Vorbis 
+Torrent: 
+Trailer: Import 
+Unknown: Exif PrintIM 
+VCard: XMP 
+Validate: Exif 
+Vorbis: FLAC XMP 
+WPG: 
+WTV: 
+WavPack: APE RIFF 
+WriteCanonRaw: CanonVRD Fixup 
+WriteExif: Canon Fixup PanasonicRaw Sony 
+WriteIPTC: XMP 
+WritePDF: 
+WritePNG: 
+WritePhotoshop: 
+WritePostScript: 
+WriteQuickTime: MIE 
+WriteRIFF: 
+WriteXMP: XMPStruct 
+Writer: Canon CanonRaw CanonVRD Fixup MacOS Panasonic Shift Shortcuts Sony TagLookup XMPStruct 
+XISF: XMP 
+XMP: Charset DJI DarwinCore Exif GPS Google MWG Microsoft Nikon PDF PLUS Panasonic PhotoMechanic XMPStruct 
+XMP2: Jpeg2000 XMP 
+XMPStruct: TagLookup XMP 
+ZIP: CaptureOne OOXML iWork 
+ZISRAW: 
+iWork: XMP ZIP 
