@@ -27,8 +27,245 @@ pub fn struct_output() -> bool {
     STRUCT_OUTPUT.with(|s| s.get())
 }
 
-/// Known XMP namespace prefixes.
-pub(crate) fn namespace_prefix(uri: &str) -> &str {
+/// Prefix an XMP namespace URI is reported under, or `""` for a namespace
+/// ExifTool does not know.
+///
+/// ExifTool resolves the URI of every `xmlns:PREFIX` declaration through its
+/// `%uri2ns` table (XMP.pm:3905). A URI that is not there gets two more tries
+/// (XMP.pm:3906-3927): with its trailing slash added or removed (the URI is
+/// then fixed, with a minor warning, see [`fixed_namespace_uri`]), and with a
+/// different version number in it (`[different xmp version]`, no warning).
+pub(crate) fn namespace_prefix(uri: &str) -> &'static str {
+    let listed = listed_namespace_prefix(uri);
+    if !listed.is_empty() {
+        return listed;
+    }
+    if let Some(prefix) = exiftool_uri_prefix(uri) {
+        return prefix;
+    }
+    if let Some(fixed) = toggled_trailing_slash(uri) {
+        if let Some(prefix) = exiftool_uri_prefix(&fixed) {
+            let listed = listed_namespace_prefix(&fixed);
+            return if listed.is_empty() { prefix } else { listed };
+        }
+    }
+    other_version_prefix(uri).unwrap_or("")
+}
+
+/// The URI ExifTool substitutes for a namespace URI it recognises only once
+/// its trailing slash is added or removed (XMP.pm:3908-3915, "patch for Nikon
+/// NX2 URI bug for Microsoft PhotoInfo namespace"). ExifTool then issues the
+/// minor warning `Fixed incorrect URI for xmlns:PREFIX`.
+pub(crate) fn fixed_namespace_uri(uri: &str) -> Option<String> {
+    if !listed_namespace_prefix(uri).is_empty() || exiftool_uri_prefix(uri).is_some() {
+        return None;
+    }
+    let fixed = toggled_trailing_slash(uri)?;
+    exiftool_uri_prefix(&fixed).map(|_| fixed)
+}
+
+/// `$try =~ s{/$}{} or $try .= '/'` (XMP.pm:3910).
+fn toggled_trailing_slash(uri: &str) -> Option<String> {
+    if uri.is_empty() {
+        return None;
+    }
+    Some(match uri.strip_suffix('/') {
+        Some(stripped) => stripped.to_string(),
+        None => format!("{uri}/"),
+    })
+}
+
+/// ExifTool's `%uri2ns`: the reverse of `%nsURI`, plus `ns.exiftool.ca`
+/// (XMP.pm:215-221).
+fn exiftool_uri_prefix(uri: &str) -> Option<&'static str> {
+    if uri == "http://ns.exiftool.ca/1.0/" {
+        return Some("et");
+    }
+    EXIFTOOL_NS_URI
+        .iter()
+        .find(|&&(_, u)| u == uri)
+        .map(|&(prefix, _)| prefix)
+}
+
+/// A namespace ExifTool knows under another version number (XMP.pm:3919-3926):
+/// the first `/N.N/` (or a trailing `/N.N`) of the URI may be any version.
+fn other_version_prefix(uri: &str) -> Option<&'static str> {
+    let (head, tail) = split_version(uri)?;
+    EXIFTOOL_NS_URI
+        .iter()
+        .find(|&&(_, known)| {
+            known
+                .strip_prefix(head)
+                .and_then(split_leading_version)
+                .is_some_and(|rest| rest == tail)
+        })
+        .map(|&(prefix, _)| prefix)
+}
+
+/// Split `uri` around its first version component: the text up to and
+/// including the `/` before it, and the text after it (starting with the `/`
+/// that ends it, or empty at the end of the URI).
+fn split_version(uri: &str) -> Option<(&str, &str)> {
+    let mut from = 0;
+    while let Some(i) = uri[from..].find('/') {
+        let head_end = from + i + 1;
+        if let Some(tail) = split_leading_version(&uri[head_end..]) {
+            return Some((&uri[..head_end], tail));
+        }
+        from = head_end;
+    }
+    None
+}
+
+/// `\d+\.\d+(/|$)` at the start of `s`: what follows the version.
+fn split_leading_version(s: &str) -> Option<&str> {
+    let digits = |t: &str| t.bytes().take_while(u8::is_ascii_digit).count();
+    let major = digits(s);
+    if major == 0 || s.as_bytes().get(major) != Some(&b'.') {
+        return None;
+    }
+    let minor = digits(&s[major + 1..]);
+    if minor == 0 {
+        return None;
+    }
+    let rest = &s[major + 1 + minor..];
+    (rest.is_empty() || rest.starts_with('/')).then_some(rest)
+}
+
+/// ExifTool's `%nsURI` (XMP.pm:109-212): every namespace prefix it knows,
+/// with its URI.
+static EXIFTOOL_NS_URI: &[(&str, &str)] = &[
+    ("aux", "http://ns.adobe.com/exif/1.0/aux/"),
+    ("album", "http://ns.adobe.com/album/1.0/"),
+    ("cc", "http://creativecommons.org/ns#"),
+    ("crd", "http://ns.adobe.com/camera-raw-defaults/1.0/"),
+    ("crs", "http://ns.adobe.com/camera-raw-settings/1.0/"),
+    ("crss", "http://ns.adobe.com/camera-raw-saved-settings/1.0/"),
+    ("dc", "http://purl.org/dc/elements/1.1/"),
+    ("exif", "http://ns.adobe.com/exif/1.0/"),
+    ("exifEX", "http://cipa.jp/exif/1.0/"),
+    ("iX", "http://ns.adobe.com/iX/1.0/"),
+    ("pdf", "http://ns.adobe.com/pdf/1.3/"),
+    ("pdfx", "http://ns.adobe.com/pdfx/1.3/"),
+    ("photoshop", "http://ns.adobe.com/photoshop/1.0/"),
+    ("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"),
+    ("rdfs", "http://www.w3.org/2000/01/rdf-schema#"),
+    ("stDim", "http://ns.adobe.com/xap/1.0/sType/Dimensions#"),
+    ("stEvt", "http://ns.adobe.com/xap/1.0/sType/ResourceEvent#"),
+    ("stFnt", "http://ns.adobe.com/xap/1.0/sType/Font#"),
+    ("stJob", "http://ns.adobe.com/xap/1.0/sType/Job#"),
+    ("stRef", "http://ns.adobe.com/xap/1.0/sType/ResourceRef#"),
+    ("stVer", "http://ns.adobe.com/xap/1.0/sType/Version#"),
+    ("stMfs", "http://ns.adobe.com/xap/1.0/sType/ManifestItem#"),
+    (
+        "stCamera",
+        "http://ns.adobe.com/photoshop/1.0/camera-profile",
+    ),
+    (
+        "crlcp",
+        "http://ns.adobe.com/camera-raw-embedded-lens-profile/1.0/",
+    ),
+    ("tiff", "http://ns.adobe.com/tiff/1.0/"),
+    ("x", "adobe:ns:meta/"),
+    ("xmpG", "http://ns.adobe.com/xap/1.0/g/"),
+    ("xmpGImg", "http://ns.adobe.com/xap/1.0/g/img/"),
+    ("xmp", "http://ns.adobe.com/xap/1.0/"),
+    ("xmpBJ", "http://ns.adobe.com/xap/1.0/bj/"),
+    ("xmpDM", "http://ns.adobe.com/xmp/1.0/DynamicMedia/"),
+    ("xmpMM", "http://ns.adobe.com/xap/1.0/mm/"),
+    ("xmpRights", "http://ns.adobe.com/xap/1.0/rights/"),
+    ("xmpNote", "http://ns.adobe.com/xmp/note/"),
+    ("xmpTPg", "http://ns.adobe.com/xap/1.0/t/pg/"),
+    ("xmpidq", "http://ns.adobe.com/xmp/Identifier/qual/1.0/"),
+    ("xmpPLUS", "http://ns.adobe.com/xap/1.0/PLUS/"),
+    (
+        "panorama",
+        "http://ns.adobe.com/photoshop/1.0/panorama-profile",
+    ),
+    ("dex", "http://ns.optimasc.com/dex/1.0/"),
+    ("mediapro", "http://ns.iview-multimedia.com/mediapro/1.0/"),
+    (
+        "expressionmedia",
+        "http://ns.microsoft.com/expressionmedia/1.0/",
+    ),
+    (
+        "Iptc4xmpCore",
+        "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/",
+    ),
+    ("Iptc4xmpExt", "http://iptc.org/std/Iptc4xmpExt/2008-02-29/"),
+    ("MicrosoftPhoto", "http://ns.microsoft.com/photo/1.0"),
+    ("MP1", "http://ns.microsoft.com/photo/1.1"),
+    ("MP", "http://ns.microsoft.com/photo/1.2/"),
+    ("MPRI", "http://ns.microsoft.com/photo/1.2/t/RegionInfo#"),
+    ("MPReg", "http://ns.microsoft.com/photo/1.2/t/Region#"),
+    ("lr", "http://ns.adobe.com/lightroom/1.0/"),
+    ("DICOM", "http://ns.adobe.com/DICOM/"),
+    ("drone-dji", "http://www.dji.com/drone-dji/1.0/"),
+    ("svg", "http://www.w3.org/2000/svg"),
+    ("et", "http://ns.exiftool.org/1.0/"),
+    ("plus", "http://ns.useplus.org/ldf/xmp/1.0/"),
+    ("prism", "http://prismstandard.org/namespaces/basic/2.0/"),
+    ("prl", "http://prismstandard.org/namespaces/prl/2.1/"),
+    (
+        "pur",
+        "http://prismstandard.org/namespaces/prismusagerights/2.1/",
+    ),
+    ("pmi", "http://prismstandard.org/namespaces/pmi/2.2/"),
+    ("prm", "http://prismstandard.org/namespaces/prm/3.0/"),
+    ("acdsee", "http://ns.acdsee.com/iptc/1.0/"),
+    ("acdsee-rs", "http://ns.acdsee.com/regions/"),
+    ("digiKam", "http://www.digikam.org/ns/1.0/"),
+    ("swf", "http://ns.adobe.com/swf/1.0/"),
+    ("cell", "http://developer.sonyericsson.com/cell/1.0/"),
+    ("aas", "http://ns.apple.com/adjustment-settings/1.0/"),
+    (
+        "mwg-rs",
+        "http://www.metadataworkinggroup.com/schemas/regions/",
+    ),
+    (
+        "mwg-kw",
+        "http://www.metadataworkinggroup.com/schemas/keywords/",
+    ),
+    (
+        "mwg-coll",
+        "http://www.metadataworkinggroup.com/schemas/collections/",
+    ),
+    ("stArea", "http://ns.adobe.com/xmp/sType/Area#"),
+    ("extensis", "http://ns.extensis.com/extensis/1.0/"),
+    ("ics", "http://ns.idimager.com/ics/1.0/"),
+    ("fpv", "http://ns.fastpictureviewer.com/fpv/1.0/"),
+    ("creatorAtom", "http://ns.adobe.com/creatorAtom/1.0/"),
+    ("apple-fi", "http://ns.apple.com/faceinfo/1.0/"),
+    ("GAudio", "http://ns.google.com/photos/1.0/audio/"),
+    ("GImage", "http://ns.google.com/photos/1.0/image/"),
+    ("GPano", "http://ns.google.com/photos/1.0/panorama/"),
+    ("GSpherical", "http://ns.google.com/videos/1.0/spherical/"),
+    ("GDepth", "http://ns.google.com/photos/1.0/depthmap/"),
+    ("GFocus", "http://ns.google.com/photos/1.0/focus/"),
+    ("GCamera", "http://ns.google.com/photos/1.0/camera/"),
+    ("GCreations", "http://ns.google.com/photos/1.0/creations/"),
+    ("dwc", "http://rs.tdwg.org/dwc/index.htm"),
+    ("GettyImagesGIFT", "http://xmp.gettyimages.com/gift/1.0/"),
+    ("LImage", "http://ns.leiainc.com/photos/1.0/image/"),
+    ("Profile", "http://ns.google.com/photos/dd/1.0/profile/"),
+    ("sdc", "http://ns.nikon.com/sdc/1.0/"),
+    ("ast", "http://ns.nikon.com/asteroid/1.0/"),
+    ("nine", "http://ns.nikon.com/nine/1.0/"),
+    ("hdr_metadata", "http://ns.adobe.com/hdr-metadata/1.0/"),
+    ("hdrgm", "http://ns.adobe.com/hdr-gain-map/1.0/"),
+    (
+        "xmpDSA",
+        "http://leica-camera.com/digital-shift-assistant/1.0/",
+    ),
+    ("seal", "http://ns.seal/2024/1.0/"),
+    ("GContainer", "http://ns.google.com/photos/1.0/container/"),
+    ("HDRGainMap", "http://ns.apple.com/HDRGainMap/1.0/"),
+    ("apdi", "http://ns.apple.com/pixeldatainfo/1.0/"),
+];
+
+/// The namespaces whose prefix this reader spells out itself, ahead of
+/// [`EXIFTOOL_NS_URI`]; [`namespace_prefix`] is the full lookup.
+fn listed_namespace_prefix(uri: &str) -> &'static str {
     match uri {
         "http://purl.org/dc/elements/1.1/" => "dc",
         "http://ns.adobe.com/xap/1.0/" => "xmp",
@@ -60,7 +297,7 @@ pub(crate) fn namespace_prefix(uri: &str) -> &str {
         "http://ns.adobe.com/xap/1.0/sType/Font#" => "stFnt",
         "http://ns.adobe.com/xap/1.0/sType/ManifestItem#" => "stMfs",
         "http://www.w3.org/2000/01/rdf-schema#" => "rdfs",
-        "http://ns.microsoft.com/photo/1.0/" => "MicrosoftPhoto",
+        "http://ns.microsoft.com/photo/1.0" => "MicrosoftPhoto",
         "http://ns.useplus.org/ldf/xmp/1.0/" => "plus",
         "http://ns.adobe.com/xap/1.0/sType/Area#" => "stArea",
         "http://www.metadataworkinggroup.com/schemas/regions/" => "mwg-rs",
@@ -443,11 +680,35 @@ impl XmpReader {
         let mut resolved_uri: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
 
+        // Prefixes already warned about by "Fixed incorrect URI": ExifTool
+        // issues each distinct warning once (`WAS_WARNED`).
+        let mut fixed_uri_warned: std::collections::HashSet<String> =
+            std::collections::HashSet::new();
+
         for event in parser {
             match event {
                 Ok(XmlEvent::StartElement {
-                    name, attributes, ..
+                    name,
+                    attributes,
+                    namespace,
                 }) => {
+                    // A namespace URI ExifTool only knows with its trailing slash
+                    // added or removed is fixed, with a minor warning, wherever it
+                    // is declared (XMP.pm:3908-3915). `namespace_prefix` resolves
+                    // it to the standard prefix; this reports the fix. The default
+                    // namespace (`xmlns="..."`) has no prefix and is not checked.
+                    for (pfx, uri) in &namespace {
+                        if pfx.is_empty()
+                            || fixed_uri_warned.contains(pfx)
+                            || fixed_namespace_uri(uri).is_none()
+                        {
+                            continue;
+                        }
+                        fixed_uri_warned.insert(pfx.to_string());
+                        tags.push(crate::tag::warning_tag(format!(
+                            "[minor] Fixed incorrect URI for xmlns:{pfx}"
+                        )));
+                    }
                     // Track the path
                     let ns_uri = name.namespace.as_deref().unwrap_or("");
                     if let Some(pfx) = name.prefix.as_deref() {
@@ -4023,6 +4284,40 @@ mod gcontainer_order_tests {
                 "DirectoryItemSemantic"
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod namespace_uri_tests {
+    use super::{fixed_namespace_uri, namespace_prefix};
+
+    #[test]
+    fn a_uri_known_without_its_trailing_slash_is_fixed() {
+        let ms = "http://ns.microsoft.com/photo/1.0";
+        assert_eq!(fixed_namespace_uri(ms), None);
+        assert_eq!(fixed_namespace_uri(&format!("{ms}/")).as_deref(), Some(ms));
+        assert_eq!(namespace_prefix(&format!("{ms}/")), "MicrosoftPhoto");
+        // And the other way round: a slash ExifTool's URI has, missing.
+        let ps = "http://ns.adobe.com/photoshop/1.0";
+        assert_eq!(
+            fixed_namespace_uri(ps).as_deref(),
+            Some("http://ns.adobe.com/photoshop/1.0/")
+        );
+        assert_eq!(namespace_prefix(ps), "photoshop");
+        assert_eq!(fixed_namespace_uri("http://example.com/ns/"), None);
+    }
+
+    #[test]
+    fn another_version_of_a_known_uri_keeps_its_prefix() {
+        let ps2 = "http://ns.adobe.com/photoshop/2.0/";
+        assert_eq!(namespace_prefix(ps2), "photoshop");
+        assert_eq!(
+            namespace_prefix("http://prismstandard.org/namespaces/basic/3.0/"),
+            "prism"
+        );
+        // Only the version may differ, and it raises no warning.
+        assert_eq!(fixed_namespace_uri(ps2), None);
+        assert_eq!(namespace_prefix("http://ns.adobe.com/photoshop/2.0/x/"), "");
     }
 }
 

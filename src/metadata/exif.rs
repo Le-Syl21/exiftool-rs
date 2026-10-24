@@ -601,9 +601,21 @@ impl ExifReader {
                     .collect();
                 let exif_has: std::collections::HashSet<String> =
                     tags.iter().map(|t| t.name.clone()).collect();
-                // Remove EXIF non-primary tags when MakerNotes provides them (MakerNotes wins)
+                // Remove EXIF non-primary tags when MakerNotes provides them
+                // (MakerNotes wins) -- but only the ones stored BEFORE the maker
+                // note. A tag the walk reaches after 0x927c (ExifIFD LensModel,
+                // 0xa434) is stored after every maker-note tag, and FoundTag lets
+                // it take the name back at equal priority (ExifTool.pm:9545-9570).
+                // Both instances stay for the central arbitration, which replays
+                // that rule in stream order and knows the stated priorities.
+                let mn_pos = tags.iter().position(|t| t.name == "MakerNote");
+                let mut idx = 0usize;
                 tags.retain(|t| {
-                    !mn_name_set.contains(&t.name) || exif_primary.contains(&t.name.as_str())
+                    let after_makernote = mn_pos.is_some_and(|p| idx > p);
+                    idx += 1;
+                    after_makernote
+                        || !mn_name_set.contains(&t.name)
+                        || exif_primary.contains(&t.name.as_str())
                 });
                 // Add MakerNotes tags, but skip EXIF-primary tags that EXIF already provides.
                 // Exception: a few maker notes carry a more precise authoritative value

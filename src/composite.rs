@@ -345,6 +345,26 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
         }
     }
 
+    // Composite LensID `Require => 'LensType'` and only Desires FocalLength
+    // (Exif.pm:5303-5331), so a LensType named by its lookup table makes a
+    // LensID even where the 35efl route above could not run for want of a
+    // FocalLength: Samsung SRW notes give LensType without one. Its value is
+    // the LensType's own (`ValueConv => '$val'`), the name only its print.
+    if !composite.iter().any(|t| t.name == "LensID") && find_tag(tags, "LensIDNumber").is_none() {
+        if let Some(lt) = find_tag(tags, "LensType") {
+            let pv = &lt.print_value;
+            let named = *pv != lt.raw_value.to_display_string();
+            if named && !pv.is_empty() && pv != "n/a" && !pv.starts_with("Unknown") {
+                composite.push(mk_composite_raw(
+                    "LensID",
+                    "Lens ID",
+                    lt.raw_value.clone(),
+                    pv.clone(),
+                ));
+            }
+        }
+    }
+
     // LensID fallback: use LensModel, Lens, or LensType if no LensID computed by 35efl
     // Only create when the value looks like a real camera lens (contains "mm" or "f/")
     if !composite.iter().any(|t| t.name == "LensID") {
