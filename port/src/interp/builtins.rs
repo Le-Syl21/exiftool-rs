@@ -25,7 +25,7 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
     Some(run(it, name, args, scope, want))
 }
 
-const BUILTINS: &[&str] = &["getpwuid", "getgrgid", "defined", "ref", "scalar", "lc", "uc", "lcfirst", "ucfirst", "quotemeta", "fc", "length", "chr", "ord", "hex", "oct", "abs", "int", "sqrt", "log", "exp", "sin", "cos", "atan2", "rand", "srand", "time", "localtime", "gmtime", "join", "sprintf", "reverse", "split", "pack", "unpack", "substr", "index", "rindex", "keys", "values", "each", "exists", "delete", "shift", "pop", "push", "unshift", "splice", "chomp", "chop", "undef", "pos", "die", "warn", "bless", "require", "caller", "lock", "study", "exit", "sleep", "do", "open", "close", "binmode", "unlink", "mkdir", "rmdir", "opendir", "readdir", "closedir", "system", "exec", "select", "seek", "read", "sysread", "eof", "readline", "fileno", "chdir", "rename", "stat", "lstat"];
+const BUILTINS: &[&str] = &["readpipe", "getpwuid", "getgrgid", "defined", "ref", "scalar", "lc", "uc", "lcfirst", "ucfirst", "quotemeta", "fc", "length", "chr", "ord", "hex", "oct", "abs", "int", "sqrt", "log", "exp", "sin", "cos", "atan2", "rand", "srand", "time", "localtime", "gmtime", "join", "sprintf", "reverse", "split", "pack", "unpack", "substr", "index", "rindex", "keys", "values", "each", "exists", "delete", "shift", "pop", "push", "unshift", "splice", "chomp", "chop", "undef", "pos", "die", "warn", "bless", "require", "caller", "lock", "study", "exit", "sleep", "do", "open", "close", "binmode", "unlink", "mkdir", "rmdir", "opendir", "readdir", "closedir", "system", "exec", "select", "seek", "read", "sysread", "eof", "readline", "fileno", "chdir", "rename", "stat", "lstat"];
 
 fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
     match name {
@@ -48,6 +48,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                     "HASH"
                 }
                 Value::Code(_) => "CODE",
+                Value::Handle(_) => "GLOB",
                 _ => "",
             };
             one(Value::str(r))
@@ -259,16 +260,19 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 },
                 None => it.named_array(scope, "_"),
             };
-            let mut a = a.borrow_mut();
-            let v = if name == "shift" {
-                if a.is_empty() {
-                    Value::Undef
+            let v = {
+                let mut ab = a.borrow_mut();
+                if name == "shift" {
+                    if ab.is_empty() {
+                        Value::Undef
+                    } else {
+                        ab.remove(0)
+                    }
                 } else {
-                    a.remove(0)
+                    ab.pop().unwrap_or_default()
                 }
-            } else {
-                a.pop().unwrap_or_default()
             };
+            it.alias_shift(&a, name == "shift");
             one(v)
         }
         "push" | "unshift" => {
@@ -281,6 +285,9 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 },
             };
             let vals = values(it, &args[1..], scope)?;
+            if name == "unshift" {
+                it.alias_forget(&a);
+            }
             let mut a = a.borrow_mut();
             if name == "push" {
                 a.extend(vals);
@@ -426,6 +433,24 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             }
         }
         "lock" | "study" => one(Value::Int(1)),
+        "readpipe" => {
+            let cmd = arg_or_topic(it, args, scope)?.to_text();
+            let out = std::process::Command::new("sh").arg("-c").arg(&cmd).output();
+            match out {
+                Ok(o) => {
+                    if want == Want::List {
+                        let mut lines = Vec::new();
+                        for l in o.stdout.split_inclusive(|&b| b == b'\n') {
+                            lines.push(Value::bytes(l));
+                        }
+                        Ok(lines)
+                    } else {
+                        one(Value::bytes(o.stdout))
+                    }
+                }
+                Err(_) => one(Value::Undef),
+            }
+        }
         "getpwuid" | "getgrgid" => {
             let id = arg_or_topic(it, args, scope)?.to_i64();
             one(match crate::interp::time::user_or_group_name(id, name == "getpwuid") {
@@ -441,7 +466,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             Err(Flow::Exit(code))
         }
         "sleep" => one(Value::Int(0)),
-        "do" | "mkdir" | "rmdir" | "opendir" | "readdir" | "closedir" | "system" | "exec" | "readline" | "chdir" | "rename" | "stat" | "lstat" => {
+        "do" | "mkdir" | "rmdir" | "opendir" | "readdir" | "closedir" | "system" | "exec" | "readline" | "chdir" | "rename" => {
             die(format!("{name} is not available in this context"))
         }
         _ => unreachable!(),
@@ -479,7 +504,10 @@ pub(super) fn warn(it: &mut Interp, msg: Value) -> ER<()> {
             it.call_named(&n, vec![msg], Want::Void)?;
         }
         Some(Value::Str(s)) if &s[..] == b"IGNORE" => {}
-        _ => it.stderr.extend_from_slice(&msg.to_bytes()),
+        _ => {
+            let h = it.handle_of(&Value::str("*STDERR"), false).unwrap();
+            it.write_handle(&h, &msg.to_bytes());
+        }
     }
     Ok(())
 }

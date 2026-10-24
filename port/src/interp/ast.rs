@@ -184,6 +184,8 @@ pub enum Expr {
     Return(Option<P<Expr>>),
     Last(Option<Rc<str>>),
     Next(Option<Rc<str>>),
+    Redo(Option<Rc<str>>),
+    Goto(Rc<str>),
     Wantarray,
     /// `print`/`printf` with an optional filehandle: a bareword is a
     /// `Const("*NAME")`, otherwise the expression holding the handle.
@@ -214,4 +216,9 @@ pub enum Stmt {
     Use(Rc<str>, Option<Expr>),
     /// `END { ... }`: run when the program ends.
     End(Rc<Block>),
+    /// `LABEL:` before a statement that is not a loop (a `goto` target).
+    Label(Rc<str>),
+    /// `EXPR if COND` / `EXPR unless COND`: no scope of its own, so
+    /// `my $x = ... if ...` declares in the enclosing block.
+    Modified(Expr, Expr),
 }

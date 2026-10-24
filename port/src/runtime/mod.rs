@@ -65,6 +65,7 @@ pub fn new_interp() -> Interp {
     let mut it = Interp::new();
     it.require_hook = Some(Rc::new(|it: &mut Interp, m: &str| require(it, m)));
     install_core(&mut it);
+    crate::modules::core::register(&mut it);
     it
 }
 
@@ -83,9 +84,21 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
         return require_file(it, what, &key);
     }
     // Pragmas and modules perl provides: nothing to load.
-    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize") {
+    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname") {
         inc.borrow_mut().insert(key.as_bytes(), Value::str(&key));
         return Ok(());
+    }
+    // A module not ported yet runs from its Perl source; the subs ported so
+    // far replace their Perl versions once it is loaded.
+    if !crate::modules::is_ported(what) {
+        if let Some(path) = source_path(&key) {
+            inc.borrow_mut().insert(key.as_bytes(), Value::str(&path));
+            run_source(it, &path)?;
+            if let Some(r) = registrar(what) {
+                r(it);
+            }
+            return Ok(());
+        }
     }
     let Some(data) = module_data(what) else {
         return die(format!("Can't locate {key} in @INC (you may need to install the {what} module) (@INC entries checked: exiftool-rs)"));
@@ -113,8 +126,38 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
     Ok(())
 }
 
+/// Where ExifTool's Perl source is, for the modules not ported yet
+/// (`EXIFTOOL_LIB`, or the checkout next to this repository).
+pub fn perl_lib() -> String {
+    std::env::var("EXIFTOOL_LIB").unwrap_or_else(|_| format!("{}/../../exiftool/lib", env!("CARGO_MANIFEST_DIR")))
+}
+
+fn source_path(key: &str) -> Option<String> {
+    let p = format!("{}/{key}", perl_lib());
+    std::path::Path::new(&p).exists().then_some(p)
+}
+
+/// Run a module's Perl source, as `require` does.
+fn run_source(it: &mut Interp, path: &str) -> ER<()> {
+    let src = match std::fs::read(path) {
+        Ok(s) => s,
+        Err(e) => return die(format!("{path}: {e}")),
+    };
+    let scope = crate::interp::Scope::new(None);
+    let saved = it.strict;
+    it.strict = false;
+    let r = it.eval_string(&src, "main", &scope, Want::Scalar);
+    it.strict = saved;
+    match r {
+        Ok(_) => Ok(()),
+        Err(e) => Err(crate::interp::Flow::Die(e)),
+    }
+}
+
 /// `require "file.pl"` / `do FILE`: run a Perl source file.
 fn require_file(it: &mut Interp, path: &str, key: &str) -> ER<()> {
+    let path = if std::path::Path::new(path).exists() { path.to_string() } else { source_path(path).unwrap_or_else(|| path.to_string()) };
+    let path = path.as_str();
     let src = match std::fs::read(path) {
         Ok(s) => s,
         Err(_) => return die(format!("Can't locate {path} in @INC")),

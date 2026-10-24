@@ -50,6 +50,7 @@ impl Value {
             Value::ArrayRef(_) => "ARRAY",
             Value::HashRef(_) => "HASH",
             Value::Code(_) => "CODE",
+            Value::Handle(_) => "GLOB",
             _ => "",
         }
     }

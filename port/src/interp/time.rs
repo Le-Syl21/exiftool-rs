@@ -106,3 +106,77 @@ pub fn user_or_group_name(id: i64, user: bool) -> Option<String> {
 pub fn user_or_group_name(_id: i64, _user: bool) -> Option<String> {
     None
 }
+
+/// Seconds since the epoch of a local wall-clock time given as if it were
+/// UTC: what `timelocal`/`mktime` compute.
+pub fn local_to_utc(wall: f64) -> f64 {
+    // The offset at the guessed instant, then once more at the corrected
+    // one (DST transitions).
+    let offset_at = |t: i64| -> i64 {
+        let tm = broken_down(t, true);
+        let as_utc = days_from_civil(tm[5] + 1900, tm[4] + 1, tm[3]) * 86400 + tm[2] * 3600 + tm[1] * 60 + tm[0];
+        as_utc - t
+    };
+    let w = wall.floor() as i64;
+    let mut t = w - offset_at(w);
+    t = w - offset_at(t);
+    t as f64 + (wall - wall.floor())
+}
+
+/// POSIX::strftime with the C library's formats (the common ones).
+pub fn strftime(fmt: &str, tm: &[i64]) -> String {
+    const DAYS: [&str; 7] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const MONTHS: [&str; 12] = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let g = |i: usize| tm.get(i).copied().unwrap_or(0);
+    // Normalize like mktime: recompute wday/yday from the date.
+    let (year, mon, mday) = (g(5) + 1900, g(4), g(3));
+    let days = days_from_civil(year, mon + 1, mday);
+    let (y, m, d) = civil_from_days(days);
+    let wday = (days + 4).rem_euclid(7);
+    let yday = days - days_from_civil(y, 1, 1);
+    let (hour, min, sec) = (g(2), g(1), g(0));
+    let mut out = String::new();
+    let mut chars = fmt.chars();
+    while let Some(c) = chars.next() {
+        if c != '%' {
+            out.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('Y') => out.push_str(&y.to_string()),
+            Some('y') => out.push_str(&format!("{:02}", y.rem_euclid(100))),
+            Some('m') => out.push_str(&format!("{:02}", m)),
+            Some('d') => out.push_str(&format!("{:02}", d)),
+            Some('e') => out.push_str(&format!("{:2}", d)),
+            Some('H') => out.push_str(&format!("{:02}", hour)),
+            Some('I') => out.push_str(&format!("{:02}", if hour % 12 == 0 { 12 } else { hour % 12 })),
+            Some('M') => out.push_str(&format!("{:02}", min)),
+            Some('S') => out.push_str(&format!("{:02}", sec)),
+            Some('p') => out.push_str(if hour < 12 { "AM" } else { "PM" }),
+            Some('j') => out.push_str(&format!("{:03}", yday + 1)),
+            Some('a') => out.push_str(&DAYS[wday as usize][..3]),
+            Some('A') => out.push_str(DAYS[wday as usize]),
+            Some('b') | Some('h') => out.push_str(&MONTHS[(m - 1) as usize][..3]),
+            Some('B') => out.push_str(MONTHS[(m - 1) as usize]),
+            Some('w') => out.push_str(&wday.to_string()),
+            Some('n') => out.push('\n'),
+            Some('t') => out.push('\t'),
+            Some('%') => out.push('%'),
+            Some('z') | Some('Z') | Some('s') => {
+                let t = days * 86400 + hour * 3600 + min * 60 + sec;
+                let utc = local_to_utc(t as f64) as i64;
+                let off = t - utc;
+                match c {
+                    _ => {}
+                }
+                out.push_str(&format!("{}{:02}{:02}", if off < 0 { '-' } else { '+' }, off.abs() / 3600, off.abs() % 3600 / 60));
+            }
+            Some(other) => {
+                out.push('%');
+                out.push(other);
+            }
+            None => out.push('%'),
+        }
+    }
+    out
+}

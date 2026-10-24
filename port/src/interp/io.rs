@@ -37,6 +37,8 @@ pub struct FileHandle {
     pub output: Option<Output>,
     pub eof: bool,
     pub lines: i64,
+    /// The file opened, for stat and file tests on the handle.
+    pub path: Option<String>,
 }
 
 impl std::fmt::Debug for FileHandle {
@@ -267,6 +269,27 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
             r.map(|n| vec![Value::Int(n)])
         }
         "fileno" => Ok(vec![Value::Int(3)]),
+        "stat" | "lstat" => {
+            let r = (|| -> ER<Vec<Value>> {
+                let m = match args.first() {
+                    Some(a) => {
+                        let target = file_target(it, a, scope)?;
+                        match target {
+                            Target::Last => return Ok(it.last_stat.clone()),
+                            Target::Path(p) => if name == "lstat" { std::fs::symlink_metadata(p) } else { std::fs::metadata(p) },
+                        }
+                    }
+                    None => std::fs::metadata(it.read_scalar("_", scope).to_text()),
+                };
+                let v = match m {
+                    Ok(m) => stat_list(&m),
+                    Err(_) => vec![],
+                };
+                it.last_stat = v.clone();
+                Ok(v)
+            })();
+            r
+        }
         "select" => Ok(vec![Value::str("main::STDOUT")]),
         "unlink" => {
             let mut n = 0;
@@ -293,6 +316,77 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
     })
 }
 
+pub(super) enum Target {
+    Path(String),
+    /// `_`: the last stat
+    Last,
+}
+
+/// What a stat or file test applies to: a name, a handle's file, or `_`.
+pub(super) fn file_target(it: &mut Interp, e: &Expr, scope: &Rc<Scope>) -> ER<Target> {
+    match e {
+        Expr::Call { name, amp: true, args } if &**name == "_" && args.is_empty() => return Ok(Target::Last),
+        Expr::Const(Value::Str(s)) if &s[..] == b"*_" || s.ends_with(b"::_") => return Ok(Target::Last),
+        _ => {}
+    }
+    let v = it.scalar(e, scope)?;
+    if let Value::Handle(_) | Value::ScalarRef(_) = &v {
+        if let Some(h) = it.handle_of(&v, false) {
+            return Ok(Target::Path(h.borrow().path.clone().unwrap_or_default()));
+        }
+    }
+    if let Value::Str(s) = &v {
+        if s.starts_with(b"*") {
+            if let Some(h) = it.handle_of(&v, false) {
+                return Ok(Target::Path(h.borrow().path.clone().unwrap_or_default()));
+            }
+        }
+    }
+    Ok(Target::Path(v.to_text()))
+}
+
+/// perl's 13-element stat list.
+pub(super) fn stat_list(m: &std::fs::Metadata) -> Vec<Value> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        vec![
+            Value::Int(m.dev() as i64),
+            Value::Int(m.ino() as i64),
+            Value::Int(m.mode() as i64),
+            Value::Int(m.nlink() as i64),
+            Value::Int(m.uid() as i64),
+            Value::Int(m.gid() as i64),
+            Value::Int(m.rdev() as i64),
+            Value::Int(m.size() as i64),
+            Value::Int(m.atime()),
+            Value::Int(m.mtime()),
+            Value::Int(m.ctime()),
+            Value::Int(m.blksize() as i64),
+            Value::Int(m.blocks() as i64),
+        ]
+    }
+    #[cfg(not(unix))]
+    {
+        let t = |x: std::io::Result<std::time::SystemTime>| x.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64).unwrap_or(0);
+        vec![
+            Value::Int(0),
+            Value::Int(0),
+            Value::Int(if m.is_dir() { 0o40777 } else if m.permissions().readonly() { 0o100444 } else { 0o100666 }),
+            Value::Int(1),
+            Value::Int(0),
+            Value::Int(0),
+            Value::Int(0),
+            Value::Int(m.len() as i64),
+            Value::Int(t(m.accessed())),
+            Value::Int(t(m.modified())),
+            Value::Int(t(m.created())),
+            Value::str(""),
+            Value::str(""),
+        ]
+    }
+}
+
 fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     let Some(first) = args.first() else { return die("Not enough arguments for open") };
     // The handle: a bareword, or a scalar that receives a new handle.
@@ -300,13 +394,18 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         Expr::Const(v) => it.handle_of(v, true).unwrap(),
         e => {
             let lv = it.lvalue(e, scope)?;
-            match lv.get() {
-                Value::Handle(h) => h,
-                _ => {
+            let cur = lv.get();
+            match cur {
+                Value::Undef => {
                     let h: HandleRc = Rc::new(RefCell::new(FileHandle::default()));
                     lv.set(Value::Handle(h.clone()))?;
                     h
                 }
+                // A handle, or a glob (\*FH) naming one.
+                v => match it.handle_of(&v, true) {
+                    Some(h) => h,
+                    None => return die("Bad filehandle"),
+                },
             }
         }
     };
@@ -317,7 +416,7 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
             Some(a) => it.scalar(a, scope)?.to_text(),
             None => return die("1-argument open is not supported"),
         };
-        let spec = spec.trim().to_string();
+        let spec = spec.trim_start().to_string();
         let (m, rest) = if let Some(r) = spec.strip_prefix(">>") {
             (">>", r)
         } else if let Some(r) = spec.strip_prefix("+<") {
@@ -331,7 +430,13 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         } else {
             ("<", spec.as_str())
         };
-        (m.to_string(), Value::str(rest.trim()))
+        // perl trims the name, but a NUL ends it (protecting trailing spaces).
+        let rest = rest.trim_start();
+        let rest = match rest.find('\0') {
+            Some(p) => &rest[..p],
+            None => rest.trim_end(),
+        };
+        (m.to_string(), Value::str(rest))
     };
     let mode_base: String = mode.chars().take_while(|c| !c.is_whitespace() && *c != ':').collect();
     let mut fh = h.borrow_mut();
@@ -339,6 +444,7 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     fh.output = None;
     fh.eof = false;
     fh.lines = 0;
+    fh.path = if target.is_ref() { None } else { Some(target.to_text()) };
     let ok = match (mode_base.as_str(), &target) {
         ("<", Value::ScalarRef(c)) => {
             fh.input = Some(Input::Memory(Cursor::new(c.borrow().to_bytes().to_vec())));

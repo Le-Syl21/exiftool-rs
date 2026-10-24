@@ -31,6 +31,8 @@ pub enum Flow {
     Next(Option<Rc<str>>),
     /// `exit CODE`
     Exit(i32),
+    Goto(Rc<str>),
+    Redo(Option<Rc<str>>),
 }
 
 pub type ER<T> = Result<T, Flow>;
@@ -249,6 +251,26 @@ pub struct LastMatch {
     pub spans: Vec<Option<(usize, usize)>>,
 }
 
+/// The aliases of one call's `@_`: where each element came from, and its
+/// value on entry. Changed elements are written back when the call returns.
+struct AliasFrame {
+    args: Option<ArrayRc>,
+    aliases: Vec<Option<Lv>>,
+    originals: Vec<Value>,
+}
+
+/// Whether a value is unchanged (the same string storage, number or ref).
+fn identical(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Str(x), Value::Str(y)) => Rc::ptr_eq(x, y) || x == y,
+        (Value::Int(x), Value::Int(y)) => x == y,
+        (Value::UInt(x), Value::UInt(y)) => x == y,
+        (Value::Num(x), Value::Num(y)) => x.to_bits() == y.to_bits(),
+        (Value::Undef, Value::Undef) => true,
+        _ => a.same_ref(b),
+    }
+}
+
 /// What `local` saved, restored when the enclosing block ends.
 enum Saved {
     Global(Rc<str>, Option<Binding>),
@@ -291,6 +313,12 @@ pub struct Interp {
     end_blocks: Vec<(Rc<Block>, Rc<Scope>)>,
     /// Set by `exit`.
     pub exit_code: Option<i32>,
+    /// The storage each argument of the call being made aliases (`@_`
+    /// elements are aliases of the caller's variables in perl).
+    pending_aliases: Option<Vec<Option<Lv>>>,
+    alias_frames: Vec<AliasFrame>,
+    /// The last stat, for `stat _` and `-X _`.
+    last_stat: Vec<Value>,
 }
 
 impl Default for Interp {
@@ -339,6 +367,9 @@ impl Interp {
             passthrough: false,
             end_blocks: Vec::new(),
             exit_code: None,
+            pending_aliases: None,
+            alias_frames: Vec::new(),
+            last_stat: Vec::new(),
         };
         i.set_scalar("main::\"", Value::str(" "));
         i.set_scalar("main::,", Value::Undef);
@@ -487,7 +518,8 @@ impl Interp {
                 self.exit_code = Some(code);
                 Err(Value::str("exit\n"))
             }
-            Err(Flow::Last(_)) | Err(Flow::Next(_)) => Err(Value::str("Can't \"last\" outside a loop block\n")),
+            Err(Flow::Goto(l)) => Err(Value::from(format!("Can't find label {l}\n"))),
+            Err(Flow::Last(_)) | Err(Flow::Next(_)) | Err(Flow::Redo(_)) => Err(Value::str("Can't \"last\" outside a loop block\n")),
         }
     }
 
@@ -528,15 +560,90 @@ impl Interp {
 
     /// Call a code value with arguments.
     pub fn call(&mut self, code: &Rc<Code>, args: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+        let aliases = self.pending_aliases.take();
         match &**code {
             Code::Native(_, f) => {
                 let f = f.clone();
-                let r = f(self, args, want)?;
-                Ok(fit(r, want))
+                let pushed = aliases.is_some();
+                if let Some(al) = aliases {
+                    self.alias_frames.push(AliasFrame { args: None, aliases: al, originals: Vec::new() });
+                }
+                let r = f(self, args, want);
+                if pushed {
+                    self.alias_frames.pop();
+                }
+                Ok(fit(r?, want))
             }
             Code::Perl(sub, closure) => {
                 let scope = Scope::new(Some(closure.clone()));
-                scope.declare(b'@', "_", Binding::Array(Rc::new(RefCell::new(args))));
+                let arr: ArrayRc = Rc::new(RefCell::new(args));
+                let pushed = aliases.is_some();
+                if let Some(al) = aliases {
+                    let originals = arr.borrow().clone();
+                    self.alias_frames.push(AliasFrame { args: Some(arr.clone()), aliases: al, originals });
+                }
+                let r = self.call_perl(sub, scope, arr, want);
+                if pushed {
+                    let frame = self.alias_frames.pop().unwrap();
+                    if let Some(arr) = &frame.args {
+                        let now = arr.borrow().clone();
+                        for (j, al) in frame.aliases.iter().enumerate() {
+                            if let (Some(lv), Some(v), Some(orig)) = (al, now.get(j), frame.originals.get(j)) {
+                                if !identical(v, orig) {
+                                    lv.set(v.clone())?;
+                                }
+                            }
+                        }
+                    }
+                }
+                r
+            }
+        }
+    }
+
+    /// Write an argument of the native sub being run back to the caller's
+    /// variable (`$_[i] = ...` in the Perl it ports).
+    pub fn set_arg(&mut self, i: usize, v: Value) -> ER<()> {
+        if let Some(Some(lv)) = self.alias_frames.last().and_then(|f| f.aliases.get(i)).cloned() {
+            lv.set(v)?;
+        }
+        Ok(())
+    }
+
+    /// Keep the alias bookkeeping in step when a sub shifts or pops its @_.
+    fn alias_shift(&mut self, arr: &ArrayRc, front: bool) {
+        if let Some(f) = self.alias_frames.last_mut() {
+            if f.args.as_ref().is_some_and(|a| Rc::ptr_eq(a, arr)) {
+                if front {
+                    if !f.aliases.is_empty() {
+                        f.aliases.remove(0);
+                    }
+                    if !f.originals.is_empty() {
+                        f.originals.remove(0);
+                    }
+                } else {
+                    let n = arr.borrow().len();
+                    f.aliases.truncate(n);
+                    f.originals.truncate(n);
+                }
+            }
+        }
+    }
+
+    /// Untrack an @_ that is restructured (unshift, splice, assignment).
+    fn alias_forget(&mut self, arr: &ArrayRc) {
+        if let Some(f) = self.alias_frames.last_mut() {
+            if f.args.as_ref().is_some_and(|a| Rc::ptr_eq(a, arr)) {
+                f.aliases.clear();
+                f.originals.clear();
+            }
+        }
+    }
+
+    fn call_perl(&mut self, sub: &Rc<Sub>, scope: Rc<Scope>, arr: ArrayRc, want: Want) -> ER<Vec<Value>> {
+        {
+            {
+                scope.declare(b'@', "_", Binding::Array(arr));
                 let saved_pkg = std::mem::replace(&mut self.package, sub.package.clone());
                 let saved_match = self.last_match.clone();
                 let saved = self.saved.len();
@@ -618,9 +725,23 @@ impl Interp {
         let mut last = Vec::new();
         let n = block.len();
         let r = (|| {
-            for (k, st) in block.iter().enumerate() {
+            let mut k = 0;
+            while k < n {
+                let st = &block[k];
                 let w = if k + 1 == n { want } else { Want::Void };
-                last = self.exec_stmt(st, &scope, w)?;
+                match self.exec_stmt(st, &scope, w) {
+                    Ok(v) => last = v,
+                    // goto LABEL: continue from the label if it is in this block.
+                    Err(Flow::Goto(l)) => match block.iter().position(|s| stmt_label(s) == Some(&*l)) {
+                        Some(j) => {
+                            k = j;
+                            continue;
+                        }
+                        None => return Err(Flow::Goto(l)),
+                    },
+                    Err(e) => return Err(e),
+                }
+                k += 1;
             }
             Ok(std::mem::take(&mut last))
         })();
@@ -719,6 +840,21 @@ impl Interp {
                 Err(e) => Err(e),
             },
             Stmt::SubDef(_) => Ok(vec![]),
+            Stmt::Label(_) => Ok(vec![]),
+            Stmt::Modified(cond, e) => {
+                let c = self.scalar(cond, scope)?;
+                if !c.truthy() {
+                    return Ok(vec![c]);
+                }
+                match want {
+                    Want::List => self.list(e, scope),
+                    Want::Scalar => Ok(vec![self.scalar(e, scope)?]),
+                    Want::Void => {
+                        self.void(e, scope)?;
+                        Ok(vec![])
+                    }
+                }
+            }
             Stmt::End(b) => {
                 self.end_blocks.push((b.clone(), scope.clone()));
                 Ok(vec![])
@@ -1188,8 +1324,30 @@ impl Interp {
             Expr::Map(..) | Expr::Grep(..) => Ok(Value::Int(self.list(e, scope)?.len() as i64)),
             Expr::Sort(..) => Ok(self.list(e, scope)?.pop().unwrap_or_default()),
             Expr::FileTest(op, f) => {
-                let f = self.scalar(f, scope)?.to_text();
-                let m = std::fs::metadata(&f);
+                let m = match io::file_target(self, f, scope)? {
+                    io::Target::Last => {
+                        if self.last_stat.is_empty() {
+                            Err(std::io::Error::other("no stat"))
+                        } else {
+                            // Re-read through the mode and size of the last stat.
+                            let mode = self.last_stat[2].to_i64();
+                            let size = self.last_stat[7].to_i64();
+                            return Ok(match op {
+                                b'e' => YES(),
+                                b'f' => boolean(mode & 0o170000 == 0o100000),
+                                b'd' => boolean(mode & 0o170000 == 0o040000),
+                                b'p' => boolean(mode & 0o170000 == 0o010000),
+                                b's' => if size > 0 { Value::Int(size) } else { Value::Undef },
+                                b'z' => boolean(size == 0),
+                                _ => YES(),
+                            });
+                        }
+                    }
+                    io::Target::Path(p) => std::fs::metadata(&p),
+                };
+                if let Ok(md) = &m {
+                    self.last_stat = io::stat_list(md);
+                }
                 Ok(match op {
                     b'e' => boolean(m.is_ok()),
                     b'f' => boolean(m.map(|m| m.is_file()).unwrap_or(false)),
@@ -1199,6 +1357,18 @@ impl Interp {
                         _ => Value::Undef,
                     },
                     b'z' => boolean(m.map(|m| m.len() == 0).unwrap_or(false)),
+                    b'p' => {
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::FileTypeExt;
+                            boolean(m.map(|m| m.file_type().is_fifo()).unwrap_or(false))
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            boolean(false)
+                        }
+                    }
+                    b'r' | b'w' | b'x' => boolean(m.is_ok()),
                     _ => boolean(m.is_ok()),
                 })
             }
@@ -1208,6 +1378,8 @@ impl Interp {
             }
             Expr::Last(l) => Err(Flow::Last(l.clone())),
             Expr::Next(l) => Err(Flow::Next(l.clone())),
+            Expr::Redo(l) => Err(Flow::Redo(l.clone())),
+            Expr::Goto(l) => Err(Flow::Goto(l.clone())),
             Expr::ReadLine(h) => Ok(self.readline(h, scope, Want::Scalar)?.pop().unwrap_or_default()),
             Expr::Wantarray => Ok(match self.want_stack.last() {
                 Some(Want::List) => Value::Int(1),
@@ -1589,6 +1761,8 @@ impl Interp {
                 Ok(Lv::List(v))
             }
             Expr::Assign(..) => self.lvalue(e, scope),
+            // local *FH: the handle is reopened by the code; nothing to save.
+            Expr::Const(_) => Ok(Lv::Skip),
             _ => die("Can't localize lexical variable"),
         }
     }
@@ -1842,6 +2016,11 @@ impl Interp {
                 }
             }
             Expr::AnonSub(_) => self.scalar(e, scope)?,
+            // \*FH: a GLOB reference, the handle itself.
+            Expr::Const(Value::Str(s)) if s.starts_with(b"*") => match self.handle_of(&Value::Str(s.clone()), true) {
+                Some(h) => Value::Handle(h),
+                None => Value::Undef,
+            },
             e => Value::ScalarRef(Rc::new(RefCell::new(self.scalar(e, scope)?))),
         })
     }
@@ -2281,12 +2460,12 @@ impl Interp {
                     return Ok(vec![Value::str(name)]);
                 }
                 // perl evaluates the arguments before it looks the sub up.
-                let mut a = Vec::new();
-                for x in args {
-                    a.extend(self.list(x, scope)?);
-                }
+                let (a, al) = self.call_args(args, scope, None)?;
                 match self.subs.get(&*key).cloned() {
-                    Some(c) => self.call(&c, a, want),
+                    Some(c) => {
+                        self.pending_aliases = Some(al);
+                        self.call(&c, a, want)
+                    }
                     None => die(format!("Undefined subroutine &{key} called")),
                 }
             }
@@ -2322,14 +2501,48 @@ impl Interp {
                         v => Rc::from(v.to_text()),
                     },
                 };
-                let mut a = vec![invv.clone()];
-                for x in args {
-                    a.extend(self.list(x, scope)?);
-                }
-                self.call_method(&invv, &mname, a, want)
+                let (a, al) = self.call_args(args, scope, Some(invv.clone()))?;
+                self.pending_aliases = Some(al);
+                let r = self.call_method(&invv, &mname, a, want);
+                self.pending_aliases = None;
+                r
             }
             _ => unreachable!(),
         }
+    }
+
+    /// The arguments of a call, with the storage each one aliases.
+    fn call_args(&mut self, args: &[Expr], scope: &Rc<Scope>, inv: Option<Value>) -> ER<(Vec<Value>, Vec<Option<Lv>>)> {
+        let mut vals = Vec::new();
+        let mut al = Vec::new();
+        if let Some(i) = inv {
+            vals.push(i);
+            al.push(None);
+        }
+        for x in args {
+            match x {
+                Expr::Scalar(_) | Expr::ScalarDeref(_) | Expr::Elem(..) | Expr::HElem(..) => {
+                    let lv = self.lvalue(x, scope)?;
+                    vals.push(lv.get());
+                    al.push(Some(lv));
+                }
+                Expr::Array(c) => {
+                    let a = self.array_of(c, scope, false)?;
+                    let n = a.borrow().len();
+                    for i in 0..n {
+                        vals.push(a.borrow()[i].clone());
+                        al.push(Some(Lv::AElem(a.clone(), i as i64)));
+                    }
+                }
+                x => {
+                    for v in self.list(x, scope)? {
+                        vals.push(v);
+                        al.push(None);
+                    }
+                }
+            }
+        }
+        Ok((vals, al))
     }
 
     /// `$obj->name(args)`: find the method through the class and its @ISA.
@@ -2400,6 +2613,15 @@ impl Interp {
             }
         }
         None
+    }
+}
+
+/// The label a statement carries, for `goto`.
+fn stmt_label(s: &Stmt) -> Option<&str> {
+    match s {
+        Stmt::Label(l) => Some(l),
+        Stmt::While { label: Some(l), .. } | Stmt::ForC { label: Some(l), .. } | Stmt::Foreach { label: Some(l), .. } | Stmt::Block(Some(l), _) => Some(l),
+        _ => None,
     }
 }
 

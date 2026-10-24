@@ -71,7 +71,7 @@ const LIST_OPS: &[&str] = &[
 ];
 
 /// Builtins whose first argument may be a bareword filehandle.
-const FH_FUNCS: &[&str] = &["open", "close", "binmode", "eof", "read", "sysread", "seek", "tell", "fileno", "truncate", "flock", "readline", "select", "opendir", "readdir", "closedir", "syswrite", "sysseek"];
+const FH_FUNCS: &[&str] = &["stat", "lstat", "open", "close", "binmode", "eof", "read", "sysread", "seek", "tell", "fileno", "truncate", "flock", "readline", "select", "opendir", "readdir", "closedir", "syswrite", "sysseek"];
 
 /// Builtins that may be called without arguments and take none.
 const NO_ARGS: &[&str] = &["time", "times", "wait", "wantarray"];
@@ -240,17 +240,26 @@ impl<'a> Parser<'a> {
         if self.at(0) == b'{' {
             return Ok(Some(Stmt::Block(None, self.block()?)));
         }
-        // LABEL:
+        // LABEL: (any identifier but a keyword)
         let mut label = None;
         if let Some(id) = self.peek_ident() {
-            let after = self.pos + id.len();
+            let mut after = self.pos + id.len();
+            while self.s.get(after) == Some(&b' ') {
+                after += 1;
+            }
             if !id.contains("::")
-                && id.chars().all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit())
+                && !is_keyword(id)
                 && self.s.get(after) == Some(&b':')
                 && self.s.get(after + 1) != Some(&b':')
             {
                 self.pos = after + 1;
                 label = Some(Rc::from(id));
+                self.ws();
+                // A label on a statement that is not a loop or a block.
+                let next = self.peek_ident();
+                if !matches!(next, Some("for" | "foreach" | "while" | "until")) && !self.starts("{") {
+                    return Ok(Some(Stmt::Label(label.unwrap())));
+                }
             }
         }
         let word = self.peek_ident();
@@ -427,11 +436,11 @@ impl<'a> Parser<'a> {
         Ok(match word {
             Some("if") => {
                 self.pos += 2;
-                Stmt::If(vec![(self.expr()?, vec![Stmt::Expr(e)])], None)
+                Stmt::Modified(self.expr()?, e)
             }
             Some("unless") => {
                 self.pos += 6;
-                Stmt::If(vec![(Expr::Un(UnOp::Not, Box::new(self.expr()?)), vec![Stmt::Expr(e)])], None)
+                Stmt::Modified(Expr::Un(UnOp::Not, Box::new(self.expr()?)), e)
             }
             Some("while") | Some("until") => {
                 self.pos += 5;
@@ -546,7 +555,7 @@ impl<'a> Parser<'a> {
             if self.at_terminator() {
                 break;
             }
-            if self.starts(",") {
+            if self.starts(",") || self.starts("=>") {
                 continue;
             }
             items.push(self.assign()?);
@@ -873,7 +882,7 @@ impl<'a> Parser<'a> {
                 self.pos += 2;
                 Ok(Expr::Un(UnOp::PreDec, Box::new(self.unary()?)))
             }
-            [b'-', c, d, ..] if c.is_ascii_alphabetic() && !ident_char(*d) && b"edfrwxszlMAC".contains(c) && *d != b'>' && *d != b'=' && *d != b',' => {
+            [b'-', c, d, ..] if c.is_ascii_alphabetic() && !ident_char(*d) && b"edfrwxszlpSbcugktTBoRWXOMAC".contains(c) && *d != b'>' && *d != b'=' && *d != b',' => {
                 // A file test: -e $file
                 let op = *c;
                 self.pos += 2;
@@ -1115,7 +1124,12 @@ impl<'a> Parser<'a> {
                 let raw = self.delimited(b'"')?;
                 self.interp_expr(&raw)
             }
-            b'`' => Err(self.err("backticks are not supported")),
+            b'`' => {
+                self.pos += 1;
+                let raw = self.delimited(b'`')?;
+                let cmd = self.interp_expr(&raw)?;
+                Ok(Expr::Call { name: Rc::from("readpipe"), args: vec![cmd], amp: false })
+            }
             b'/' => {
                 self.pos += 1;
                 let raw = self.delimited_or(b'/', "Search pattern not terminated")?;
@@ -1525,13 +1539,22 @@ impl<'a> Parser<'a> {
             }
             "last" | "next" | "redo" => {
                 let label = match self.peek_ident() {
-                    Some(l) if l.chars().all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit()) => {
+                    Some(l) if !is_keyword(l) => {
                         self.pos += l.len();
                         Some(Rc::from(l))
                     }
                     _ => None,
                 };
-                return Ok(if id == "next" { Expr::Next(label) } else { Expr::Last(label) });
+                return Ok(match id {
+                    "next" => Expr::Next(label),
+                    "redo" => Expr::Redo(label),
+                    _ => Expr::Last(label),
+                });
+            }
+            "goto" => {
+                let label = self.peek_ident().ok_or_else(|| self.err("goto LABEL expected"))?;
+                self.pos += label.len();
+                return Ok(Expr::Goto(Rc::from(label)));
             }
             "map" | "grep" | "sort" => return self.list_callback(id),
             "print" | "printf" => {
@@ -1579,6 +1602,22 @@ impl<'a> Parser<'a> {
             }
             return Ok(Expr::Call { name: Rc::from(id), args, amp: false });
         }
+        // Indirect object syntax: `import File::Glob qw(...)`, `new Foo(...)`.
+        if matches!(id, "import" | "new" | "unimport") {
+            if let Some(class) = self.peek_ident() {
+                if class.contains("::") || class.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
+                    self.pos += class.len();
+                    let args = if self.starts("(") {
+                        self.paren_args()?
+                    } else if self.at_terminator() {
+                        vec![]
+                    } else {
+                        flatten_list(self.comma()?)
+                    };
+                    return Ok(Expr::Method { inv: Box::new(Expr::Const(Value::str(class))), name: MethodName::Static(Rc::from(id)), args });
+                }
+            }
+        }
         // Builtins and subs.
         let is_unary = NAMED_UNARY.contains(&id);
         let is_list = LIST_OPS.contains(&id);
@@ -1606,7 +1645,11 @@ impl<'a> Parser<'a> {
         }
         // A user sub called as a list operator: NAME $arg, ...
         self.ws();
-        if matches!(self.at(0), b'$' | b'"' | b'\'' | b'@') && !self.starts("$)") {
+        let quote_arg = matches!(self.peek_ident(), Some("q" | "qq" | "qw")) && {
+            let w = self.peek_ident().unwrap().len();
+            matches!(self.at(w), b'(' | b'{' | b'[' | b'/' | b'<' | b'!' | b'|')
+        };
+        if (matches!(self.at(0), b'$' | b'"' | b'\'' | b'@') && !self.starts("$)")) || quote_arg {
             let args = flatten_list(self.comma()?);
             return Ok(Expr::Call { name: Rc::from(id), args, amp: false });
         }
@@ -1630,7 +1673,19 @@ impl<'a> Parser<'a> {
             }
             let next = self.s.get(k).copied().unwrap_or(0);
             // A bareword followed by a term (not an operator or a comma).
-            let followed_by_term = k > after && matches!(next, b'"' | b'\'' | b'$' | b'@' | b'0'..=b'9') || next == b';' || next == 0 || next == b')';
+            let word_after = {
+                let mut m = k;
+                while m < self.s.len() && ident_char(self.s[m]) {
+                    m += 1;
+                }
+                std::str::from_utf8(&self.s[k..m]).unwrap_or("")
+            };
+            let all_caps = h.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
+            let followed_by_term = k > after && matches!(next, b'"' | b'\'' | b'$' | b'@' | b'0'..=b'9')
+                || next == b';'
+                || next == 0
+                || next == b')'
+                || (all_caps && k > after && (next == b'<' && self.s.get(k + 1) == Some(&b'<') || ident_start(next) && !matches!(word_after, "x" | "eq" | "ne" | "lt" | "gt" | "le" | "ge" | "cmp" | "and" | "or" | "xor" | "if" | "unless" | "for" | "foreach")));
             if !NAMED_UNARY.contains(&h) && !LIST_OPS.contains(&h) && !matches!(h, "map" | "grep" | "sort" | "join" | "sprintf" | "scalar" | "reverse") && followed_by_term && (h.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_') || next != b'(') {
                 self.pos = after;
                 return Ok(Some(Expr::Const(Value::str(&format!("*{h}")))));
@@ -1647,7 +1702,16 @@ impl<'a> Parser<'a> {
                 k += 1;
             }
             let next = self.s.get(k).copied().unwrap_or(0);
-            if k > after && matches!(next, b'"' | b'\'' | b'$' | b'@') {
+            let word_after = {
+                let mut m = k;
+                while m < self.s.len() && ident_char(self.s[m]) {
+                    m += 1;
+                }
+                std::str::from_utf8(&self.s[k..m]).unwrap_or("")
+            };
+            let term_start = matches!(next, b'"' | b'\'' | b'$' | b'@' | b'(' | b'\\' | b'0'..=b'9')
+                || (ident_start(next) && !matches!(word_after, "x" | "eq" | "ne" | "lt" | "gt" | "le" | "ge" | "cmp" | "and" | "or" | "xor" | "if" | "unless" | "for" | "foreach" | "while" | "until" | "isa"));
+            if k > after && term_start && self.s.get(after) != Some(&b'[') && self.s.get(after) != Some(&b'{') {
                 self.pos = after;
                 return Ok(Some(Expr::Scalar(Rc::from(id))));
             }
@@ -1746,13 +1810,15 @@ impl<'a> Parser<'a> {
     fn decl_var(&mut self) -> R<Expr> {
         self.ws();
         let sigil = self.at(0);
+        if sigil == b'*' && ident_start(self.at(1)) {
+            // local *FH: a glob (a filehandle here).
+            return self.term();
+        }
         if !matches!(sigil, b'$' | b'@' | b'%') {
             return Err(self.err("variable expected"));
         }
         self.pos += 1;
-        let id = self.peek_ident().ok_or_else(|| self.err("variable name expected"))?;
-        self.pos += id.len();
-        let name: Rc<str> = Rc::from(id);
+        let name = self.var_name().ok_or_else(|| self.err("variable name expected"))?;
         Ok(match sigil {
             b'$' => Expr::Scalar(name),
             b'@' => Expr::Array(Container::Named(name)),
@@ -1834,7 +1900,7 @@ impl<'a> Parser<'a> {
             self.pos += 2;
             return Some(Rc::from(name));
         }
-        if b"&`'+/\\,;!@0<>]$.|\"".contains(&c) && c != 0 {
+        if b"&`'+/\\,;!@0<>]$.|\"?".contains(&c) && c != 0 {
             self.pos += 1;
             return Some(Rc::from((c as char).to_string()));
         }
@@ -2064,6 +2130,16 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// Words that start statements or expressions, never labels.
+fn is_keyword(w: &str) -> bool {
+    matches!(
+        w,
+        "if" | "unless" | "while" | "until" | "for" | "foreach" | "my" | "our" | "local" | "return" | "print" | "printf" | "sub" | "package" | "use" | "no"
+            | "do" | "eval" | "else" | "elsif" | "last" | "next" | "redo" | "goto" | "and" | "or" | "not" | "xor" | "defined" | "undef" | "require"
+            | "q" | "qq" | "qw" | "m" | "s" | "tr" | "y" | "qr" | "default" | "__END__" | "__DATA__"
+    )
+}
+
 fn trim_start(l: &[u8]) -> &[u8] {
     let n = l.iter().take_while(|c| **c == b' ' || **c == b'\t').count();
     &l[n..]
@@ -2174,7 +2250,7 @@ fn interp_var_end(raw: &[u8], i: usize, regex: bool) -> Option<usize> {
                 break;
             }
         }
-        c if c.is_ascii_digit() && !regex => {
+        c if c.is_ascii_digit() => {
             while at(k).is_ascii_digit() {
                 k += 1;
             }
