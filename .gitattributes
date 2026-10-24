@@ -17,3 +17,4 @@ tests/issues/exif/*.txt text eol=lf
 tests/issues/canon/*.txt text eol=lf
 tests/issues/samsung_xmp/*.txt text eol=lf
 tests/issues/samsung_xmp/*.xmp text eol=lf
+tests/issues/gps/*.xmp text eol=lf

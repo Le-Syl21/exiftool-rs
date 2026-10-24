@@ -100,11 +100,14 @@ pub fn compute_composite_tags(tags: &[Tag]) -> Vec<Tag> {
     if find_tag(tags, "ShutterSpeed").is_none() && find_tag(tags, "ExposureTime").is_none() {
         if let Some(ssv) = find_tag_f64(tags, "ShutterSpeedValue") {
             // Perl Composite ShutterSpeed: PrintExposureTime(2^-ApertureValue), no " s".
-            let print = crate::tags::canon_sub::print_exposure_time(2.0_f64.powf(-ssv));
-            composite.push(mk_composite(
+            let secs = 2.0_f64.powf(-ssv);
+            let print = crate::tags::canon_sub::print_exposure_time(secs);
+            // The ValueConv's seconds are what -n shows.
+            composite.push(mk_composite_raw(
                 "ShutterSpeed",
                 "Shutter Speed",
-                Value::String(print),
+                Value::F64(secs),
+                print,
             ));
         }
     }
@@ -906,6 +909,9 @@ pub fn gps_coordinates(tags: &[Tag]) -> Vec<Tag> {
         t.group.family2 = "Location".into();
         out.push(t);
     }
+    if out.is_empty() {
+        out.extend(quicktime_gps_coordinates(tags));
+    }
     // XMP.pm Composite GPSLatitudeRef / GPSLongitudeRef: the hemisphere of
     // the XMP coordinate (`Require => 'XMP-exif:GPSLatitude'`), from its sign
     // or its trailing letter. ExifTool notes these are not inhibited by an
@@ -949,6 +955,74 @@ pub fn gps_coordinates(tags: &[Tag]) -> Vec<Tag> {
     }
     out
 }
+
+/// QuickTime Composite GPSLatitude, GPSLongitude, GPSAltitude and
+/// GPSAltitudeRef (QuickTime.pm lines 8668-8697), split from the
+/// "lat lon [alt]" value of QuickTime:GPSCoordinates. The altitude pair is
+/// `Priority => 0` and only exists when the coordinates carry an altitude.
+fn quicktime_gps_coordinates(tags: &[Tag]) -> Vec<Tag> {
+    use crate::tags::conv_expr::{eval, Val};
+    let mut out = Vec::new();
+    let Some(src) = tags
+        .iter()
+        .find(|t| t.name == "GPSCoordinates" && t.group.family0 == "QuickTime")
+    else {
+        return out;
+    };
+    let text = src.raw_value.to_display_string();
+    let c: Vec<&str> = text.split_whitespace().collect();
+    let mut push = |name: &str, desc: &str, raw: Value, print: String, priority0: bool| {
+        let mut t = mk_composite_raw(name, desc, raw, print);
+        t.group.family2 = "Location".into();
+        if priority0 {
+            t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
+        }
+        out.push(t);
+    };
+    for (i, name, desc, r) in [
+        (0, "GPSLatitude", "GPS Latitude", "N"),
+        (1, "GPSLongitude", "GPS Longitude", "E"),
+    ] {
+        // `my @c = split " ", $val; $c[i]`: undef (no tag) when missing.
+        let Some(v) = c.get(i) else { continue };
+        let n = Val::Str((*v).to_string()).as_num();
+        let expr = format!("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"{r}\")");
+        let print = eval(&expr, &Val::Num(n))
+            .map(|p| p.as_string())
+            .unwrap_or_default();
+        let raw = match v.parse::<f64>() {
+            Ok(f) => Value::F64(f),
+            Err(_) => Value::String((*v).to_string()),
+        };
+        push(name, desc, raw, print, false);
+    }
+    if let Some(alt) = c.get(2) {
+        let n = Val::Str((*alt).to_string()).as_num();
+        let abs = crate::value::format_g15(n.abs());
+        push(
+            "GPSAltitude",
+            "GPS Altitude",
+            Value::F64(n.abs()),
+            format!("{abs} m"),
+            true,
+        );
+        let below = n < 0.0;
+        push(
+            "GPSAltitudeRef",
+            "GPS Altitude Ref",
+            Value::U8(u8::from(below)),
+            if below {
+                "Below Sea Level"
+            } else {
+                "Above Sea Level"
+            }
+            .to_string(),
+            true,
+        );
+    }
+    out
+}
+
 fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
     // GPS.pm:346-355 — GPSPosition `Require`s `Composite:GPSLatitude` and
     // `Composite:GPSLongitude`, i.e. the ref-bearing values, not the plain GPS
@@ -984,6 +1058,16 @@ fn compute_gps_position(tags: &[Tag]) -> Option<Tag> {
 }
 
 fn compute_gps_altitude(tags: &[Tag]) -> Option<Tag> {
+    // GPS.pm Composite GPSAltitude `Desire`s GPS:GPSAltitude/GPSAltitudeRef and
+    // XMP:GPSAltitude/GPSAltitudeRef, and its RawConv drops it unless one of
+    // the two references exists: a GPSAltitude from any other group (OpenEXR,
+    // QuickTime) does not make one.
+    let has_ref = tags.iter().any(|t| {
+        t.name == "GPSAltitudeRef" && (t.group.family1 == "GPS" || t.group.family0 == "XMP")
+    });
+    if !has_ref {
+        return None;
+    }
     let alt = find_tag(tags, "GPSAltitude")?;
     let alt_ref = find_tag_value(tags, "GPSAltitudeRef").unwrap_or_default();
 
@@ -1047,10 +1131,12 @@ fn compute_shutter_speed(tags: &[Tag]) -> Option<Tag> {
         .as_f64()
         .map(crate::tags::canon_sub::print_exposure_time)
         .unwrap_or_else(|| et.print_value.clone());
-    Some(mk_composite(
+    // Exif.pm ShutterSpeed ValueConv passes ExposureTime through: -n shows it.
+    Some(mk_composite_raw(
         "ShutterSpeed",
         "Shutter Speed",
-        Value::String(print),
+        et.raw_value.clone(),
+        print,
     ))
 }
 

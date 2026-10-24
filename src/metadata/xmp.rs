@@ -2454,6 +2454,42 @@ impl XmpReader {
             }
         }
 
+        // XMP-exif GPS coordinates carry %latConv / %longConv (XMP.pm lines
+        // 224-235): ValueConv ToDegrees($val, 1) gives the signed decimal
+        // degrees `-n` shows, and PrintConv ToDMS prints them, so "12,30N" and
+        // `12 deg 30' 0.00" N` both read as 12.5.
+        for tag in &mut tags {
+            let reference = match &tag.id {
+                TagId::Text(id) => match id.as_str() {
+                    "exif:GPSLatitude" | "exif:GPSDestLatitude" => "N",
+                    "exif:GPSLongitude" | "exif:GPSDestLongitude" => "E",
+                    _ => continue,
+                },
+                _ => continue,
+            };
+            let Value::String(text) = &tag.raw_value else {
+                continue;
+            };
+            match gps_to_degrees(text) {
+                Some(deg) => {
+                    let expr =
+                        format!("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"{reference}\")");
+                    if let Some(p) =
+                        crate::tags::conv_expr::eval(&expr, &crate::tags::conv_expr::Val::Num(deg))
+                    {
+                        tag.print_value = p.as_string();
+                    }
+                    tag.raw_value = Value::F64(deg);
+                }
+                // ToDegrees returns '' for a value without a number, which
+                // ToDMS leaves empty.
+                None => {
+                    tag.raw_value = Value::String(String::new());
+                    tag.print_value = String::new();
+                }
+            }
+        }
+
         // Post-processing: aggregate duplicate tag names (same name, different values)
         // into a single tag with comma-joined print_value. This matches ExifTool behavior
         // where repeated struct properties (e.g. in Bag/Seq items) are combined into one tag.
@@ -3330,13 +3366,6 @@ fn xmp_exif_print_override(prefix: &str, name: &str, value: &Value) -> Option<St
     if prefix != "exif" {
         return None;
     }
-    if let Some(lat) = match name {
-        "GPSLatitude" | "GPSDestLatitude" => Some(true),
-        "GPSLongitude" | "GPSDestLongitude" => Some(false),
-        _ => None,
-    } {
-        return xmp_gps_coordinate(&value.to_display_string(), lat);
-    }
     let v = value.as_f64()?;
     match name {
         "ExposureTime" => Some(crate::tags::canon_sub::print_exposure_time(v)),
@@ -3345,42 +3374,31 @@ fn xmp_exif_print_override(prefix: &str, name: &str, value: &Value) -> Option<St
     }
 }
 
-/// An XMP GPS coordinate ("51,30.042N" or "51,30,2.52N") the way ExifTool
-/// prints it (GPS.pm `ToDegrees`, then `ToDMS` with a reference letter):
-/// `51 deg 30' 2.52" N`.
-fn xmp_gps_coordinate(text: &str, latitude: bool) -> Option<String> {
-    let t = text.trim();
-    let last = t.chars().last()?.to_ascii_uppercase();
-    let (body, negative) = match last {
-        'N' | 'E' => (&t[..t.len() - 1], false),
-        'S' | 'W' => (&t[..t.len() - 1], true),
-        _ => (t, t.starts_with('-')),
-    };
-    let nums: Vec<f64> = body
-        .split(',')
-        .map(|p| p.trim().trim_start_matches('-').parse::<f64>())
-        .collect::<std::result::Result<_, _>>()
-        .ok()?;
-    let deg =
-        nums.first()? + nums.get(1).unwrap_or(&0.0) / 60.0 + nums.get(2).unwrap_or(&0.0) / 3600.0;
-    let mut d = deg.trunc();
-    let mut m = ((deg - d) * 60.0).trunc();
-    let mut sec = format!("{:.2}", (deg - d - m / 60.0) * 3600.0);
-    if sec.parse::<f64>().ok()? >= 60.0 {
-        sec = format!("{:.2}", sec.parse::<f64>().ok()? - 60.0);
-        m += 1.0;
-        if m >= 60.0 {
-            m -= 60.0;
-            d += 1.0;
-        }
+/// GPS.pm ToDegrees($val, 1): degrees, minutes and seconds from the first
+/// three numbers in the text, negated for a trailing S/South or W/West after
+/// a non-letter. `None` for a value it returns '' for.
+fn gps_to_degrees(text: &str) -> Option<f64> {
+    use regex_lite::Regex;
+    static RE: std::sync::LazyLock<[Regex; 3]> = std::sync::LazyLock::new(|| {
+        [
+            Regex::new(r"\b(inf|undef)\b").unwrap(),
+            Regex::new(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]\d+)?").unwrap(),
+            Regex::new(r"(?i)[^A-Z](S(outh)?|W(est)?)\s*$").unwrap(),
+        ]
+    });
+    if RE[0].is_match(text) {
+        return None;
     }
-    let r = match (latitude, negative) {
-        (true, false) => 'N',
-        (true, true) => 'S',
-        (false, false) => 'E',
-        (false, true) => 'W',
-    };
-    Some(format!("{} deg {}' {}\" {}", d as i64, m as i64, sec, r))
+    let nums: Vec<f64> = RE[1]
+        .find_iter(text)
+        .take(3)
+        .map(|m| m.as_str().parse::<f64>().unwrap_or(0.0))
+        .collect();
+    let d = *nums.first()?;
+    let m = nums.get(1).copied().unwrap_or(0.0);
+    let s = nums.get(2).copied().unwrap_or(0.0);
+    let deg = d + (m + s / 60.0) / 60.0;
+    Some(if RE[2].is_match(text) { -deg } else { deg })
 }
 
 fn parse_xmp_value(text: &str) -> Value {

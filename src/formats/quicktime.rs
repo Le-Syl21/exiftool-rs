@@ -1788,33 +1788,163 @@ fn parse_mdhd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
         ));
     }
 
-    // Language code (ISO 639-2 packed)
+    // MediaLanguageCode (QuickTime.pm MediaHeader 5): zero is dropped, a
+    // Macintosh code (below 0x400, or 0x7fff) stays a number printed through
+    // Font.pm's Macintosh table, anything else is a packed ISO 639-2 code.
     if d.len() >= lang_offset + 2 {
         let lang_code = u16::from_be_bytes([d[lang_offset], d[lang_offset + 1]]);
-        if lang_code != 0 && lang_code != 0x7FFF {
-            if lang_code >= 0x400 {
-                // ISO 639-2 packed format: 3 x 5-bit codes offset by 0x60
-                let c1 = ((lang_code >> 10) & 0x1F) as u8 + 0x60;
-                let c2 = ((lang_code >> 5) & 0x1F) as u8 + 0x60;
-                let c3 = (lang_code & 0x1F) as u8 + 0x60;
-                if c1.is_ascii_lowercase() && c2.is_ascii_lowercase() && c3.is_ascii_lowercase() {
-                    let lang = format!("{}{}{}", c1 as char, c2 as char, c3 as char);
-                    tags.push(mk(
-                        "MediaLanguageCode",
-                        "Media Language Code",
-                        Value::String(lang),
-                    ));
-                }
-            } else {
-                // Macintosh language code - just emit numeric
-                tags.push(mk(
+        if lang_code != 0 {
+            let t = if lang_code < 0x400 || lang_code == 0x7FFF {
+                let print = match mac_language(lang_code) {
+                    Some(lang) => lang.to_string(),
+                    None => format!("Unknown ({lang_code})"),
+                };
+                let mut t = mk(
                     "MediaLanguageCode",
                     "Media Language Code",
-                    Value::U32(lang_code as u32),
-                ));
-            }
+                    Value::U16(lang_code),
+                );
+                t.print_value = print;
+                t
+            } else {
+                let lang: String = [10, 5, 0]
+                    .iter()
+                    .map(|s| (((lang_code >> s) & 0x1F) as u8 + 0x60) as char)
+                    .collect();
+                mk(
+                    "MediaLanguageCode",
+                    "Media Language Code",
+                    Value::String(lang),
+                )
+            };
+            tags.push(t);
         }
     }
+}
+
+/// Font.pm `%ttLang{Macintosh}`: the Macintosh language codes, which a
+/// QuickTime MediaLanguageCode below 0x400 is.
+fn mac_language(code: u16) -> Option<&'static str> {
+    Some(match code {
+        0 => "en",
+        1 => "fr",
+        2 => "de",
+        3 => "it",
+        4 => "nl-NL",
+        5 => "sv",
+        6 => "es",
+        7 => "da",
+        8 => "pt",
+        9 => "no",
+        10 => "he",
+        11 => "ja",
+        12 => "ar",
+        13 => "fi",
+        14 => "el",
+        15 => "is",
+        16 => "mt",
+        17 => "tr",
+        18 => "hr",
+        19 => "zh-TW",
+        20 => "ur",
+        21 => "hi",
+        22 => "th",
+        23 => "ko",
+        24 => "lt",
+        25 => "pl",
+        26 => "hu",
+        27 => "et",
+        28 => "lv",
+        29 => "smi",
+        30 => "fo",
+        31 => "fa",
+        32 => "ru",
+        33 => "zh-CN",
+        34 => "nl-BE",
+        35 => "ga",
+        36 => "sq",
+        37 => "ro",
+        38 => "cs",
+        39 => "sk",
+        40 => "sl",
+        41 => "yi",
+        42 => "sr",
+        43 => "mk",
+        44 => "bg",
+        45 => "uk",
+        46 => "be",
+        47 => "uz",
+        48 => "kk",
+        49 => "az",
+        50 => "az",
+        51 => "hy",
+        52 => "ka",
+        53 => "ro",
+        54 => "ky",
+        55 => "tg",
+        56 => "tk",
+        57 => "mn-MN",
+        58 => "mn-CN",
+        59 => "ps",
+        60 => "ku",
+        61 => "ks",
+        62 => "sd",
+        63 => "bo",
+        64 => "ne",
+        65 => "sa",
+        66 => "mr",
+        67 => "bn",
+        68 => "as",
+        69 => "gu",
+        70 => "pa",
+        71 => "or",
+        72 => "ml",
+        73 => "kn",
+        74 => "ta",
+        75 => "te",
+        76 => "si",
+        77 => "my",
+        78 => "km",
+        79 => "lo",
+        80 => "vi",
+        81 => "id",
+        82 => "tl",
+        83 => "ms-MY",
+        84 => "ms-BN",
+        85 => "am",
+        86 => "ti",
+        87 => "om",
+        88 => "so",
+        89 => "sw",
+        90 => "rw",
+        91 => "rn",
+        92 => "ny",
+        93 => "mg",
+        94 => "eo",
+        128 => "cy",
+        129 => "eu",
+        130 => "ca",
+        131 => "la",
+        132 => "qu",
+        133 => "gn",
+        134 => "ay",
+        135 => "tt",
+        136 => "ug",
+        137 => "dz",
+        138 => "jv",
+        139 => "su",
+        140 => "gl",
+        141 => "af",
+        142 => "br",
+        144 => "gd",
+        145 => "gv",
+        146 => "ga",
+        147 => "to",
+        148 => "el",
+        149 => "kl",
+        150 => "az",
+        _ => return None,
+    })
 }
 
 /// Parse handler reference (hdlr).
@@ -2897,6 +3027,17 @@ fn parse_stsd(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
                 parse_colr(&entry[cpos + 8..cpos + csize], tags);
             } else if ctype == b"CMP1" {
                 parse_cmp1(&entry[cpos + 8..cpos + csize], tags);
+            } else if ctype == b"pasp" {
+                // ImageDesc `pasp`: `join(":", unpack("N*",$val))`.
+                let ratio: Vec<String> = entry[cpos + 8..cpos + csize]
+                    .chunks_exact(4)
+                    .map(|c| u32::from_be_bytes([c[0], c[1], c[2], c[3]]).to_string())
+                    .collect();
+                tags.push(mk(
+                    "PixelAspectRatio",
+                    "Pixel Aspect Ratio",
+                    Value::String(ratio.join(":")),
+                ));
             }
             cpos += csize;
         }
@@ -3336,8 +3477,12 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             if idx >= 1 && idx <= keys.len() {
                 for value in find_data_atoms(data, pos + 8, item_end) {
                     let key = &keys[idx - 1];
-                    if let Some((name, description)) = keys_tag_name(key) {
-                        let mut t = mk(name, description, Value::String(value));
+                    if let Some((name, description)) = keys_read_name(key) {
+                        let mut t = if name == "GPSCoordinates" {
+                            gps_coordinates_tag(&value)
+                        } else {
+                            mk(&name, &description, Value::String(value))
+                        };
                         if priority0::keys_is_priority0(key.as_bytes()) {
                             t.priority = crate::tag::PRIORITY_EXPLICIT_ZERO;
                         }
@@ -3352,7 +3497,9 @@ fn parse_ilst(data: &[u8], start: usize, end: usize, tags: &mut Vec<Tag>, state:
             // Every 'data' atom inside this item is its own instance.
             for value in find_data_atoms(data, pos + 8, item_end) {
                 let (name, description) = ilst_tag_name(item_type);
-                if !name.is_empty() {
+                if item_type == b"\xa9xyz" {
+                    tags.push(gps_coordinates_tag(&value));
+                } else if !name.is_empty() {
                     // Apply PrintConv for specific tags
                     let display_value = apply_ilst_print_conv(item_type, &value);
                     let mut t = mk(name, description, Value::String(display_value));
@@ -3416,6 +3563,225 @@ pub(crate) fn keys_tag_name(key: &str) -> Option<(&'static str, &'static str)> {
         "location.ISO6709" => Some(("GPSCoordinates", "GPS Coordinates")),
         _ => None,
     }
+}
+
+/// The name a Keys item is read under: [`keys_tag_name`] first, then the rest
+/// of the QuickTime::Keys table, then the name ProcessKeys makes up for a key
+/// it does not know (QuickTime.pm lines 9844-9852). Keys whose table entry
+/// converts the value (sub-directories, ValueConvs, PrintConvs) are skipped,
+/// as are ShutterEncoder's `Avoid` copies of the file type and creation time.
+fn keys_read_name(key: &str) -> Option<(String, String)> {
+    if let Some((name, description)) = keys_tag_name(key) {
+        return Some((name.to_string(), description.to_string()));
+    }
+    // `s/^com\.(apple\.quicktime\.)?//` for the `mdta` namespace.
+    let short = key
+        .strip_prefix("com.apple.quicktime.")
+        .or_else(|| key.strip_prefix("com."))
+        .unwrap_or(key);
+    let named = match short {
+        "live-photo.auto" => Some("LivePhotoAuto"),
+        "live-photo.vitality-score" => Some("LivePhotoVitalityScore"),
+        "live-photo.vitality-scoring-version" => Some("LivePhotoVitalityScoringVersion"),
+        "apple.photos.variation-identifier" => Some("ApplePhotosVariationIdentifier"),
+        "direction.facing" => Some("CameraDirection"),
+        "direction.motion" => Some("CameraMotion"),
+        "player.movie.visual.brightness" => Some("Brightness"),
+        "player.movie.visual.color" => Some("Color"),
+        "player.movie.visual.tint" => Some("Tint"),
+        "player.movie.visual.contrast" => Some("Contrast"),
+        "player.movie.audio.gain" => Some("AudioGain"),
+        "player.movie.audio.treble" => Some("Treble"),
+        "player.movie.audio.bass" => Some("Bass"),
+        "player.movie.audio.balance" => Some("Balance"),
+        "player.movie.audio.pitchshift" => Some("PitchShift"),
+        "rating.user" => Some("UserRating"),
+        "collection.user" => Some("UserCollection"),
+        "full-frame-rate-playback-intent" => Some("FullFrameRatePlaybackIntent"),
+        "detected-face.bounds" => Some("DetectedFaceBounds"),
+        "detected-face.face-id" => Some("DetectedFaceID"),
+        "detected-face.roll-angle" => Some("DetectedFaceRollAngle"),
+        "detected-face.yaw-angle" => Some("DetectedFaceYawAngle"),
+        "smartstyle.rendering-version" => Some("SmartstyleRenderingVersion"),
+        "smartstyle.tone" => Some("SmartstyleTone"),
+        "smartstyle.color" => Some("SmartstyleColor"),
+        "smartstyle.intensity" => Some("SmartstyleIntensity"),
+        "smartstyle.bypassed" => Some("SmartstyleBypassed"),
+        "smartstyle.cast" => Some("SmartstyleCast"),
+        "video-orientation"
+        | "live-photo-info"
+        | "detected-face"
+        | "scene-illuminance"
+        | "smartstyle-info"
+        | "player.movie.audio.mute"
+        | "location.role"
+        | "location.date"
+        | "creation_time"
+        | "setu"
+        | "sdpd"
+        | "major_brand"
+        | "minor_version"
+        | "compatible_brands" => return None,
+        _ => None,
+    };
+    let name = match named {
+        Some(n) => n.to_string(),
+        None => {
+            // A made-up name only for a reasonable id: `/^[-\w. ]+$/ or /\w{4}/`.
+            let word = |c: char| c.is_alphanumeric() || c == '_';
+            let reasonable = (!short.is_empty()
+                && short
+                    .chars()
+                    .all(|c| word(c) || matches!(c, '-' | '.' | ' ')))
+                || short
+                    .chars()
+                    .collect::<Vec<_>>()
+                    .windows(4)
+                    .any(|w| w.iter().all(|&c| word(c)));
+            if !reasonable {
+                return None;
+            }
+            generated_keys_name(short)
+        }
+    };
+    Some((name.clone(), name))
+}
+
+/// ProcessKeys' name for an unknown key: `ucfirst`, only `-0-9a-zA-Z_. `
+/// kept, the letter after a run of dots or spaces upper-cased (the run
+/// dropped), `_x` -> `_X`, then `x_X` -> `xX`, and `Tag_` before anything
+/// shorter than two characters.
+fn generated_keys_name(key: &str) -> String {
+    let mut s: String = key
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ' '))
+        .collect();
+    if let Some(first) = s.get(..1) {
+        s = first.to_ascii_uppercase() + &s[1..];
+    }
+    // s/[. ]+(.?)/\U$1/g
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '.' || c == ' ' {
+            while matches!(chars.peek(), Some('.') | Some(' ')) {
+                chars.next();
+            }
+            if let Some(n) = chars.next() {
+                out.push(n.to_ascii_uppercase());
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    // s/_([a-z])/_\U$1/g
+    let b: Vec<char> = out.chars().collect();
+    let mut up: Vec<char> = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        up.push(b[i]);
+        if b[i] == '_' && i + 1 < b.len() && b[i + 1].is_ascii_lowercase() {
+            up.push(b[i + 1].to_ascii_uppercase());
+            i += 1;
+        }
+        i += 1;
+    }
+    // s/([a-z])_([A-Z])/$1$2/g
+    let mut name = String::with_capacity(up.len());
+    let mut i = 0;
+    while i < up.len() {
+        if up[i] == '_'
+            && i > 0
+            && up[i - 1].is_ascii_lowercase()
+            && up.get(i + 1).is_some_and(char::is_ascii_uppercase)
+        {
+            i += 1;
+            continue;
+        }
+        name.push(up[i]);
+        i += 1;
+    }
+    if name.chars().count() < 2 {
+        name = format!("Tag_{name}");
+    }
+    name
+}
+
+/// QuickTime.pm ConvertISO6709: an ISO 6709 position (`+DD.DDD+DDD.DDD+AAA/`,
+/// or with minutes, or minutes and seconds) as "lat lon [alt]" in decimal
+/// degrees. A value in none of these forms is returned as it is.
+pub(crate) fn convert_iso6709(val: &str) -> String {
+    use crate::value::format_g15;
+    use regex_lite::Regex;
+    static RE: std::sync::LazyLock<[Regex; 3]> = std::sync::LazyLock::new(|| {
+        [
+            Regex::new(r"^([-+]\d{1,2}(?:\.\d*)?)([-+]\d{1,3}(?:\.\d*)?)([-+]\d+(?:\.\d*)?)?")
+                .unwrap(),
+            Regex::new(
+                r"^([-+])(\d{2})(\d{2}(?:\.\d*)?)([-+])(\d{3})(\d{2}(?:\.\d*)?)([-+]\d+(?:\.\d*)?)?",
+            )
+            .unwrap(),
+            Regex::new(
+                r"^([-+])(\d{2})(\d{2})(\d{2}(?:\.\d*)?)([-+])(\d{3})(\d{2})(\d{2}(?:\.\d*)?)([-+]\d+(?:\.\d*)?)?",
+            )
+            .unwrap(),
+        ]
+    });
+    let num = |s: &str| s.parse::<f64>().unwrap_or(0.0);
+    let signed = |sign: &str, v: f64| if sign == "-" { -v } else { v };
+    let (lat, lon, alt) = if let Some(c) = RE[0].captures(val) {
+        (num(&c[1]), num(&c[2]), c.get(3).map(|m| num(m.as_str())))
+    } else if let Some(c) = RE[1].captures(val) {
+        (
+            signed(&c[1], num(&c[2]) + num(&c[3]) / 60.0),
+            signed(&c[4], num(&c[5]) + num(&c[6]) / 60.0),
+            c.get(7).map(|m| num(m.as_str())),
+        )
+    } else if let Some(c) = RE[2].captures(val) {
+        (
+            signed(&c[1], num(&c[2]) + num(&c[3]) / 60.0 + num(&c[4]) / 3600.0),
+            signed(&c[5], num(&c[6]) + num(&c[7]) / 60.0 + num(&c[8]) / 3600.0),
+            c.get(9).map(|m| num(m.as_str())),
+        )
+    } else {
+        return val.to_string();
+    };
+    let mut out = format!("{} {}", format_g15(lat), format_g15(lon));
+    if let Some(alt) = alt {
+        out.push(' ');
+        out.push_str(&format_g15(alt));
+    }
+    out
+}
+
+/// QuickTime.pm PrintGPSCoordinates: both coordinates through GPS ToDMS, and
+/// the altitude, if any, above or below sea level.
+fn print_gps_coordinates(val: &str) -> String {
+    use crate::tags::conv_expr::{eval, Val};
+    let v: Vec<&str> = val.split_whitespace().collect();
+    let dms = |s: Option<&&str>, r: &str| {
+        let expr = format!("Image::ExifTool::GPS::ToDMS($self, $val, 1, \"{r}\")");
+        let n = Val::Num(s.map_or(0.0, |s| Val::Str((*s).to_string()).as_num()));
+        eval(&expr, &n).map(|v| v.as_string()).unwrap_or_default()
+    };
+    let mut prt = format!("{}, {}", dms(v.first(), "N"), dms(v.get(1), "E"));
+    if let Some(alt) = v.get(2) {
+        match alt.strip_prefix('-') {
+            Some(abs) => prt.push_str(&format!(", {abs} m Below Sea Level")),
+            None => prt.push_str(&format!(", {alt} m Above Sea Level")),
+        }
+    }
+    prt
+}
+
+/// A GPSCoordinates tag (Keys `location.ISO6709`, UserData and ItemList
+/// `\xa9xyz`): ConvertISO6709 as its value, PrintGPSCoordinates as its print.
+fn gps_coordinates_tag(text: &str) -> Tag {
+    let val = convert_iso6709(text);
+    let mut t = mk("GPSCoordinates", "GPS Coordinates", Value::String(val));
+    t.print_value = print_gps_coordinates(&t.print_value);
+    t.group.family2 = "Location".into();
+    t
 }
 
 /// Find and decode every `data` atom of an ilst item, in order.
@@ -3554,7 +3920,9 @@ fn parse_qt_text_atom(
         if !text.is_empty() {
             let key = crate::encoding::decode_utf8_or_latin1(&atom_type[1..4]).to_string();
             let (static_name, static_desc) = qt_text_name(&key);
-            if !static_name.is_empty() {
+            if atom_type == b"\xa9xyz" {
+                tags.push(gps_coordinates_tag(&text));
+            } else if !static_name.is_empty() {
                 let mut t = mk(static_name, static_desc, Value::String(text));
                 // `Avoid => 1` on the UserData entry — again only the atom code
                 // separates them: `\xa9mdl` is priority 0 and `\xa9mod` is not,
@@ -3670,19 +4038,18 @@ pub(crate) fn qt_text_name(key: &str) -> (&'static str, &'static str) {
 
 /// Convert Mac epoch (seconds since 1904-01-01) to date string.
 fn mac_epoch_to_string(secs: u64) -> Option<String> {
+    // QuickTime.pm %timeInfo RawConv keeps a zero date (unless StrictDate),
+    // and ConvertUnixTime prints it as a zero date (ExifTool.pm line 6787).
     if secs == 0 {
-        return None;
+        return Some("0000:00:00 00:00:00".to_string());
     }
     // Mac epoch: Jan 1, 1904. Unix epoch: Jan 1, 1970.
     // Difference: 66 years + 17 leap days = (66*365+17)*24*3600
     let offset: i64 = (66 * 365 + 17) * 24 * 3600;
-    let unix_secs = secs as i64 - offset;
-    if unix_secs < 0 {
-        // Likely wrong epoch - some software uses Unix epoch
-        // Try treating as Unix epoch (add back offset to check validity)
-        // For now just skip invalid dates
-        return None;
-    }
+    let secs = i64::try_from(secs).ok()?;
+    // A date before the Unix epoch was written with the wrong time zero:
+    // %timeInfo RawConv then takes it as Unix time as it stands.
+    let unix_secs = if secs >= offset { secs - offset } else { secs };
 
     // QuickTimeUTC containers (CR3): the stored value is UTC; emit it in local time
     // with the timezone offset (ExifTool ConvertUnixTime $val, 1).
