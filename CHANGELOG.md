@@ -2,7 +2,7 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
-## [Unreleased]
+## [0.14.1] - 2026-10-24
 
 Twelve reports from @julyx10, each checked against ExifTool 13.59 on the
 synthetic files of the report (kept as regression tests in `tests/issues/`).
@@ -20,6 +20,12 @@ synthetic files of the report (kept as regression tests in `tests/issues/`).
   focus distance, GPS, ...), and Perl's generated names for the others (#33).
 - XMP: ExifTool's table of namespace URIs and its fixes for wrong ones, with
   the `[minor] Fixed incorrect URI` warning (#32).
+
+### Changed
+
+- Low-level writer API: `writer::exif_edit::TagSpec` has a new `info` field,
+  its row of the generated write table. The high-level API (`ExifTool`,
+  `Options`, `Tag`) is unchanged.
 
 ### Fixed
 
