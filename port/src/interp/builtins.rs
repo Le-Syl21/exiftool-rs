@@ -48,7 +48,12 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                     "HASH"
                 }
                 Value::Code(_) => "CODE",
-                Value::Handle(_) => "GLOB",
+                Value::Handle(h) => {
+                    if let Some(c) = &h.borrow().class {
+                        return one(Value::str(c));
+                    }
+                    "GLOB"
+                }
                 Value::LvRef(l) => {
                     if l.get().is_ref() {
                         "REF"
@@ -436,6 +441,10 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 Some(Value::HashRef(h)) => {
                     h.borrow_mut().blessed = Some(class);
                     one(Value::HashRef(h.clone()))
+                }
+                Some(Value::Handle(h)) => {
+                    h.borrow_mut().class = Some(class);
+                    one(Value::Handle(h.clone()))
                 }
                 _ => die("Can't bless non-hash reference"),
             }

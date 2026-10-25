@@ -107,6 +107,8 @@ pub struct FileHandle {
     pub lines: i64,
     /// The file opened, for stat and file tests on the handle.
     pub path: Option<String>,
+    /// The class it is blessed into (`bless $fh, 'IO::File'`).
+    pub class: Option<Rc<str>>,
 }
 
 impl std::fmt::Debug for FileHandle {
@@ -163,6 +165,17 @@ impl Interp {
                 None
             }
             _ => None,
+        }
+    }
+
+    /// Everything behind a handle, for natives that read a whole file
+    /// (Archive::Zip): its file, or its in-memory data.
+    pub fn handle_contents(&mut self, v: &Value) -> Option<Vec<u8>> {
+        let h = self.handle_of(v, false)?;
+        let fh = h.borrow();
+        match &fh.input {
+            Some(Input::Memory(m)) => Some(m.get_ref().clone()),
+            _ => std::fs::read(fh.path.as_ref()?).ok(),
         }
     }
 

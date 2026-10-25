@@ -25,6 +25,8 @@ sha1 = "0.10"
 # Compress::Zlib and IO::(Un)Compress: zlib itself, as perl uses, so
 # compressed output is byte for byte the same
 flate2 = { version = "1", default-features = false, features = ["zlib"] }
+# IO::(Un)Compress::Brotli: Google's brotli library itself, as the perl module
+brotlic = "0.8"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

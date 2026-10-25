@@ -2,6 +2,8 @@
 
 use crate::runtime::Registrar;
 
+pub mod archive_zip;
+pub mod brotli;
 pub mod core;
 pub mod zlib;
 
