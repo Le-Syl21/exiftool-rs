@@ -19,6 +19,9 @@ path = "src/lib.rs"
 pcre2 = "0.2"
 # Digest::MD5
 md-5 = "0.10"
+# Digest::SHA
+sha2 = "0.10"
+sha1 = "0.10"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -12,6 +12,8 @@ use super::*;
 pub enum Input {
     File(BufReader<File>),
     Memory(Cursor<Vec<u8>>),
+    /// `+<`: read and write the same file (writes go through `Output::Rw`).
+    Rw(RwFile),
 }
 
 impl Input {
@@ -19,7 +21,71 @@ impl Input {
         match self {
             Input::File(f) => f,
             Input::Memory(m) => m,
+            Input::Rw(f) => f,
         }
+    }
+}
+
+/// A file opened for update: reads are buffered, and the buffer is dropped
+/// (the file position put back) before a write or a seek.
+pub struct RwFile {
+    f: File,
+    buf: Vec<u8>,
+    at: usize,
+}
+
+impl RwFile {
+    fn sync(&mut self) {
+        let unread = (self.buf.len() - self.at) as i64;
+        if unread > 0 {
+            let _ = self.f.seek(SeekFrom::Current(-unread));
+        }
+        self.buf.clear();
+        self.at = 0;
+    }
+}
+
+impl std::io::Read for RwFile {
+    fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
+        let avail = self.fill_buf()?;
+        let n = avail.len().min(out.len());
+        out[..n].copy_from_slice(&avail[..n]);
+        self.consume(n);
+        Ok(n)
+    }
+}
+
+impl BufRead for RwFile {
+    fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+        if self.at >= self.buf.len() {
+            self.buf.resize(8192, 0);
+            let n = std::io::Read::read(&mut self.f, &mut self.buf)?;
+            self.buf.truncate(n);
+            self.at = 0;
+        }
+        Ok(&self.buf[self.at..])
+    }
+
+    fn consume(&mut self, n: usize) {
+        self.at = (self.at + n).min(self.buf.len());
+    }
+}
+
+impl Seek for RwFile {
+    fn seek(&mut self, to: SeekFrom) -> std::io::Result<u64> {
+        self.sync();
+        self.f.seek(to)
+    }
+}
+
+impl Write for RwFile {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        self.sync();
+        self.f.write(data)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.f.flush()
     }
 }
 
@@ -29,6 +95,8 @@ pub enum Output {
     File(std::io::BufWriter<File>),
     /// `open(FH, '>', \$buf)`
     Scalar(Cell),
+    /// The update side of `Input::Rw`.
+    Rw,
 }
 
 #[derive(Default)]
@@ -127,6 +195,10 @@ impl Interp {
                 *c.borrow_mut() = Value::bytes(cur);
                 true
             }
+            Some(Output::Rw) => match &mut fh.input {
+                Some(Input::Rw(f)) => f.write_all(data).is_ok(),
+                _ => false,
+            },
             None => false,
         }
     }
@@ -240,15 +312,18 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
                 let whence = it.scalar(&args[2], scope)?.to_i64();
                 let Some(h) = it.handle_of(&hv, false) else { return Ok(false) };
                 let mut fh = h.borrow_mut();
+                let fh = &mut *fh;
                 let target = match whence {
                     0 => SeekFrom::Start(pos.max(0) as u64),
                     1 => SeekFrom::Current(pos),
                     _ => SeekFrom::End(pos),
                 };
-                let ok = match fh.input.as_mut() {
-                    Some(Input::File(f)) => f.seek(target).is_ok(),
-                    Some(Input::Memory(m)) => m.seek(target).is_ok(),
-                    None => false,
+                let ok = match (fh.input.as_mut(), fh.output.as_mut()) {
+                    (Some(Input::File(f)), _) => f.seek(target).is_ok(),
+                    (Some(Input::Memory(m)), _) => m.seek(target).is_ok(),
+                    (Some(Input::Rw(f)), _) => f.seek(target).is_ok(),
+                    (None, Some(Output::File(w))) => w.seek(target).is_ok(),
+                    _ => false,
                 };
                 fh.eof = false;
                 Ok(ok)
@@ -260,15 +335,39 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
                 let hv = it.scalar(&args[0], scope)?;
                 let Some(h) = it.handle_of(&hv, false) else { return Ok(-1) };
                 let mut fh = h.borrow_mut();
-                Ok(match fh.input.as_mut() {
-                    Some(Input::File(f)) => f.stream_position().map(|p| p as i64).unwrap_or(-1),
-                    Some(Input::Memory(m)) => m.position() as i64,
-                    None => -1,
+                let fh = &mut *fh;
+                Ok(match (fh.input.as_mut(), fh.output.as_mut()) {
+                    (Some(Input::File(f)), _) => f.stream_position().map(|p| p as i64).unwrap_or(-1),
+                    (Some(Input::Memory(m)), _) => m.position() as i64,
+                    (Some(Input::Rw(f)), _) => f.seek(SeekFrom::Current(0)).map(|p| p as i64).unwrap_or(-1),
+                    (None, Some(Output::File(w))) => w.stream_position().map(|p| p as i64).unwrap_or(-1),
+                    (None, Some(Output::Scalar(c))) => c.borrow().to_bytes().len() as i64,
+                    _ => -1,
                 })
             })();
             r.map(|n| vec![Value::Int(n)])
         }
         "fileno" => Ok(vec![Value::Int(3)]),
+        "truncate" => {
+            let r = (|| -> ER<bool> {
+                let hv = it.scalar(&args[0], scope)?;
+                let len = it.scalar(&args[1], scope)?.to_i64().max(0) as u64;
+                if let Some(h) = it.handle_of(&hv, false) {
+                    let mut fh = h.borrow_mut();
+                    let fh = &mut *fh;
+                    return Ok(match (&mut fh.input, &mut fh.output) {
+                        (Some(Input::Rw(f)), _) => {
+                            f.sync();
+                            f.f.set_len(len).is_ok()
+                        }
+                        (_, Some(Output::File(w))) => w.flush().is_ok() && w.get_ref().set_len(len).is_ok(),
+                        _ => false,
+                    });
+                }
+                Ok(std::fs::OpenOptions::new().write(true).open(hv.to_text()).and_then(|f| f.set_len(len)).is_ok())
+            })();
+            r.map(|b| vec![Value::from(b)])
+        }
         "stat" | "lstat" => {
             let r = (|| -> ER<Vec<Value>> {
                 let m = match args.first() {
@@ -457,7 +556,19 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
             fh.output = Some(Output::Scalar(c.clone()));
             true
         }
-        ("<" | "+<", t) => match File::open(t.to_text()) {
+        ("+<", t) => match std::fs::OpenOptions::new().read(true).write(true).open(t.to_text()) {
+            Ok(f) => {
+                fh.input = Some(Input::Rw(RwFile { f, buf: Vec::new(), at: 0 }));
+                fh.output = Some(Output::Rw);
+                true
+            }
+            Err(e) => {
+                drop(fh);
+                it.set_scalar("main::!", Value::from(os_error_text(&e)));
+                return Ok(vec![Value::from(false)]);
+            }
+        },
+        ("<", t) => match File::open(t.to_text()) {
             Ok(f) => {
                 fh.input = Some(Input::File(BufReader::new(f)));
                 true

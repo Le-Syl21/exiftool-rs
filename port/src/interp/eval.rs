@@ -2574,23 +2574,29 @@ impl Interp {
                         self.call(&c, a, want)
                     }
                     None => match self.autoload(&key) {
-                        Some(c) => self.call(&c, a, want),
+                        Some(c) => {
+                            self.pending_aliases = Some(al);
+                            self.call(&c, a, want)
+                        }
                         None => die(format!("Undefined subroutine &{key} called")),
                     },
                 }
             }
             Expr::CallRef(f, args) => {
                 let f = self.scalar(f, scope)?;
-                let mut a = Vec::new();
-                for x in args {
-                    a.extend(self.list(x, scope)?);
-                }
+                let (a, al) = self.call_args(args, scope, None)?;
                 match f {
-                    Value::Code(c) => self.call(&c, a, want),
+                    Value::Code(c) => {
+                        self.pending_aliases = Some(al);
+                        self.call(&c, a, want)
+                    }
                     Value::Str(s) => {
                         self.check_symref(&s, "a subroutine")?;
                         let n = String::from_utf8_lossy(&s).into_owned();
-                        self.call_named(&n, a, want)
+                        self.pending_aliases = Some(al);
+                        let r = self.call_named(&n, a, want);
+                        self.pending_aliases = None;
+                        r
                     }
                     Value::Undef => die("Can't use an undefined value as a subroutine reference"),
                     _ => die("Not a CODE reference"),

@@ -78,6 +78,20 @@ fn md5(data: &[u8]) -> Vec<u8> {
     Md5::digest(data).to_vec()
 }
 
+fn concat(a: &[Value]) -> Vec<u8> {
+    a.iter().flat_map(|v| v.to_bytes().to_vec()).collect()
+}
+
+fn sha(bits: u32, data: &[u8]) -> Vec<u8> {
+    use sha2::Digest;
+    match bits {
+        1 => sha1::Sha1::digest(data).to_vec(),
+        384 => sha2::Sha384::digest(data).to_vec(),
+        512 => sha2::Sha512::digest(data).to_vec(),
+        _ => sha2::Sha256::digest(data).to_vec(),
+    }
+}
+
 fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
@@ -112,6 +126,42 @@ pub fn register(it: &mut Interp) {
     it.define_native("Digest::MD5::hexdigest", |_, a, _| {
         let o = arg(&a, 0);
         let r = md5(&o.get("data").to_bytes());
+        o.set("data", Value::str(""));
+        ret(Value::str(&hex(&r)))
+    });
+    // Digest::SHA: sha1/sha256/sha384/sha512 (+ _hex), and the OO interface.
+    for (name, bits) in [("sha1", 1u32), ("sha256", 256), ("sha384", 384), ("sha512", 512)] {
+        it.define_native(&format!("Digest::SHA::{name}"), move |_, a, _| ret(Value::bytes(sha(bits, &concat(&a)))));
+        it.define_native(&format!("Digest::SHA::{name}_hex"), move |_, a, _| ret(Value::str(&hex(&sha(bits, &concat(&a))))));
+    }
+    it.define_native("Digest::SHA::new", |_, a, _| {
+        let h = Value::new_hash();
+        if let Value::HashRef(r) = &h {
+            r.borrow_mut().blessed = Some(std::rc::Rc::from("Digest::SHA"));
+        }
+        let alg = a.get(1).map(|v| v.to_i64()).unwrap_or(1);
+        h.set("alg", Value::Int(alg));
+        h.set("data", Value::str(""));
+        ret(h)
+    });
+    it.define_native("Digest::SHA::add", |_, a, _| {
+        let o = arg(&a, 0);
+        let mut d = o.get("data").to_bytes().to_vec();
+        for v in &a[1..] {
+            d.extend_from_slice(&v.to_bytes());
+        }
+        o.set("data", Value::bytes(d));
+        ret(o)
+    });
+    it.define_native("Digest::SHA::digest", |_, a, _| {
+        let o = arg(&a, 0);
+        let r = sha(o.get("alg").to_i64() as u32, &o.get("data").to_bytes());
+        o.set("data", Value::str(""));
+        ret(Value::bytes(r))
+    });
+    it.define_native("Digest::SHA::hexdigest", |_, a, _| {
+        let o = arg(&a, 0);
+        let r = sha(o.get("alg").to_i64() as u32, &o.get("data").to_bytes());
         o.set("data", Value::str(""));
         ret(Value::str(&hex(&r)))
     });
