@@ -1710,12 +1710,28 @@ fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
                             v = call_code(it, &conv, vec![val.clone(), self_.clone()], Want::Scalar)?.pop().unwrap_or_default();
                         } else {
                             //### eval ValueConv/PrintConv ($val, $self, @val, @prt, @raw)
+                            // (with every lexical of GetValue in scope at this point, as
+                            // the eval sees them: GoPro's PrintConv reads $tag)
                             let scope = crate::interp::Scope::new(None);
-                            let val_cell = scope.scalar("val", val.clone());
                             scope.scalar("self", self_.clone());
+                            scope.scalar("tag", tag.clone());
+                            scope.scalar("type", type_.clone());
+                            scope.array("convTypes", conv_types.iter().map(|c| pl::s(c)).collect());
+                            scope.scalar("tagInfo", tag_info.clone());
+                            scope.scalar("valueConv", value_conv.clone());
+                            scope.scalar("both", both.clone());
+                            scope.scalar("rawValue", raw_value.clone());
+                            scope.scalar("value", value.clone());
                             scope.declare(b'@', "val", Binding::Array(val_a.clone()));
                             scope.declare(b'@', "prt", Binding::Array(prt_a.clone()));
                             scope.declare(b'@', "raw", Binding::Array(raw_a.clone()));
+                            scope.scalar("convType", pl::s(conv_type));
+                            scope.scalar("conv", conv.clone());
+                            scope.scalar("i", if vals.truthy() { n(i as i64) } else { Value::Undef });
+                            let val_cell = scope.scalar("val", val.clone());
+                            scope.scalar("vals", vals.clone());
+                            scope.array("values", values.clone());
+                            scope.scalar("convList", conv_list.clone());
                             let r = it.eval_string(&conv.to_bytes(), "Image::ExifTool", &scope, Want::Scalar);
                             val = val_cell.borrow().clone();
                             v = match r {
