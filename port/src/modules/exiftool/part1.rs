@@ -53,7 +53,6 @@ fn local_topic<T>(it: &mut Interp, f: impl FnOnce(&mut Interp) -> ER<T>) -> ER<T
 }
 
 /// `local $SIG{'__WARN__'} = VALUE;` around a block.
-#[allow(dead_code)] // (used by the subs still to port)
 fn local_sig_warn<T>(it: &mut Interp, handler: Value, f: impl FnOnce(&mut Interp) -> ER<T>) -> ER<T> {
     let sig = ghash(it, "main::SIG");
     let had = sig.exists("__WARN__");
@@ -69,7 +68,6 @@ fn local_sig_warn<T>(it: &mut Interp, handler: Value, f: impl FnOnce(&mut Interp
 }
 
 /// `\&SetWarning`
-#[allow(dead_code)] // (used by the subs still to port)
 fn set_warning_ref(it: &mut Interp) -> Value {
     Value::Code(it.sub_ref("Image::ExifTool::SetWarning"))
 }
@@ -252,7 +250,7 @@ fn glob_ref(it: &mut Interp, name: &str) -> ER<Value> {
 
 /// `$$h{KEY}` as the base of a longer element access (`$$h{KEY}{...}`):
 /// perl creates the inner hash when it is undefined, even to read it.
-fn viv(h: &Value, key: &str) -> Value {
+fn viv(h: &Value, key: impl AsRef<[u8]>) -> Value {
     if h.is_hash() {
         h.get_or_new_hash(key)
     } else {
@@ -1353,6 +1351,499 @@ pub fn init(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     })
 }
 
+/// `grep /^$pat$/i, LIST` (the first match, for `my ($match) = grep ...`).
+fn grep_first_ci(pat: &Value, list: &[Value]) -> ER<Value> {
+    let p = [b"^", &pat.to_bytes()[..], b"$"].concat();
+    let r = pl::re_dyn(&p, "i")?;
+    Ok(list.iter().find(|k| r.is_match(k)).cloned().unwrap_or_default())
+}
+
+/// `$a[$i]` with perl's negative indices, on a Vec.
+fn at_i(v: &[Value], i: i64) -> Value {
+    let idx = if i < 0 { v.len() as i64 + i } else { i };
+    if idx < 0 {
+        Value::Undef
+    } else {
+        at(v, idx as usize)
+    }
+}
+
+/// `&$code(ARGS)` on a code value (perl's errors otherwise).
+fn call_code(it: &mut Interp, code: &Value, args: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    match code {
+        Value::Code(c) => it.call(c, args, want),
+        Value::Undef => crate::interp::eval::die("Can't use an undefined value as a subroutine reference"),
+        Value::Str(s) => {
+            let name = String::from_utf8_lossy(s).into_owned();
+            it.call_named(&name, args, want)
+        }
+        _ => crate::interp::eval::die("Not a CODE reference"),
+    }
+}
+
+/// `join SEP, LIST`
+fn join(sep: &Value, list: &[Value]) -> Value {
+    let s = sep.to_bytes();
+    let parts: Vec<Vec<u8>> = list.iter().map(|v| v.to_bytes().to_vec()).collect();
+    Value::bytes(parts.join(&s[..]))
+}
+
+/// Get tag value
+/// Inputs: 0) ExifTool object reference
+///         1) tag key or tag name with optional group names (case insensitive)
+///            (or flattened tagInfo for getting field values, not part of public API)
+///         2) [optional] Value type: PrintConv, ValueConv, Both, Raw, Bin or Rational, the
+///            default is PrintConv or ValueConv, depending on the PrintConv option setting
+///         3) raw field value (not part of public API)
+/// Returns: Scalar context: tag value or undefined
+///          List context: list of values or empty list
+pub fn get_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    local_topic(it, |it| get_value_body(it, a, want))
+}
+
+fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    let (self_, mut tag, mut type_) = (arg(&a, 0), arg(&a, 1), arg(&a, 2)); // plus: ($rawFieldValue)
+    let mut conv_types: Vec<&str> = Vec::new();
+    let tag_info;
+    let mut value_conv = Value::Undef;
+    let mut both = Value::Undef;
+    let raw_value = self_.get("VALUE");
+
+    // get specific tag key if tag has a group name
+    if let Some(c) = re(r"^(.*):(.+)", "").m(&tag) {
+        let (gp, mut tg) = (cap(&c, 1), cap(&c, 2));
+        let mut keys_: Vec<Value> = Vec::new();
+        if raw_value.get(tg.to_bytes()).is_undef() {
+            let m = grep_first_ci(&tg, &keys(&raw_value))?;
+            if m.truthy() {
+                tg = m;
+            }
+        }
+        // build list of tag keys in the order of priority (no index
+        // is top priority, otherwise higher index is higher priority)
+        let mut key = tg.clone();
+        let d = viv(&self_, "DUPL_TAG").get(tg.to_bytes());
+        let mut i = if d.truthy() { d } else { n(0) };
+        loop {
+            if !raw_value.get(key.to_bytes()).is_undef() {
+                keys_.push(key.clone());
+            }
+            if pl::le(&i, &n(0)) {
+                break;
+            }
+            key = pl::concat(&tg, &pl::concat(&pl::s(" ("), &pl::concat(&i, &pl::s(")"))));
+            i = pl::sub(&i, &n(1));
+        }
+        if !keys_.is_empty() {
+            key = pl::method(it, &self_, "GroupMatches", vec![gp, Value::new_array(keys_)])?;
+            if key.truthy() {
+                tag = key;
+            }
+        }
+    } else if raw_value.get(tag.to_bytes()).is_undef() && !re(r" ", "").is_match(&tag) {
+        // fix case of tag name
+        if raw_value.get(tag.to_bytes()).is_undef() {
+            let m = grep_first_ci(&tag, &keys(&raw_value))?;
+            if m.truthy() {
+                tag = m;
+            }
+        }
+    }
+    // figure out what conversions to do
+    if type_.truthy() {
+        if pl::str_eq(&type_, "Rational") {
+            return ret(viv(&viv(&self_, "TAG_EXTRA"), tag.to_bytes()).get("Rational"));
+        }
+        if pl::str_eq(&type_, "Bin") {
+            return ret(viv(&viv(&self_, "TAG_EXTRA"), tag.to_bytes()).get("BinVal"));
+        }
+    } else {
+        type_ = if self_.get("OPTIONS").get("PrintConv").truthy() { pl::s("PrintConv") } else { pl::s("ValueConv") };
+    }
+
+    // start with the raw value
+    let mut value = raw_value.get(tag.to_bytes());
+    if value.is_undef() {
+        if !tag.is_ref() {
+            return pl::ret_nothing(want);
+        }
+        // get the value of a structure field
+        tag_info = tag.clone();
+        tag = tag_info.get("Name");
+        value = arg(&a, 3);
+        // (note: type "Both" is not allowed for structure fields)
+        if !pl::str_eq(&type_, "Raw") {
+            conv_types.push("ValueConv");
+            if !pl::str_eq(&type_, "ValueConv") {
+                conv_types.push("PrintConv");
+            }
+        }
+    } else {
+        tag_info = viv(&self_, "TAG_INFO").get(tag.to_bytes());
+        if tag_info.get("Struct").truthy() && value.is_ref() {
+            // must load XMPStruct.pl just in case (should already be loaded if
+            // a structure was extracted, but we could also arrive here if a simple
+            // list of values was stored incorrectly in a Struct tag)
+            crate::runtime::require(it, "Image/ExifTool/XMPStruct.pl")?;
+            // convert strucure field values
+            if !pl::str_eq(&type_, "Both") {
+                // (note: ConvertStruct handles the filtering and escaping too if necessary)
+                return it.call_named("Image::ExifTool::XMP::ConvertStruct", vec![self_.clone(), tag_info.clone(), value.clone(), type_.clone()], want);
+            }
+            let vc = pl::call(it, "Image::ExifTool::XMP::ConvertStruct", vec![self_.clone(), tag_info.clone(), value.clone(), pl::s("ValueConv")])?;
+            let v = pl::call(it, "Image::ExifTool::XMP::ConvertStruct", vec![self_.clone(), tag_info.clone(), value.clone(), pl::s("PrintConv")])?;
+            // (must not save these in $$self{BOTH} because the values may have been escaped)
+            return Ok(vec![vc, v]);
+        }
+        if !pl::str_eq(&type_, "Raw") {
+            // use values we calculated already if we stored them
+            both = viv(&self_, "BOTH").get(tag.to_bytes());
+            if both.truthy() {
+                if pl::str_eq(&type_, "PrintConv") {
+                    value = both.at(1);
+                } else if pl::str_eq(&type_, "ValueConv") {
+                    value = both.at(0);
+                    if value.is_undef() {
+                        value = both.at(1);
+                    }
+                } else {
+                    value_conv = both.at(0);
+                    value = both.at(1);
+                }
+            } else {
+                conv_types.push("ValueConv");
+                if !pl::str_eq(&type_, "ValueConv") {
+                    conv_types.push("PrintConv");
+                }
+            }
+        }
+    }
+
+    // do the conversions
+    let val_a: crate::interp::eval::ArrayRc = Rc::new(RefCell::new(Vec::new()));
+    let prt_a: crate::interp::eval::ArrayRc = Rc::new(RefCell::new(Vec::new()));
+    let raw_a: crate::interp::eval::ArrayRc = Rc::new(RefCell::new(Vec::new()));
+    for conv_type in conv_types.iter().copied() {
+        // don't convert a scalar reference or structure
+        if ref_of(&value) == "SCALAR" && !tag_info.get("ConvertBinary").truthy() {
+            break;
+        }
+        let mut conv = tag_info.get(conv_type);
+        if conv.is_undef() {
+            if conv_type == "ValueConv" {
+                if !tag_info.get("Binary").truthy() {
+                    continue;
+                }
+                conv = pl::s("\\$val"); // return scalar reference for binary values
+            } else {
+                // use PRINT_CONV from tag table if PrintConv doesn't exist
+                conv = viv(&tag_info, "Table").get("PRINT_CONV");
+                if conv.is_undef() {
+                    continue;
+                }
+                if tag_info.exists(conv_type) {
+                    continue;
+                }
+            }
+        }
+        // save old ValueConv value if we want Both
+        if pl::str_eq(&type_, "Both") && conv_type == "PrintConv" {
+            value_conv = value.clone();
+        }
+        let mut i: usize = 0;
+        let mut val;
+        let mut vals = Value::Undef;
+        let mut values: Vec<Value> = Vec::new();
+        let mut conv_list = Value::Undef;
+        // split into list if conversion is an array
+        if ref_of(&conv) == "ARRAY" {
+            conv_list = conv.clone();
+            conv = conv_list.at(0);
+            let val_list: Vec<Value> = if ref_of(&value) == "ARRAY" { value.items() } else { pl::split_ws(&value) };
+            // reorganize list if specified (Note: The writer currently doesn't
+            // relist values, so they may be grouped but the order must not change)
+            let relist = tag_info.get("Relist");
+            if relist.truthy() {
+                let mut new_list = Vec::new();
+                for old_index in relist.items() {
+                    let mut new_val = Value::Undef;
+                    if old_index.is_ref() {
+                        let mut join_ = Vec::new();
+                        for x in old_index.items() {
+                            let v = at_i(&val_list, x.to_i64());
+                            if !v.is_undef() {
+                                join_.push(v);
+                            }
+                        }
+                        if !join_.is_empty() {
+                            new_val = join(&pl::s(" "), &join_);
+                        }
+                    } else {
+                        new_val = at_i(&val_list, old_index.to_i64());
+                    }
+                    if !new_val.is_undef() {
+                        new_list.push(new_val);
+                    }
+                }
+                value = Value::new_array(new_list);
+            } else {
+                value = Value::new_array(val_list);
+            }
+            if value.is_empty() {
+                return pl::ret_nothing(want);
+            }
+        }
+        // initialize array so we can iterate over values in list
+        if ref_of(&value) == "ARRAY" {
+            if !tag_info.get("RawJoin").is_undef() {
+                val = join(&pl::s(" "), &value.items());
+            } else {
+                i = 0;
+                vals = value.clone();
+                val = vals.at(0);
+            }
+        } else {
+            val = value.clone();
+        }
+        // loop through all values in list
+        loop {
+            if !conv.is_undef() {
+                // get values of required tags if this is a Composite tag
+                if ref_of(&val) == "HASH" && val_a.borrow().is_empty() {
+                    // disable escape of source values so we don't double escape them
+                    let old_escape = self_.get("ESCAPE_PROC");
+                    self_.delete("ESCAPE_PROC");
+                    // temporarily delete filter so it isn't applied to the Require'd values
+                    let options = self_.get("OPTIONS");
+                    let old_filter = options.get("Filter");
+                    options.delete("Filter");
+                    for k in keys(&val) {
+                        let vk = val.get(k.to_bytes());
+                        if vk.is_undef() {
+                            continue;
+                        }
+                        let idx = k.to_i64().max(0) as usize;
+                        let rv = raw_value.get(vk.to_bytes());
+                        set_at(&mut raw_a.borrow_mut(), idx, rv);
+                        let r = get_value(it, vec![self_.clone(), vk, pl::s("Both")], Want::List)?;
+                        set_at(&mut val_a.borrow_mut(), idx, arg(&r, 0));
+                        set_at(&mut prt_a.borrow_mut(), idx, arg(&r, 1));
+                        if !at(&val_a.borrow(), idx).is_undef() || !viv(&tag_info, "Require").get(k.to_bytes()).truthy() {
+                            continue;
+                        }
+                        let options = self_.get("OPTIONS");
+                        if !old_filter.is_undef() {
+                            options.set("Filter", old_filter.clone());
+                        }
+                        self_.set("ESCAPE_PROC", old_escape.clone());
+                        return pl::ret_nothing(want);
+                    }
+                    let options = self_.get("OPTIONS");
+                    if !old_filter.is_undef() {
+                        options.set("Filter", old_filter.clone());
+                    }
+                    self_.set("ESCAPE_PROC", old_escape);
+                    // set $val to $val[0], or \@val for a CODE ref conversion
+                    val = if ref_of(&conv) == "CODE" { Value::ArrayRef(val_a.clone()) } else { at(&val_a.borrow(), 0) };
+                }
+                if ref_of(&conv) == "HASH" {
+                    // look up converted value in hash
+                    value = conv.get(val.to_bytes());
+                    if value.is_undef() {
+                        if conv.get("BITMASK").truthy() {
+                            value = pl::call(it, "Image::ExifTool::DecodeBits", vec![val.clone(), conv.get("BITMASK"), tag_info.get("BitsPerWord")])?;
+                        } else {
+                            // use alternate conversion routine if available
+                            if conv.get("OTHER").truthy() {
+                                let h = set_warning_ref(it);
+                                value = local_sig_warn(it, h, |it| {
+                                    it.set_scalar(EVAL_WARNING, Value::Undef);
+                                    let v = call_code(it, &conv.get("OTHER"), vec![val.clone(), Value::Undef, conv.clone()], Want::Scalar)?.pop().unwrap_or_default();
+                                    if it.get_scalar(EVAL_WARNING).truthy() {
+                                        let cw = clean_warning(it, vec![], Want::Scalar)?.pop().unwrap_or_default();
+                                        let msg = pl::concat(&pl::s(&format!("{conv_type} ")), &pl::concat(&tag, &pl::concat(&pl::s(": "), &cw)));
+                                        method_void(it, &self_, "Warn", vec![msg])?;
+                                    }
+                                    Ok(v)
+                                })?;
+                            }
+                            if value.is_undef() {
+                                if tag_info.get("PrintHex").truthy() && !val.is_undef() && pl::call(it, "Image::ExifTool::IsInt", vec![val.clone()])?.truthy() && conv_type == "PrintConv" {
+                                    value = pl::sprintf("Unknown (0x%x)", &[val.clone()]);
+                                } else {
+                                    value = pl::concat(&pl::s("Unknown ("), &pl::concat(&val, &pl::s(")")));
+                                }
+                            }
+                        }
+                    }
+                    // override with our localized language PrintConv if available
+                    let cur_lang = self_.get("CUR_LANG");
+                    if cur_lang.truthy() && conv_type == "PrintConv" {
+                        // (no need to check for lang-alt tag names -- they won't have a PrintConv)
+                        let mut tmp = cur_lang.get(tag_info.get("Name").to_bytes());
+                        if ref_of(&tmp) == "HASH" {
+                            tmp = tmp.get("PrintConv");
+                            if tmp.truthy() {
+                                if conv.get("BITMASK").truthy() && conv.get(val.to_bytes()).is_undef() {
+                                    let mut vs = pl::split(&re(", ", ""), &value, 0);
+                                    for v in vs.iter_mut() {
+                                        let t = tmp.get(v.to_bytes());
+                                        if !t.is_undef() {
+                                            *v = t;
+                                        }
+                                    }
+                                    value = join(&pl::s(", "), &vs);
+                                } else {
+                                    let t = tmp.get(value.to_bytes());
+                                    if !t.is_undef() {
+                                        value = pl::method(it, &self_, "Decode", vec![t, pl::s("UTF8")])?;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // call subroutine or do eval to convert value
+                    let h = set_warning_ref(it);
+                    value = local_sig_warn(it, h, |it| {
+                        it.set_scalar(EVAL_WARNING, Value::Undef);
+                        let v;
+                        if ref_of(&conv) == "CODE" {
+                            v = call_code(it, &conv, vec![val.clone(), self_.clone()], Want::Scalar)?.pop().unwrap_or_default();
+                        } else {
+                            //### eval ValueConv/PrintConv ($val, $self, @val, @prt, @raw)
+                            let scope = crate::interp::Scope::new(None);
+                            let val_cell = scope.scalar("val", val.clone());
+                            scope.scalar("self", self_.clone());
+                            scope.declare(b'@', "val", Binding::Array(val_a.clone()));
+                            scope.declare(b'@', "prt", Binding::Array(prt_a.clone()));
+                            scope.declare(b'@', "raw", Binding::Array(raw_a.clone()));
+                            let r = it.eval_string(&conv.to_bytes(), "Image::ExifTool", &scope, Want::Scalar);
+                            val = val_cell.borrow().clone();
+                            v = match r {
+                                Ok(mut x) => x.pop().unwrap_or_default(),
+                                Err(e) => {
+                                    if it.exit_code.is_some() {
+                                        return Err(Flow::Exit(it.exit_code.unwrap()));
+                                    }
+                                    if e.truthy() {
+                                        it.set_scalar(EVAL_WARNING, e);
+                                    }
+                                    Value::Undef
+                                }
+                            };
+                        }
+                        if it.get_scalar(EVAL_WARNING).truthy() {
+                            let cw = clean_warning(it, vec![], Want::Scalar)?.pop().unwrap_or_default();
+                            let msg = pl::concat(&pl::s(&format!("{conv_type} ")), &pl::concat(&tag, &pl::concat(&pl::s(": "), &cw)));
+                            method_void(it, &self_, "Warn", vec![msg])?;
+                        }
+                        Ok(v)
+                    })?;
+                }
+            } else {
+                value = val.clone();
+            }
+            if !vals.truthy() {
+                break;
+            }
+            // must store a separate copy of each binary data value in the list
+            if ref_of(&value) == "SCALAR" {
+                let tval = value.deref();
+                value = Value::ScalarRef(Rc::new(RefCell::new(tval)));
+            }
+            // save this converted value and step to next value in list
+            if !value.is_undef() {
+                values.push(value.clone());
+            }
+            i += 1;
+            if i >= vals.len() {
+                if !values.is_empty() {
+                    value = Value::new_array(values.clone());
+                }
+                break;
+            }
+            val = vals.at(i as i64);
+            if conv_list.truthy() {
+                let next_conv = conv_list.at(i as i64);
+                if next_conv.truthy() && pl::str_eq(&next_conv, "REPEAT") {
+                    conv_list = Value::Undef;
+                } else {
+                    conv = next_conv;
+                }
+            }
+        }
+        // return undefined now if no value
+        if value.is_undef() {
+            return pl::ret_nothing(want);
+        }
+        // join back into single value if split for conversion list
+        if conv_list.truthy() && ref_of(&value) == "ARRAY" {
+            value = join(&pl::s(if conv_type == "PrintConv" { "; " } else { " " }), &value.items());
+        }
+    }
+    if pl::str_eq(&type_, "Both") {
+        // save both (unescaped) values because we often need them again
+        // (Composite tags need "Both" and often Require one tag for various Composite tags)
+        if !both.truthy() {
+            viv(&self_, "BOTH").set(tag.to_bytes(), Value::new_array(vec![value_conv.clone(), value.clone()]));
+        }
+        // escape values if necessary
+        let ep = self_.get("ESCAPE_PROC");
+        if ep.truthy() {
+            do_escape(it, &mut value, &ep)?;
+            if !value_conv.is_undef() {
+                do_escape(it, &mut value_conv, &ep)?;
+            } else {
+                value_conv = value.clone();
+            }
+        } else if value_conv.is_undef() {
+            // $valueConv is undefined if there was no print conversion done
+            value_conv = value.clone();
+        }
+        value = filter_ref(it, &self_, value)?;
+        // return Both values as a list (ValueConv, PrintConv)
+        return Ok(vec![value_conv, value]);
+    }
+    // escape value if necessary
+    let ep = self_.get("ESCAPE_PROC");
+    if ep.truthy() {
+        do_escape(it, &mut value, &ep)?;
+    }
+
+    // filter if necessary
+    if self_.get("OPTIONS").get("Filter").truthy() && pl::str_eq(&type_, "PrintConv") {
+        value = filter_ref(it, &self_, value)?;
+    }
+
+    if ref_of(&value) == "ARRAY" {
+        let options = self_.get("OPTIONS");
+        if !options.get("ListItem").is_undef() {
+            value = value.at(options.get("ListItem").to_i64());
+        } else if want == Want::List {
+            // return array if requested
+            return Ok(value.items());
+        } else if pl::str_eq(&type_, "PrintConv") && !options.get("List").truthy() {
+            // join PrintConv values in delimited string if List option not used
+            // and list contains simple scalars (otherwise return ARRAY ref)
+            if value.items().iter().any(|x| x.is_ref()) {
+                return ret(value);
+            }
+            value = join(&options.get("ListSep"), &value.items());
+        }
+    }
+    ret(value)
+}
+
+/// `$self->Filter($$self{OPTIONS}{Filter}, \$value)`: the filtered value.
+fn filter_ref(it: &mut Interp, self_: &Value, value: Value) -> ER<Value> {
+    let cell = Rc::new(RefCell::new(value));
+    let f = self_.get("OPTIONS").get("Filter");
+    method_void(it, self_, "Filter", vec![f, Value::ScalarRef(cell.clone())])?;
+    let v = cell.borrow().clone();
+    Ok(v)
+}
+
 /// Register the subs ported so far; the others still run from the Perl.
 pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::DummyWriteProc", dummy_write_proc);
@@ -1380,4 +1871,5 @@ pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::GetDescription", get_description);
     it.define_native("Image::ExifTool::GetGroup", get_group);
     it.define_native("Image::ExifTool::Init", init);
+    it.define_native("Image::ExifTool::GetValue", get_value);
 }
