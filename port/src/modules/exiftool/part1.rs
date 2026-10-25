@@ -221,7 +221,6 @@ fn call_lv(it: &mut Interp, name: &str, args: &mut [Value], want: Want) -> ER<Ve
 }
 
 /// `$obj->Method(ARGS)` where the method may assign its arguments.
-#[allow(dead_code)] // (used by the subs still to port)
 fn method_lv(it: &mut Interp, obj: &Value, name: &str, args: &mut [Value], want: Want) -> ER<Vec<Value>> {
     let names: Vec<String> = (0..args.len()).map(|i| format!("a{i}")).collect();
     let code = format!("$obj->{name}({})", names.iter().map(|n| format!("${n}")).collect::<Vec<_>>().join(","));
@@ -2535,6 +2534,773 @@ fn options_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
     ret(old_val)
 }
 
+/// The first match of a pattern from `pos` 0 (`$s =~ /re/g` on a string
+/// just assigned): the captures and where the match ends (`pos($s)`).
+fn match_g(pat: &[u8], subject: &Value) -> ER<Option<(pl::Caps, usize)>> {
+    let r = match crate::perl::regex::compile(pat, "") {
+        Ok(r) => r,
+        Err(e) => return crate::interp::eval::die(e),
+    };
+    let b = subject.to_bytes();
+    match r.match_at(&b, 0) {
+        Ok(Some(sp)) => {
+            let end = sp[0].map(|(_, e)| e).unwrap_or(0);
+            let caps = sp.iter().map(|g| g.map(|(s, e)| Value::bytes(&b[s..e]))).collect();
+            Ok(Some((caps, end)))
+        }
+        _ => Ok(None),
+    }
+}
+
+/// `stat EXPR` (list context).
+fn stat(it: &mut Interp, file: &Value) -> ER<Vec<Value>> {
+    Ok(perl_snippet(it, "stat $f", &[("f", file.clone())], Want::List)?.0)
+}
+
+/// A file test (`-f`, `-p`, `-s`) on a file name or handle.
+fn file_test(it: &mut Interp, op: char, file: &Value) -> ER<Value> {
+    Ok(perl_snippet(it, &format!("-{op} $f"), &[("f", file.clone())], Want::Scalar)?.0.pop().unwrap_or_default())
+}
+
+/// Extract meta information from image
+/// Inputs: 0) ExifTool object reference
+///         1-N) Same as ImageInfo()
+/// Returns: 1 if this was a valid image, 0 otherwise
+/// Notes: pass an undefined value to avoid parsing arguments
+/// Internal 'ReEntry' option allows this routine to be called recursively
+pub fn extract_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    local_topic(it, |it| extract_info_body(it, a))
+}
+
+fn extract_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
+    let self_ = arg(&a, 0);
+    let args: Vec<Value> = a[1.min(a.len())..].to_vec();
+    let options = self_.get("OPTIONS"); // pointer to current options
+    let fast = or_default(options.get("FastScan"), n(0));
+    let req = self_.get("REQ_TAG_LOOKUP");
+    let req_all = or_default(options.get("RequestAll"), n(0));
+    let mut save_options = Value::new_hash();
+    let mut re_entry = Value::Undef;
+    let mut rsize = Value::Undef;
+    let mut zid = false;
+    let mut type_ = Value::Undef;
+    let mut start_time: Vec<Value> = Vec::new();
+    let mut save_order = Value::Undef;
+    let mut is_dir = false;
+    let s = |x: &str| pl::s(x);
+    let found_tag = |it: &mut Interp, name: &str, v: Value| method_void(it, &self_, "FoundTag", vec![pl::s(name), v]);
+    let a0 = arg(&args, 0);
+    let a1 = arg(&args, 1);
+
+    // check for internal ReEntry option to allow recursive calls to ExtractInfo
+    if ref_of(&a1) == "HASH" && a1.get("ReEntry").truthy() && (ref_of(&a0) == "SCALAR" || ref_of(&a0) == "GLOB") {
+        // save necessary members for restoring later
+        re_entry = Value::new_hash();
+        for k in ["RAF", "PROCESSED", "EXIF_DATA", "EXIF_POS", "FILE_TYPE"] {
+            re_entry.set(k, self_.get(k));
+        }
+        save_order = pl::call(it, "Image::ExifTool::GetByteOrder", vec![])?;
+        let raf = pl::method(it, &s("File::RandomAccess"), "new", vec![a0.clone()])?;
+        self_.set("RAF", raf);
+        self_.set("PROCESSED", Value::new_hash());
+        self_.delete("EXIF_DATA");
+        self_.delete("EXIF_POS");
+    } else {
+        if !a0.is_undef() || options.get("HtmlDump").truthy() || req.get("validate").truthy() {
+            save_options = options.hash_copy(); // save original options
+
+            // require duplicates for html dump
+            if options.get("HtmlDump").truthy() {
+                self::options(it, vec![self_.clone(), s("Duplicates"), n(1)], Want::Scalar)?;
+            }
+            // enable Validate option if Validate tag is requested
+            if req.get("validate").truthy() {
+                self::options(it, vec![self_.clone(), s("Validate"), n(1)], Want::Scalar)?;
+            }
+            if !a0.is_undef() {
+                // only initialize filename if called with arguments
+                self_.set("FILENAME", Value::Undef); // name of file (or '' if we didn't open it)
+                self_.set("RAF", Value::Undef); // RandomAccess object reference
+
+                method_void(it, &self_, "ParseArguments", args.clone())?; // initialize from our arguments
+            }
+        }
+        // ignore all tags and set ExtractEmbedded if outputting CSV directly
+        if self::options(it, vec![self_.clone(), s("PrintCSV")], Want::Scalar)?.pop().unwrap_or_default().truthy() {
+            let all = Value::new_hash();
+            all.set("all", n(1));
+            self_.get("OPTIONS").set("IgnoreTags", all);
+            self::options(it, vec![self_.clone(), s("ExtractEmbedded"), n(1)], Want::Scalar)?;
+        }
+        // initialize ExifTool object members
+        init(it, vec![self_.clone()], Want::Void)?;
+        self_.set("InExtract", n(1)); // set flag indicating we are inside ExtractInfo
+
+        self_.delete("MAKER_NOTE_FIXUP"); // fixup information for extracted maker notes
+        self_.delete("MAKER_NOTE_BYTE_ORDER");
+
+        // return our version number
+        let version = pl::concat(&it.get_scalar("Image::ExifTool::VERSION"), &it.get_scalar("Image::ExifTool::RELEASE"));
+        found_tag(it, "ExifToolVersion", version)?;
+        if req.get("now").truthy() || req_all.truthy() {
+            let v = pl::method(it, &self_, "TimeNow", vec![])?;
+            found_tag(it, "Now", v)?;
+        }
+        if req.get("newguid").truthy() || req_all.truthy() {
+            let v = pl::call(it, "Image::ExifTool::NewGUID", vec![])?;
+            found_tag(it, "NewGUID", v)?;
+        }
+        if req.get("newuuid").truthy() || req_all.truthy() {
+            let v = pl::call(it, "Image::ExifTool::NewUUID", vec![])?;
+            found_tag(it, "NewUUID", v)?;
+        }
+        // generate sequence number if necessary
+        if req.get("filesequence").truthy() || req_all.truthy() {
+            found_tag(it, "FileSequence", self_.get("FILE_SEQUENCE"))?;
+        }
+
+        if req.get("processingtime").truthy() || req_all.truthy() {
+            if let Some(t) = eval_block(it, |it| {
+                crate::runtime::require(it, "Time::HiRes")?;
+                pl::call_list(it, "Time::HiRes::gettimeofday", vec![])
+            })? {
+                start_time = t;
+            }
+            if start_time.is_empty() && req.get("processingtime").truthy() {
+                method_void(it, &self_, "Warn", vec![s("Install Time::HiRes to generate ProcessingTime")])?;
+            }
+        }
+
+        // create Hash object if ImageDataHash is requested
+        if req.get("imagedatahash").truthy() && !self_.get("ImageDataHash").truthy() {
+            let image_hash_type = self::options(it, vec![self_.clone(), s("ImageHashType")], Want::Scalar)?.pop().unwrap_or_default();
+            if let Some(c) = re(r"^SHA(256|512)$", "i").m(&image_hash_type) {
+                crate::runtime::require(it, "Digest::SHA")?;
+                let h = pl::method(it, &s("Digest::SHA"), "new", vec![cap(&c, 1)])?;
+                self_.set("ImageDataHash", h);
+            } else {
+                crate::runtime::require(it, "Digest::MD5")?;
+                let h = pl::method(it, &s("Digest::MD5"), "new", vec![])?;
+                self_.set("ImageDataHash", h);
+            }
+        }
+        self_.set("FILE_SEQUENCE", pl::add(&self_.get("FILE_SEQUENCE"), &n(1))); // count files read
+    }
+
+    let filename = self_.get("FILENAME"); // image file name ('' if already open)
+    let mut raf = self_.get("RAF"); // RandomAccess object
+
+    // local *EXIFTOOL_FILE;   # avoid clashes with global namespace
+    // (the interpreter's `local *FH` saves nothing: the handle is reopened)
+
+    let mut realname = filename.clone();
+    let req_or_all = |key: &str| req.get(key).truthy() || (req_all.truthy() && !viv(&self_, "EXCL_TAG_LOOKUP").get(key).truthy());
+    if !raf.truthy() {
+        // save file name
+        if !filename.is_undef() && !filename.to_bytes().is_empty() {
+            if !pl::str_eq(&filename, "-") {
+                // extract file name from pipe if necessary
+                if re(r"\|$", "").is_match(&realname) {
+                    re(r#"^.*?"(.*?)".*"#, "s").subst(&mut realname, false, |c| cap(c, 1).to_bytes().to_vec());
+                }
+                let dn = pl::call_list(it, "Image::ExifTool::SplitFileName", vec![realname.clone()])?;
+                let (dir, name) = (arg(&dn, 0), arg(&dn, 1));
+                found_tag(it, "FileName", name.clone())?;
+                if req_or_all("basename") {
+                    let b = match re(r"(.*)\.", "").m(&name) {
+                        Some(c) => cap(&c, 1),
+                        None => name.clone(),
+                    };
+                    found_tag(it, "BaseName", b)?;
+                }
+                if !dir.is_undef() && !dir.to_bytes().is_empty() {
+                    found_tag(it, "Directory", dir.clone())?;
+                }
+                if req_or_all("filepath") {
+                    let h = set_warning_ref(it);
+                    local_sig_warn(it, h, |it| {
+                        let mut path = Value::Undef;
+                        if pl::str_eq(&os(it), "MSWin32") && options.get("WindowsLongPath").truthy() {
+                            path = pl::method(it, &self_, "WindowsLongPath", vec![filename.clone()])?;
+                        } else if eval_block(it, |it| crate::runtime::require(it, "Cwd"))?.is_some() {
+                            path = eval_block(it, |it| pl::call(it, "Cwd::abs_path", vec![filename.clone()]))?.unwrap_or_default();
+                        }
+                        if !path.is_undef() {
+                            if pl::str_eq(&os(it), "MSWin32") {
+                                path = Value::bytes(path.to_bytes().iter().map(|&c| if c == b'\\' { b'/' } else { c }).collect::<Vec<u8>>()); // return forward slashes
+                            }
+                            found_tag(it, "FilePath", path)?;
+                        } else if req.get("filepath").truthy() {
+                            method_void(it, &self_, "Warn", vec![s("The Perl Cwd module must be installed to use FilePath")])?;
+                        }
+                        Ok(())
+                    })?;
+                }
+                // get size of resource fork on Mac OS
+                if pl::str_eq(&os(it), "darwin") && !self_.get("IN_RESOURCE").truthy() {
+                    rsize = file_test(it, 's', &pl::concat(&filename, &s("/..namedfork/rsrc")))?;
+                }
+                // check to see if Zone.Identifier file exists in Windows
+                if pl::str_eq(&os(it), "MSWin32") && eval_block(it, |it| crate::runtime::require(it, "Win32API::File"))?.is_some() {
+                    let wattr;
+                    let mut zfile = [pl::concat(&filename, &s(":Zone.Identifier"))];
+                    if method_lv(it, &self_, "EncodeFileName", &mut zfile, Want::Scalar)?.pop().unwrap_or_default().truthy() {
+                        wattr = eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributesW", vec![zfile[0].clone()]))?.unwrap_or_default();
+                    } else {
+                        wattr = eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributes", vec![zfile[0].clone()]))?.unwrap_or_default();
+                    }
+                    let inv = pl::call(it, "Win32API::File::INVALID_FILE_ATTRIBUTES", vec![])?;
+                    if !pl::num_eq(&wattr, &inv) {
+                        zid = true;
+                    }
+                }
+            }
+            // open the file
+            let fh = glob_ref(it, "EXIFTOOL_FILE")?;
+            if pl::method(it, &self_, "Open", vec![fh.clone(), filename.clone()])?.truthy() {
+                // create random access file object
+                raf = pl::method(it, &s("File::RandomAccess"), "new", vec![fh])?;
+                // patch to force pipe to be buffered because seek returns success
+                // in Windows cmd shell pipe even though it really failed
+                if pl::str_eq(&filename, "-") || re(r"\|$", "").is_match(&filename) {
+                    raf.set("TESTED", n(-1));
+                }
+                self_.set("RAF", raf.clone());
+            } else if pl::method(it, &self_, "IsDirectory", vec![filename.clone()])?.truthy() {
+                is_dir = true;
+            } else {
+                method_void(it, &self_, "Error", vec![s("Error opening file")])?;
+                // continue to process alt files if necessary
+                if self_.get("ALT_EXIFTOOL").truthy() {
+                    method_void(it, &self_, "DoneExtract", vec![])?;
+                }
+            }
+        } else {
+            method_void(it, &self_, "Error", vec![s("No file specified")])?;
+        }
+    }
+
+    while raf.truthy() || is_dir {
+        let mut stat_: Vec<Value> = Vec::new();
+        let mut plain_file = false;
+        if re_entry.truthy() {
+            // we already set these tags
+        } else if !raf.truthy() {
+            stat_ = stat(it, &filename)?;
+        } else if !raf.get("FILE_PT").truthy() {
+            // get file size from image in memory
+            let len = pl::length(&raf.get("BUFF_PT").deref());
+            found_tag(it, "FileSize", len)?;
+        } else if file_test(it, 'f', &raf.get("FILE_PT"))?.truthy() {
+            // get file tags if this is a plain file
+            stat_ = perl_snippet(it, "stat _", &[], Want::List)?.0;
+            plain_file = true;
+            // hack to patch Windows daylight savings time bug
+            if pl::str_eq(&os(it), "MSWin32") {
+                let t = pl::method_list(it, &self_, "GetFileTime", vec![raf.get("FILE_PT")])?;
+                for (j, idx) in [8usize, 9, 10].iter().enumerate() {
+                    set_at(&mut stat_, *idx, arg(&t, j));
+                }
+            }
+        } else {
+            // (note that Windows directories will still show the
+            //  daylight savings time bug -- should fix this sometime)
+            stat_ = stat(it, &raf.get("FILE_PT"))?;
+            if file_test(it, 'p', &raf.get("FILE_PT"))?.truthy() {
+                set_at(&mut stat_, 7, Value::Undef); // (pipe buffer size isn't useful)
+            }
+        }
+        let file_size = at(&stat_, 7);
+        if !at(&stat_, 7).is_undef() {
+            found_tag(it, "FileSize", at(&stat_, 7))?;
+        }
+        if rsize.truthy() {
+            found_tag(it, "ResourceForkSize", rsize.clone())?;
+        }
+        if zid {
+            found_tag(it, "ZoneIdentifier", s("Exists"))?;
+        }
+        if !at(&stat_, 9).is_undef() {
+            found_tag(it, "FileModifyDate", at(&stat_, 9))?;
+        }
+        if !at(&stat_, 8).is_undef() {
+            found_tag(it, "FileAccessDate", at(&stat_, 8))?;
+        }
+        let c_tag = if pl::str_eq(&os(it), "MSWin32") { "FileCreateDate" } else { "FileInodeChangeDate" };
+        if !at(&stat_, 10).is_undef() {
+            found_tag(it, c_tag, at(&stat_, 10))?;
+        }
+        if pl::str_eq(&os(it), "linux") && !stat_.is_empty() && eval_block(it, |it| crate::runtime::require(it, "File::StatX"))?.is_some() {
+            let h = set_warning_ref(it);
+            local_sig_warn(it, h, |it| {
+                let mut st = Value::Undef;
+                if raf.truthy() {
+                    if let Some(v) = eval_block(it, |it| {
+                        let b = pl::call(it, "File::StatX::STATX_BTIME", vec![])?;
+                        pl::call(it, "File::StatX::fstatx", vec![raf.get("FILE_PT"), n(0), b])
+                    })? {
+                        st = v;
+                    }
+                } else if let Some(v) = eval_block(it, |it| {
+                    let b = pl::call(it, "File::StatX::STATX_BTIME", vec![])?;
+                    pl::call(it, "File::StatX::statx", vec![filename.clone(), n(0), b])
+                })? {
+                    st = v;
+                }
+                if st.truthy() {
+                    let bt = pl::method(it, &st, "btime", vec![])?;
+                    if bt.truthy() {
+                        let bt = pl::method(it, &st, "btime", vec![])?;
+                        found_tag(it, "FileCreateDate", bt)?;
+                    }
+                }
+                Ok(())
+            })?;
+        }
+        if !at(&stat_, 2).is_undef() {
+            found_tag(it, "FilePermissions", at(&stat_, 2))?;
+        }
+        // extract more system info if SystemTags option is set
+        if !stat_.is_empty() {
+            let st = options.get("SystemTags");
+            let sys = st.truthy() || (req_all.truthy() && st.is_undef());
+            if sys || req.get("fileattributes").truthy() {
+                let ops = crate::perl::ops::bit_and;
+                let mut attr = vec![ops(&at(&stat_, 2), &n(0xf000)), ops(&at(&stat_, 2), &n(0x0e00))];
+                // add Windows file attributes if available
+                if pl::str_eq(&os(it), "MSWin32") && !filename.is_undef() && !filename.to_bytes().is_empty() && !pl::str_eq(&filename, "-") {
+                    let h = set_warning_ref(it);
+                    local_sig_warn(it, h, |it| {
+                        if eval_block(it, |it| crate::runtime::require(it, "Win32API::File"))?.is_some() {
+                            let wattr;
+                            let mut file = [filename.clone()];
+                            if method_lv(it, &self_, "EncodeFileName", &mut file, Want::Scalar)?.pop().unwrap_or_default().truthy() {
+                                wattr = eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributesW", vec![file[0].clone()]))?.unwrap_or_default();
+                            } else {
+                                wattr = eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributes", vec![file[0].clone()]))?.unwrap_or_default();
+                            }
+                            if !wattr.is_undef() && !pl::num_eq(&wattr, &Value::Int(0xffffffff)) {
+                                attr.push(wattr);
+                            }
+                        }
+                        Ok(())
+                    })?;
+                }
+                let sep = it.get_scalar("main::\"");
+                found_tag(it, "FileAttributes", join(&sep, &attr))?;
+            }
+            for (name, idx, key) in [
+                ("FileDeviceNumber", 0, "filedevicenumber"),
+                ("FileInodeNumber", 1, "fileinodenumber"),
+                ("FileHardLinks", 3, "filehardlinks"),
+                ("FileUserID", 4, "fileuserid"),
+                ("FileGroupID", 5, "filegroupid"),
+                ("FileDeviceID", 6, "filedeviceid"),
+                ("FileBlockSize", 11, "fileblocksize"),
+                ("FileBlockCount", 12, "fileblockcount"),
+            ] {
+                if sys || req.get(key).truthy() {
+                    found_tag(it, name, at(&stat_, idx))?;
+                }
+            }
+        }
+        // extract MDItem tags if requested (only on plain files)
+        if pl::str_eq(&os(it), "darwin") && !filename.is_undef() && !filename.to_bytes().is_empty() && !file_size.is_undef() {
+            let req_mac_os = pl::gt(&req_all, &n(1)) || req.get("macos:").truthy();
+            let cr_date = req_mac_os || req.get("filecreatedate").truthy();
+            let md_item = req_mac_os || options.get("MDItemTags").truthy() || keys(&req).iter().any(|k| re(r"^mditem", "").is_match(k));
+            let xattr = req_mac_os || options.get("XAttrTags").truthy() || keys(&req).iter().any(|k| re(r"^xattr", "").is_match(k));
+            if cr_date || md_item || xattr {
+                crate::runtime::require(it, "Image::ExifTool::MacOS")?;
+                if cr_date {
+                    call_void(it, "Image::ExifTool::MacOS::GetFileCreateDate", vec![self_.clone(), filename.clone()])?;
+                }
+                if md_item && plain_file {
+                    call_void(it, "Image::ExifTool::MacOS::ExtractMDItemTags", vec![self_.clone(), filename.clone()])?;
+                }
+                if xattr {
+                    call_void(it, "Image::ExifTool::MacOS::ExtractXAttrTags", vec![self_.clone(), filename.clone()])?;
+                }
+            }
+        }
+        // do whatever else we can with directories, then return
+        if is_dir || (!at(&stat_, 2).is_undef() && pl::num_eq(&crate::perl::ops::bit_and(&at(&stat_, 2), &n(0o170000)), &n(0o040000))) {
+            found_tag(it, "FileType", s("DIR"))?;
+            found_tag(it, "FileTypeExtension", s(""))?;
+            method_void(it, &self_, "DoneExtract", vec![])?;
+            if raf.truthy() {
+                method_void(it, &raf, "Close", vec![])?;
+            }
+            if !save_options.is_empty() {
+                self_.set("OPTIONS", save_options.clone());
+            }
+            if !re_entry.truthy() {
+                self_.delete("InExtract");
+            }
+            return ret(n(1));
+        }
+        // get list of file types to check
+        let tiff_type;
+        let no_magic = Value::new_hash();
+        let mut recognized_ext = Value::Undef;
+        let ext = pl::call(it, "Image::ExifTool::GetFileExtension", vec![realname.clone()])?;
+        self_.set("FILE_EXT", ext.clone());
+        let magic_number = ghash(it, "Image::ExifTool::magicNumber");
+        let module_name = lhash(it, "moduleName");
+        let weak_magic = lhash(it, "weakMagic");
+        let process_type = lhash(it, "processType");
+        // set $recognizedExt if this file type is recognized by extension only
+        if !ext.is_undef() && magic_number.get(ext.to_bytes()).is_undef() && !module_name.get(ext.to_bytes()).is_undef() && !module_name.get(ext.to_bytes()).truthy() {
+            recognized_ext = ext.clone();
+        }
+        let mut file_type_list: std::collections::VecDeque<Value> = get_file_type(it, vec![realname.clone()], Want::List)?.into();
+        if pl::ge(&fast, &n(4)) {
+            if !file_type_list.is_empty() {
+                type_ = file_type_list.pop_front().unwrap();
+                self_.set("FILE_TYPE", type_.clone());
+                method_void(it, &self_, "SetFileType", vec![type_.clone()])?;
+            } else {
+                method_void(it, &self_, "Error", vec![s("Unknown file type")])?;
+            }
+            method_void(it, &self_, "DoneExtract", vec![])?;
+            break; // don't read the file
+        }
+        let file_types = garray(it, "Image::ExifTool::fileTypes").items();
+        if !file_type_list.is_empty() {
+            // add remaining types to end of list so we test them all
+            let pat = join(&s("|"), &file_type_list.iter().cloned().collect::<Vec<_>>());
+            let r = pl::re_dyn(&[b"^(", &pat.to_bytes()[..], b")$"].concat(), "")?;
+            for t in file_types {
+                if !r.is_match(&t) {
+                    file_type_list.push_back(t);
+                }
+            }
+            tiff_type = self_.get("FILE_EXT");
+            if !pl::num_eq(&fast, &n(3)) {
+                no_magic.set("MXF", n(1)); // don't do magic number test on MXF or DV files
+                no_magic.set("DV", n(1));
+            }
+        } else {
+            // scan through all recognized file types
+            file_type_list = file_types.into();
+            tiff_type = s("TIFF");
+        }
+        file_type_list.push_back(s("")); // end of list marker
+        // initialize the input file for seeking in binary data
+        method_void(it, &raf, "BinMode", vec![])?; // set binary mode before we start reading
+        let pos = pl::method(it, &raf, "Tell", vec![])?; // get file position so we can rewind
+        // loop through list of file types to test
+        let buff: crate::interp::eval::Cell = Rc::new(RefCell::new(Value::Undef));
+        let mut err = Value::Undef;
+        let dir_info = Value::new_hash();
+        dir_info.set("RAF", raf.clone());
+        dir_info.set("Base", pos.clone());
+        dir_info.set("TestBuff", Value::ScalarRef(buff.clone()));
+        let test_len = it.get_scalar("Image::ExifTool::testLen");
+        // read start of file for testing
+        let raf_read = |it: &mut Interp, len: Value| -> ER<Value> {
+            let mut ra = [buff.borrow().clone(), len];
+            let r = method_lv(it, &raf, "Read", &mut ra, Want::Scalar)?.pop().unwrap_or_default();
+            *buff.borrow_mut() = ra[0].clone();
+            Ok(r)
+        };
+        if raf_read(it, test_len)?.truthy() {
+            if !pl::method(it, &raf, "Seek", vec![pos.clone(), n(0)])?.truthy() {
+                err = s("Error seeking in file");
+            }
+        } else {
+            err = raf.get("ERROR");
+            *buff.borrow_mut() = s("");
+        }
+        while !err.truthy() {
+            let mut unk_header = false;
+            type_ = file_type_list.pop_front().unwrap_or_default();
+            let b = buff.borrow().clone();
+            if type_.truthy() {
+                let mn = magic_number.get(type_.to_bytes());
+                if mn.truthy() {
+                    // do quick test for this file type to avoid loading module unnecessarily
+                    let r = pl::re_dyn(&[b"^", &mn.to_bytes()[..]].concat(), "s")?;
+                    if !r.is_match(&b) && !no_magic.get(type_.to_bytes()).truthy() {
+                        continue;
+                    }
+                } else {
+                    // keep checking for other types if we recognize this file only by extension
+                    let m = module_name.get(type_.to_bytes());
+                    if !m.is_undef() && !m.truthy() {
+                        continue;
+                    }
+                    if pl::gt(&fast, &n(2)) {
+                        continue; // keep checking if we aren't processing the file
+                    }
+                }
+                if weak_magic.get(type_.to_bytes()).truthy() && !recognized_ext.is_undef() {
+                    continue;
+                }
+            } else if type_.is_undef() {
+                break;
+            } else if recognized_ext.truthy() {
+                type_ = recognized_ext.clone(); // set type from recognized file extension only
+            } else {
+                // last ditch effort to scan past unknown header for JPEG/TIFF
+                let Some((c, end)) = match_g(br"(\xff\xd8\xff|MM\0\x2a|II\x2a\0)", &b)? else { continue };
+                let m1 = cap(&c, 1);
+                type_ = if &m1.to_bytes()[..] == b"\xff\xd8\xff" { s("JPEG") } else { s("TIFF") };
+                let skip = n(end as i64 - m1.to_bytes().len() as i64);
+                dir_info.set("Base", pl::add(&pos, &skip));
+                if !pl::method(it, &raf, "Seek", vec![pl::add(&pos, &skip), n(0)])?.truthy() {
+                    err = s("Error seeking in file");
+                    break;
+                }
+                let msg = format!("Processing {}-like data after unknown {}-byte header", type_.to_text(), skip.to_text());
+                method_void(it, &self_, "Warn", vec![s(&msg)])?;
+                if !self_.get("DOC_NUM").truthy() {
+                    unk_header = true;
+                }
+            }
+            // save file type in member variable
+            self_.set("FILE_TYPE", type_.clone());
+            dir_info.set("Parent", if pl::str_eq(&type_, "TIFF") { tiff_type.clone() } else { type_.clone() });
+            // don't process the file when FastScan > 2
+            if pl::gt(&fast, &n(2)) && !process_type.get(type_.to_bytes()).truthy() {
+                if !(weak_magic.get(type_.to_bytes()).truthy() && (!ext.truthy() || ext.to_bytes() != type_.to_bytes())) {
+                    method_void(it, &self_, "SetFileType", vec![dir_info.get("Parent")])?;
+                }
+                break;
+            }
+            let mut module = module_name.get(type_.to_bytes());
+            if module.is_undef() {
+                module = type_.clone();
+            }
+            let mut func = format!("Process{}", type_.to_text());
+
+            // load module if necessary
+            if module.truthy() {
+                crate::runtime::require(it, &format!("Image/ExifTool/{}.pm", module.to_text()))?;
+                func = format!("Image::ExifTool::{}::{func}", module.to_text());
+            } else if pl::str_eq(&module, "0") {
+                method_void(it, &self_, "SetFileType", vec![])?;
+                method_void(it, &self_, "Warn", vec![s("Unsupported file type")])?;
+                break;
+            } else {
+                // (a sub of this package, as `&$func` finds it here)
+                func = format!("Image::ExifTool::{func}");
+            }
+            viv_array(&self_, "PATH").push(type_.clone()); // save file type in metadata PATH
+
+            // process the file
+            let result = it.call_named(&func, vec![self_.clone(), dir_info.clone()], Want::Scalar)?.pop().unwrap_or_default();
+
+            if let Value::ArrayRef(p) = viv_array(&self_, "PATH") {
+                p.borrow_mut().pop();
+            }
+
+            if result.truthy() {
+                // all done if successful
+                if unk_header {
+                    method_void(it, &self_, "DeleteTag", vec![s("FileType")])?;
+                    method_void(it, &self_, "DeleteTag", vec![s("FileTypeExtension")])?;
+                    method_void(it, &self_, "DeleteTag", vec![s("MIMEType")])?;
+                    method_void(it, &self_, "VPrint", vec![n(0), s("Reset file type due to unknown header\n")])?;
+                }
+                break;
+            }
+            // seek back to try again from the same position in the file
+            if !pl::method(it, &raf, "Seek", vec![pos.clone(), n(0)])?.truthy() {
+                err = s("Error seeking in file");
+            }
+        }
+        if !err.truthy() && type_.is_undef() && !self_.get("DOC_NUM").truthy() {
+            // if we were given a single image with a known type there
+            // must be a format error since we couldn't read it, otherwise
+            // it is likely we don't support images of this type
+            let file_type = or_default(get_file_type(it, vec![realname.clone()], Want::Scalar)?.pop().unwrap_or_default(), s(""));
+            let b = buff.borrow().clone();
+            if !pl::length(&b).truthy() {
+                err = s("File is empty");
+            } else {
+                let ch = Value::bytes(&b.to_bytes()[..1]);
+                let not_ch = [b"[^", &crate::perl::regex::quotemeta(&ch.to_bytes())[..], b"]"].concat();
+                if b.to_bytes().len() < 16 || pl::re_dyn(&not_ch, "")?.is_match(&b) {
+                    if pl::str_eq(&file_type, "RAW") {
+                        err = s("Unsupported RAW file type");
+                    } else if file_type.truthy() {
+                        err = s("File format error");
+                    } else {
+                        err = s("Unknown file type");
+                    }
+                } else {
+                    // provide some insight into the content of some corrupted files
+                    if self_.get("OPTIONS").get("FastScan").truthy() {
+                        err = s("File header is all");
+                    } else {
+                        let mut num = n(0);
+                        loop {
+                            if !raf_read(it, n(65536))?.truthy() {
+                                num = Value::Undef;
+                                break;
+                            }
+                            let b = buff.borrow().clone();
+                            if let Some((_, end)) = match_g(&not_ch, &b)? {
+                                num = pl::add(&num, &n(end as i64 - 1));
+                                break;
+                            }
+                            num = pl::add(&num, &pl::length(&b));
+                        }
+                        if num.truthy() {
+                            let fs = pl::call(it, "Image::ExifTool::ConvertFileSize", vec![num])?;
+                            err = pl::concat(&s("First "), &pl::concat(&fs, &s(" of file is")));
+                        } else {
+                            err = s("Entire file is");
+                        }
+                    }
+                    let tail = if pl::str_eq(&ch, "\0") {
+                        s(" binary zeros")
+                    } else if pl::str_eq(&ch, " ") {
+                        s(" ASCII spaces")
+                    } else if re(r"[a-zA-Z0-9]", "").is_match(&ch) {
+                        pl::concat(&s(" ASCII '"), &pl::concat(&ch, &s("' characters")))
+                    } else {
+                        pl::sprintf(" binary 0x%.2x's", &[n(ch.to_bytes()[0] as i64)])
+                    };
+                    err = pl::concat(&err, &tail);
+                }
+            }
+        }
+        if err.truthy() {
+            method_void(it, &self_, "Error", vec![err.clone()])?;
+        } else if self::options(it, vec![self_.clone(), s("ScanForXMP")], Want::Scalar)?.pop().unwrap_or_default().truthy() && (type_.is_undef() || (!fast.truthy() && !self_.get("FoundXMP").truthy())) {
+            // scan for XMP
+            method_void(it, &raf, "Seek", vec![pos.clone(), n(0)])?;
+            crate::runtime::require(it, "Image::ExifTool::XMP")?;
+            if pl::call(it, "Image::ExifTool::XMP::ScanForXMP", vec![self_.clone(), raf.clone()])?.truthy() {
+                type_ = s("");
+            }
+        }
+        // extract binary EXIF data block only if requested
+        let ed = self_.get("EXIF_DATA");
+        if !ed.is_undef() && pl::gt(&pl::length(&ed), &n(16)) && (req.get("exif").truthy() || (self_.get("TAGS_FROM_FILE").truthy() && !viv(&self_, "EXCL_TAG_LOOKUP").get("exif").truthy())) {
+            found_tag(it, "EXIF", self_.get("EXIF_DATA"))?;
+        }
+        if !re_entry.truthy() {
+            self_.set("PATH", Value::new_array(vec![])); // reset PATH
+            method_void(it, &self_, "DoneExtract", vec![])?;
+            // do our HTML dump if requested
+            let hd = self_.get("HTML_DUMP");
+            if hd.truthy() {
+                method_void(it, &raf, "Seek", vec![n(0), n(2)])?; // seek to end of file
+                let t = pl::method(it, &raf, "Tell", vec![])?;
+                method_void(it, &hd, "FinishTiffDump", vec![self_.clone(), t])?;
+                let mut pos = options.get("HtmlDumpBase");
+                if pos.is_undef() {
+                    pos = or_default(self_.get("FIRST_EXIF_POS"), n(0));
+                }
+                let mut data_pt = if !self_.get("EXIF_DATA").is_undef() {
+                    match &self_ {
+                        Value::HashRef(h) => Value::LvRef(Rc::new(crate::interp::eval::Lv::HElem(h.clone(), Rc::from(&b"EXIF_DATA"[..])))),
+                        _ => Value::Undef,
+                    }
+                } else {
+                    Value::Undef
+                };
+                if !self_.get("EXIF_POS").is_undef() && !pl::num_eq(&pos, &self_.get("EXIF_POS")) {
+                    data_pt = Value::Undef;
+                }
+                if self_.get("ExtendedEXIF").truthy() {
+                    data_pt = Value::Undef; // can't use EXIF block if not contiguous
+                }
+                let fname = self_.get("FILENAME");
+                let title = if fname.truthy() { pl::concat(&s("HTML Dump ("), &pl::concat(&fname, &s(")"))) } else { s("HTML Dump") };
+                let success = pl::method(it, &hd, "Print", vec![raf.clone(), data_pt, pos, options.get("TextOut"), options.get("HtmlDump"), title])?;
+                if pl::lt(&success, &n(0)) {
+                    let e = self_.get("HTML_DUMP").get("ERROR");
+                    method_void(it, &self_, "Warn", vec![pl::concat(&s("Error reading "), &e)])?;
+                }
+            }
+        }
+        if filename.truthy() {
+            method_void(it, &raf, "Close", vec![])?; // close the file if we opened it
+            // process the resource fork as an embedded file on Mac filesystems
+            if rsize.truthy() && options.get("ExtractEmbedded").truthy() {
+                // local *RESOURCE_FILE;
+                let fh = glob_ref(it, "RESOURCE_FILE")?;
+                if pl::method(it, &self_, "Open", vec![fh.clone(), pl::concat(&filename, &s("/..namedfork/rsrc"))])?.truthy() {
+                    self_.set("DOC_NUM", pl::add(&self_.get("DOC_COUNT"), &n(1)));
+                    self_.set("IN_RESOURCE", n(1));
+                    let opts = Value::new_hash();
+                    opts.set("ReEntry", n(1));
+                    extract_info(it, vec![self_.clone(), fh, opts], Want::Void)?;
+                    perl_snippet(it, "close RESOURCE_FILE", &[], Want::Void)?;
+                    self_.delete("IN_RESOURCE");
+                } else {
+                    method_void(it, &self_, "Warn", vec![s("Error opening resource fork")])?;
+                }
+            }
+        }
+        break; // (loop was a cheap "goto")
+    }
+
+    // Note: This should be the only tag generated after BuildCompositeTags,
+    // and as such it can't be used in user-defined Composite tags
+    if !start_time.is_empty() {
+        let t = pl::call(it, "Time::HiRes::tv_interval", vec![Value::new_array(start_time.clone())])?;
+        found_tag(it, "ProcessingTime", t)?;
+    }
+
+    // add numbers to warnings with multiple occurrences
+    let was_warned = self_.get("WAS_WARNED");
+    if !was_warned.is_empty() {
+        let (mut tag, val) = (s("Warning"), self_.get("VALUE"));
+        let mut i = 1;
+        while val.get(tag.to_bytes()).truthy() {
+            let nn = viv(&self_, "WAS_WARNED").get(val.get(tag.to_bytes()).to_bytes());
+            if nn.truthy() && pl::gt(&nn, &n(1)) {
+                let v = pl::concat(&val.get(tag.to_bytes()), &pl::concat(&s(" [x"), &pl::concat(&nn, &s("]"))));
+                val.set(tag.to_bytes(), v);
+            }
+            tag = s(&format!("Warning ({i})"));
+            i += 1;
+        }
+    }
+    // restore original options
+    if !save_options.is_empty() {
+        self_.set("OPTIONS", save_options);
+    }
+
+    if re_entry.truthy() {
+        // restore necessary members when exiting re-entrant code
+        for k in keys(&re_entry) {
+            self_.set(k.to_bytes(), re_entry.get(k.to_bytes()));
+        }
+        call_void(it, "Image::ExifTool::SetByteOrder", vec![save_order])?;
+    } else {
+        // call cleanup routines if necessary
+        let cleanup = self_.get("Cleanup");
+        if cleanup.truthy() {
+            for f in cleanup.items() {
+                call_code(it, &f, vec![self_.clone()], Want::Void)?;
+            }
+            self_.delete("Cleanup");
+        }
+        self_.delete("InExtract");
+    }
+
+    // ($type may be undef without an Error when processing sub-documents)
+    if type_.is_undef() || viv(&self_, "VALUE").exists("Error") {
+        return ret(n(0));
+    }
+    ret(n(1))
+}
+
+/// `@{$$h{KEY}}` as an lvalue: the array, created when undefined.
+fn viv_array(h: &Value, key: &str) -> Value {
+    if h.is_hash() {
+        h.get_or_new_array(key)
+    } else {
+        Value::Undef
+    }
+}
+
 /// Register the subs ported so far; the others still run from the Perl.
 pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::DummyWriteProc", dummy_write_proc);
@@ -2565,4 +3331,5 @@ pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::GetValue", get_value);
     it.define_native("Image::ExifTool::BuildCompositeTags", build_composite_tags);
     it.define_native("Image::ExifTool::Options", options);
+    it.define_native("Image::ExifTool::ExtractInfo", extract_info);
 }
