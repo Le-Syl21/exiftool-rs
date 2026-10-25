@@ -291,6 +291,43 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
                 }
                 pos += consumed;
             }
+            b'u' => {
+                // uudecode the rest: lines of a length char then 4-char groups.
+                let mut res = Vec::new();
+                while pos < data.len() {
+                    let len = (data[pos].wrapping_sub(32) & 0x3f) as usize;
+                    pos += 1;
+                    if len == 0 {
+                        // skip to the end of the line
+                        while pos < data.len() && data[pos] != b'\n' {
+                            pos += 1;
+                        }
+                        pos += 1;
+                        continue;
+                    }
+                    let mut got = 0;
+                    while got < len && pos < data.len() {
+                        let mut q = [0u8; 4];
+                        for k in 0..4 {
+                            q[k] = data.get(pos + k).map(|c| c.wrapping_sub(32) & 0x3f).unwrap_or(0);
+                        }
+                        let b = [(q[0] << 2) | (q[1] >> 4), (q[1] << 4) | (q[2] >> 2), (q[2] << 6) | q[3]];
+                        for &x in &b {
+                            if got < len {
+                                res.push(x);
+                                got += 1;
+                            }
+                        }
+                        pos += 4;
+                    }
+                    // skip the newline
+                    while pos < data.len() && data[pos] != b'\n' {
+                        pos += 1;
+                    }
+                    pos += 1;
+                }
+                out.push(Value::bytes(res));
+            }
             b'w' => {
                 let n = repeat(count, usize::MAX);
                 for _ in 0..n {
@@ -525,6 +562,22 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                     let ch = char::from_u32(cp).unwrap_or('\u{FFFD}');
                     let mut buf = [0u8; 4];
                     out.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
+                }
+            }
+            b'u' => {
+                // uuencode, 45 bytes per line
+                let s = cur.next().to_bytes();
+                let enc = |c: u8| if c == 0 { b'`' } else { c + 32 };
+                for chunk in s.chunks(45) {
+                    out.push(enc(chunk.len() as u8));
+                    for g in chunk.chunks(3) {
+                        let a = [g[0], *g.get(1).unwrap_or(&0), *g.get(2).unwrap_or(&0)];
+                        out.push(enc(a[0] >> 2));
+                        out.push(enc(((a[0] & 3) << 4) | (a[1] >> 4)));
+                        out.push(enc(((a[1] & 0xf) << 2) | (a[2] >> 6)));
+                        out.push(enc(a[2] & 0x3f));
+                    }
+                    out.push(b'\n');
                 }
             }
             b'w' => {

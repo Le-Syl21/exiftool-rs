@@ -302,6 +302,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             let Some(Expr::Array(c)) = args.first() else { return die("Type of arg 1 to splice must be array") };
             let a = it.array_of(c, scope, true)?;
             let rest = values(it, &args[1..], scope)?;
+            it.alias_forget(&a);
             let mut a = a.borrow_mut();
             let len = a.len() as i64;
             let off = rest.first().map(|v| v.to_i64()).unwrap_or(0);
@@ -329,6 +330,8 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             let targets: Vec<Lv> = if args.is_empty() { vec![Lv::Scalar(it.scalar_cell(scope, "_"))] } else { args.iter().map(|a| it.lvalue(a, scope)).collect::<ER<_>>()? };
             let mut count = 0;
             let mut last = Value::str("");
+            // chomp removes $/ (all trailing newlines in paragraph mode).
+            let sep = it.get_scalar("main::/");
             for lv in flatten_lv(targets) {
                 let v = lv.get();
                 if v.is_undef() {
@@ -336,9 +339,19 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 }
                 let s = v.to_bytes();
                 if name == "chomp" {
-                    if s.last() == Some(&b'\n') {
-                        lv.set(Value::bytes(&s[..s.len() - 1]))?;
-                        count += 1;
+                    if sep.is_undef() {
+                        continue;
+                    }
+                    let sp = sep.to_bytes();
+                    if sp.is_empty() {
+                        let n = s.iter().rev().take_while(|&&c| c == b'\n').count();
+                        if n > 0 {
+                            lv.set(Value::bytes(&s[..s.len() - n]))?;
+                            count += n as i64;
+                        }
+                    } else if s.ends_with(&sp) {
+                        lv.set(Value::bytes(&s[..s.len() - sp.len()]))?;
+                        count += sp.len() as i64;
                     }
                 } else if !s.is_empty() {
                     last = Value::bytes(&s[s.len() - 1..]);

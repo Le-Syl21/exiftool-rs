@@ -384,6 +384,7 @@ impl Interp {
             trace_depth: 0,
         };
         i.set_scalar("main::\"", Value::str(" "));
+        i.set_scalar("main::/", Value::str("\n"));
         i.set_scalar("main::,", Value::Undef);
         i.set_scalar("main::;", Value::str("\x1c"));
         i.set_scalar("main::]", Value::Num(5.036));
@@ -1934,6 +1935,9 @@ impl Interp {
     fn assign_list(&mut self, l: &Expr, r: &Expr, scope: &Rc<Scope>) -> ER<Lv> {
         let vals = self.list(r, scope)?;
         let lv = self.lvalue(l, scope)?;
+        if let Lv::Array(a) = &lv {
+            self.alias_forget(a);
+        }
         assign_values(&lv, vals)?;
         Ok(lv)
     }
