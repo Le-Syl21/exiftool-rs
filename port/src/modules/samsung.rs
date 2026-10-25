@@ -293,7 +293,7 @@ pub fn process_samsung(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let (mut offset_pos, mut audio_n_off, mut audio_size) = (Value::Undef, Value::Undef, Value::Undef);
 
     if !raf.truthy() {
-        raf = pl::call(it, "File::RandomAccess::new", vec![s("File::RandomAccess"), dir_info.get("DataPt")])?;
+        raf = pl::method(it, &s("File::RandomAccess"), "new", vec![dir_info.get("DataPt")])?;
         pl::method(it, &et, "VerboseDir", vec![s("SamsungTrailer")])?;
     }
     if !(raf_seek(it, &raf, pl::sub(&n(-6), &offset), 2)?
@@ -486,7 +486,7 @@ pub fn process_samsung(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                 crate::runtime::require(it, "Image::ExifTool::Fixup")?;
                 let mut fixup = dir_info.get("Fixup");
                 if !fixup.truthy() {
-                    fixup = pl::call(it, "Image::ExifTool::Fixup::new", vec![s("Image::ExifTool::Fixup")])?;
+                    fixup = pl::method(it, &s("Image::ExifTool::Fixup"), "new", vec![])?;
                     dir_info.set("Fixup", fixup.clone());
                 }
                 let f1 = pl::sub(&pl::length(&buff), &offset_pos);
@@ -516,7 +516,7 @@ pub fn process_samsung(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
 pub fn write_stmn(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     // create a Fixup for the PreviewImage
-    let fixup = pl::call(it, "Image::ExifTool::Fixup::new", vec![s("Image::ExifTool::Fixup")])?;
+    let fixup = pl::method(it, &s("Image::ExifTool::Fixup"), "new", vec![])?;
     dir_info.set("Fixup", fixup);
     let val = pl::call(it, "Image::ExifTool::WriteBinaryData", vec![et.clone(), dir_info, tag_table_ptr])?;
     // force PreviewImage into the trailer even if it fits in EXIF segment
