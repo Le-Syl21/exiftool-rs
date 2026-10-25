@@ -132,17 +132,6 @@ fn join(sep: &[u8], list: &[Value]) -> Value {
     Value::bytes(parts.join(sep))
 }
 
-/// `sort LIST` (string comparison).
-fn sort_str(mut v: Vec<Value>) -> Vec<Value> {
-    v.sort_by(|a, b| ops::str_cmp(a, b));
-    v
-}
-
-/// `keys %$h` as values.
-fn keys_of(h: &Value) -> Vec<Value> {
-    h.keys().into_iter().map(Value::Str).collect()
-}
-
 /// `gmtime(T)` / `localtime(T)` in list context.
 fn time_list(t: &Value, local: bool) -> Vec<Value> {
     crate::interp::time::broken_down(t.to_f64().floor() as i64, local).iter().map(|&x| Value::Int(x)).collect()
@@ -162,6 +151,16 @@ fn with_set_warning<T>(it: &mut Interp, f: impl FnOnce(&mut Interp) -> ER<T>) ->
         sig.delete("__WARN__");
     }
     r
+}
+
+/// `ref $v`: the class of a blessed reference, else its type.
+fn ref_of(v: &Value) -> String {
+    if let Value::HashRef(h) = v {
+        if let Some(c) = &h.borrow().blessed {
+            return c.to_string();
+        }
+    }
+    v.ref_type().to_string()
 }
 
 /// `$^O`
@@ -426,11 +425,11 @@ pub fn add_tags_to_lookup(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<
 pub fn expand_flags(_it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let tag_info = arg(&a, 0);
     let flags = tag_info.get("Flags");
-    if flags.ref_type() == "ARRAY" {
+    if ref_of(&flags) == "ARRAY" {
         for f in flags.items() {
             tag_info.set(f.to_bytes(), n(1));
         }
-    } else if flags.ref_type() == "HASH" {
+    } else if ref_of(&flags) == "HASH" {
         for key in flags.keys() {
             tag_info.set(&key, flags.get(&key));
         }
@@ -1217,11 +1216,11 @@ fn filter_v(it: &mut Interp, slf: &Value, filter: &Value, val_pt: &Value) -> ER<
             assign_deref(val_pt, out)?;
             rtn_val = n(1);
         }
-    } else if v.ref_type() == "SCALAR" {
+    } else if ref_of(&v) == "SCALAR" {
         let val = Value::ScalarRef(Rc::new(std::cell::RefCell::new(v.deref()))); // make a copy to avoid filtering twice
         rtn_val = filter_v(it, slf, filter, &val)?;
         assign_deref(val_pt, val)?;
-    } else if v.ref_type() == "ARRAY" {
+    } else if ref_of(&v) == "ARRAY" {
         let arr = Rc::new(std::cell::RefCell::new(v.items())); // make a copy to avoid filtering twice
         let len = arr.borrow().len();
         for i in 0..len {
@@ -1231,7 +1230,7 @@ fn filter_v(it: &mut Interp, slf: &Value, filter: &Value, val_pt: &Value) -> ER<
             }
         }
         assign_deref(val_pt, Value::ArrayRef(arr))?;
-    } else if v.ref_type() == "HASH" {
+    } else if ref_of(&v) == "HASH" {
         let copy = v.hash_copy(); // make a copy to avoid filtering twice
         let Value::HashRef(h) = &copy else { unreachable!() };
         for k in copy.keys() {
@@ -1264,7 +1263,7 @@ pub fn printable(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if out_str.is_undef() {
         return ret(pl::s("(undef)"));
     }
-    if out_str.ref_type() == "SCALAR" {
+    if ref_of(&out_str) == "SCALAR" {
         return ret(pl::s(&format!("(Binary data {} bytes)", out_str.deref().to_bytes().len())));
     }
     tr(&mut out_str, br"\x01-\x1f\x7f-\xff", b".", "");
@@ -1735,6 +1734,981 @@ pub fn split_file_name(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     Ok(vec![dir, name])
 }
 
+// ---- requested tags ----
+
+/// `/^$pat$/i` built from a string at run time.
+fn re_full(pre: &str, pat: &Value, post: &str, flags: &str) -> ER<pl::Re> {
+    let mut p = pre.as_bytes().to_vec();
+    p.extend_from_slice(&pat.to_bytes());
+    p.extend_from_slice(post.as_bytes());
+    pl::re_dyn(&p, flags)
+}
+
+/// `grep /RE/, LIST`
+fn grep_re(r: &pl::Re, list: &[Value]) -> Vec<Value> {
+    list.iter().filter(|v| r.is_match(v)).cloned().collect()
+}
+
+fn group_matches_v(it: &mut Interp, slf: &Value, group: &Value, tag_list: &Value, want: Want) -> ER<Vec<Value>> {
+    let tag_list = if tag_list.is_ref() { tag_list.clone() } else { Value::new_array(vec![tag_list.clone()]) };
+    let mut matches: Vec<Value> = Vec::new();
+    // check each group name individually (eg. "Author:1IPTC")
+    let mut grps = pl::split(&re(":", ""), group, 0);
+    let mut fmys: Vec<Value> = vec![Value::Undef; grps.len()];
+    for g in 0..grps.len() {
+        let (mut c1, mut c2) = (Value::Undef, Value::Undef);
+        if re(r"^(\d*)(id-)?", "i").subst(&mut grps[g], false, |c| {
+            c1 = cap(c, 1);
+            c2 = cap(c, 2);
+            Vec::new()
+        }) > 0
+        {
+            if !c1.to_bytes().is_empty() {
+                fmys[g] = c1;
+            }
+            if c2.truthy() {
+                fmys[g] = n(7);
+                continue; // (don't convert tag ID's to lower case)
+            }
+        }
+        grps[g] = lc(&grps[g]);
+        if pl::str_eq(&grps[g], "copy0") {
+            grps[g] = pl::s(""); // accept 'Copy0' for primary tag
+        }
+    }
+    for tag in tag_list.items() {
+        let groups = pl::method_list(it, slf, "GetGroup", vec![tag.clone(), n(-1)])?;
+        let mut g = 0;
+        while g < grps.len() {
+            let grp = grps[g].clone();
+            if pl::str_eq(&grp, "*") || pl::str_eq(&grp, "all") {
+                g += 1;
+                continue;
+            }
+            let f = fmys[g].clone();
+            if !f.is_undef() {
+                let fi = f.to_i64();
+                let gf = if fi >= 0 { groups.get(fi as usize).cloned().unwrap_or_default() } else { Value::Undef };
+                if gf.is_undef() {
+                    break;
+                }
+                if pl::num_eq(&f, &n(7)) {
+                    let id = pl::method(it, slf, "GetTagID", vec![tag.clone()])?;
+                    if is_same_id(it, vec![id, grp.clone()], Want::Scalar)?.pop().unwrap_or_default().truthy() {
+                        g += 1;
+                        continue;
+                    }
+                } else if grp.to_bytes() == lc(&gf).to_bytes() {
+                    g += 1;
+                    continue;
+                }
+                break;
+            } else {
+                let r = re_full("^", &grp, "$", "i")?;
+                if grep_re(&r, &groups).is_empty() {
+                    break;
+                }
+            }
+            g += 1;
+        }
+        if g == grps.len() {
+            if want != Want::List {
+                return ret(tag);
+            }
+            matches.push(tag);
+        }
+    }
+    if want == Want::List {
+        Ok(matches)
+    } else {
+        ret(matches.into_iter().next().unwrap_or_default())
+    }
+}
+
+/// Get list of tags in specified group
+/// Inputs: 0) ExifTool ref, 1) group spec (case insensitive), 2) tag key or reference to list of tag keys
+/// Returns: list of matching tags in list context, or first match in scalar context
+/// Notes: Group spec may contain multiple groups separated by colons, each
+///        possibly with a leading family number
+pub fn group_matches(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    group_matches_v(it, &arg(&a, 0), &arg(&a, 1), &arg(&a, 2), want)
+}
+
+/// RemoveTagsFromList: returns the new tag list (what the Perl stores in `$_[0]`).
+fn remove_tags_from_list_v(tags: &Value, list1: &Value, list2: &Value, exclude: &Value, inv: bool) -> Value {
+    // (local $_: the loop variable is a Rust one)
+    let mut filtered_tags: Vec<Value> = Vec::new();
+
+    let renumber = |list: &Value, i: i64| {
+        let items: Vec<Value> = list
+            .items()
+            .into_iter()
+            .filter_map(|x| {
+                if pl::lt(&x, &n(i)) {
+                    Some(x)
+                } else if pl::num_eq(&x, &n(i)) {
+                    None
+                } else {
+                    Some(pl::sub(&x, &n(1)))
+                }
+            })
+            .collect();
+        if let Value::ArrayRef(a) = list {
+            *a.borrow_mut() = items;
+        }
+    };
+    if !list1.is_empty() || !list2.is_empty() {
+        while !tags.is_empty() {
+            let Value::ArrayRef(arr) = tags else { break };
+            let tag = arr.borrow_mut().pop().unwrap_or_default();
+            let i = arr.borrow().len() as i64;
+            if exclude.get(tag.to_bytes()).truthy() != inv {
+                // remove index of excluded tag from each list
+                renumber(list1, i);
+                renumber(list2, i);
+            } else {
+                filtered_tags.insert(0, tag);
+            }
+        }
+    } else {
+        for t in tags.items() {
+            if exclude.get(t.to_bytes()).truthy() == inv {
+                filtered_tags.push(t);
+            }
+        }
+    }
+    Value::new_array(filtered_tags) // update tag list
+}
+
+/// Remove specified tags from returned tag list, updating indices in other lists
+/// Inputs: 0) tag list ref, 1) index list ref, 2) index list ref, 3) hash ref,
+///         4) true to include tags from hash instead of excluding
+/// Returns: nothing, but updates input lists
+pub fn remove_tags_from_list(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let r = remove_tags_from_list_v(&arg(&a, 0), &arg(&a, 1), &arg(&a, 2), &arg(&a, 3), arg(&a, 4).truthy());
+    it.set_arg(0, r.clone())?;
+    ret(r)
+}
+
+/// Copy tags from alternate input file
+/// Inputs: 0) ExifTool ref, 1) family 8 group, 2) list ref for tag keys to copy
+/// - updates tag key list to match keys newly added to $self
+pub fn copy_alt_info(_it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    let (slf, g8, tags) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
+    let Some(c) = re(r"(\d+)", "").m(&g8) else { return pl::ret_nothing(want) };
+    let et = slf.get("ALT_EXIFTOOL").get(g8.to_bytes());
+    if !et.truthy() {
+        return pl::ret_nothing(want);
+    }
+    let alt_order = pl::mul(&pl::add(&cap(&c, 1), &n(1)), &n(100000)); // increment file order
+    for (i, tag) in tags.items().into_iter().enumerate() {
+        let mut vtag = tag.clone();
+        let rep = [&b" #["[..], &g8.to_bytes()[..], b"]"].concat();
+        re(r"( |$)", "").subst(&mut vtag, false, |_| rep.clone());
+        if slf.get("VALUE").get(vtag.to_bytes()).is_undef() {
+            slf.get_or_new_hash("VALUE").set(vtag.to_bytes(), et.get("VALUE").get(tag.to_bytes()));
+            slf.get_or_new_hash("TAG_INFO").set(vtag.to_bytes(), et.get("TAG_INFO").get(tag.to_bytes()));
+            let extra = et.get("TAG_EXTRA").get(tag.to_bytes());
+            slf.get_or_new_hash("TAG_EXTRA").set(vtag.to_bytes(), if extra.truthy() { extra } else { Value::new_hash() });
+            let fo = et.get("FILE_ORDER").get(tag.to_bytes());
+            slf.get_or_new_hash("FILE_ORDER").set(vtag.to_bytes(), pl::add(&if fo.truthy() { fo } else { n(0) }, &alt_order));
+        }
+        tags.set_at(i, vtag);
+    }
+    pl::ret_nothing(want)
+}
+
+/// The keys of `%Image::ExifTool::Shortcuts::Main` matching `/^\Q$tag\E$/i`:
+/// the first one (`my ($match) = grep ...`).
+fn shortcut_match(main: &Value, tag: &Value) -> ER<Value> {
+    let q = Value::bytes(crate::perl::regex::quotemeta(&tag.to_bytes()));
+    let r = re_full("^", &q, "$", "i")?;
+    for k in main.keys() {
+        let k = Value::Str(k);
+        if r.is_match(&k) {
+            return Ok(k);
+        }
+    }
+    Ok(Value::Undef)
+}
+
+fn cat(parts: &[&Value]) -> Value {
+    let mut v = Vec::new();
+    for p in parts {
+        v.extend_from_slice(&p.to_bytes());
+    }
+    Value::bytes(v)
+}
+
+fn expand_shortcuts_v(it: &mut Interp, tag_list: &Value, remove_suffix: bool) -> ER<()> {
+    if !tag_list.truthy() || tag_list.is_empty() {
+        return Ok(());
+    }
+
+    runtime::require(it, "Image::ExifTool::Shortcuts")?;
+    let main = pkg_hash(it, "Image::ExifTool::Shortcuts::Main");
+
+    // expand shortcuts
+    let suffix = pl::s(if remove_suffix { "" } else { "#" });
+    let empty = pl::s("");
+    let mut expanded_tags: Vec<Value> = Vec::new();
+    'entry: for entry in tag_list.items() {
+        // skip things like options hash references in list
+        if entry.is_ref() {
+            expanded_tags.push(entry);
+            continue;
+        }
+        // remove leading '-'
+        let c = re(r"^(-?)(.*)", "s").m(&entry).unwrap_or_default();
+        let (excl, mut tag) = (cap(&c, 1), cap(&c, 2));
+        let mut post;
+        let mut posts: Vec<Value> = Vec::new();
+        let pre;
+        let mut v;
+        // handle redirection
+        let redirect = if !excl.truthy() { re(r"(.+?)([-+]?[<>].+)", "s").m(&tag) } else { None };
+        if let Some(c) = redirect {
+            tag = cap(&c, 1);
+            post = cap(&c, 2);
+            if re(r"^[-+]?>", "").is_match(&post) || !re(r"\$", "").is_match(&post) {
+                // expand shortcuts in postfix (rhs of redirection)
+                let c2 = re(r"([-+]?[<>])(.+:)?(.+)", "").m(&post).unwrap_or_default();
+                let (op, mut p2, mut t2) = (cap(&c2, 1), cap(&c2, 2), cap(&c2, 3));
+                if p2.is_undef() {
+                    p2 = pl::s("");
+                }
+                v = if re(r"#$", "").subst(&mut t2, false, |_| Vec::new()) > 0 { suffix.clone() } else { empty.clone() }; // ValueConv suffix
+                let m = shortcut_match(&main, &t2)?;
+                if m.truthy() {
+                    for x in main.get(m.to_bytes()).items() {
+                        if re(r"^-", "").is_match(&x) {
+                            continue; // ignore excluded tags
+                        }
+                        if p2.truthy() && re(r"(.+:)(.+)", "").is_match(&x) {
+                            posts.push(cat(&[&op, &x, &v]));
+                        } else {
+                            posts.push(cat(&[&op, &p2, &x, &v]));
+                        }
+                    }
+                    if posts.is_empty() {
+                        continue 'entry;
+                    }
+                    post = posts.remove(0);
+                }
+            }
+        } else {
+            post = pl::s("");
+        }
+        // handle group names
+        if let Some(c) = re(r"(.+:)(.+)", "").m(&tag) {
+            pre = cap(&c, 1);
+            tag = cap(&c, 2);
+        } else {
+            pre = pl::s("");
+        }
+        v = if re(r"#$", "").subst(&mut tag, false, |_| Vec::new()) > 0 { suffix.clone() } else { empty.clone() }; // ValueConv suffix
+        // loop over all postfixes
+        loop {
+            // expand the tag name
+            let m = shortcut_match(&main, &tag)?;
+            if m.truthy() {
+                let list = main.get(m.to_bytes()).items();
+                if excl.truthy() {
+                    // entry starts with '-', so exclude all tags in this shortcut
+                    for x in list {
+                        if re(r"^-", "").is_match(&x) {
+                            continue; // ignore excluded exclude tags
+                        }
+                        // group of expanded tag takes precedence
+                        if pre.truthy() && re(r"(.+:)(.+)", "").is_match(&x) {
+                            expanded_tags.push(cat(&[&excl, &x]));
+                        } else {
+                            expanded_tags.push(cat(&[&excl, &pre, &x]));
+                        }
+                    }
+                } else if !pre.to_bytes().is_empty() || !post.to_bytes().is_empty() || v.truthy() {
+                    for x in list {
+                        let c = re(r"(-?)(.+:)?(.+)", "").m(&x).unwrap_or_default();
+                        if cap(&c, 2).truthy() {
+                            // group from expanded tag takes precedence
+                            expanded_tags.push(cat(&[&x, &v, &post]));
+                        } else {
+                            expanded_tags.push(cat(&[&cap(&c, 1), &pre, &cap(&c, 3), &v, &post]));
+                        }
+                    }
+                } else {
+                    expanded_tags.extend(list);
+                }
+            } else {
+                expanded_tags.push(cat(&[&excl, &pre, &tag, &v, &post]));
+            }
+            if posts.is_empty() {
+                break;
+            }
+            post = posts.remove(0);
+        }
+    }
+    if let Value::ArrayRef(a) = tag_list {
+        *a.borrow_mut() = expanded_tags;
+    }
+    Ok(())
+}
+
+/// Expand shortcuts
+/// Inputs: 0) reference to list of tags, 1) set to remove trailing '#'
+/// Notes: Handles leading '-' for excluded tags, trailing '#' for ValueConv,
+///        multiple group names, and redirected tags
+pub fn expand_shortcuts(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    expand_shortcuts_v(it, &arg(&a, 0), arg(&a, 1).truthy())?;
+    pl::ret_nothing(want)
+}
+
+/// Add hash of Composite tags to our composites
+/// Inputs: 0) hash reference to table of Composite tags to add or module name,
+///         1) override existing tag definition
+pub fn add_composite_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    // (local $_: the loop variables are Rust ones)
+    let (mut add, over_ride) = (arg(&a, 0), arg(&a, 1));
+    let module;
+    let mut prefix;
+    if !add.is_ref() {
+        prefix = add.clone();
+        re(r".*::", "").subst(&mut prefix, false, |_| Vec::new());
+        module = add.clone();
+        let name = pl::concat(&add, &pl::s("::Composite"));
+        add = pkg_hash(it, &name.to_text());
+        prefix = pl::concat(&prefix, &pl::s("-"));
+    } else {
+        module = Value::Undef;
+        prefix = pl::s("UserDefined-");
+    }
+    let mut default_groups = add.get("GROUPS");
+    let comp_table = pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s("Image::ExifTool::Composite")])?;
+
+    // make sure default groups are defined in families 0 and 1
+    if default_groups.truthy() {
+        for (k, d) in [("0", "Composite"), ("1", "Composite"), ("2", "Other")] {
+            if !default_groups.get(k).truthy() {
+                default_groups.set(k, pl::s(d));
+            }
+        }
+    } else {
+        default_groups = Value::new_hash();
+        default_groups.set("0", pl::s("Composite"));
+        default_groups.set("1", pl::s("Composite"));
+        default_groups.set("2", pl::s("Other"));
+        add.set("GROUPS", default_groups.clone());
+    }
+    setup_tag_table(it, vec![add.clone()], Want::Void)?; // generate Name, TagID, etc
+    let special_tags = pkg_hash(it, "Image::ExifTool::specialTags");
+    let composite_id = my_hash(it, "compositeID");
+    let mut ids: Vec<Value> = add.keys().into_iter().map(Value::Str).collect();
+    ids.sort_by(ops::str_cmp);
+    for tag_id in ids {
+        if special_tags.get(tag_id.to_bytes()).truthy() {
+            continue; // must skip special tags
+        }
+        let tag_info = add.get(tag_id.to_bytes());
+        let mut new = pl::concat(&prefix, &tag_id); // new tag ID for Composite table
+        if tag_info.get("Writable").truthy() {
+            tag_info.set("Module", module.clone());
+        }
+        if over_ride.truthy() && tag_info.get("Override").is_undef() {
+            tag_info.set("Override", n(1));
+        }
+        tag_info.set("IsComposite", n(1));
+        // handle Composite tags with the same name
+        if composite_id.get(tag_id.to_bytes()).truthy() {
+            // determine if we want to override this tag
+            // (=0 keep both, >0 override, <0 keep existing)
+            let o1 = tag_info.get("Override");
+            let first = composite_id.get(tag_id.to_bytes()).at(0);
+            let o2 = comp_table.get(first.to_bytes()).get("Override");
+            let over = pl::sub(&if o1.truthy() { o1 } else { n(0) }, &if o2.truthy() { o2 } else { n(0) });
+            if pl::lt(&over, &n(0)) {
+                continue;
+            }
+            if over.truthy() {
+                // remove existing tags with this ID
+                for x in composite_id.get(tag_id.to_bytes()).items() {
+                    comp_table.delete(x.to_bytes());
+                }
+                composite_id.delete(tag_id.to_bytes());
+            }
+        }
+        // make sure new TagID is unique by adding index if necessary
+        // (could only happen for UserDefined tags now that module name is added to tag ID)
+        let mut nn: i64 = 0;
+        while comp_table.get(new.to_bytes()).truthy() {
+            let old = nn;
+            nn += 1;
+            if old != 0 {
+                re(r"-\d+$", "").subst(&mut new, false, |_| Vec::new());
+            }
+            new = pl::concat(&new, &pl::s(&format!("-{nn}")));
+        }
+        // use new ID and save it so we can use it in TagLookup
+        if tag_id.to_bytes() != new.to_bytes() {
+            tag_info.set("NewTagID", new.clone());
+        }
+
+        // add new ID to lookup of Composite tag ID's
+        if !composite_id.get(tag_id.to_bytes()).truthy() {
+            composite_id.set(tag_id.to_bytes(), Value::new_array(Vec::new()));
+        }
+        composite_id.get(tag_id.to_bytes()).unshift(new.clone()); // (most recent one first)
+
+        // convert scalar Require/Desire/Inhibit entries
+        let (mut hashes, mut scalars): (Vec<&str>, Vec<&str>) = (Vec::new(), Vec::new());
+        let used = Value::new_hash();
+        for typ in ["Require", "Desire", "Inhibit"] {
+            let req = tag_info.get(typ);
+            if !req.truthy() {
+                continue;
+            }
+            if ref_of(&req) == "HASH" {
+                hashes.push(typ);
+            } else {
+                scalars.push(typ);
+            }
+        }
+        if !scalars.is_empty() {
+            // make lookup for indices that are used
+            for typ in &hashes {
+                for k in tag_info.get(typ).keys() {
+                    used.set(&k, n(1));
+                }
+            }
+            let mut next: i64 = 0;
+            for typ in &scalars {
+                while used.get(next.to_string()).truthy() {
+                    next += 1;
+                }
+                let h = Value::new_hash();
+                h.set(next.to_string(), tag_info.get(typ));
+                next += 1;
+                tag_info.set(typ, h);
+            }
+        }
+        // add this Composite tag to our main Composite table
+        tag_info.set("Table", comp_table.clone());
+        // (use the original TagID, even if we changed it, so don't do this:)
+        tag_info.set("TagID", new.clone());
+        // save tag under new ID in Composite table
+        comp_table.set(new.to_bytes(), tag_info.clone());
+        // set all default groups in tag
+        let mut groups = tag_info.get("Groups");
+        if !groups.truthy() {
+            groups = Value::new_hash();
+            tag_info.set("Groups", groups.clone());
+        }
+        // fill in default groups
+        for k in default_groups.keys() {
+            if !groups.get(&k).truthy() {
+                groups.set(&k, default_groups.get(&k));
+            }
+        }
+        // set flag indicating group list was built
+        tag_info.set("GotGroups", n(1));
+    }
+    pl::ret_nothing(want)
+}
+
+/// Parse function arguments and set member variables accordingly
+/// Inputs: Same as ImageInfo()
+/// - sets REQUESTED_TAGS, REQ_TAG_LOOKUP, IO_TAG_LIST, FILENAME, RAF, OPTIONS
+pub fn parse_arguments(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    let mut args = a.into_iter();
+    let slf = args.next().unwrap_or_default();
+    let options = slf.get("OPTIONS");
+    let mut old_group_opts: Vec<Value> = slf.get("OPTIONS").keys().into_iter().map(Value::Str).filter(|k| re("^Group", "").is_match(k)).collect();
+    let exclude = Value::new_array(Vec::new());
+    let mut was_exclude_opt = false;
+
+    slf.set("REQUESTED_TAGS", Value::new_array(Vec::new()));
+    if !slf.get("ReqTagAlreadySet").truthy() {
+        slf.set("REQ_TAG_LOOKUP", Value::new_hash());
+    }
+    slf.set("EXCL_TAG_LOOKUP", Value::new_hash());
+    slf.set("IO_TAG_LIST", Value::Undef);
+    slf.delete("EXCL_XMP_LOOKUP");
+
+    // handle our input arguments
+    for mut arg in args.by_ref() {
+        if arg.is_ref() && !pl::call(it, "overload::Method", vec![arg.clone(), pl::s("\"\"")])?.truthy() {
+            if ref_of(&arg) == "ARRAY" {
+                slf.set("IO_TAG_LIST", arg.clone());
+                for x in arg.items() {
+                    if let Some(c) = re(r"^-(.*)", "").m(&x) {
+                        exclude.push(cap(&c, 1));
+                    } else {
+                        slf.get("REQUESTED_TAGS").push(x);
+                    }
+                }
+            } else if ref_of(&arg) == "HASH" {
+                for opt in arg.keys() {
+                    let opt = Value::Str(opt);
+                    // a single new group option overrides all old group options
+                    if !old_group_opts.is_empty() && re("^Group", "").is_match(&opt) {
+                        for o in &old_group_opts {
+                            options.delete(o.to_bytes());
+                        }
+                        old_group_opts.clear();
+                    }
+                    pl::method(it, &slf, "Options", vec![opt.clone(), arg.get(opt.to_bytes())])?;
+                    if pl::str_eq(&opt, "Exclude") {
+                        was_exclude_opt = true;
+                    }
+                }
+            } else if ref_of(&arg) == "SCALAR" || pl::call(it, "UNIVERSAL::isa", vec![arg.clone(), pl::s("GLOB")])?.truthy() {
+                if !slf.get("RAF").is_undef() {
+                    continue;
+                }
+                // convert image data from UTF-8 to character stream if necessary
+                // (patches RHEL 3 UTF8 LANG problem)
+                let mut repack = false;
+                if ref_of(&arg) == "SCALAR" && pl::ge(&it.get_scalar("main::]"), &Value::Num(5.006)) {
+                    repack = slf.path(&["OPTIONS", "EncodeHangs"]).truthy() || {
+                        // eval { require Encode; Encode::is_utf8($$arg) }
+                        runtime::require(it, "Encode")?;
+                        match pl::call(it, "Encode::is_utf8", vec![arg.deref()]) {
+                            Ok(v) => {
+                                it.set_scalar("main::@", pl::s(""));
+                                v.truthy()
+                            }
+                            Err(Flow::Die(e)) => {
+                                it.set_scalar("main::@", e);
+                                false
+                            }
+                            Err(e) => return Err(e),
+                        }
+                    } || it.get_scalar("main::@").truthy();
+                }
+                if repack {
+                    let data = arg.deref();
+                    let buff = with_set_warning(it, |it| {
+                        // repack by hand if Encode isn't available
+                        if slf.path(&["OPTIONS", "EncodeHangs"]).truthy() || it.get_scalar("main::@").truthy() {
+                            let t: &[u8] = if pl::lt(&it.get_scalar("main::]"), &Value::Num(5.010000)) { b"U0C*" } else { b"C0C*" };
+                            let codes = match pack::unpack(t, &data.to_bytes()) {
+                                Ok(v) => v,
+                                Err(e) => return die(e),
+                            };
+                            pack_v(b"C*", &codes)
+                        } else {
+                            pl::call(it, "Encode::encode", vec![pl::s("utf8"), data.clone()])
+                        }
+                    })?;
+                    arg = Value::ScalarRef(Rc::new(std::cell::RefCell::new(buff)));
+                }
+                let raf = pl::method(it, &pl::s("File::RandomAccess"), "new", vec![arg])?;
+                slf.set("RAF", raf);
+                // set filename to empty string to indicate that
+                // we have a file but we didn't open it
+                slf.set("FILENAME", pl::s(""));
+            } else if pl::call(it, "UNIVERSAL::isa", vec![arg.clone(), pl::s("File::RandomAccess")])?.truthy() {
+                slf.set("RAF", arg);
+                slf.set("FILENAME", pl::s(""));
+            } else {
+                pl::warn(it, &format!("Don't understand ImageInfo argument {}\n", arg.to_text()))?;
+            }
+        } else if !slf.get("FILENAME").is_undef() {
+            if let Some(c) = re(r"^-(.*)", "").m(&arg) {
+                exclude.push(cap(&c, 1));
+            } else {
+                slf.get("REQUESTED_TAGS").push(arg);
+            }
+        } else {
+            slf.set("FILENAME", arg);
+        }
+    }
+    // add additional requested tags to lookup
+    if options.get("RequestTags").truthy() {
+        for t in options.get("RequestTags").items() {
+            slf.get_or_new_hash("REQ_TAG_LOOKUP").set(t.to_bytes(), n(1));
+        }
+    }
+    // expand shortcuts in tag arguments if provided
+    if !slf.get("REQUESTED_TAGS").is_empty() {
+        expand_shortcuts_v(it, &slf.get("REQUESTED_TAGS"), false)?;
+        // initialize lookup for requested tags
+        for t in slf.get("REQUESTED_TAGS").items() {
+            let Some(c) = re(r"^(.*:)?([-\w?*]*)#?$", "").m(&t) else { continue };
+            if cap(&c, 2).truthy() {
+                slf.get_or_new_hash("REQ_TAG_LOOKUP").set(lc(&cap(&c, 2)).to_bytes(), n(1));
+            }
+            if !cap(&c, 1).truthy() {
+                continue;
+            }
+            for g in pl::split(&re(":", ""), &cap(&c, 1), 0) {
+                slf.get_or_new_hash("REQ_TAG_LOOKUP").set(pl::concat(&lc(&g), &pl::s(":")).to_bytes(), n(1));
+            }
+        }
+    }
+    if !exclude.is_empty() || was_exclude_opt {
+        // must add existing excluded tags
+        if options.get("Exclude").truthy() {
+            for x in options.get("Exclude").items() {
+                exclude.push(x);
+            }
+        }
+        options.set("Exclude", exclude.clone());
+        // expand shortcuts in new exclude list
+        expand_shortcuts_v(it, &options.get("Exclude"), true)?; // (also remove '#' suffix)
+    }
+    // generate lookup for excluded tags
+    if options.get("Exclude").truthy() {
+        for x in options.get("Exclude").items() {
+            if let Some(c) = re(r"([-\w]+)#?$", "").m(&x) {
+                slf.get_or_new_hash("EXCL_TAG_LOOKUP").set(lc(&cap(&c, 1)).to_bytes(), n(1));
+            }
+            if let Some(c) = re(r"(xmp-.*:[-\w]+)#?", "i").m(&x) {
+                if !slf.get("EXCL_XMP_LOOKUP").truthy() {
+                    slf.set("EXCL_XMP_LOOKUP", Value::new_hash());
+                }
+                slf.get("EXCL_XMP_LOOKUP").set(lc(&cap(&c, 1)).to_bytes(), n(1));
+            }
+        }
+        // exclude list is used only for EXCL_TAG_LOOKUP when TAGS_FROM_FILE is set
+        if slf.get("TAGS_FROM_FILE").truthy() {
+            options.set("Exclude", Value::Undef);
+        }
+    }
+    pl::ret_nothing(want)
+}
+
+/// `sort { $$fileOrder{$a} <=> $$fileOrder{$b} } LIST`
+fn sort_by_file_order(file_order: &Value, mut list: Vec<Value>) -> Vec<Value> {
+    list.sort_by(|a, b| ops::num_cmp(&file_order.get(a.to_bytes()), &file_order.get(b.to_bytes())).unwrap_or(std::cmp::Ordering::Equal));
+    list
+}
+
+/// Set list of found tags from previously requested tags
+/// Inputs: 0) ExifTool object reference
+/// Returns: 0) Reference to list of found tag keys (in order of requested tags)
+///          1) Reference to list of indices for tags requested by value
+///          2) Reference to list of indices for tags specified by wildcard or "all"
+/// Notes: index lists are returned in increasing order
+pub fn set_found_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    // (local $_: the loop variables are Rust ones)
+    let slf = arg(&a, 0);
+    let options = slf.get("OPTIONS");
+    let req_tags = {
+        let r = slf.get("REQUESTED_TAGS");
+        if r.truthy() {
+            r
+        } else {
+            Value::new_array(Vec::new())
+        }
+    };
+    let duplicates = options.get("Duplicates");
+    let exclude = options.get("Exclude");
+    let mut file_order = slf.get("FILE_ORDER");
+    let mut group_options: Vec<Value> = Vec::new();
+    // ignore empty group options
+    let mut gk: Vec<Value> = options.keys().into_iter().map(Value::Str).filter(|k| re("^Group", "").is_match(k)).collect();
+    gk.sort_by(ops::str_cmp);
+    for k in gk {
+        if options.get(k.to_bytes()).truthy() {
+            group_options.push(k);
+        }
+    }
+    let do_dups = duplicates.truthy() || exclude.truthy() || !group_options.is_empty();
+    let mut tag;
+    let mut rtn_tags = Value::Undef;
+    let by_value = Value::new_array(Vec::new());
+    let wild_tags = Value::new_array(Vec::new());
+
+    // only return requested tags if specified
+    if !req_tags.is_empty() {
+        if !rtn_tags.truthy() {
+            rtn_tags = Value::new_array(Vec::new());
+        }
+        // scan through the requested tags and generate a list of tags we found
+        let mut tag_hash = slf.get("VALUE");
+        for req_tag in req_tags.items() {
+            let mut matches: Vec<Value> = Vec::new();
+            let (mut group, mut all_grp, mut all_tag, mut by_val, mut g8) = (Value::Undef, false, false, false, Value::Undef);
+            let mut et = slf.clone();
+            if let Some(c) = re(r"^(.*):(.+)", "").m(&req_tag) {
+                group = cap(&c, 1);
+                tag = cap(&c, 2);
+                if re(r"^(\*|all)$", "i").is_match(&group) {
+                    all_grp = true;
+                } else if let Some(c) = re(r"\bfile(\d+):", "i").m(&req_tag) {
+                    g8 = pl::concat(&pl::s("File"), &cap(&c, 1));
+                    let alt = slf.get("ALT_EXIFTOOL").get(g8.to_bytes());
+                    et = if alt.truthy() { alt } else { slf.clone() };
+                    file_order = et.get("FILE_ORDER");
+                    tag_hash = et.get("VALUE");
+                } else if !re(r"^[-\w:]*$", "").is_match(&group) {
+                    let msg = pl::concat(&pl::concat(&pl::s("Invalid group name '"), &group), &pl::s("'"));
+                    warn(it, vec![slf.clone(), msg], Want::Scalar)?;
+                    group = pl::s("invalid");
+                }
+            } else {
+                tag = req_tag.clone();
+            }
+            if re(r"#$", "").subst(&mut tag, false, |_| Vec::new()) > 0 && options.get("PrintConv").truthy() {
+                by_val = true;
+            }
+            let keys: Vec<Value> = tag_hash.keys().into_iter().map(Value::Str).collect();
+            if !tag_hash.get(req_tag.to_bytes()).is_undef() && !do_dups {
+                matches = vec![tag.clone()];
+            } else if re(r"^(\*|all)$", "i").is_match(&tag) {
+                // tag name of '*' or 'all' matches all tags
+                if do_dups || all_grp {
+                    matches = keys.into_iter().filter(|k| !re("#", "").is_match(k)).collect();
+                } else {
+                    matches = keys.into_iter().filter(|k| !re(" ", "").is_match(k)).collect();
+                }
+                if matches.is_empty() {
+                    continue; // don't want entry in list for '*' tag
+                }
+                all_tag = true;
+            } else if re(r"[*?]", "").is_match(&tag) {
+                // allow wildcards in tag names
+                tr(&mut tag, b"-_A-Za-z0-9*?", b"", "dc"); // sterilize
+                re(r"\*", "").subst(&mut tag, true, |_| br"[-\w]*".to_vec());
+                re(r"\?", "").subst(&mut tag, true, |_| br"[-\w]".to_vec());
+                if do_dups || all_grp {
+                    tag = pl::concat(&tag, &pl::s(r"( \(.*)?"));
+                }
+                matches = grep_re(&re_full("^", &tag, "$", "i")?, &keys);
+                if matches.is_empty() {
+                    continue; // don't want entry in list for wildcard tags
+                }
+                all_tag = true;
+            } else if do_dups || !group.is_undef() {
+                tr(&mut tag, b"-_A-Za-z0-9", b"", "dc"); // sterilize
+                // must also look for tags like "Tag (1)"
+                // (but be sure not to match temporary ValueConv entries like "Tag #")
+                matches = grep_re(&re_full("^", &tag, r"( \(|$)", "i")?, &keys);
+            } else if re(r"^[-\w]+$", "").is_match(&tag) {
+                // find first matching value
+                // (use in list context to return value instead of count)
+                matches = grep_re(&re_full("^", &tag, "$", "i")?, &keys).into_iter().take(1).collect();
+            } else {
+                let msg = pl::concat(&pl::concat(&pl::s("Invalid tag name '"), &tag), &pl::s("'"));
+                warn(it, vec![slf.clone(), msg], Want::Scalar)?;
+            }
+            if !group.is_undef() && !all_grp {
+                // keep only specified group
+                matches = group_matches_v(it, &et, &group, &Value::new_array(matches), Want::List)?;
+                if !(!matches.is_empty() || !all_tag) {
+                    continue;
+                }
+            }
+            if matches.len() > 1 {
+                // maintain original file order for multiple tags
+                matches = sort_by_file_order(&file_order, matches);
+                // return only the highest priority tag unless duplicates wanted
+                if !(do_dups || all_tag || all_grp) {
+                    tag = matches.remove(0);
+                    let p = et.get("PRIORITY").get(tag.to_bytes());
+                    let mut old_priority = if p.truthy() { p } else { n(1) };
+                    for m in &matches {
+                        let mut priority = et.get("PRIORITY").get(m.to_bytes());
+                        if priority.is_undef() {
+                            priority = n(1);
+                        }
+                        if !pl::ge(&priority, &old_priority) {
+                            continue;
+                        }
+                        tag = m.clone();
+                        old_priority = if priority.truthy() { priority } else { n(1) };
+                    }
+                    matches = vec![tag.clone()];
+                }
+            } else if matches.is_empty() {
+                // put entry in return list even without value (value is undef)
+                matches = vec![pl::concat(&tag, &pl::s(if by_val { " #(0)" } else { " (0)" }))];
+                // bogus file order entry to avoid warning if sorting in file order
+                slf.get_or_new_hash("FILE_ORDER").set(matches[0].to_bytes(), n(999999999));
+            }
+            // copy over necessary information for tags from alternate files
+            if g8.truthy() {
+                let list = Value::new_array(matches);
+                copy_alt_info(it, vec![slf.clone(), g8.clone(), list.clone()], Want::Void)?;
+                matches = list.items();
+                // restore variables to original values for main file
+                file_order = slf.get("FILE_ORDER");
+                tag_hash = slf.get("VALUE");
+            }
+            let base = rtn_tags.len() as i64;
+            // save indices of tags extracted by value
+            if by_val {
+                for i in base..base + matches.len() as i64 {
+                    by_value.push(n(i));
+                }
+            }
+            // save indices of wildcard tags
+            if all_tag {
+                for i in base..base + matches.len() as i64 {
+                    wild_tags.push(n(i));
+                }
+            }
+            for m in matches {
+                rtn_tags.push(m);
+            }
+        }
+    } else {
+        // no requested tags, so we want all tags
+        let keys: Vec<Value> = slf.get("VALUE").keys().into_iter().map(Value::Str).collect();
+        let all_tags: Vec<Value> = if do_dups {
+            keys
+        } else {
+            // only include tag if it doesn't end in a copy number
+            keys.into_iter().filter(|k| !re(" ", "").is_match(k)).collect()
+        };
+        rtn_tags = Value::new_array(all_tags);
+    }
+
+    // filter excluded tags and group options
+    while (exclude.truthy() || !group_options.is_empty()) && !rtn_tags.is_empty() {
+        if exclude.truthy() {
+            let excl = Value::new_hash();
+            for pat in exclude.items() {
+                let mut group = Value::Undef;
+                if let Some(c) = re(r"^(.*):(.+)", "").m(&pat) {
+                    group = cap(&c, 1);
+                    tag = cap(&c, 2);
+                    if re(r"^(\*|all)$", "i").is_match(&group) {
+                        group = Value::Undef;
+                    } else if !re(r"^[-\w:]*$", "").is_match(&group) {
+                        let msg = pl::concat(&pl::concat(&pl::s("Invalid group name '"), &group), &pl::s("'"));
+                        warn(it, vec![slf.clone(), msg], Want::Scalar)?;
+                        group = pl::s("invalid");
+                    }
+                } else {
+                    tag = pat.clone();
+                }
+                let mut matches: Vec<Value>;
+                if re(r"^(\*|all)$", "i").is_match(&tag) {
+                    matches = rtn_tags.items();
+                } else {
+                    // allow wildcards in tag names
+                    re(r"\*", "").subst(&mut tag, true, |_| br"[-\w]*".to_vec());
+                    re(r"\?", "").subst(&mut tag, true, |_| br"[-\w]".to_vec());
+                    matches = grep_re(&re_full("^", &tag, "( |$)", "i")?, &rtn_tags.items());
+                }
+                if group.truthy() && !matches.is_empty() {
+                    matches = group_matches_v(it, &slf, &group, &Value::new_array(matches), Want::List)?;
+                }
+                for m in matches {
+                    excl.set(m.to_bytes(), n(1));
+                }
+            }
+            if !excl.is_empty() {
+                // remove excluded tags from return list(s)
+                rtn_tags = remove_tags_from_list_v(&rtn_tags, &by_value, &wild_tags, &excl, false);
+                if rtn_tags.is_empty() {
+                    break; // all done if nothing left
+                }
+            }
+            if duplicates.truthy() && group_options.is_empty() {
+                break;
+            }
+        }
+        // filter groups if requested, or to remove duplicates
+        let keep_tags = Value::new_hash();
+        let want_group = Value::new_hash();
+        let mut all_groups = n(1);
+        // build hash of requested/excluded group names for each group family
+        let mut want_order: i64 = 0;
+        for group_opt in &group_options {
+            let Some(c) = re(r"^Group(\d*(:\d+)*)", "").m(group_opt) else { continue };
+            let family = if cap(&c, 1).truthy() { cap(&c, 1) } else { n(0) };
+            if !want_group.get(family.to_bytes()).truthy() {
+                want_group.set(family.to_bytes(), Value::new_hash());
+            }
+            let o = options.get(group_opt.to_bytes());
+            let group_list = if ref_of(&o) == "ARRAY" { o } else { Value::new_array(vec![o]) };
+            for g in group_list.items() {
+                // groups have priority in order they were specified
+                want_order += 1;
+                let (group_name, want_v);
+                if let Some(c) = re(r"^-(.*)", "").m(&g) {
+                    // excluded group begins with '-'
+                    group_name = cap(&c, 1);
+                    want_v = n(0); // we don't want tags in this group
+                } else {
+                    group_name = g.clone();
+                    want_v = n(want_order); // we want tags in this group
+                    all_groups = n(0); // don't want all groups if we requested one
+                }
+                want_group.get(family.to_bytes()).set(group_name.to_bytes(), want_v);
+            }
+        }
+        // loop through all tags and decide which ones we want
+        let best_tag = Value::new_hash();
+        'gr_tag: for t in rtn_tags.items() {
+            tag = t;
+            let mut want_tag = all_groups.clone(); // want tag by default if want all groups
+            for family in want_group.keys() {
+                let family = Value::Str(family);
+                let group = pl::method(it, &slf, "GetGroup", vec![tag.clone(), family.clone()])?;
+                let wanted = want_group.get(family.to_bytes()).get(group.to_bytes());
+                if wanted.is_undef() {
+                    continue;
+                }
+                if !wanted.truthy() {
+                    continue 'gr_tag; // skip tag if group excluded
+                }
+                // take lowest non-zero want flag
+                if want_tag.truthy() && pl::lt(&want_tag, &wanted) {
+                    continue;
+                }
+                want_tag = wanted;
+            }
+            if !want_tag.truthy() {
+                continue;
+            }
+            if duplicates.truthy() {
+                keep_tags.set(tag.to_bytes(), n(1));
+                continue;
+            }
+            // determine which tag we want to keep
+            let tag_name = pl::call(it, "Image::ExifTool::GetTagName", vec![tag.clone()])?;
+            let best = best_tag.get(tag_name.to_bytes());
+            if !best.is_undef() {
+                if pl::gt(&want_tag, &keep_tags.get(best.to_bytes())) {
+                    continue;
+                }
+                if pl::num_eq(&want_tag, &keep_tags.get(best.to_bytes())) {
+                    // want two tags with the same name -- keep the latest one
+                    if let Some(c) = re(r" \((\d+)\)$", "").m(&tag) {
+                        let tag_num = cap(&c, 1);
+                        match re(r" \((\d+)\)$", "").m(&best) {
+                            None => continue,
+                            Some(c2) => {
+                                if pl::gt(&cap(&c2, 1), &tag_num) {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+                // this tag is better, so delete old best tag
+                keep_tags.delete(best.to_bytes());
+            }
+            keep_tags.set(tag.to_bytes(), want_tag); // keep this tag (for now...)
+            best_tag.set(tag_name.to_bytes(), tag.clone()); // this is our current best tag
+        }
+        // include only tags we want to keep in return lists
+        rtn_tags = remove_tags_from_list_v(&rtn_tags, &by_value, &wild_tags, &keep_tags, true);
+        break;
+    }
+    slf.set("FOUND_TAGS", rtn_tags.clone()); // save found tags
+
+    // return reference to found tag keys (and list of indices of tags to extract by value)
+    if want == Want::List {
+        Ok(vec![rtn_tags, by_value, wild_tags])
+    } else {
+        ret(rtn_tags)
+    }
+}
+
 pub fn register(it: &mut Interp) {
     let subs: &[(&str, Reader)] = &[
         ("Purge", purge),
@@ -1818,6 +2792,13 @@ pub fn register(it: &mut Interp) {
         ("JpegMarkerName", jpeg_marker_name),
         ("IsSameID", is_same_id),
         ("SplitFileName", split_file_name),
+        ("GroupMatches", group_matches),
+        ("RemoveTagsFromList", remove_tags_from_list),
+        ("CopyAltInfo", copy_alt_info),
+        ("ExpandShortcuts", expand_shortcuts),
+        ("AddCompositeTags", add_composite_tags),
+        ("ParseArguments", parse_arguments),
+        ("SetFoundTags", set_found_tags),
     ];
     for (name, f) in subs {
         it.define_native(&format!("{ET}::{name}"), *f);
