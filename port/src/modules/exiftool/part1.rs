@@ -24,7 +24,6 @@ fn ghash(it: &mut Interp, name: &str) -> Value {
 }
 
 /// A package array as a reference.
-#[allow(dead_code)] // (used by the subs still to port)
 fn garray(it: &mut Interp, name: &str) -> Value {
     match it.global(b'@', name) {
         Binding::Array(a) => Value::ArrayRef(a),
@@ -422,7 +421,7 @@ pub fn clear_options(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
             // (the value of the last statement: the foreach)
             return pl::ret_nothing(want);
         }
-        ret(pl::s(""))
+        ret(n(0)) // (the value of the last statement: the false `%hash`)
     })
 }
 
@@ -2149,6 +2148,393 @@ fn save_comp_keys(comp_keys: &Value, tag_key: &Value) {
     }
 }
 
+/// `tr/-_a-zA-Z0-9#//dc`: delete every other character.
+fn tr_param_name(v: &Value) -> Value {
+    let b: Vec<u8> = v.to_bytes().iter().copied().filter(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'#')).collect();
+    Value::bytes(b)
+}
+
+/// `$x =~ /$pat/` compiled at run time, dying with the message the
+/// interpreter gives for a bad pattern.
+fn re_interp(pat: &Value, flags: &str) -> ER<pl::Re> {
+    let mut bytes = pat.to_bytes().to_vec();
+    if bytes.is_empty() {
+        bytes = b"(?:)".to_vec();
+    }
+    match pl::re_dyn(&bytes, flags) {
+        Ok(r) => Ok(r),
+        Err(Flow::Die(e)) => {
+            let e = e.to_text();
+            let e = e.strip_suffix(" at (eval) line 1.\n").unwrap_or(&e).to_string();
+            crate::interp::eval::die(format!("{e} in regex; marked by <-- HERE in m/{}/", String::from_utf8_lossy(&bytes)))
+        }
+        Err(e) => Err(e),
+    }
+}
+
+/// Get/set ExifTool options
+/// Inputs: 0) ExifTool object reference,
+///         1) Parameter name (case insensitive), 2) Value to set the option
+///         3-N) More parameter/value pairs
+/// Returns: original value of last option specified
+pub fn options(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    local_topic(it, |it| options_body(it, a))
+}
+
+fn options_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
+    let self_ = arg(&a, 0);
+    let mut args: std::collections::VecDeque<Value> = a.into_iter().skip(1).collect();
+    let options = self_.get("OPTIONS");
+    let mut old_val = Value::Undef;
+
+    while !args.is_empty() {
+        let mut param = args.pop_front().unwrap();
+        let mut plus = false;
+        // fix parameter case if necessary
+        if !options.exists(param.to_bytes()) {
+            plus = re(r"\+$", "").subst(&mut param, false, |_| Vec::new()) > 0;
+            let fixed = grep_first_ci(&param, &keys(&options))?;
+            if fixed.truthy() {
+                param = fixed;
+            } else {
+                re(r"^Group(\d*)$", "i").subst(&mut param, false, |c| [&b"Group"[..], &cap(c, 1).to_bytes()].concat());
+            }
+        }
+        let p = param.to_text();
+        old_val = options.get(param.to_bytes());
+        if ref_of(&old_val) == "HASH" && (p == "Compact" || p == "XMPShorthand") {
+            // get previous Compact/XMPShorthand setting
+            old_val = old_val.get(param.to_bytes());
+        }
+        if args.is_empty() {
+            break;
+        }
+        let mut new_val = args.pop_front().unwrap();
+        if p == "Lang" {
+            // allow this to be set to undef to select the default language
+            let default_lang = it.get_scalar("Image::ExifTool::defaultLang");
+            if new_val.is_undef() {
+                new_val = default_lang.clone();
+            }
+            if new_val.to_bytes() == default_lang.to_bytes() {
+                options.set(param.to_bytes(), new_val);
+                self_.delete("CUR_LANG");
+            // make sure the language is available
+            } else {
+                let langs = Value::new_hash();
+                for l in garray(it, "Image::ExifTool::langs").items() {
+                    langs.set(l.to_bytes(), n(1));
+                }
+                if langs.get(new_val.to_bytes()).truthy() {
+                    let code = format!("require Image::ExifTool::Lang::{}", new_val.to_text());
+                    let scope = crate::interp::Scope::new(None);
+                    let ok = match it.eval_string(code.as_bytes(), "Image::ExifTool", &scope, Want::Scalar) {
+                        Ok(v) => v.last().is_some_and(|v| v.truthy()),
+                        Err(_) => {
+                            if let Some(c) = it.exit_code {
+                                return Err(Flow::Exit(c));
+                            }
+                            false
+                        }
+                    };
+                    if ok {
+                        let xlat = format!("Image::ExifTool::Lang::{}::Translate", new_val.to_text());
+                        let h = ghash(it, &xlat);
+                        if !h.is_empty() {
+                            self_.set("CUR_LANG", h);
+                            options.set(param.to_bytes(), new_val);
+                        }
+                    }
+                }
+            } // else don't change Lang
+        } else if p == "Exclude" && !new_val.is_undef() {
+            // clone Exclude list and expand shortcuts
+            let exclude = if ref_of(&new_val) == "ARRAY" { Value::new_array(new_val.items()) } else { Value::new_array(vec![new_val]) };
+            call_void(it, "Image::ExifTool::ExpandShortcuts", vec![exclude.clone(), n(1)])?; // (also remove '#' suffix)
+            options.set(param.to_bytes(), exclude);
+        } else if re(r"^Charset", "").is_match(&param) || p == "IPTCCharset" {
+            // only allow valid character sets to be set
+            if new_val.truthy() {
+                let charset = ghash(it, "Image::ExifTool::charsetName").get(lc(&new_val).to_bytes());
+                if charset.truthy() {
+                    options.set(param.to_bytes(), charset.clone());
+                    // maintain backward-compatibility with old IPTCCharset option
+                    if p == "IPTCCharset" {
+                        options.set("CharsetIPTC", charset);
+                    }
+                } else {
+                    pl::warn(it, &format!("Invalid Charset {}\n", new_val.to_text()))?;
+                }
+            } else if p == "CharsetEXIF" || p == "CharsetFileName" || p == "CharsetRIFF" {
+                options.set(param.to_bytes(), new_val); // only these may be set to a false value
+            } else if p == "CharsetQuickTime" {
+                options.set(param.to_bytes(), pl::s("MacRoman")); // QuickTime defaults to MacRoman
+            } else {
+                options.set(param.to_bytes(), pl::s("Latin")); // all others default to Latin
+            }
+        } else if p == "UserParam" {
+            // clear options if $newVal is undef
+            if new_val.is_undef() {
+                options.set(param.to_bytes(), Value::new_hash());
+                continue;
+            }
+            let table = pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s("Image::ExifTool::UserParam")])?;
+            // allow initialization of entire UserParam hash
+            if ref_of(&new_val) == "HASH" {
+                let new_params = Value::new_hash();
+                for k in sort_str(keys(&new_val)) {
+                    let lc_tag = lc(&k);
+                    new_params.set(lc_tag.to_bytes(), new_val.get(k.to_bytes()));
+                    table.delete(lc_tag.to_bytes());
+                    call_void(it, "Image::ExifTool::AddTagToTable", vec![table.clone(), lc_tag, k])?;
+                }
+                options.set(param.to_bytes(), new_params);
+                continue;
+            }
+            let mut force = false;
+            let mut param_name = Value::Undef;
+            // set/reset single UserParam parameter
+            if let Some(c) = re(r"(.*?)=(.*)", "s").m(&new_val) {
+                param_name = cap(&c, 1);
+                new_val = cap(&c, 2);
+                if re(r"\^$", "").subst(&mut param_name, false, |_| Vec::new()) > 0 {
+                    force = true;
+                }
+                param_name = tr_param_name(&param_name);
+                param = lc(&param_name);
+            } else {
+                param = tr_param_name(&lc(&new_val));
+                new_val = Value::Undef;
+            }
+            table.delete(param.to_bytes());
+            old_val = viv(&options, "UserParam").get(param.to_bytes());
+            if !new_val.is_undef() {
+                if !new_val.to_bytes().is_empty() || force {
+                    viv(&options, "UserParam").set(param.to_bytes(), new_val);
+                    call_void(it, "Image::ExifTool::AddTagToTable", vec![table.clone(), param.clone(), param_name.clone()])?;
+                } else {
+                    viv(&options, "UserParam").delete(param.to_bytes());
+                }
+            }
+            // remove alternate version of tag
+            if re(r"#$", "").subst(&mut param, false, |_| Vec::new()) == 0 {
+                param = pl::concat(&param, &pl::s("#"));
+            }
+            table.delete(param.to_bytes());
+            viv(&options, "UserParam").delete(param.to_bytes());
+        } else if p == "RequestTags" {
+            if !new_val.is_undef() {
+                // parse list from delimited string if necessary
+                let req_list = Value::new_array(if ref_of(&new_val) == "ARRAY" { new_val.items() } else { re(r"[-\w?*:]+", "").all(&new_val) });
+                call_void(it, "Image::ExifTool::ExpandShortcuts", vec![req_list.clone()])?;
+                // add to existing list
+                if !options.get(param.to_bytes()).truthy() {
+                    options.set(param.to_bytes(), Value::new_array(vec![]));
+                }
+                for item in req_list.items() {
+                    let Some(c) = re(r"^(.*:)?([-\w?*]*)#?$", "").m(&item) else { continue };
+                    let list = options.get(param.to_bytes());
+                    if cap(&c, 2).truthy() {
+                        list.push(lc(&cap(&c, 2)));
+                    }
+                    if !cap(&c, 1).truthy() {
+                        continue;
+                    }
+                    // add requested groups with trailing colon
+                    for g in pl::split(&re(":", ""), &cap(&c, 1), 0) {
+                        list.push(pl::concat(&lc(&g), &pl::s(":")));
+                    }
+                }
+            } else {
+                options.set(param.to_bytes(), Value::Undef); // clear the list
+            }
+        } else if re(r"^(IgnoreTags|IgnoreGroups)$", "").is_match(&param) {
+            if !new_val.is_undef() {
+                if ref_of(&new_val) == "HASH" {
+                    options.set(param.to_bytes(), new_val);
+                    continue;
+                }
+                // parse list from delimited string if necessary
+                let ignore_list = Value::new_array(if ref_of(&new_val) == "ARRAY" { new_val.items() } else { re(r"[-\w?*:#]+", "").all(&new_val) });
+                if p == "IgnoreTags" {
+                    call_void(it, "Image::ExifTool::ExpandShortcuts", vec![ignore_list.clone()])?;
+                }
+                // add to existing tags/groups to ignore
+                if !options.get(param.to_bytes()).truthy() {
+                    options.set(param.to_bytes(), Value::new_hash());
+                }
+                for item in ignore_list.items() {
+                    let Some(c) = re(r"^(.*:)?([-\w?*]+)#?$", "").m(&item) else { continue };
+                    options.get(param.to_bytes()).set(lc(&cap(&c, 2)).to_bytes(), n(1));
+                }
+            } else {
+                options.set(param.to_bytes(), Value::Undef); // clear the option
+            }
+        } else if p == "ListJoin" {
+            options.set(param.to_bytes(), new_val.clone());
+            // set the old List and ListSep options for backward compatibility
+            if !new_val.is_undef() {
+                options.set("List", n(0));
+                options.set("ListSep", new_val);
+            } else {
+                options.set("List", n(1));
+                // (ListSep must be defined)
+            }
+        } else if p == "List" {
+            options.set(param.to_bytes(), new_val.clone());
+            // set the new ListJoin option for forward compatibility
+            let lj = if new_val.truthy() { Value::Undef } else { options.get("ListSep") };
+            options.set("ListJoin", lj);
+        } else if p == "Compact" || p == "XMPShorthand" {
+            // set Compact and XMPShorthand options, preserving backward compatibility
+            let compact = Value::new_hash();
+            for pp in ["Compact", "XMPShorthand"] {
+                // (allow setting from a HASH (undocumented)
+                if ref_of(&new_val) == "HASH" {
+                    if let (Value::HashRef(dst), Value::HashRef(src)) = (&compact, &new_val) {
+                        let mut c = src.borrow().clone();
+                        c.blessed = None;
+                        *dst.borrow_mut() = c;
+                    }
+                    continue;
+                }
+                let val = if p == pp { new_val.clone() } else { viv(&options, "Compact").get(pp) };
+                if !val.is_undef() {
+                    let v = re(r"\w+", "").all(&val);
+                    let opt = if pp == "Compact" { lhash(it, "compactOpt") } else { lhash(it, "xmpShorthandOpt") };
+                    for x in v {
+                        let set = opt.get(lc(&x).to_bytes());
+                        if !set.truthy() {
+                            pl::warn(it, &format!("Invalid {pp} setting '{}'\n", x.to_text()))?;
+                            return ret(old_val);
+                        }
+                        if !set.is_ref() {
+                            compact.set(set.to_bytes(), n(1));
+                            continue;
+                        }
+                        for s in set.items() {
+                            compact.set(s.to_bytes(), n(1));
+                        }
+                    }
+                }
+                compact.set(pp, val); // preserve most recent setting
+            }
+            options.set("XMPShorthand", compact.clone());
+            options.set("Compact", compact);
+        } else if p == "NoWarning" {
+            // validate regular expression
+            it.set_scalar(EVAL_WARNING, Value::Undef);
+            if !new_val.is_undef() {
+                let h = set_warning_ref(it);
+                local_sig_warn(it, h, |it| {
+                    eval_block(it, |_it| re_interp(&new_val, "").map(|r| r.is_match(&param)))?;
+                    let e = it.get_scalar("main::@");
+                    if e.truthy() {
+                        it.set_scalar(EVAL_WARNING, e);
+                    }
+                    Ok(())
+                })?;
+            }
+            if it.get_scalar(EVAL_WARNING).truthy() {
+                let cw = clean_warning(it, vec![], Want::Scalar)?.pop().unwrap_or_default();
+                pl::warn(it, &format!("NoWarning: {}\n", cw.to_text()))?;
+                continue;
+            }
+            // add to existing expression if specified
+            if plus && !old_val.is_undef() {
+                new_val = if !new_val.is_undef() { pl::concat(&old_val, &pl::concat(&pl::s("|"), &new_val)) } else { old_val.clone() };
+            }
+            options.set(param.to_bytes(), new_val);
+        } else if p == "ImageHashType" {
+            if new_val.is_undef() {
+                pl::warn(it, &format!("Can't set {p} to undef\n"))?;
+            } else if re(r"^(MD5|SHA256|SHA512)$", "i").is_match(&new_val) {
+                options.set(param.to_bytes(), uc(&new_val));
+            } else {
+                pl::warn(it, &format!("Invalid {p} setting '{}'\n", new_val.to_text()))?;
+            }
+        } else if p == "StructFormat" {
+            if !new_val.is_undef() {
+                if !re(r"^(JSON|JSONQ)$", "i").is_match(&new_val) {
+                    pl::warn(it, &format!("Invalid {p} setting '{}'\n", new_val.to_text()))?;
+                    continue;
+                }
+                new_val = uc(&new_val);
+            }
+            options.set(param.to_bytes(), new_val);
+        } else if p == "ByteUnit" {
+            if !new_val.is_undef() {
+                // (allow "Metric" or "SI" for SI, and "IT" or "Binary" for Binary)
+                let good_val = if re(r"^S|M", "i").is_match(&new_val) {
+                    pl::s("SI")
+                } else if re(r"^I|B", "i").is_match(&new_val) {
+                    pl::s("Binary")
+                } else {
+                    Value::Undef
+                };
+                if !good_val.truthy() {
+                    pl::warn(it, &format!("Invalid {p} setting '{}'\n", new_val.to_text()))?;
+                    continue;
+                }
+                options.set(param.to_bytes(), good_val);
+            } else {
+                pl::warn(it, &format!("Can't set {p} to undef\n"))?;
+            }
+        } else if p == "Plot" {
+            // add to existing plot settings
+            if !old_val.is_undef() && !new_val.is_undef() {
+                new_val = pl::concat(&old_val, &pl::concat(&pl::s(","), &new_val));
+            }
+            options.set(param.to_bytes(), new_val);
+        } else if p == "KeepUTCTime" || p == "SystemTimeRes" {
+            ghash(it, "Image::ExifTool::static_vars").set(param.to_bytes(), new_val.clone());
+            options.set(param.to_bytes(), new_val);
+        } else if pl::str_eq(&lc(&param), "geodir") {
+            it.set_scalar("Image::ExifTool::Geolocation::geoDir", new_val);
+        } else {
+            if p == "Escape" {
+                // set ESCAPE_PROC
+                if !new_val.is_undef() && pl::str_eq(&new_val, "XML") {
+                    crate::runtime::require(it, "Image::ExifTool::XMP")?;
+                    let r = Value::Code(it.sub_ref("Image::ExifTool::XMP::EscapeXML"));
+                    self_.set("ESCAPE_PROC", r);
+                } else if !new_val.is_undef() && pl::str_eq(&new_val, "HTML") {
+                    crate::runtime::require(it, "Image::ExifTool::HTML")?;
+                    let r = Value::Code(it.sub_ref("Image::ExifTool::HTML::EscapeHTML"));
+                    self_.set("ESCAPE_PROC", r);
+                } else {
+                    self_.delete("ESCAPE_PROC");
+                }
+                // must forget saved values since they depend on Escape method
+                self_.set("BOTH", Value::new_hash());
+            } else if p == "GlobalTimeShift" {
+                self_.delete("GLOBAL_TIME_OFFSET"); // reset our calculated offset
+            } else if p == "TimeZone" && !new_val.is_undef() && !new_val.to_bytes().is_empty() {
+                ghash(it, "main::ENV").set("TZ", new_val.clone());
+                if pl::str_eq(&os(it), "MSWin32") {
+                    if eval_block(it, |it| crate::runtime::require(it, "Time::Piece"))?.is_some() {
+                        eval_block(it, |it| call_void(it, "Time::Piece::_tzset", vec![]))?;
+                    } else {
+                        pl::warn(it, "Install Time::Piece to set time zone in Windows\n")?;
+                    }
+                } else {
+                    eval_block(it, |it| {
+                        crate::runtime::require(it, "POSIX")?;
+                        call_void(it, "POSIX::tzset", vec![])
+                    })?;
+                }
+            } else if p == "Validate" {
+                // load Validate module if Validate option enabled
+                if new_val.truthy() {
+                    crate::runtime::require(it, "Image::ExifTool::Validate")?;
+                }
+            }
+            options.set(param.to_bytes(), new_val);
+        }
+    }
+    ret(old_val)
+}
+
 /// Register the subs ported so far; the others still run from the Perl.
 pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::DummyWriteProc", dummy_write_proc);
@@ -2178,4 +2564,5 @@ pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::Init", init);
     it.define_native("Image::ExifTool::GetValue", get_value);
     it.define_native("Image::ExifTool::BuildCompositeTags", build_composite_tags);
+    it.define_native("Image::ExifTool::Options", options);
 }
