@@ -274,6 +274,61 @@ pub fn warn(it: &mut Interp, msg: &str) -> ER<()> {
     it.warn(Value::from(m))
 }
 
+/// Cells holding the arguments, and their aliases, for a call whose callee
+/// writes `$_[i]`.
+fn alias_cells(args: &[Value]) -> (Vec<crate::interp::eval::Cell>, Vec<Option<crate::interp::eval::Lv>>) {
+    let cells: Vec<_> = args.iter().map(|v| std::rc::Rc::new(std::cell::RefCell::new(v.clone()))).collect();
+    let al = cells.iter().map(|c| Some(crate::interp::eval::Lv::Scalar(c.clone()))).collect();
+    (cells, al)
+}
+
+/// `Pkg::Func($a, $b)` where the sub writes its arguments (`$_[0] = ...`):
+/// the slice gets the new values back, as perl's aliasing gives them.
+pub fn call_mut(it: &mut Interp, name: &str, args: &mut [Value], want: Want) -> ER<Vec<Value>> {
+    let (cells, al) = alias_cells(args);
+    let code = it.sub_ref(name);
+    let r = it.call_with_aliases(&code, args.to_vec(), al, want);
+    for (a, c) in args.iter_mut().zip(cells) {
+        *a = c.borrow().clone();
+    }
+    r
+}
+
+/// `$obj->Method($a, $b)` where the method writes its arguments
+/// (`$raf->Read($buff, $len)`): the slice gets the new values back. The
+/// object itself is not aliased.
+pub fn method_mut(it: &mut Interp, obj: &Value, name: &str, args: &mut [Value], want: Want) -> ER<Vec<Value>> {
+    let (cells, mut al) = alias_cells(args);
+    let mut a = vec![obj.clone()];
+    a.extend(args.iter().cloned());
+    al.insert(0, None);
+    it.set_pending_aliases(al);
+    let r = it.call_method(obj, name, a, want);
+    it.set_pending_aliases_none();
+    for (x, c) in args.iter_mut().zip(cells) {
+        *x = c.borrow().clone();
+    }
+    r
+}
+
+/// `substr(STR, OFF[, LEN])` (undef outside the string, as perl, without
+/// the warning: use the builtin through Perl when the warning matters).
+pub fn substr(s: &Value, off: i64, len: Option<i64>) -> Value {
+    let b = s.to_bytes();
+    match crate::interp::eval::substr_range(b.len(), off, len) {
+        Some((a, e)) => Value::bytes(&b[a..e]),
+        None => Value::Undef,
+    }
+}
+
+/// `$a % $b` (dies on zero, as perl).
+pub fn modulo(a: &Value, b: &Value) -> ER<Value> {
+    match ops::modulo(a, b) {
+        Ok(v) => Ok(v),
+        Err(e) => die(e),
+    }
+}
+
 /// The argument `i` of a ported sub (`$_[i]`), undef when missing.
 pub fn arg(a: &[Value], i: usize) -> Value {
     a.get(i).cloned().unwrap_or_default()

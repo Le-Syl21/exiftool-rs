@@ -619,14 +619,11 @@ impl Interp {
                     self.trace_write(&line);
                     self.trace_depth += 1;
                 }
-                let pushed = aliases.is_some();
-                if let Some(al) = aliases {
-                    self.alias_frames.push(AliasFrame { args: None, aliases: al, originals: Vec::new() });
-                }
+                // Always a frame of its own: set_arg in this native must never
+                // reach the variables of an outer call (no aliases = no-op).
+                self.alias_frames.push(AliasFrame { args: None, aliases: aliases.unwrap_or_default(), originals: Vec::new() });
                 let r = f(self, args, want).map(|v| fit(v, want));
-                if pushed {
-                    self.alias_frames.pop();
-                }
+                self.alias_frames.pop();
                 if traced {
                     self.trace_depth -= 1;
                     let res = match (&r, want) {
@@ -745,6 +742,24 @@ impl Interp {
             Ok(v) | Err(Flow::Return(v)) => Ok(fit(v, want)),
             Err(e) => Err(e),
         }
+    }
+
+    /// Call a code value with each argument aliased to the given storage
+    /// (what perl passes for `f($x, $h{k})`): writes to `$_[i]` reach it.
+    pub fn call_with_aliases(&mut self, code: &Rc<Code>, args: Vec<Value>, aliases: Vec<Option<Lv>>, want: Want) -> ER<Vec<Value>> {
+        self.pending_aliases = Some(aliases);
+        let r = self.call(code, args, want);
+        self.pending_aliases = None;
+        r
+    }
+
+    /// Aliases for the next call (see pl::method_mut).
+    pub fn set_pending_aliases(&mut self, al: Vec<Option<Lv>>) {
+        self.pending_aliases = Some(al);
+    }
+
+    pub fn set_pending_aliases_none(&mut self) {
+        self.pending_aliases = None;
     }
 
     /// Call a named sub (fully qualified, or in the current package).
