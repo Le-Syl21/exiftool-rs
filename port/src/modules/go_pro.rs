@@ -105,10 +105,13 @@ pub fn convert_system_time(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
 /// Inputs: 0) value or list of values, 1) string of scale factors
 /// Returns: nothing, but updates values
 pub fn scale_values(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
-    if let Some(v) = scale_values_impl(&arg(&a, 0), &arg(&a, 1))? {
-        it.set_arg(0, v)?;
+    match scale_values_impl(&arg(&a, 0), &arg(&a, 1))? {
+        Some(v) => {
+            it.set_arg(0, v.clone())?;
+            ret(v) // (the value of the last statement, the assignment)
+        }
+        None => pl::ret_nothing(want),
     }
-    pl::ret_nothing(want)
 }
 
 /// The new value of `$_[0]`, or None when ScaleValues returns early.

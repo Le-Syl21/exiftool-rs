@@ -284,6 +284,10 @@ pub fn get_matrix_structure(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
 /// Returns: average sample rate (in Hz)
 pub fn calc_sample_rate(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, val_pt) = (arg(&a, 0), arg(&a, 1));
+    if !val_pt.is_scalar_ref() {
+        // ($$valPt of anything else)
+        return crate::interp::eval::die(if val_pt.is_undef() { "Can't use an undefined value as a SCALAR reference" } else { "Not a SCALAR reference" });
+    }
     let dat = pl::unpack("N*", &val_pt.deref())?;
     let (mut num, mut dur) = (n(0), n(0));
     let mut i = 2usize;
@@ -917,11 +921,11 @@ pub fn parse_item_prop_assoc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
 /// Process item information now
 /// Inputs: 0) ExifTool ref
 pub fn handle_item_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    handle_item_info_impl(it, &arg(&a, 0))?;
-    pl::ret_nothing(_w)
+    // (returns the value of its last statement, the deleted MediaDataInfo)
+    ret(handle_item_info_impl(it, &arg(&a, 0))?)
 }
 
-fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<()> {
+fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
     let et = et.clone();
     let raf = et.get("RAF");
     let items = et.get("ItemInfo");
@@ -1207,8 +1211,7 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<()> {
         et.delete("DOC_NUM");
     }
     et.delete("ItemInfo");
-    et.delete("MediaDataInfo");
-    Ok(())
+    Ok(et.delete("MediaDataInfo"))
 }
 
 /// Warn if ExtractEmbedded option isn't used
