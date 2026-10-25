@@ -49,6 +49,13 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 }
                 Value::Code(_) => "CODE",
                 Value::Handle(_) => "GLOB",
+                Value::LvRef(l) => {
+                    if l.get().is_ref() {
+                        "REF"
+                    } else {
+                        "SCALAR"
+                    }
+                }
                 _ => "",
             };
             one(Value::str(r))

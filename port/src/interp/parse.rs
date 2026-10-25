@@ -882,7 +882,7 @@ impl<'a> Parser<'a> {
                 self.pos += 2;
                 Ok(Expr::Un(UnOp::PreDec, Box::new(self.unary()?)))
             }
-            [b'-', c, d, ..] if c.is_ascii_alphabetic() && !ident_char(*d) && b"edfrwxszlpSbcugktTBoRWXOMAC".contains(c) && *d != b'>' && *d != b'=' && *d != b',' => {
+            [b'-', c, d, ..] if c.is_ascii_alphabetic() && !ident_char(*d) && b"edfrwxszlpSbcugktTBoRWXOMAC".contains(c) && *d != b'>' && *d != b'=' && *d != b',' && !self.fat_comma_after(2) => {
                 // A file test: -e $file
                 let op = *c;
                 self.pos += 2;
@@ -1661,6 +1661,13 @@ impl<'a> Parser<'a> {
             return Ok(Expr::Call { name: Rc::from(id), args, amp: false });
         }
         Ok(Expr::Call { name: Rc::from(id), args: vec![], amp: true })
+    }
+
+    /// Whether `=>` follows (after spaces) the `n` bytes at the position.
+    fn fat_comma_after(&self, n: usize) -> bool {
+        let r = &self.rest()[n.min(self.rest().len())..];
+        let k = r.iter().take_while(|c| c.is_ascii_whitespace()).count();
+        r[k..].starts_with(b"=>") || r[k..].starts_with(b",")
     }
 
     /// The filehandle of `print FH LIST`, `print $fh LIST`, `print {$fh}`.

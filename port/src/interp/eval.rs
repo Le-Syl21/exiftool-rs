@@ -1273,6 +1273,7 @@ impl Interp {
                 let v = self.scalar(inner, scope)?;
                 match v {
                     Value::ScalarRef(c) => Ok(c.borrow().clone()),
+                    Value::LvRef(l) => Ok(l.get()),
                     Value::Undef => die("Can't use an undefined value as a SCALAR reference"),
                     Value::Str(s) => {
                         self.check_symref(&s, "a SCALAR")?;
@@ -1690,6 +1691,7 @@ impl Interp {
                 };
                 match v {
                     Value::ScalarRef(c) => Lv::Scalar(c),
+                    Value::LvRef(l) => (*l).clone(),
                     Value::Str(s) => {
                         self.check_symref(&s, "a SCALAR")?;
                         let name = String::from_utf8_lossy(&s).into_owned();
@@ -2107,8 +2109,9 @@ impl Interp {
 
     fn make_ref(&mut self, e: &Expr, scope: &Rc<Scope>) -> ER<Value> {
         Ok(match e {
-            Expr::Scalar(_) | Expr::ScalarDeref(_) | Expr::My(..) => match self.lvalue(e, scope)? {
+            Expr::Scalar(_) | Expr::ScalarDeref(_) | Expr::My(..) | Expr::Elem(..) | Expr::HElem(..) => match self.lvalue(e, scope)? {
                 Lv::Scalar(c) => Value::ScalarRef(c),
+                lv @ (Lv::AElem(..) | Lv::HElem(..)) => Value::LvRef(Rc::new(lv)),
                 lv => Value::ScalarRef(Rc::new(RefCell::new(lv.get()))),
             },
             Expr::Array(c) => Value::ArrayRef(self.array_of(c, scope, true)?),

@@ -30,7 +30,7 @@ impl Value {
     }
 
     pub fn is_scalar_ref(&self) -> bool {
-        matches!(self, Value::ScalarRef(_))
+        matches!(self, Value::ScalarRef(_) | Value::LvRef(_))
     }
 
     pub fn is_code(&self) -> bool {
@@ -51,6 +51,13 @@ impl Value {
             Value::HashRef(_) => "HASH",
             Value::Code(_) => "CODE",
             Value::Handle(_) => "GLOB",
+            Value::LvRef(l) => {
+                if l.get().is_ref() {
+                    "REF"
+                } else {
+                    "SCALAR"
+                }
+            }
             _ => "",
         }
     }
@@ -191,6 +198,7 @@ impl Value {
     pub fn deref(&self) -> Value {
         match self {
             Value::ScalarRef(c) => c.borrow().clone(),
+            Value::LvRef(l) => l.get(),
             _ => Value::Undef,
         }
     }
@@ -202,6 +210,7 @@ impl Value {
             (Value::ArrayRef(a), Value::ArrayRef(b)) => Rc::ptr_eq(a, b),
             (Value::ScalarRef(a), Value::ScalarRef(b)) => Rc::ptr_eq(a, b),
             (Value::Code(a), Value::Code(b)) => Rc::ptr_eq(a, b),
+            (Value::LvRef(a), Value::LvRef(b)) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }

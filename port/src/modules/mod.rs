@@ -1,6 +1,7 @@
 //! The ported modules, one per ExifTool Perl file.
 
 pub mod core;
+pub mod zlib;
 
 use crate::runtime::Registrar;
 

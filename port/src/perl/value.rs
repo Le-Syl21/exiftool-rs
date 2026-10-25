@@ -33,6 +33,9 @@ pub enum Value {
     Code(Rc<crate::interp::eval::Code>),
     /// A filehandle (`open(my $fh, ...)`).
     Handle(Rc<RefCell<crate::interp::eval::io::FileHandle>>),
+    /// A reference to an array or hash element (`\$a[2]`, `\$$h{k}`): a
+    /// SCALAR reference that reads and writes the element itself.
+    LvRef(Rc<crate::interp::eval::Lv>),
 }
 
 /// A Perl hash. Insertion order is kept for reproducibility, but nothing may
@@ -60,7 +63,7 @@ impl Value {
     }
 
     pub fn is_ref(&self) -> bool {
-        matches!(self, Value::ScalarRef(_) | Value::ArrayRef(_) | Value::HashRef(_) | Value::Code(_) | Value::Handle(_))
+        matches!(self, Value::ScalarRef(_) | Value::ArrayRef(_) | Value::HashRef(_) | Value::Code(_) | Value::Handle(_) | Value::LvRef(_))
     }
 
     /// The string form (perl's `sv_2pv`): undef is empty, integers in decimal,
@@ -94,6 +97,7 @@ impl Value {
             Value::HashRef(r) => Number::Int(Rc::as_ptr(r) as *const u8 as i64),
             Value::Code(r) => Number::Int(Rc::as_ptr(r) as *const u8 as i64),
             Value::Handle(r) => Number::Int(Rc::as_ptr(r) as *const u8 as i64),
+            Value::LvRef(r) => Number::Int(Rc::as_ptr(r) as *const u8 as i64),
         }
     }
 
@@ -316,6 +320,7 @@ impl fmt::Display for Value {
             },
             Value::Code(r) => write!(f, "CODE({:p})", Rc::as_ptr(r)),
             Value::Handle(r) => write!(f, "GLOB({:p})", Rc::as_ptr(r)),
+            Value::LvRef(r) => write!(f, "SCALAR({:p})", Rc::as_ptr(r)),
         }
     }
 }
@@ -333,6 +338,7 @@ impl fmt::Debug for Value {
             Value::HashRef(r) => write!(f, "{:?}", r.borrow()),
             Value::Code(_) => f.write_str("CODE"),
             Value::Handle(_) => f.write_str("GLOB"),
+            Value::LvRef(r) => write!(f, "\\{:?}", r.get()),
         }
     }
 }
