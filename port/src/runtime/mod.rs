@@ -149,9 +149,28 @@ fn run_source(it: &mut Interp, path: &str) -> ER<()> {
     it.strict = false;
     let r = it.eval_string(&src, "main", &scope, Want::Scalar);
     it.strict = saved;
+    // The file's `my` variables, for the module's ported subs: the same
+    // names the data loader gives them (MODULE::<my>::name).
+    let module = module_of_path(path);
+    for (sigil, name, b) in scope.vars() {
+        it.set_global(sigil, &format!("{module}::<my>::{name}"), b);
+    }
     match r {
         Ok(_) => Ok(()),
         Err(e) => Err(crate::interp::Flow::Die(e)),
+    }
+}
+
+/// The package a library file defines: .../Image/ExifTool/Exif.pm is
+/// Image::ExifTool::Exif, and a Write*.pl file belongs to its module.
+fn module_of_path(path: &str) -> String {
+    let rel = path.rsplit_once("/lib/").map(|(_, r)| r).unwrap_or(path);
+    let rel = rel.trim_end_matches(".pm").trim_end_matches(".pl");
+    let m = rel.replace('/', "::");
+    match m.strip_prefix("Image::ExifTool::Write") {
+        Some("r") => "Image::ExifTool".to_string(),
+        Some(sub) if !sub.is_empty() => format!("Image::ExifTool::{sub}"),
+        _ => m,
     }
 }
 
@@ -171,6 +190,14 @@ fn require_file(it: &mut Interp, path: &str, key: &str) -> ER<()> {
     it.strict = false;
     let r = it.eval_string(&src, "main", &scope, Want::Scalar);
     it.strict = saved;
+    let module = module_of_path(path);
+    for (sigil, name, b) in scope.vars() {
+        it.set_global(sigil, &format!("{module}::<my>::{name}"), b);
+    }
+    // The ported subs of this file replace the Perl ones it defined.
+    if let Some(r) = registrar(&file_key(path)) {
+        r(it);
+    }
     match r {
         Ok(v) => {
             if !v.last().is_some_and(|v| v.truthy()) {
@@ -180,6 +207,13 @@ fn require_file(it: &mut Interp, path: &str, key: &str) -> ER<()> {
         }
         Err(e) => Err(crate::interp::Flow::Die(e)),
     }
+}
+
+/// The registrar key of a library file: its path as a package name
+/// (Image/ExifTool/XMPStruct.pl is Image::ExifTool::XMPStruct).
+fn file_key(path: &str) -> String {
+    let rel = path.rsplit_once("/lib/").map(|(_, r)| r).unwrap_or(path);
+    rel.trim_end_matches(".pm").trim_end_matches(".pl").replace('/', "::")
 }
 
 /// Subs perl itself provides that ExifTool and its tests use.

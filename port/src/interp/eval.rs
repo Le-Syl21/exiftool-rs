@@ -98,7 +98,12 @@ impl Scope {
         a
     }
 
-    fn lookup(&self, sigil: u8, name: &str) -> Option<Binding> {
+    /// The variables declared directly in this scope.
+    pub fn vars(&self) -> Vec<(u8, Rc<str>, Binding)> {
+        self.vars.borrow().clone()
+    }
+
+    pub(crate) fn lookup(&self, sigil: u8, name: &str) -> Option<Binding> {
         let mut s = Some(self);
         while let Some(sc) = s {
             for (sg, n, b) in sc.vars.borrow().iter().rev() {
@@ -329,6 +334,8 @@ pub struct Interp {
     goto_target: Option<Rc<str>>,
     /// opendir handles: the entries and the read position.
     dir_handles: HashMap<String, (Vec<Value>, usize)>,
+    /// `\&name` references, by name.
+    sub_refs: HashMap<Rc<str>, Rc<Code>>,
     /// PORT_TRACE: log ExifTool's sub calls, as scripts/trace_db.pl does.
     trace: Option<std::io::BufWriter<std::fs::File>>,
     trace_depth: usize,
@@ -385,6 +392,7 @@ impl Interp {
             last_stat: Vec::new(),
             goto_target: None,
             dir_handles: HashMap::new(),
+            sub_refs: HashMap::new(),
             trace: std::env::var("PORT_TRACE").ok().and_then(|p| std::fs::File::create(p).ok()).map(std::io::BufWriter::new),
             trace_depth: 0,
         };
@@ -404,6 +412,20 @@ impl Interp {
     pub fn define_native(&mut self, name: &str, f: impl Fn(&mut Interp, Vec<Value>, Want) -> ER<Vec<Value>> + 'static) {
         let name: Rc<str> = Rc::from(name);
         self.subs.insert(name.clone(), Rc::new(Code::Native(name, Rc::new(f))));
+    }
+
+    /// `\&name`: one reference per name (so `\&f == \&f`), resolved by name
+    /// at each call, so a sub ported to Rust replaces the Perl one even in
+    /// references taken before.
+    pub fn sub_ref(&mut self, full: &str) -> Rc<Code> {
+        if let Some(c) = self.sub_refs.get(full) {
+            return c.clone();
+        }
+        let k: Rc<str> = Rc::from(full);
+        let k2 = k.clone();
+        let c = Rc::new(Code::Native(k.clone(), Rc::new(move |i: &mut Interp, args, want| i.call_named(&k2, args, want))));
+        self.sub_refs.insert(k, c.clone());
+        c
     }
 
     pub fn sub(&self, name: &str) -> Option<Rc<Code>> {
@@ -558,6 +580,11 @@ impl Interp {
         Ok(b)
     }
 
+    /// `warn` with a message already formatted (through `$SIG{__WARN__}`).
+    pub fn warn(&mut self, msg: Value) -> ER<()> {
+        builtins::warn(self, msg)
+    }
+
     /// Run the `END` blocks, last defined first.
     pub fn run_end_blocks(&mut self) -> ER<()> {
         while let Some((b, scope)) = self.end_blocks.pop() {
@@ -584,17 +611,34 @@ impl Interp {
     pub fn call(&mut self, code: &Rc<Code>, args: Vec<Value>, want: Want) -> ER<Vec<Value>> {
         let aliases = self.pending_aliases.take();
         match &**code {
-            Code::Native(_, f) => {
+            Code::Native(name, f) => {
                 let f = f.clone();
+                let traced = self.trace.is_some() && (name.starts_with("Image::ExifTool") || name.starts_with("File::RandomAccess"));
+                if traced {
+                    let line = format!("{}> {} {}\n", "  ".repeat(self.trace_depth), name, args.iter().map(trace_summary).collect::<Vec<_>>().join("|"));
+                    self.trace_write(&line);
+                    self.trace_depth += 1;
+                }
                 let pushed = aliases.is_some();
                 if let Some(al) = aliases {
                     self.alias_frames.push(AliasFrame { args: None, aliases: al, originals: Vec::new() });
                 }
-                let r = f(self, args, want);
+                let r = f(self, args, want).map(|v| fit(v, want));
                 if pushed {
                     self.alias_frames.pop();
                 }
-                Ok(fit(r?, want))
+                if traced {
+                    self.trace_depth -= 1;
+                    let res = match (&r, want) {
+                        (Ok(v), Want::List) => v.iter().map(trace_summary).collect::<Vec<_>>().join("|"),
+                        (Ok(v), Want::Scalar) => trace_summary(v.last().unwrap_or(&Value::Undef)),
+                        (Ok(_), Want::Void) => "void".to_string(),
+                        (Err(_), _) => "DIED".to_string(),
+                    };
+                    let line = format!("{}< {}\n", "  ".repeat(self.trace_depth), res);
+                    self.trace_write(&line);
+                }
+                r
             }
             Code::Perl(sub, closure) => {
                 let scope = Scope::new(Some(closure.clone()));
@@ -863,13 +907,11 @@ impl Interp {
             Stmt::While { label, cond, body, until, post } => {
                 let mut first = true;
                 loop {
+                    // A `my` in the condition is visible in the body.
+                    let inner = Scope::new(Some(scope.clone()));
                     if !(*post && first) {
                         let c = match cond {
-                            Some(c) => {
-                                let inner = Scope::new(Some(scope.clone()));
-                                let v = self.scalar(c, &inner)?.truthy();
-                                v
-                            }
+                            Some(c) => self.scalar(c, &inner)?.truthy(),
                             None => true,
                         };
                         if c == *until {
@@ -877,7 +919,7 @@ impl Interp {
                         }
                     }
                     first = false;
-                    match self.run_block(body, scope, Want::Void) {
+                    match self.run_block(body, &inner, Want::Void) {
                         Ok(_) => {}
                         Err(Flow::Last(l)) if label_matches(&l, label) => break,
                         Err(Flow::Next(l)) if label_matches(&l, label) => continue,
@@ -2059,26 +2101,7 @@ impl Interp {
     fn unary(&mut self, op: UnOp, e: &Expr, scope: &Rc<Scope>) -> ER<Value> {
         Ok(match op {
             UnOp::Not => boolean(!self.scalar(e, scope)?.truthy()),
-            UnOp::Neg => {
-                let v = self.scalar(e, scope)?;
-                if let Value::Str(s) = &v {
-                    // perl's S_negate_string: -"foo" is "-foo", -"+x" is
-                    // "-x", -"-foo" is "+foo" (when not a number).
-                    if !s.is_empty() {
-                        if ident_like(s[0]) {
-                            let mut o = b"-".to_vec();
-                            o.extend_from_slice(s);
-                            return Ok(Value::bytes(o));
-                        }
-                        if s[0] == b'+' || (s[0] == b'-' && !v.looks_like_number()) {
-                            let mut o = s.to_vec();
-                            o[0] = if s[0] == b'-' { b'+' } else { b'-' };
-                            return Ok(Value::bytes(o));
-                        }
-                    }
-                }
-                ops::neg(&v)
-            }
+            UnOp::Neg => ops::negate(&self.scalar(e, scope)?),
             UnOp::Plus => self.scalar(e, scope)?,
             UnOp::BitNot => {
                 let v = self.scalar(e, scope)?;
@@ -2118,14 +2141,7 @@ impl Interp {
             Expr::Hash(c) => Value::HashRef(self.hash_of(c, scope, true)?),
             Expr::Call { name, amp: true, args } if args.len() == 1 && matches!(&args[0], Expr::Array(Container::Named(n)) if &**n == "_") => {
                 let key = self.sub_key(name);
-                match self.subs.get(&*key) {
-                    Some(c) => Value::Code(c.clone()),
-                    None => {
-                        // A reference to a sub not defined yet: resolved at call time.
-                        let k = key.clone();
-                        Value::Code(Rc::new(Code::Native(key.clone(), Rc::new(move |i: &mut Interp, args, want| i.call_named(&k, args, want)))))
-                    }
-                }
+                Value::Code(self.sub_ref(&key))
             }
             Expr::AnonSub(_) => self.scalar(e, scope)?,
             // \*FH: a GLOB reference, the handle itself.
@@ -2911,10 +2927,6 @@ fn fit(mut v: Vec<Value>, want: Want) -> Vec<Value> {
             vec![last]
         }
     }
-}
-
-fn ident_like(c: u8) -> bool {
-    c.is_ascii_alphabetic() || c == b'_'
 }
 
 /// A string operand of a bitwise operator: a string never used as a number.

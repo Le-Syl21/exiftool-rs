@@ -297,8 +297,10 @@ impl<'a> Parser<'a> {
                 let cond = if self.starts(")") { None } else { Some(self.expr()?) };
                 self.expect(")")?;
                 // while (<FH>) is while (defined($_ = <FH>))
+                // ... and while (my $x = <FH>) is while (defined(my $x = <FH>))
                 let cond = cond.map(|c| match c {
                     Expr::ReadLine(_) => Expr::Call { name: Rc::from("defined"), args: vec![Expr::Assign(None, Box::new(Expr::Scalar(Rc::from("_"))), Box::new(c))], amp: false },
+                    Expr::Assign(None, l, r) if matches!(*r, Expr::ReadLine(_)) => Expr::Call { name: Rc::from("defined"), args: vec![Expr::Assign(None, l, r)], amp: false },
                     c => c,
                 });
                 let body = self.block()?;

@@ -265,7 +265,14 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                     Value::ArrayRef(a) => a,
                     _ => return die(format!("Type of arg 1 to {name} must be array")),
                 },
-                None => it.named_array(scope, "_"),
+                // @_ in a sub, @ARGV at file level.
+                None => match scope.lookup(b'@', "_") {
+                    Some(Binding::Array(a)) => a,
+                    _ => match it.global(b'@', "main::ARGV") {
+                        Binding::Array(a) => a,
+                        _ => unreachable!(),
+                    },
+                },
             };
             let v = {
                 let mut ab = a.borrow_mut();
@@ -924,56 +931,7 @@ fn split(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Ve
             }
         }
     };
-    let mut fields: Vec<Value> = Vec::new();
-    let mut s = 0usize;
-    if awk {
-        s = subject.iter().take_while(|c| c.is_ascii_whitespace()).count();
-    }
-    let len = subject.len();
-    let mut remaining = if limit > 0 { limit } else { i64::MAX };
-    while s < len {
-        remaining -= 1;
-        if remaining == 0 {
-            break;
-        }
-        // The match must end after s.
-        let mut from = s;
-        let spans = loop {
-            match re.match_at(&subject, from).map_err(|e| Flow::Die(Value::from(e)))? {
-                Some(sp) => {
-                    let (_, e) = sp[0].unwrap();
-                    if e > s {
-                        break Some(sp);
-                    }
-                    from += 1;
-                    if from > len {
-                        break None;
-                    }
-                }
-                None => break None,
-            }
-        };
-        let Some(spans) = spans else { break };
-        let (ms, me) = spans[0].unwrap();
-        fields.push(Value::bytes(&subject[s..ms]));
-        for g in &spans[1..] {
-            fields.push(match g {
-                Some((a, b)) => Value::bytes(&subject[*a..*b]),
-                None => Value::Undef,
-            });
-        }
-        s = me;
-    }
-    if s < len || (!fields.is_empty() && limit != 0) {
-        fields.push(Value::bytes(&subject[s.min(len)..]));
-    } else if len == 0 {
-        // split of an empty string is an empty list.
-    }
-    if limit == 0 {
-        while fields.last().is_some_and(|v| v.is_undef() || v.to_bytes().is_empty()) {
-            fields.pop();
-        }
-    }
+    let fields = crate::perl::regex::split(&re, awk, &subject, limit).map_err(|e| Flow::Die(Value::from(e)))?;
     if want != Want::List {
         return Ok(vec![Value::Int(fields.len() as i64)]);
     }

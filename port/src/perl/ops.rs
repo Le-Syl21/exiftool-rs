@@ -134,6 +134,26 @@ pub fn pow(a: &Value, b: &Value) -> Value {
     Value::Num(x.as_f64().powf(y.as_f64()))
 }
 
+/// Unary minus as perl does it on any value (S_negate_string): -"foo" is
+/// "-foo", -"+x" is "-x", -"-foo" is "+foo" when it is not a number.
+pub fn negate(v: &Value) -> Value {
+    if let Value::Str(s) = v {
+        if !s.is_empty() {
+            if s[0].is_ascii_alphabetic() || s[0] == b'_' {
+                let mut o = b"-".to_vec();
+                o.extend_from_slice(s);
+                return Value::bytes(o);
+            }
+            if s[0] == b'+' || (s[0] == b'-' && !v.looks_like_number()) {
+                let mut o = s.to_vec();
+                o[0] = if s[0] == b'-' { b'+' } else { b'-' };
+                return Value::bytes(o);
+            }
+        }
+    }
+    neg(v)
+}
+
 pub fn neg(a: &Value) -> Value {
     // perl's unary minus on a string that does not look like a number
     // prefixes "-" (`-"foo"` is "-foo"); ExifTool only negates numbers.

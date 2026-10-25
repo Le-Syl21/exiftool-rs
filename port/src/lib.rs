@@ -7,4 +7,5 @@
 pub mod interp;
 pub mod modules;
 pub mod perl;
+pub mod pl;
 pub mod runtime;

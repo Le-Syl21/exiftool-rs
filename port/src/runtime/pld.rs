@@ -158,13 +158,8 @@ impl Reader<'_> {
 
 /// A reference to a named sub, resolved when called (the native may be
 /// registered after the data that refers to it).
-pub fn code_by_name(it: &Interp, name: &str) -> Value {
-    if let Some(c) = it.sub(name) {
-        return Value::Code(c);
-    }
-    let n: Rc<str> = Rc::from(name);
-    let n2 = n.clone();
-    Value::Code(Rc::new(Code::Native(n, Rc::new(move |i: &mut Interp, args, want| i.call_named(&n2, args, want)))))
+pub fn code_by_name(it: &mut Interp, name: &str) -> Value {
+    Value::Code(it.sub_ref(name))
 }
 
 /// An anonymous sub of a table, from its deparsed source. It is compiled on
