@@ -16,13 +16,14 @@ sub summary {
     }
     # (no regex here: it would change $1, which callers pass as arguments)
     my $s = "$v";
+    my $more = length($s) > 40 ? '...#' . length($s) : '';
     $s = substr($s, 0, 40) if length $s > 40;
     my $o = '';
     for my $i (0 .. length($s) - 1) {
         my $c = ord(substr($s, $i, 1));
         $o .= ($c >= 0x20 and $c <= 0x7e and $c != 0x5c and $c != 0x7c) ? chr($c) : sprintf('\x%.2x', $c);
     }
-    return "S:$o";
+    return "S:$o$more";
 }
 sub sub {
     my $name = ref $sub ? '' : $sub;

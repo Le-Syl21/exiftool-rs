@@ -180,3 +180,13 @@ pub fn strftime(fmt: &str, tm: &[i64]) -> String {
     }
     out
 }
+
+/// `utime`: set a file's access and modification times (undef = now).
+pub fn set_file_times(path: &str, atime: Option<f64>, mtime: Option<f64>) -> bool {
+    let now = std::time::SystemTime::now();
+    let t = |x: Option<f64>| x.map(|s| std::time::UNIX_EPOCH + std::time::Duration::from_secs_f64(s.max(0.0))).unwrap_or(now);
+    match std::fs::File::options().write(true).open(path).or_else(|_| std::fs::File::open(path)) {
+        Ok(f) => f.set_times(std::fs::FileTimes::new().set_accessed(t(atime)).set_modified(t(mtime))).is_ok(),
+        Err(_) => false,
+    }
+}

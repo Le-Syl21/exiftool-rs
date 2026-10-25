@@ -144,7 +144,7 @@ pub enum Lv {
     /// `$#array = N`
     LastIndex(ArrayRc),
     /// `pos($x) = N` (the interpreter keeps positions; see assign_scalar)
-    Pos(Cell),
+    Pos(Box<Lv>),
 }
 
 impl Lv {
@@ -296,7 +296,9 @@ pub struct Interp {
     pub package: Rc<str>,
     pub last_match: Option<LastMatch>,
     /// `pos()` of scalars, by cell address.
-    pos: HashMap<usize, usize>,
+    /// pos() of scalars by cell address, with the string it applies to
+    /// (a new value of the variable resets it, as in perl).
+    pos: HashMap<usize, (usize, usize)>,
     saved: Vec<Saved>,
     want_stack: Vec<Want>,
     /// Asked for package variables not defined yet (the runtime's tables).
@@ -325,6 +327,8 @@ pub struct Interp {
     last_stat: Vec<Value>,
     /// A goto into a nested block, while the blocks on the way are entered.
     goto_target: Option<Rc<str>>,
+    /// opendir handles: the entries and the read position.
+    dir_handles: HashMap<String, (Vec<Value>, usize)>,
     /// PORT_TRACE: log ExifTool's sub calls, as scripts/trace_db.pl does.
     trace: Option<std::io::BufWriter<std::fs::File>>,
     trace_depth: usize,
@@ -380,6 +384,7 @@ impl Interp {
             alias_frames: Vec::new(),
             last_stat: Vec::new(),
             goto_target: None,
+            dir_handles: HashMap::new(),
             trace: std::env::var("PORT_TRACE").ok().and_then(|p| std::fs::File::create(p).ok()).map(std::io::BufWriter::new),
             trace_depth: 0,
         };
@@ -1498,6 +1503,12 @@ impl Interp {
         }
     }
 
+    /// pos() by key (see pos_key), checked against the current value.
+    pub(crate) fn pos_at(&self, key: usize, lv: &Lv) -> Option<usize> {
+        let (p, tag) = *self.pos.get(&key)?;
+        (tag == value_tag(&lv.get())).then_some(p)
+    }
+
     /// Under `strict refs`, a string used as a reference is fatal.
     fn check_symref(&self, s: &[u8], what: &str) -> ER<()> {
         if !self.strict {
@@ -1743,14 +1754,11 @@ impl Interp {
                 self.lvalue(inner, scope)?
             }
             Expr::Call { name, args, .. } if &**name == "pos" => {
-                let cell = match args.first() {
-                    Some(e) => match self.lvalue(e, scope)? {
-                        Lv::Scalar(c) => c,
-                        _ => return die("Can't modify pos of this"),
-                    },
-                    None => self.scalar_cell(scope, "_"),
+                let lv = match args.first() {
+                    Some(e) => self.lvalue(e, scope)?,
+                    None => Lv::Scalar(self.scalar_cell(scope, "_")),
                 };
-                Lv::Pos(cell)
+                Lv::Pos(Box::new(lv))
             }
             Expr::Call { name, args, .. } if &**name == "substr" && (2..=3).contains(&args.len()) => {
                 let base = self.lvalue(&args[0], scope)?;
@@ -1857,17 +1865,18 @@ impl Interp {
                 // is_list_lhs; here the lhs is a scalar.
                 let v = self.scalar(r, scope)?;
                 let lv = self.lvalue(l, scope)?;
-                if let Lv::Pos(c) = &lv {
-                    let key = Rc::as_ptr(c) as usize;
+                if let Lv::Pos(target) = &lv {
+                    let Some(key) = pos_key(target) else { return Ok(lv) };
                     if v.is_undef() {
                         self.pos.remove(&key);
                     } else {
-                        let len = c.borrow().to_bytes().len() as i64;
+                        let cur = target.get();
+                        let len = cur.to_bytes().len() as i64;
                         let mut p = v.to_i64();
                         if p < 0 {
                             p += len;
                         }
-                        self.pos.insert(key, p.clamp(0, len) as usize);
+                        self.pos.insert(key, (p.clamp(0, len) as usize, value_tag(&cur)));
                     }
                     return Ok(lv);
                 }
@@ -2254,26 +2263,25 @@ impl Interp {
     fn do_match(&mut self, e: &Expr, scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
         let Expr::Match { target, neg, pat } = e else { unreachable!() };
         let re = self.regex(pat, scope)?;
+        // The target, and where its pos() is kept (variables and elements).
         let (subject, cell) = match target {
             Some(t) => match &**t {
-                Expr::Scalar(_) | Expr::ScalarDeref(_) => match self.lvalue(t, scope)? {
-                    Lv::Scalar(c) => {
-                        let b = c.borrow().to_bytes();
-                        (b, Some(c))
-                    }
-                    lv => (lv.get().to_bytes(), None),
-                },
+                Expr::Scalar(_) | Expr::ScalarDeref(_) | Expr::Elem(..) | Expr::HElem(..) => {
+                    let lv = self.lvalue(t, scope)?;
+                    let b = lv.get().to_bytes();
+                    (b, pos_key(&lv).map(|k| (k, lv)))
+                }
                 t => (self.scalar(t, scope)?.to_bytes(), None),
             },
             None => {
-                let c = self.scalar_cell(scope, "_");
-                let s = c.borrow().to_bytes();
-                (s, Some(c))
+                let lv = Lv::Scalar(self.scalar_cell(scope, "_"));
+                let s = lv.get().to_bytes();
+                (s, pos_key(&lv).map(|k| (k, lv)))
             }
         };
         let global = pat.flags.contains('g');
         if global && want == Want::List && !neg {
-            let start = cell.as_ref().and_then(|c| self.pos.get(&(Rc::as_ptr(c) as usize)).copied()).unwrap_or(0);
+            let start = cell.as_ref().and_then(|(k, lv)| self.pos_at(*k, lv)).unwrap_or(0);
             let all = re.match_all(&subject, start).map_err(|e| Flow::Die(Value::from(e)))?;
             let mut out = Vec::new();
             for spans in &all {
@@ -2292,28 +2300,27 @@ impl Interp {
             if let Some(last) = all.last() {
                 self.last_match = Some(LastMatch { subject: subject.clone(), spans: last.clone() });
             }
-            if let Some(c) = &cell {
-                self.pos.remove(&(Rc::as_ptr(c) as usize));
+            if let Some((k, _)) = &cell {
+                self.pos.remove(k);
             }
             return Ok(out);
         }
-        let start = if global { cell.as_ref().and_then(|c| self.pos.get(&(Rc::as_ptr(c) as usize)).copied()).unwrap_or(0) } else { 0 };
+        let start = if global { cell.as_ref().and_then(|(k, lv)| self.pos_at(*k, lv)).unwrap_or(0) } else { 0 };
         let m = re.match_at(&subject, start).map_err(|e| Flow::Die(Value::from(e)))?;
         let matched = m.is_some();
         if let Some(spans) = &m {
             if global {
-                if let Some(c) = &cell {
-                    let (s, e) = spans[0].unwrap();
-                    // An empty match must still advance next time.
-                    let next = if e == s && e == start { e } else { e };
-                    self.pos.insert(Rc::as_ptr(c) as usize, next);
+                if let Some((k, lv)) = &cell {
+                    let (_, e) = spans[0].unwrap();
+                    let tag = value_tag(&lv.get());
+                    self.pos.insert(*k, (e, tag));
                 }
             }
             self.last_match = Some(LastMatch { subject: subject.clone(), spans: spans.clone() });
         } else if global {
-            if let Some(c) = &cell {
+            if let Some((k, _)) = &cell {
                 if !pat.flags.contains('c') {
-                    self.pos.remove(&(Rc::as_ptr(c) as usize));
+                    self.pos.remove(k);
                 }
             }
         }
@@ -2744,6 +2751,30 @@ impl Interp {
     }
 }
 
+/// Where pos() of an lvalue is kept: a scalar's cell, or an element's
+/// container and index/key.
+fn pos_key(lv: &Lv) -> Option<usize> {
+    match lv {
+        Lv::Scalar(c) => Some(Rc::as_ptr(c) as usize),
+        Lv::AElem(a, i) => Some((Rc::as_ptr(a) as usize).wrapping_mul(31).wrapping_add(*i as usize).wrapping_add(1)),
+        Lv::HElem(h, k) => {
+            use std::hash::{Hash, Hasher};
+            let mut hs = std::collections::hash_map::DefaultHasher::new();
+            k.hash(&mut hs);
+            Some((Rc::as_ptr(h) as usize).wrapping_mul(17) ^ hs.finish() as usize)
+        }
+        _ => None,
+    }
+}
+
+/// Identifies a variable's current value, so a stale pos() is detected.
+fn value_tag(v: &Value) -> usize {
+    match v {
+        Value::Str(s) => s.as_ptr() as usize ^ s.len(),
+        _ => 1,
+    }
+}
+
 /// The variables of the last match: `$1`.., `$&`, `` $` ``, `$'`, `$+`.
 fn is_match_var(name: &str) -> bool {
     let b = name.as_bytes();
@@ -2760,8 +2791,8 @@ fn trace_summary(v: &Value) -> String {
         },
         v if v.is_ref() => format!("R:{}", v.ref_type()),
         v => {
-            let b = v.to_bytes();
-            let b = &b[..b.len().min(40)];
+            let full = v.to_bytes();
+            let b = &full[..full.len().min(40)];
             let mut s = String::from("S:");
             for &c in b {
                 if (0x20..=0x7e).contains(&c) && c != b'\\' && c != b'|' {
@@ -2769,6 +2800,9 @@ fn trace_summary(v: &Value) -> String {
                 } else {
                     s.push_str(&format!("\\x{c:02x}"));
                 }
+            }
+            if full.len() > 40 {
+                s.push_str(&format!("...#{}", full.len()));
             }
             s
         }

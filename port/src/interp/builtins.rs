@@ -25,7 +25,7 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
     Some(run(it, name, args, scope, want))
 }
 
-const BUILTINS: &[&str] = &["readpipe", "getpwuid", "getgrgid", "defined", "ref", "scalar", "lc", "uc", "lcfirst", "ucfirst", "quotemeta", "fc", "length", "chr", "ord", "hex", "oct", "abs", "int", "sqrt", "log", "exp", "sin", "cos", "atan2", "rand", "srand", "time", "localtime", "gmtime", "join", "sprintf", "reverse", "split", "pack", "unpack", "substr", "index", "rindex", "keys", "values", "each", "exists", "delete", "shift", "pop", "push", "unshift", "splice", "chomp", "chop", "undef", "pos", "die", "warn", "bless", "require", "caller", "lock", "study", "exit", "sleep", "do", "open", "close", "binmode", "unlink", "mkdir", "rmdir", "opendir", "readdir", "closedir", "system", "exec", "select", "seek", "read", "sysread", "eof", "readline", "fileno", "chdir", "rename", "stat", "lstat"];
+const BUILTINS: &[&str] = &["utime", "chmod", "readpipe", "getpwuid", "getgrgid", "defined", "ref", "scalar", "lc", "uc", "lcfirst", "ucfirst", "quotemeta", "fc", "length", "chr", "ord", "hex", "oct", "abs", "int", "sqrt", "log", "exp", "sin", "cos", "atan2", "rand", "srand", "time", "localtime", "gmtime", "join", "sprintf", "reverse", "split", "pack", "unpack", "substr", "index", "rindex", "keys", "values", "each", "exists", "delete", "shift", "pop", "push", "unshift", "splice", "chomp", "chop", "undef", "pos", "die", "warn", "bless", "require", "caller", "lock", "study", "exit", "sleep", "do", "open", "close", "binmode", "unlink", "mkdir", "rmdir", "opendir", "readdir", "closedir", "system", "exec", "select", "seek", "read", "sysread", "eof", "readline", "fileno", "chdir", "rename", "stat", "lstat"];
 
 fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
     match name {
@@ -374,15 +374,12 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             one(Value::Undef)
         }
         "pos" => {
-            let cell = match args.first() {
-                Some(e) => match it.lvalue(e, scope)? {
-                    Lv::Scalar(c) => c,
-                    _ => return one(Value::Undef),
-                },
-                None => it.scalar_cell(scope, "_"),
+            let lv = match args.first() {
+                Some(e) => it.lvalue(e, scope)?,
+                None => Lv::Scalar(it.scalar_cell(scope, "_")),
             };
-            one(match it.pos.get(&(Rc::as_ptr(&cell) as usize)) {
-                Some(&p) => Value::Int(p as i64),
+            one(match pos_key(&lv).and_then(|k| it.pos_at(k, &lv)) {
+                Some(p) => Value::Int(p as i64),
                 None => Value::Undef,
             })
         }
@@ -479,11 +476,128 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             Err(Flow::Exit(code))
         }
         "sleep" => one(Value::Int(0)),
-        "do" | "mkdir" | "rmdir" | "opendir" | "readdir" | "closedir" | "system" | "exec" | "readline" | "chdir" | "rename" => {
+        "rename" => {
+            let a = values(it, args, scope)?;
+            let ok = std::fs::rename(arg_text(&a, 0), arg_text(&a, 1)).is_ok();
+            one(Value::from(ok))
+        }
+        "mkdir" => {
+            let a = values(it, args, scope)?;
+            let p = if a.is_empty() { it.read_scalar("_", scope).to_text() } else { arg_text(&a, 0) };
+            let ok = std::fs::create_dir(&p).is_ok();
+            #[cfg(unix)]
+            if ok {
+                use std::os::unix::fs::PermissionsExt;
+                let mode = a.get(1).map(|v| v.to_i64() as u32).unwrap_or(0o777);
+                let _ = std::fs::set_permissions(&p, std::fs::Permissions::from_mode(mode & !0o022));
+            }
+            one(Value::from(ok))
+        }
+        "rmdir" => {
+            let p = arg_or_topic(it, args, scope)?.to_text();
+            one(Value::from(std::fs::remove_dir(&p).is_ok()))
+        }
+        "chdir" => {
+            let p = arg_or_topic(it, args, scope)?.to_text();
+            one(Value::from(std::env::set_current_dir(&p).is_ok()))
+        }
+        "opendir" => {
+            // opendir(DH, $dir): the entries are kept in a handle-like hash.
+            let Some(first) = args.first() else { return die("Not enough arguments for opendir") };
+            let dir = match args.get(1) {
+                Some(d) => it.scalar(d, scope)?.to_text(),
+                None => return die("Not enough arguments for opendir"),
+            };
+            let entries = match std::fs::read_dir(&dir) {
+                Ok(rd) => {
+                    let mut v = vec![Value::str("."), Value::str("..")];
+                    for e in rd.flatten() {
+                        v.push(Value::str(&e.file_name().to_string_lossy()));
+                    }
+                    v
+                }
+                Err(_) => return one(Value::from(false)),
+            };
+            let key = match first {
+                Expr::Const(c) => c.to_text(),
+                e => {
+                    let lv = it.lvalue(e, scope)?;
+                    let k = format!("*dir{}", it.dir_handles.len());
+                    lv.set(Value::str(&k))?;
+                    k
+                }
+            };
+            it.dir_handles.insert(key, (entries, 0));
+            one(Value::from(true))
+        }
+        "readdir" => {
+            let key = match args.first() {
+                Some(Expr::Const(c)) => c.to_text(),
+                Some(e) => it.scalar(e, scope)?.to_text(),
+                None => return die("Not enough arguments for readdir"),
+            };
+            let Some((entries, pos)) = it.dir_handles.get_mut(&key) else { return one(Value::Undef) };
+            if want == Want::List {
+                let rest = entries[*pos..].to_vec();
+                *pos = entries.len();
+                Ok(rest)
+            } else {
+                let v = entries.get(*pos).cloned().unwrap_or_default();
+                *pos += 1;
+                one(v)
+            }
+        }
+        "closedir" => {
+            let key = match args.first() {
+                Some(Expr::Const(c)) => c.to_text(),
+                Some(e) => it.scalar(e, scope)?.to_text(),
+                None => String::new(),
+            };
+            one(Value::from(it.dir_handles.remove(&key).is_some()))
+        }
+        "system" => {
+            let a = values(it, args, scope)?;
+            let status = if a.len() == 1 {
+                std::process::Command::new("sh").arg("-c").arg(arg_text(&a, 0)).status()
+            } else {
+                std::process::Command::new(arg_text(&a, 0)).args(a[1..].iter().map(|v| v.to_text())).status()
+            };
+            let code = status.map(|s| s.code().unwrap_or(-1) << 8).unwrap_or(-1);
+            it.set_scalar("main::?", Value::Int(code as i64));
+            one(Value::Int(code as i64))
+        }
+        "utime" => {
+            let a = values(it, args, scope)?;
+            let (at, mt) = (a.first().map(|v| v.to_f64()), a.get(1).map(|v| v.to_f64()));
+            let mut n = 0;
+            for f in a.iter().skip(2) {
+                if crate::interp::time::set_file_times(&f.to_text(), at, mt) {
+                    n += 1;
+                }
+            }
+            one(Value::Int(n))
+        }
+        "chmod" => {
+            let a = values(it, args, scope)?;
+            let mut n = 0;
+            #[cfg(unix)]
+            for f in a.iter().skip(1) {
+                use std::os::unix::fs::PermissionsExt;
+                if std::fs::set_permissions(f.to_text(), std::fs::Permissions::from_mode(a[0].to_i64() as u32)).is_ok() {
+                    n += 1;
+                }
+            }
+            one(Value::Int(n))
+        }
+        "do" | "exec" | "readline" => {
             die(format!("{name} is not available in this context"))
         }
         _ => unreachable!(),
     }
+}
+
+fn arg_text(a: &[Value], i: usize) -> String {
+    a.get(i).map(|v| v.to_text()).unwrap_or_default()
 }
 
 fn flatten_lv(v: Vec<Lv>) -> Vec<Lv> {
