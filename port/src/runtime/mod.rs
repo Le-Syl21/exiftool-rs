@@ -60,6 +60,17 @@ pub fn lex_scalar(it: &mut Interp, module: &str, name: &str) -> crate::interp::e
     }
 }
 
+/// A scope holding a module's file lexicals (`my` variables at file level),
+/// for eval sites: table strings see them as perl's eval does.
+pub fn file_scope(it: &Interp, module: &str) -> std::rc::Rc<crate::interp::Scope> {
+    let scope = crate::interp::Scope::new(None);
+    let prefix = format!("{module}::<my>::");
+    for (sigil, name, b) in it.globals_with_prefix(&prefix) {
+        scope.declare(sigil, &name[prefix.len()..], b);
+    }
+    scope
+}
+
 /// A new interpreter with the runtime installed.
 pub fn new_interp() -> Interp {
     let mut it = Interp::new();

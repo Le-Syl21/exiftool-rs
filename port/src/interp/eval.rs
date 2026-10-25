@@ -480,6 +480,11 @@ impl Interp {
         b
     }
 
+    /// Package variables whose qualified name starts with `prefix`.
+    pub fn globals_with_prefix(&self, prefix: &str) -> Vec<(u8, String, Binding)> {
+        self.globals.iter().filter(|((_, n), _)| n.starts_with(prefix)).map(|((s, n), b)| (*s, n.to_string(), b.clone())).collect()
+    }
+
     pub fn set_global(&mut self, sigil: u8, name: &str, b: Binding) {
         let key = self.global_key(name);
         self.globals.insert((sigil, key), b);

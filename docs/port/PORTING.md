@@ -65,6 +65,29 @@ ExifTool's whole test suite runs unchanged on top of this (114 scripts,
 8. **English** for code, comments and commit messages. Commits end with the
    two trailer lines given to you.
 
+## Helpers that already exist
+
+Use these instead of writing your own (the pilot ports each wrote some of
+them; they are now shared):
+
+| Perl | Rust |
+|---|---|
+| `$raf->Read($buff, $len)` and any call that writes its arguments | `pl::method_mut(it, &raf, "Read", &mut [buff, len], want)` / `pl::call_mut` |
+| `ref $obj` (blessed class) | `pl::ref_of` |
+| `substr`, `%`, `join`, `lc`, `uc`, `ucfirst`, `tr///`, `pack`, `unpack` | `pl::substr`, `pl::modulo`, `pl::join`, `pl::lc`..., `pl::tr`, `pl::pack`, `pl::unpack` / `unpack1` |
+| `%Pkg::x`, `@Pkg::x` | `pl::pkg_hash`, `pl::pkg_array` |
+| `\$v`, `\$$h{k}`, `$$ref = v`, `&$code(...)` | `pl::sref`, `pl::elem_ref`, `pl::set_deref`, `pl::call_code` |
+| `local $_`, `local $X`, `local $SIG{__WARN__}` | `pl::local_topic`, `pl::local_global`, `pl::local_sig_warn` |
+| `eval { ... }` | `pl::eval_block` (sets `$@`) |
+| `eval $string` at an eval site | `pl::eval_site_in(it, code, pkg, Some(runtime::file_scope(it, MODULE)), &[("val", v), ("self", et), ("@val", arr)], want)` |
+| `print $fh LIST` | `pl::print_to` |
+| `Get16u`, `Get32u`, `ReadValue`, `SetByteOrder`... | already ported: call `crate::modules::exiftool::part2::get16u(...)` etc. directly |
+
+## Before you start
+
+Your worktree may have been created from `main`, which has no `port/`:
+if so, run `git reset --hard perl-port` first (the worktree is clean).
+
 ## Checking a port
 
 All commands take the ExifTool checkout explicitly; use
