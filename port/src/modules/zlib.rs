@@ -155,13 +155,19 @@ pub fn register(it: &mut Interp) {
         let obj = new_object("Compress::Zlib::deflateStream", Stream::Deflate(Compress::new(Compression::new(6), !raw_window(&a))));
         Ok(if want == Want::List { vec![obj, Value::Int(Z_OK)] } else { vec![obj] })
     });
-    it.define_native("Compress::Zlib::inflateStream::inflate", |_, a, want| {
+    it.define_native("Compress::Zlib::inflateStream::inflate", |it, a, want| {
         let input = arg(&a, 1).to_bytes();
-        let (out, st) = with_stream(&arg(&a, 0), |s| match s {
-            Stream::Inflate(d) => inflate_all(d, &input),
-            Stream::Deflate(_) => (Vec::new(), Z_DATA_ERROR),
+        let (out, st, used) = with_stream(&arg(&a, 0), |s| match s {
+            Stream::Inflate(d) => {
+                let before = d.total_in();
+                let (o, st) = inflate_all(d, &input);
+                (o, st, (d.total_in() - before) as usize)
+            }
+            Stream::Deflate(_) => (Vec::new(), Z_DATA_ERROR, 0),
         })
-        .unwrap_or((Vec::new(), Z_DATA_ERROR));
+        .unwrap_or((Vec::new(), Z_DATA_ERROR, 0));
+        // Like Compress::Zlib, the input argument keeps what was not consumed.
+        it.set_arg(1, Value::bytes(&input[used.min(input.len())..]))?;
         let v = if st == Z_DATA_ERROR { Value::Undef } else { Value::bytes(out) };
         Ok(if want == Want::List { vec![v, Value::Int(st)] } else { vec![v] })
     });
