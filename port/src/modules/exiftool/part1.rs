@@ -1844,6 +1844,311 @@ fn filter_ref(it: &mut Interp, self_: &Value, value: Value) -> ER<Value> {
     Ok(v)
 }
 
+/// `"$name ($i)"`
+fn copy_key(name: &Value, i: &Value) -> Value {
+    pl::concat(name, &pl::concat(&pl::s(" ("), &pl::concat(i, &pl::s(")"))))
+}
+
+/// `$h{$k} || $default`
+fn or_default(v: Value, d: Value) -> Value {
+    if v.truthy() {
+        v
+    } else {
+        d
+    }
+}
+
+/// Build Composite tags from Require'd/Desire'd tags
+/// Inputs: 0) ExifTool object reference, 1) flag to build only tags that require
+///         tags from alternate files (without this, these tags are ignored)
+/// Note: Tag values are calculated in alphabetical order unless a tag Require's
+///       or Desire's another Composite tag, in which case the calculation is
+///       deferred until after the other tag is calculated.
+pub fn build_composite_tags(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    local_topic(it, |it| {
+        let (self_, alt_only) = (arg(&a, 0), arg(&a, 1));
+
+        self_.set("BuildingComposite", n(1));
+
+        let comp_table = pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s("Image::ExifTool::Composite")])?;
+        let mut tag_list = sort_str(keys(&comp_table));
+        let raw_value = self_.get("VALUE");
+        let comp_keys = self_.get("COMP_KEYS");
+        let cache = Value::new_hash();
+        let mut all_built = false;
+        let special_tags = ghash(it, "Image::ExifTool::specialTags");
+        let composite_id = lhash(it, "compositeID");
+
+        loop {
+            let not_built = Value::new_hash();
+            let mut deferred_tags: Vec<Value> = Vec::new();
+            for t in &tag_list {
+                if !special_tags.get(t.to_bytes()).truthy() {
+                    not_built.set(comp_table.get(t.to_bytes()).get("Name").to_bytes(), n(1));
+                }
+            }
+            'composite_tag: for tag in tag_list.iter() {
+                if special_tags.get(tag.to_bytes()).truthy() {
+                    continue;
+                }
+                let tag_info = pl::method(it, &self_, "GetTagInfo", vec![comp_table.clone(), tag.clone()])?;
+                if !tag_info.truthy() {
+                    continue;
+                }
+                let tag_name = comp_table.get(tag.to_bytes()).get("Name");
+                // put required tags into array and make sure they all exist
+                let sd = tag_info.get("SubDoc");
+                let sub_doc = if sd.truthy() { self_.get("DOC_COUNT").truthy() } else { false };
+                let require = or_default(tag_info.get("Require"), Value::new_hash());
+                let desire = or_default(tag_info.get("Desire"), Value::new_hash());
+                let inhibit = or_default(tag_info.get("Inhibit"), Value::new_hash());
+                // loop through sub-documents if necessary
+                let mut doc_num = n(0);
+                loop {
+                    let tag_key = Value::new_hash();
+                    let mut found: Option<bool> = None;
+                    let mut require_alt = false;
+                    // save Require'd and Desire'd tag values in list
+                    let mut index: i64 = 0;
+                    loop {
+                        let ik = index.to_string();
+                        let mut req_tag = or_default(or_default(require.get(&ik), desire.get(&ik)), inhibit.get(&ik));
+                        if !req_tag.truthy() {
+                            // allow Composite with no Require'd or Desire'd tags
+                            if index == 0 {
+                                found = Some(true);
+                            }
+                            break;
+                        }
+                        if sub_doc {
+                            // handle SubDoc tags specially to cache tag keys for faster
+                            // processing when there are a large number of sub-documents
+                            // - get document number from the tag groups if specified,
+                            //   otherwise we are looping through all documents for this tag
+                            let mut d2 = None;
+                            let doc = if re(r"\b(Main|Doc(\d+)):", "").subst(&mut req_tag, false, |c| {
+                                d2 = Some(cap(c, 2));
+                                Vec::new()
+                            }) > 0
+                            {
+                                or_default(d2.unwrap_or_default(), n(0))
+                            } else {
+                                doc_num.clone()
+                            };
+                            // make fast lookup for keys of this tag with specified groups other than doc group
+                            // (similar to code in InsertTagValues(), but this is case-sensitive)
+                            let mut cache_tag = cache.get(req_tag.to_bytes());
+                            if !cache_tag.truthy() {
+                                cache_tag = Value::new_array(vec![]);
+                                cache.set(req_tag.to_bytes(), cache_tag.clone());
+                                let mut req_group = Value::Undef;
+                                let mut g = Value::Undef;
+                                if re(r"^(.*):", "").subst(&mut req_tag, false, |c| {
+                                    g = cap(c, 1);
+                                    Vec::new()
+                                }) > 0
+                                {
+                                    req_group = g;
+                                }
+                                let mut keys_: Vec<Value> = Vec::new();
+                                // build list of tag keys in order of precedence
+                                let mut key = req_tag.clone();
+                                let mut i = or_default(viv(&self_, "DUPL_TAG").get(req_tag.to_bytes()), n(0));
+                                loop {
+                                    if !raw_value.get(key.to_bytes()).is_undef() {
+                                        keys_.push(key.clone());
+                                    }
+                                    if pl::le(&i, &n(0)) {
+                                        break;
+                                    }
+                                    key = copy_key(&req_tag, &i);
+                                    i = pl::sub(&i, &n(1));
+                                }
+                                if !req_group.is_undef() {
+                                    keys_ = pl::method_list(it, &self_, "GroupMatches", vec![req_group, Value::new_array(keys_)])?;
+                                }
+                                // loop through tags in reverse order of precedence so the higher
+                                // priority tag will win in the case of duplicates within a doc
+                                for k in keys_.iter().rev() {
+                                    let g3 = viv(&viv(&self_, "TAG_EXTRA"), k.to_bytes()).get("G3");
+                                    let idx = or_default(g3, n(0)).to_i64();
+                                    let idx = if idx < 0 { idx + cache_tag.len() as i64 } else { idx };
+                                    if idx >= 0 {
+                                        cache_tag.set_at(idx as usize, k.clone());
+                                    }
+                                }
+                            }
+                            // (set $reqTag to a bogus key if not found)
+                            req_tag = or_default(cache_tag.at(doc.to_i64()), pl::concat(&req_tag, &pl::s(" (0)")));
+                        } else if let Some(c) = re(r"^(.*):(.+)", "").m(&req_tag) {
+                            let (req_group, name) = (cap(&c, 1), cap(&c, 2));
+                            if pl::str_eq(&req_group, "Composite") && not_built.get(name.to_bytes()).truthy() {
+                                // defer only until all other tags are built if
+                                // we are inhibiting based on another Composite tag
+                                if !(inhibit.get(&ik).truthy() && all_built) {
+                                    deferred_tags.push(tag.clone());
+                                    continue 'composite_tag;
+                                }
+                            }
+                            let mut keys_: Vec<Value> = Vec::new();
+                            let mut alt_file = Value::Undef;
+                            let mut et = self_.clone();
+                            // get tags from alternate file if a family 8 group was specified
+                            if let Some(fc) = re(r"\b(File\d+):", "i").m(&req_tag) {
+                                let f = cap(&fc, 1);
+                                let alt = viv(&self_, "ALT_EXIFTOOL").get(f.to_bytes());
+                                if alt.truthy() {
+                                    et = alt;
+                                    alt_file = f;
+                                    // set flags indicating we require tags from alternate files
+                                    require_alt = true;
+                                    self_.set("DoAltComposite", n(1));
+                                }
+                            }
+                            // (CAREFUL! keys may not be sequential if one was deleted)
+                            let mut key = name.clone();
+                            let mut i = or_default(viv(&et, "DUPL_TAG").get(name.to_bytes()), n(0));
+                            loop {
+                                if !viv(&et, "VALUE").get(key.to_bytes()).is_undef() {
+                                    keys_.push(key.clone());
+                                }
+                                if pl::le(&i, &n(0)) {
+                                    break;
+                                }
+                                key = copy_key(&name, &i);
+                                i = pl::sub(&i, &n(1));
+                            }
+                            let keys_ref = Value::new_array(keys_);
+                            // make sure the necessary information is available from the alternate file
+                            if alt_file.truthy() {
+                                method_void(it, &self_, "CopyAltInfo", vec![alt_file.clone(), keys_ref.clone()])?;
+                            }
+                            // find first matching tag
+                            key = pl::method(it, &self_, "GroupMatches", vec![req_group, keys_ref])?;
+                            req_tag = or_default(key, pl::concat(&name, &pl::s(" (0)")));
+                        } else if not_built.get(req_tag.to_bytes()).truthy() && !inhibit.get(&ik).truthy() {
+                            // calculate this tag later if it relies on another
+                            // Composite tag which hasn't been calculated yet
+                            deferred_tags.push(tag.clone());
+                            continue 'composite_tag;
+                        }
+                        if !raw_value.get(req_tag.to_bytes()).is_undef() {
+                            if inhibit.get(&ik).truthy() {
+                                found = Some(false);
+                                break;
+                            } else {
+                                found = Some(true);
+                            }
+                        } else if require.get(&ik).truthy() {
+                            found = Some(false);
+                            break; // don't continue since we require this tag
+                        }
+                        tag_key.set(&ik, req_tag);
+                        index += 1;
+                    }
+                    // stop now if this requires alternate tags and we aren't building them
+                    if require_alt != alt_only.truthy() {
+                        break;
+                    }
+                    if doc_num.truthy() {
+                        if found == Some(true) {
+                            self_.set("DOC_NUM", doc_num.clone());
+                            // save pointers to all used tag keys
+                            save_comp_keys(&comp_keys, &tag_key);
+                            method_void(it, &self_, "FoundTag", vec![tag_info.clone(), tag_key.clone()])?;
+                            self_.delete("DOC_NUM");
+                        }
+                        doc_num = pl::add(&doc_num, &n(1));
+                        if pl::le(&doc_num, &self_.get("DOC_COUNT")) {
+                            continue;
+                        }
+                        break;
+                    } else if found == Some(true) {
+                        not_built.delete(tag_name.to_bytes()); // this tag is OK to build now
+                        // keep track of all Require'd tag keys
+                        for k in keys(&tag_key) {
+                            // only tag keys with same name as a Composite tag
+                            // can be replaced (also eliminates keys with
+                            // instance numbers which can't be replaced either)
+                            if !composite_id.get(tag_key.get(k.to_bytes()).to_bytes()).truthy() {
+                                continue;
+                            }
+                        }
+                        // save pointers to all used tag keys
+                        save_comp_keys(&comp_keys, &tag_key);
+                        // save reference to tag key lookup as value for Composite tag
+                        pl::method(it, &self_, "FoundTag", vec![tag_info.clone(), tag_key.clone()])?;
+                    } else if found.is_none() {
+                        not_built.delete(tag_name.to_bytes()); // tag can't be built anyway
+                    }
+                    if !sub_doc {
+                        break;
+                    }
+                    // don't process sub-documents if there is no chance to build this tag
+                    // (can be very time-consuming if there are many docs)
+                    if !require.is_empty() {
+                        for k in keys(&require) {
+                            let mut req_tag = require.get(k.to_bytes());
+                            re(r".*:", "").subst(&mut req_tag, false, |_| Vec::new());
+                            if raw_value.get(req_tag.to_bytes()).is_undef() {
+                                continue 'composite_tag;
+                            }
+                        }
+                        doc_num = n(1); // go ahead and process the 1st sub-document
+                    } else {
+                        let sd = tag_info.get("SubDoc");
+                        let try_ = if sd.is_ref() { sd.items() } else { keys(&desire) };
+                        // at least one of the specified desire tags must exist
+                        for t in try_ {
+                            let mut des_tag = desire.get(t.to_bytes());
+                            if !des_tag.truthy() {
+                                continue;
+                            }
+                            re(r".*:", "").subst(&mut des_tag, false, |_| Vec::new());
+                            if !raw_value.get(des_tag.to_bytes()).is_undef() {
+                                doc_num = n(1);
+                                break;
+                            }
+                        }
+                        if !doc_num.truthy() {
+                            break;
+                        }
+                    }
+                }
+            }
+            if deferred_tags.is_empty() {
+                break;
+            }
+            if deferred_tags.len() == tag_list.len() {
+                if all_built {
+                    // everything was deferred in the last pass,
+                    // must be a circular dependency
+                    pl::warn(it, "Circular dependency in Composite tags\n")?;
+                    break;
+                }
+                all_built = true; // try once more, ignoring Composite Inhibit tags
+            }
+            tag_list = deferred_tags; // calculate deferred tags now
+        }
+        Ok(vec![self_.delete("BuildingComposite")])
+    })
+}
+
+/// The two loops of BuildCompositeTags that save pointers to the used tag
+/// keys:
+///     foreach (keys %tagKey) {
+///         $$compKeys{$_} or $$compKeys{$_} = [ ];
+///         push @{$$compKeys{$tagKey{$_}}}, [ \%tagKey, $_ ];
+///     }
+fn save_comp_keys(comp_keys: &Value, tag_key: &Value) {
+    for k in keys(tag_key) {
+        if !comp_keys.get(k.to_bytes()).truthy() {
+            comp_keys.set(k.to_bytes(), Value::new_array(vec![]));
+        }
+        comp_keys.get_or_new_array(tag_key.get(k.to_bytes()).to_bytes()).push(Value::new_array(vec![tag_key.clone(), k]));
+    }
+}
+
 /// Register the subs ported so far; the others still run from the Perl.
 pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::DummyWriteProc", dummy_write_proc);
@@ -1872,4 +2177,5 @@ pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::GetGroup", get_group);
     it.define_native("Image::ExifTool::Init", init);
     it.define_native("Image::ExifTool::GetValue", get_value);
+    it.define_native("Image::ExifTool::BuildCompositeTags", build_composite_tags);
 }
