@@ -195,13 +195,17 @@ pub fn register(it: &mut Interp) {
     // Time::Local: timelocal/timegm with perl's year rules (two-digit years
     // in a rolling century, 4-digit as is, years >= 1000 taken literally).
     it.define_native("Time::Local::timegm", |_, a, _| timegm_native(&a, false));
-    it.define_native("Time::Local::timelocal", |_, a, _| timegm_native(&a, true));
+    it.define_native("Time::Local::timelocal", |it, a, _| {
+        crate::interp::time::sync_tz(it);
+        timegm_native(&a, true)
+    });
     it.define_native("Time::Local::timegm_nocheck", |_, a, _| timegm_native(&a, false));
     it.define_native("Time::Local::timelocal_nocheck", |_, a, _| timegm_native(&a, true));
     it.define_native("POSIX::floor", |_, a, _| ret(Value::Num(arg(&a, 0).to_f64().floor())));
     it.define_native("POSIX::ceil", |_, a, _| ret(Value::Num(arg(&a, 0).to_f64().ceil())));
     it.define_native("POSIX::fmod", |_, a, _| ret(Value::Num(arg(&a, 0).to_f64() % arg(&a, 1).to_f64())));
-    it.define_native("POSIX::tzset", |_, _, _| {
+    it.define_native("POSIX::tzset", |it, _, _| {
+        crate::interp::time::sync_tz(it);
         #[cfg(unix)]
         unsafe {
             extern "C" {
@@ -217,7 +221,10 @@ pub fn register(it: &mut Interp) {
         let tm: Vec<i64> = a.iter().skip(1).map(|v| v.to_i64()).collect();
         ret(Value::str(&crate::interp::time::strftime(&fmt, &tm)))
     });
-    it.define_native("POSIX::mktime", |_, a, _| timegm_native(&a, true));
+    it.define_native("POSIX::mktime", |it, a, _| {
+        crate::interp::time::sync_tz(it);
+        timegm_native(&a, true)
+    });
     it.define_native("Scalar::Util::blessed", |_, a, _| {
         ret(match arg(&a, 0) {
             Value::HashRef(h) => match &h.borrow().blessed {

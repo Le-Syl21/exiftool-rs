@@ -401,6 +401,19 @@ impl Interp {
         i.set_scalar("main::,", Value::Undef);
         i.set_scalar("main::;", Value::str("\x1c"));
         i.set_scalar("main::]", Value::Num(5.036));
+        // $^O as perl names the system.
+        let os = match std::env::consts::OS {
+            "windows" => "MSWin32",
+            "macos" => "darwin",
+            o => o,
+        };
+        i.set_scalar("main::^O", Value::str(os));
+        // %ENV from the process environment.
+        if let Binding::Hash(h) = i.global(b'%', "main::ENV") {
+            for (k, v) in std::env::vars_os() {
+                h.borrow_mut().insert(k.to_string_lossy().as_bytes(), Value::str(&v.to_string_lossy()));
+            }
+        }
         i.set_scalar("main::0", Value::str("exiftool"));
         i.set_scalar("main::@", Value::str(""));
         i
@@ -1456,7 +1469,12 @@ impl Interp {
             Expr::Eval(b) => Ok(self.eval_block(b, scope, Want::Scalar)?.pop().unwrap_or_default()),
             Expr::EvalStr(code) => Ok(self.eval_str_expr(code, scope, Want::Scalar)?.pop().unwrap_or_default()),
             Expr::Map(..) | Expr::Grep(..) => Ok(Value::Int(self.list(e, scope)?.len() as i64)),
-            Expr::Sort(..) => Ok(self.list(e, scope)?.pop().unwrap_or_default()),
+            // sort in scalar context: perl returns undef (the list is
+            // still sorted, for any side effects of the comparison).
+            Expr::Sort(..) => {
+                self.list(e, scope)?;
+                Ok(Value::Undef)
+            }
             Expr::FileTest(op, f) => {
                 let m = match io::file_target(self, f, scope)? {
                     io::Target::Last => {

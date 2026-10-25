@@ -2,6 +2,29 @@
 
 /// perl's 9-element broken-down time: sec, min, hour, mday, mon, year-1900,
 /// wday, yday, isdst.
+/// perl's localtime sees %ENV{TZ} changes: copy it to the process
+/// environment and re-read the zone before converting.
+pub fn sync_tz(it: &mut crate::interp::Interp) {
+    if let crate::interp::Binding::Hash(h) = it.global(b'%', "main::ENV") {
+        let tz = h.borrow().get(b"TZ").map(|v| v.to_text());
+        let cur = std::env::var("TZ").ok();
+        if tz != cur {
+            match &tz {
+                // SAFETY: the interpreter is single-threaded.
+                Some(z) => unsafe { std::env::set_var("TZ", z) },
+                None => unsafe { std::env::remove_var("TZ") },
+            }
+            #[cfg(unix)]
+            unsafe {
+                extern "C" {
+                    fn tzset();
+                }
+                tzset();
+            }
+        }
+    }
+}
+
 pub fn broken_down(t: i64, local: bool) -> [i64; 9] {
     if local {
         if let Some(tm) = local_tm(t) {

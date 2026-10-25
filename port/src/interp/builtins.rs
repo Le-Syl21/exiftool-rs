@@ -160,6 +160,9 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 Some(a) => it.scalar(a, scope)?.to_f64(),
                 None => std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0),
             };
+            if name == "localtime" {
+                crate::interp::time::sync_tz(it);
+            }
             let tm = crate::interp::time::broken_down(t.floor() as i64, name == "localtime");
             if want == Want::List {
                 Ok(tm.iter().map(|&x| Value::Int(x)).collect())
