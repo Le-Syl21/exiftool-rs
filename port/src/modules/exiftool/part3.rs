@@ -1860,6 +1860,11 @@ fn s(c: &Rc<RefCell<Value>>, v: Value) {
     *c.borrow_mut() = v;
 }
 
+/// `s` under another name, for subs with a lexical `$s`.
+fn s_(c: &Rc<RefCell<Value>>, v: Value) {
+    s(c, v);
+}
+
 /// An eval scope binding these lexical cells (in declaration order).
 fn scope_of(it: &mut Interp, scalars: &[(&str, &Rc<RefCell<Value>>)]) -> Rc<Scope> {
     let scope = eval_scope(it);
@@ -2961,6 +2966,1654 @@ pub fn do_process_tiff(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     ret(if err.truthy() { n(-1) } else { n(1) })
 }
 
+/// `$raf->ReadLine($buff)` (see `raf_read`).
+fn raf_readline(it: &mut Interp, raf: &Value, initial: Value) -> ER<(Value, Value)> {
+    let scope = Scope::new(None);
+    scope.scalar("raf", raf.clone());
+    let buff = scope.scalar("buff", initial);
+    let r = scalar_of(snippet(it, "$raf->ReadLine($buff)", &scope, Want::Scalar)?);
+    let b = buff.borrow().clone();
+    Ok((r, b))
+}
+
+/// `$subject =~ /PAT/g` in scalar context from the start of the string:
+/// the end of the match (what `pos()` is then) and the captures.
+fn match_g(pat: &[u8], flags: &str, subject: &Value) -> ER<Option<(usize, pl::Caps)>> {
+    let r = match crate::perl::regex::compile(pat, flags) {
+        Ok(r) => r,
+        Err(e) => return crate::interp::eval::die(e),
+    };
+    let b = subject.to_bytes();
+    match r.match_at(&b, 0) {
+        Ok(Some(sp)) => {
+            let end = sp[0].map(|(_, e)| e).unwrap_or(0);
+            let caps = sp.iter().map(|g| g.map(|(x, y)| Value::bytes(&b[x..y]))).collect();
+            Ok(Some((end, caps)))
+        }
+        _ => Ok(None),
+    }
+}
+
+/// A pattern made of a package variable's value (interpolated, so its
+/// characters are regex syntax, as in perl) and literal pattern text.
+fn re_var(it: &mut Interp, pre: &str, var: &str, post: &str) -> ER<pl::Re> {
+    let v = it.get_scalar(&format!("{ET}::{var}"));
+    let mut p = pre.as_bytes().to_vec();
+    p.extend_from_slice(&v.to_bytes());
+    p.extend_from_slice(post.as_bytes());
+    pl::re_dyn(&p, "")
+}
+
+/// Extract information from a JPEG image
+/// Inputs: 0) ExifTool object reference, 1) dirInfo ref with RAF set
+///         2) tag table ref to process JPEG-like metadata
+/// Returns: 1 on success, 0 if this wasn't a valid JPEG file
+pub fn process_jpeg(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    // local $_;
+    let topic = local_topic(it);
+    // (and the `local $/` below, restored here on every exit)
+    let saved_rs = it.get_scalar("main::/");
+    let r = process_jpeg_impl(it, a);
+    it.set_scalar("main::/", saved_rs);
+    restore_topic(it, topic);
+    ret(r?)
+}
+
+// (some assignments are never read, as in the Perl, which is kept as it is)
+#[allow(unused_assignments)]
+fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
+    use crate::perl::ops;
+    let (self_, dir_info, mut optional_tag_table) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
+    let options = self_.get("OPTIONS");
+    let verbose = options.get("Verbose");
+    let out = options.get("TextOut");
+    let fast = or(options.get("FastScan"), n(0));
+    let mut raf = dir_info.get("RAF");
+    let req = self_.get("REQ_TAG_LOOKUP");
+    let html_dump = self_.get("HTML_DUMP");
+    let mut dump_parms = Hash::default();
+    dump_parms.insert(b"Out", out.clone());
+    dump_parms.insert(b"Prefix", self_.get("INDENT"));
+    let (mut s, mut length, mut hash, mut hashsize) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef);
+    let (mut success, mut want_trailer, mut trail_info, mut found_sos, mut got_size) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef, Value::Undef);
+    let jumbf_chunk = Value::new_hash();
+    let (mut icc_chunk, mut icc_chunk_count, mut icc_chunks_total): (Vec<Value>, Value, Value) = (Vec::new(), Value::Undef, Value::Undef);
+    let (mut flir_chunk, mut flir_count, mut flir_total): (Vec<Value>, Value, Value) = (Vec::new(), Value::Undef, Value::Undef);
+    let mut preview = Value::Undef;
+    let scalado = cell(Value::Undef);
+    let dqt = Value::new_array(vec![]);
+    let (mut sub_sampling, mut dump_end) = (Value::Undef, Value::Undef);
+    let extended_xmp = Value::new_hash();
+    let mk = |m: &Value, x: i64| pl::num_eq(m, &n(x));
+    let method = |it: &mut Interp, name: &str, args: Vec<Value>| pl::method(it, &self_, name, args);
+    let table = |it: &mut Interp, name: &str| pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s(name)]);
+    let set_bo = |it: &mut Interp, bo: Value| pl::call(it, "Image::ExifTool::SetByteOrder", vec![bo]);
+
+    let mut indent = self_.get("INDENT");
+    re("  $", "").subst(&mut indent, false, |_| Vec::new());
+    if !raf.truthy() {
+        let class = pl::s("File::RandomAccess");
+        raf = scalar_of(it.call_method(&class, "new", vec![class.clone(), dir_info.get("DataPt")], Want::Scalar)?);
+        verbose_dir(it, vec![self_.clone(), pl::s("JPEG"), Value::Undef, len_of(&dir_info.get("DataPt").deref())], Want::Void)?;
+    }
+    // get pointer to hash object if it exists and we are the top-level JPEG or JP2
+    if re("^(JPEG|JP2)$", "").is_match(&self_.get("FILE_TYPE")) && !self_.get("DOC_NUM").truthy() {
+        hash = self_.get("ImageDataHash");
+        hashsize = n(0);
+    }
+    // check to be sure this is a valid JPG (or J2C, or EXV) file
+    let (r, b) = raf_read(it, &raf, s.clone(), &n(2))?;
+    s = b;
+    if pl::num_eq(&r, &n(2)) && re("^\\xff[\\xd8\\x4f\\x01]", "").is_match(&s) {
+        optional_tag_table = Value::Undef;
+    } else {
+        if !(optional_tag_table.truthy() && re("^\\xff[\\xe0-\\xef]", "").is_match(&s)) {
+            return Ok(n(0));
+        }
+        if !pl::method(it, &raf, "Seek", vec![n(-2), n(1)])?.truthy() {
+            method(it, "Error", vec![pl::s("Seek error")])?;
+            return Ok(n(1));
+        }
+    }
+    if &s.to_bytes()[..] == b"\xff\x01" {
+        let (r, b) = raf_read(it, &raf, s.clone(), &n(5))?;
+        s = b;
+        if !(pl::num_eq(&r, &n(5)) && pl::str_eq(&s, "Exiv2")) {
+            return Ok(n(0));
+        }
+        self_.set("FILE_TYPE", pl::s("EXV"));
+    }
+    let mut app_bytes = n(0);
+    let mut calc_image_len = req.get("jpegimagelength");
+    if options.get("RequestAll").truthy() && pl::gt(&options.get("RequestAll"), &n(2)) {
+        calc_image_len = n(1);
+    }
+    if !vget(&self_, &[b"VALUE", b"FileType"]).truthy() || (self_.get("DOC_NUM").truthy() && options.get("ExtractEmbedded").truthy()) {
+        method(it, "SetFileType", vec![])?; // set FileType tag
+        if pl::gt(&fast, &n(2)) {
+            return Ok(n(1)); // don't process file when FastScan > 2
+        }
+        self_.get_or_new_hash("LOW_PRIORITY_DIR").set("IFD1", n(1)); // lower priority of IFD1 tags
+    }
+    if method(it, "Options", vec![pl::s("FastScan")])?.truthy() {
+        raf.set("NoBuffer", n(1)); // disable buffering in FastScan mode
+    }
+
+    if pl::lt(&verbose, &n(4)) {
+        dump_parms.insert(b"MaxLen", n(128));
+    }
+    if html_dump.truthy() && !optional_tag_table.truthy() {
+        dump_end = pl::method(it, &raf, "Tell", vec![])?;
+        let (nn, t, m) = if pl::str_eq(&s, "Exiv2") { (7, "EXV", "TEM") } else { (2, "JPEG", "SOI") };
+        let pos = pl::sub(&dump_end, &n(nn));
+        if pos.truthy() {
+            method(it, "HDump", vec![n(0), pos.clone(), pl::s("[unknown header]")])?;
+        }
+        method(it, "HDump", vec![pos, n(nn), pl::s(&format!("{t} header")), pl::s(&format!("{m} Marker"))])?;
+    }
+    let path = self_.get("PATH");
+    let pn = path.len();
+
+    // set input record separator to 0xff (the JPEG marker) to make reading quicker
+    it.set_scalar("main::/", Value::bytes(b"\xff"));
+
+    let (mut next_marker, mut next_seg_data_pt, mut next_seg_pos, mut first_seg_pos) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef);
+    let combined_seg_data = cell(Value::Undef);
+    let skip_data = Value::new_array(vec![]);
+    let print = |it: &mut Interp, parts: &[&Value]| print_to(it, &out, vec![cat(parts)]);
+    let hex_dump = |it: &mut Interp, data_pt: &Value, dp: &Hash, extra: &[(&str, Value)]| -> ER<()> {
+        let mut args = vec![data_pt.clone(), Value::Undef];
+        for (k, v) in dp.iter() {
+            args.push(Value::Str(k.clone()));
+            args.push(v.clone());
+        }
+        for (k, v) in extra {
+            args.push(pl::s(k));
+            args.push(v.clone());
+        }
+        pl::call(it, "Image::ExifTool::HexDump", args)?;
+        Ok(())
+    };
+    let marker_len_bytes = lex_hash(it, "markerLenBytes");
+
+    // read file until we reach an end of image (EOI) or start of scan (SOS)
+    'marker: loop {
+        // set marker and data pointer for current segment
+        let marker = next_marker.clone();
+        if marker.truthy() && pl::lt(&marker, &n(0)) {
+            break;
+        }
+        let seg_data_pt = next_seg_data_pt.clone();
+        let mut seg_pos = next_seg_pos.clone();
+        let mut skipped = Value::Undef;
+        next_marker = Value::Undef;
+        next_seg_data_pt = Value::Undef;
+//
+// read ahead to the next segment unless we have reached EOI, SOS or SOD
+//
+        loop {
+            if marker.truthy() && (mk(&marker, 0xd9) || (mk(&marker, 0xda) && !want_trailer.truthy() && !hash.truthy()) || mk(&marker, 0x93)) {
+                break;
+            }
+            // read up to next marker (JPEG markers begin with 0xff)
+            let buff = cell(Value::Undef);
+            let (r, b) = raf_readline(it, &raf, g(&buff))?;
+            s_(&buff, b);
+            if !r.truthy() {
+                if !optional_tag_table.truthy() {
+                    break 'marker;
+                }
+                next_marker = n(-1);
+                success = n(1);
+                break;
+            }
+            skipped = pl::sub(&len_of(&g(&buff)), &n(1));
+            // JPEG markers can be padded with unlimited 0xff's
+            loop {
+                let (r, ch) = raf_read(it, &raf, Value::Undef, &n(1))?;
+                if !r.truthy() {
+                    break 'marker;
+                }
+                next_marker = n(ch.to_bytes().first().copied().unwrap_or(0) as i64);
+                if !mk(&next_marker, 0xff) {
+                    break;
+                }
+                skipped = pl::add(&skipped, &n(1));
+            }
+            // read segment data if it exists
+            let mlb = marker_len_bytes.get(next_marker.to_bytes());
+            if mlb.is_undef() {
+                // read record length word
+                let (r, b) = raf_read(it, &raf, s.clone(), &n(2))?;
+                s = b;
+                if !pl::num_eq(&r, &n(2)) {
+                    break 'marker;
+                }
+                let up = crate::perl::pack::unpack(b"n", &s.to_bytes()).unwrap_or_default();
+                let mut len = arg(&up, 0); // get data length
+                if !(!len.is_undef() && pl::ge(&len, &n(2))) {
+                    break 'marker;
+                }
+                next_seg_pos = pl::method(it, &raf, "Tell", vec![])?;
+                len = pl::sub(&len, &n(2)); // subtract size of length word
+                let (r, b) = raf_read(it, &raf, g(&buff), &len)?;
+                s_(&buff, b);
+                if !pl::num_eq(&r, &len) {
+                    break 'marker;
+                }
+                next_seg_data_pt = Value::ScalarRef(buff.clone()); // set pointer to our next data
+            } else if pl::num_eq(&mlb, &n(4)) {
+                // handle J2C extensions with 4-byte length word
+                let (r, b) = raf_read(it, &raf, s.clone(), &n(4))?;
+                s = b;
+                if !pl::num_eq(&r, &n(4)) {
+                    break 'marker;
+                }
+                let up = crate::perl::pack::unpack(b"N", &s.to_bytes()).unwrap_or_default();
+                let mut len = arg(&up, 0); // get data length
+                if !(!len.is_undef() && pl::ge(&len, &n(4))) {
+                    break 'marker;
+                }
+                next_seg_pos = pl::method(it, &raf, "Tell", vec![])?;
+                len = pl::sub(&len, &n(4)); // subtract size of length word
+                if !pl::method(it, &raf, "Seek", vec![len, n(1)])?.truthy() {
+                    break 'marker;
+                }
+            } else if hash.truthy() && !marker.is_undef() && (mk(&marker, 0x00) || mk(&marker, 0xda) || (pl::ge(&marker, &n(0xd0)) && pl::le(&marker, &n(0xd7)))) {
+                // calculate hash for image data (includes leading ff d9 but not trailing ff da)
+                let mut m = b"\xff".to_vec();
+                m.push(marker.to_i64() as u8);
+                pl::method(it, &hash, "add", vec![Value::bytes(m)])?;
+                let nn = pl::sub(&skipped, &pl::sub(&len_of(&g(&buff)), &n(1))); // number of extra 0xff's
+                if !nn.truthy() {
+                    let b = substr(it, &g(&buff), &n(0), Some(&n(-1)))?; // remove trailing 0xff
+                    s_(&buff, b);
+                } else if pl::gt(&nn, &n(1)) {
+                    let extra = vec![0xffu8; pl::sub(&nn, &n(1)).to_i64().max(0) as usize];
+                    s_(&buff, pl::concat(&g(&buff), &Value::bytes(extra))); // add back extra 0xff's
+                }
+                pl::method(it, &hash, "add", vec![g(&buff)])?;
+                hashsize = pl::add(&hashsize, &pl::add(&skipped, &n(2)));
+            }
+            // read second segment too if this was the first
+            if marker.is_undef() {
+                continue 'marker;
+            }
+            break;
+        }
+        // set some useful variables for the current segment
+        let marker_name = pl::call(it, "Image::ExifTool::JpegMarkerName", vec![marker.clone()])?;
+        path.set_at(pn, marker_name.clone());
+        // issue warning if we skipped some garbage
+        if skipped.truthy() && !found_sos.truthy() && !pl::str_eq(&marker_name, "SOS") {
+            method(it, "Warn", vec![cat(&[&pl::s("Skipped unknown "), &skipped, &pl::s(" bytes after JPEG "), &marker_name, &pl::s(" segment")]), n(1)])?;
+            if html_dump.truthy() {
+                method(it, "HDump", vec![pl::sub(&pl::sub(&next_seg_pos, &n(4)), &skipped), skipped.clone(), cat(&[&pl::s("[unknown "), &skipped, &pl::s(" bytes]")]), Value::Undef, n(0x08)])?;
+                dump_end = pl::sub(&next_seg_pos, &n(4));
+            }
+        }
+//
+// parse the current segment
+//
+        let m_and = |mask: i64| ops::bit_and(&marker, &n(mask));
+        // handle SOF markers: SOF0-SOF15, except DHT(0xc4), JPGA(0xc8) and DAC(0xcc)
+        if pl::num_eq(&m_and(0xf0), &n(0xc0)) && (mk(&marker, 0xc0) || m_and(0x03).truthy()) {
+            length = len_of(&seg_data_pt.deref());
+            if verbose.truthy() {
+                print(it, &[&indent, &pl::s("JPEG "), &marker_name, &pl::s(" ("), &length, &pl::s(" bytes):\n")])?;
+                if pl::gt(&verbose, &n(2)) {
+                    hex_dump(it, &seg_data_pt, &dump_parms, &[("Addr", seg_pos.clone())])?;
+                }
+            } else if html_dump.truthy() {
+                method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), pl::add(&length, &n(4)), cat(&[&pl::s("[JPEG "), &marker_name, &pl::s("]")]), Value::Undef, n(0x08)])?;
+                dump_end = pl::add(&seg_pos, &length);
+            }
+            if pl::lt(&length, &n(6)) || got_size.truthy() {
+                continue;
+            }
+            got_size = n(1); // (ignore subsequent SOF segments in probably corrupted JPEG)
+            // extract some useful information
+            let up = crate::perl::pack::unpack(b"Cn2C", &seg_data_pt.deref().to_bytes()).unwrap_or_default();
+            let (p, h, w, nc) = (arg(&up, 0), arg(&up, 1), arg(&up, 2), arg(&up, 3));
+            let sof = table(it, "Image::ExifTool::JPEG::SOF")?;
+            method(it, "HandleTag", vec![sof.clone(), pl::s("ImageWidth"), w])?;
+            method(it, "HandleTag", vec![sof.clone(), pl::s("ImageHeight"), h])?;
+            method(it, "HandleTag", vec![sof.clone(), pl::s("EncodingProcess"), pl::sub(&marker, &n(0xc0))])?;
+            method(it, "HandleTag", vec![sof.clone(), pl::s("BitsPerSample"), p])?;
+            method(it, "HandleTag", vec![sof.clone(), pl::s("ColorComponents"), nc.clone()])?;
+            if !(pl::num_eq(&nc, &n(3)) && pl::ge(&length, &n(15))) {
+                continue;
+            }
+            let (mut hmin, mut hmax, mut vmin, mut vmax) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef);
+            // loop through all components to determine sampling frequency
+            sub_sampling = pl::s("");
+            let mut i = 0i64;
+            while pl::lt(&n(i), &nc) {
+                let sf = pl::call(it, "Image::ExifTool::Get8u", vec![seg_data_pt.clone(), n(7 + 3 * i)])?;
+                sub_sampling = pl::concat(&sub_sampling, &pl::sprintf("%.2x", &[sf.clone()]));
+                // isolate horizontal and vertical components
+                let (hf, vf) = (ops::shift_right(&sf, &n(4)), ops::bit_and(&sf, &n(0x0f)));
+                if i == 0 {
+                    hmin = hf.clone();
+                    hmax = hf;
+                    vmin = vf.clone();
+                    vmax = vf;
+                    i += 1;
+                    continue;
+                }
+                // determine min/max frequencies
+                if pl::lt(&hf, &hmin) {
+                    hmin = hf.clone();
+                }
+                if pl::gt(&hf, &hmax) {
+                    hmax = hf;
+                }
+                if pl::lt(&vf, &vmin) {
+                    vmin = vf.clone();
+                }
+                if pl::gt(&vf, &vmax) {
+                    vmax = vf;
+                }
+                i += 1;
+            }
+            if hmin.truthy() && vmin.truthy() {
+                let (hs, vs) = (pl::div(&hmax, &hmin)?, pl::div(&vmax, &vmin)?);
+                method(it, "HandleTag", vec![sof, pl::s("YCbCrSubSampling"), cat(&[&hs, &pl::s(" "), &vs])])?;
+            }
+            continue;
+        } else if mk(&marker, 0xd9) {
+            // EOI
+            if let Value::ArrayRef(p) = &path {
+                p.borrow_mut().pop();
+            }
+            if verbose.truthy() {
+                print(it, &[&indent, &pl::s("JPEG EOI\n")])?;
+            }
+            let pos = pl::method(it, &raf, "Tell", vec![])?;
+            if !self_.get("DOC_NUM").truthy() {
+                self_.set("TrailerStart", pos.clone());
+            }
+            if html_dump.truthy() && dump_end.truthy() {
+                method(it, "HDump", vec![dump_end.clone(), pl::sub(&pl::sub(&pos, &n(2)), &dump_end), pl::s("[JPEG Image Data]"), Value::Undef, n(0x08)])?;
+                method(it, "HDump", vec![pl::sub(&pos, &n(2)), n(2), pl::s("JPEG EOI"), Value::Undef])?;
+                dump_end = n(0);
+            }
+            if found_sos.truthy() || pl::str_eq(&self_.get("FILE_TYPE"), "EXV") {
+                success = n(1);
+            } else {
+                method(it, "Warn", vec![pl::s("Missing JPEG SOS")])?;
+            }
+            if req.get("trailer").truthy() {
+                // read entire trailer into memory
+                if pl::method(it, &raf, "Seek", vec![n(0), n(2)])?.truthy() {
+                    let len = pl::sub(&pl::method(it, &raf, "Tell", vec![])?, &pos);
+                    if len.truthy() {
+                        let buff = cell(Value::Undef);
+                        pl::method(it, &raf, "Seek", vec![pos.clone(), n(0)])?;
+                        let (r, b) = raf_read(it, &raf, g(&buff), &len)?;
+                        s_(&buff, b);
+                        if pl::num_eq(&r, &len) {
+                            found_tag_call(it, &self_, vec![pl::s("Trailer"), Value::ScalarRef(buff)])?;
+                        }
+                        pl::method(it, &raf, "Seek", vec![pos.clone(), n(0)])?;
+                    }
+                } else {
+                    method(it, "Warn", vec![pl::s("Error seeking in file")])?;
+                }
+            }
+            // we are here because we are looking for trailer information
+            if want_trailer.truthy() {
+                let start = self_.get("PreviewImageStart");
+                if start.truthy() || options.get("ExtractEmbedded").truthy() {
+                    let buff = cell(Value::Undef);
+                    // most previews start right after the JPEG EOI, but the Olympus E-20
+                    // preview is 508 bytes into the trailer, the K-M Maxxum 7D preview is
+                    // 979 bytes in, and Sony previews can start up to 32 kB into the trailer.
+                    // (and Minolta and Sony previews can have a random first byte...)
+                    let scan_len = if re("Sony", "i").is_match(&self_.get("Make")) { n(65536) } else { n(1024) };
+                    let (r, b) = raf_read(it, &raf, g(&buff), &scan_len)?;
+                    s_(&buff, b);
+                    if r.truthy() {
+                        let m2;
+                        if re("^.{4}ftyp", "s").is_match(&g(&buff)) {
+                            let mut val = Value::Undef;
+                            if pl::method(it, &raf, "Seek", vec![n(0), n(2)])?.truthy() {
+                                let len = pl::sub(&pl::method(it, &raf, "Tell", vec![])?, &pos);
+                                if options.get("Binary").truthy() {
+                                    if pl::method(it, &raf, "Seek", vec![pos.clone(), n(0)])?.truthy() {
+                                        let (r, b) = raf_read(it, &raf, g(&buff), &len)?;
+                                        s_(&buff, b);
+                                        if pl::num_eq(&r, &len) {
+                                            val = Value::ScalarRef(buff.clone());
+                                        }
+                                    }
+                                } else {
+                                    val = Value::ScalarRef(cell(cat(&[&pl::s("Binary data "), &len, &pl::s(" bytes")])));
+                                }
+                                if val.truthy() {
+                                    found_tag_call(it, &self_, vec![pl::s("EmbeddedVideo"), val])?;
+                                } else {
+                                    method(it, "Warn", vec![pl::s("Error reading trailer")])?;
+                                }
+                            } else {
+                                method(it, "Warn", vec![pl::s("Error seeking to end of file")])?;
+                            }
+                        } else if {
+                            m2 = match match_g(b"\\xff\\xd8\\xff.", "", &g(&buff))? {
+                                Some(x) => Some(x),
+                                None => {
+                                    if re("(Minolta|Sony)", "i").is_match(&self_.get("Make")) {
+                                        match_g(b".\\xd8\\xff\\xdb", "", &g(&buff))?
+                                    } else {
+                                        None
+                                    }
+                                }
+                            };
+                            m2.is_some()
+                        } {
+                            // adjust PreviewImageStart to this location
+                            let p = m2.unwrap().0;
+                            let actual = pl::sub(&pl::add(&pos, &n(p as i64)), &n(4));
+                            if start.truthy() && !seq(&start, &actual) && pl::gt(&verbose, &n(1)) {
+                                print(it, &[&indent, &pl::s("(Fixed PreviewImage location: "), &start, &pl::s(" -> "), &actual, &pl::s(")\n")])?;
+                            }
+                            // update preview image offsets
+                            if start.truthy() {
+                                if vget(&self_, &[b"VALUE", b"PreviewImageStart"]).truthy() {
+                                    self_.get("VALUE").set("PreviewImageStart", actual.clone());
+                                }
+                                self_.set("PreviewImageStart", actual.clone());
+                            }
+                            // load preview now if we tried and failed earlier
+                            if self_.get("PreviewError").truthy() && self_.get("PreviewImageLength").truthy() {
+                                let mut ok = false;
+                                if pl::method(it, &raf, "Seek", vec![actual.clone(), n(0)])?.truthy() {
+                                    let (r, b) = raf_read(it, &raf, g(&buff), &self_.get("PreviewImageLength"))?;
+                                    s_(&buff, b);
+                                    ok = r.truthy();
+                                }
+                                if ok {
+                                    found_tag_call(it, &self_, vec![pl::s("PreviewImage"), g(&buff)])?;
+                                    self_.delete("PreviewError");
+                                }
+                            }
+                        }
+                    }
+                    pl::method(it, &raf, "Seek", vec![pos.clone(), n(0)])?;
+                }
+            }
+            // process trailer now or finish processing trailers
+            // and scan for AFCP if necessary
+            let mut from_end = n(0);
+            if trail_info.truthy() {
+                trail_info.set("ScanForTrailer", n(1)); // scan now if necessary
+                method(it, "ProcessTrailers", vec![trail_info.clone()])?;
+                // save offset from end of file to start of first trailer
+                from_end = trail_info.get("Offset");
+                trail_info = Value::Undef;
+            }
+            if self_.get("LeicaTrailer").truthy() {
+                pl::method(it, &raf, "Seek", vec![n(0), n(2)])?;
+                let lt = self_.get("LeicaTrailer");
+                lt.set("TrailPos", pos.clone());
+                let tell = pl::method(it, &raf, "Tell", vec![])?;
+                lt.set("TrailLen", pl::sub(&pl::sub(&tell, &pos), &from_end));
+                pl::call(it, "Image::ExifTool::Panasonic::ProcessLeicaTrailer", vec![self_.clone()])?;
+            }
+            // finally, dump remaining information in JPEG trailer
+            if verbose.truthy() || html_dump.truthy() {
+                let mut end_pos = self_.get("LeicaTrailerPos");
+                if !end_pos.truthy() {
+                    pl::method(it, &raf, "Seek", vec![n(0), n(2)])?;
+                    end_pos = pl::sub(&pl::method(it, &raf, "Tell", vec![])?, &from_end);
+                }
+                if pl::gt(&end_pos, &pos) {
+                    let h = Value::new_hash();
+                    h.set("RAF", raf.clone());
+                    h.set("DataPos", pos.clone());
+                    h.set("DirLen", pl::sub(&end_pos, &pos));
+                    method(it, "DumpUnknownTrailer", vec![h])?;
+                }
+            }
+            if calc_image_len.truthy() {
+                found_tag_call(it, &self_, vec![pl::s("JPEGImageLength"), pl::sub(&pos, &app_bytes)])?;
+            }
+            break; // all done parsing file
+        } else if mk(&marker, 0xda) {
+            // SOS
+            if let Value::ArrayRef(p) = &path {
+                p.borrow_mut().pop();
+            }
+            found_sos = n(1);
+            // all done with meta information unless we have a trailer
+            if verbose.truthy() {
+                print(it, &[&indent, &pl::s("JPEG SOS\n")])?;
+            }
+            // process extended XMP now if it existed
+            // (must do this before trailers because XMP is required to process Google trailer)
+            if !extended_xmp.is_empty() {
+                // GUID indicated by the last main XMP segment
+                let good_guid = or(vget(&self_, &[b"VALUE", b"HasExtendedXMP"]), pl::s(""));
+                // GUID of the extended XMP that we will process ('2' for all)
+                let mut read_guid = or(options.get("ExtendedXMP"), n(0));
+                if pl::str_eq(&read_guid, "1") {
+                    read_guid = good_guid.clone();
+                }
+                let mut guids = extended_xmp.keys();
+                guids.sort();
+                for gk in guids {
+                    let guid = Value::Str(gk.clone());
+                    if gk.len() != 32 {
+                        continue; // ignore other (internal) keys
+                    }
+                    let ext_xmp = extended_xmp.get(&gk);
+                    let mut offsets: Vec<Value> = Vec::new();
+                    let mut warn = Value::Undef;
+                    // make sure we have all chunks, and create a list of sorted offsets
+                    let mut off = n(0);
+                    while pl::lt(&off, &ext_xmp.get("Size")) {
+                        if ext_xmp.get(off.to_bytes()).is_undef() {
+                            break;
+                        }
+                        offsets.push(off.clone());
+                        off = pl::add(&off, &len_of(&ext_xmp.get(off.to_bytes())));
+                    }
+                    if !pl::num_eq(&off, &ext_xmp.get("Size")) {
+                        method(it, "Warn", vec![cat(&[&pl::s("Incomplete extended XMP (GUID "), &guid, &pl::s(")")])])?;
+                        continue;
+                    }
+                    if seq(&guid, &read_guid) || pl::str_eq(&read_guid, "2") {
+                        if !seq(&guid, &good_guid) {
+                            warn = pl::s("Reading non-");
+                        }
+                        let buff = cell(pl::s(""));
+                        // assemble XMP all together
+                        for o in &offsets {
+                            s_(&buff, pl::concat(&g(&buff), &ext_xmp.get(o.to_bytes())));
+                        }
+                        let tag_table_ptr = table(it, "Image::ExifTool::XMP::Main")?;
+                        let di = Value::new_hash();
+                        di.set("DataPt", Value::ScalarRef(buff));
+                        di.set("Parent", pl::s("APP1"));
+                        di.set("IsExtended", n(1));
+                        path.set_at(pn, pl::s("APP1"));
+                        method(it, "ProcessDirectory", vec![di, tag_table_ptr])?;
+                        if let Value::ArrayRef(p) = &path {
+                            p.borrow_mut().pop();
+                        }
+                    } else {
+                        warn = pl::s("Ignored ");
+                        if !seq(&guid, &good_guid) {
+                            warn = pl::concat(&warn, &pl::s("non-"));
+                        }
+                    }
+                    if warn.truthy() {
+                        method(it, "Warn", vec![cat(&[&warn, &pl::s("standard extended XMP (GUID "), &guid, &pl::s(")")])])?;
+                    }
+                    extended_xmp.delete(&gk);
+                }
+            }
+            if !fast.truthy() {
+                trail_info = method(it, "IdentifyTrailer", vec![raf.clone()])?;
+                // process trailer now unless we are doing verbose dump
+                if trail_info.truthy() && pl::lt(&verbose, &n(3)) && !html_dump.truthy() {
+                    // process trailers (keep trailInfo to finish processing later
+                    // only if we can't finish without scanning from JPEG EOF)
+                    if method(it, "ProcessTrailers", vec![trail_info.clone()])?.truthy() {
+                        trail_info = Value::Undef;
+                    }
+                }
+                if want_trailer.truthy() && self_.get("PreviewImageStart").truthy() {
+                    // seek ahead and validate preview image
+                    let cur_pos = pl::method(it, &raf, "Tell", vec![])?;
+                    let mut ok = false;
+                    if pl::method(it, &raf, "Seek", vec![self_.get("PreviewImageStart"), n(0)])?.truthy() {
+                        let (r, buff) = raf_read(it, &raf, Value::Undef, &n(4))?;
+                        ok = pl::num_eq(&r, &n(4)) && re("^.\\xd8\\xff[\\xc4\\xdb\\xe0-\\xef]", "").is_match(&buff);
+                    }
+                    if ok {
+                        want_trailer = Value::Undef;
+                    }
+                    if !pl::method(it, &raf, "Seek", vec![cur_pos, n(0)])?.truthy() {
+                        break;
+                    }
+                }
+                // seek ahead and process Leica trailer
+                if self_.get("LeicaTrailer").truthy() {
+                    runtime::require(it, "Image::ExifTool::Panasonic")?;
+                    pl::call(it, "Image::ExifTool::Panasonic::ProcessLeicaTrailer", vec![self_.clone()])?;
+                    if self_.get("LeicaTrailer").truthy() {
+                        want_trailer = n(1);
+                    }
+                } else if options.get("ExtractEmbedded").truthy()
+                    || (vget(&self_, &[b"VALUE", b"HiddenDataOffset"]).truthy() && vget(&self_, &[b"VALUE", b"HiddenDataLength"]).truthy() && (options.get("Validate").truthy() || req.get("hiddendata").truthy()))
+                {
+                    want_trailer = n(1);
+                }
+                if trail_info.truthy() || want_trailer.truthy() || pl::gt(&verbose, &n(2)) || html_dump.truthy() {
+                    continue;
+                }
+            }
+            // must scan to EOI if Validate or JpegCompressionFactor used
+            if options.get("Validate").truthy() || calc_image_len.truthy() || req.get("trailer").truthy() || hash.truthy() {
+                continue;
+            }
+            // nothing interesting to parse after start of scan (SOS)
+            success = n(1);
+            break; // all done parsing file
+        } else if mk(&marker, 0x93) {
+            if let Value::ArrayRef(p) = &path {
+                p.borrow_mut().pop();
+            }
+            if verbose.truthy() {
+                print(it, &[&indent, &pl::s("JPEG SOD\n")])?;
+            }
+            success = n(1);
+            if hash.truthy() && pl::str_eq(&self_.get("FILE_TYPE"), "JP2") {
+                let pos = pl::method(it, &raf, "Tell", vec![])?;
+                method(it, "ImageDataHash", vec![raf.clone(), Value::Undef, pl::s("SOD")])?;
+                pl::method(it, &raf, "Seek", vec![pos, n(0)])?;
+            }
+            if pl::gt(&verbose, &n(2)) || html_dump.truthy() {
+                continue;
+            }
+            break; // all done parsing file
+        } else if !marker_len_bytes.get(marker.to_bytes()).is_undef() {
+            // handle other stand-alone markers and segments we skipped over
+            if verbose.truthy() && marker.truthy() {
+                if pl::lt(&verbose, &n(4)) && pl::num_eq(&m_and(0xf8), &n(0xd0)) {
+                    continue;
+                }
+                print(it, &[&indent, &pl::s("JPEG "), &marker_name, &pl::s("\n")])?;
+            }
+            continue;
+        } else if mk(&marker, 0xdb) && pl::length(&seg_data_pt.deref()).truthy() &&    // DQT
+            // save the DQT data only if JPEGDigest has been requested
+            // (Note: since we aren't checking the API RequestAll option here, the application
+            //  must use the RequestTags option to generate these tags if they have not been
+            //  specifically requested.  The reason is that there is too much overhead involved
+            //  in the calculation of this tag to make this worth the CPU time.)
+            (req.get("jpegdigest").truthy() || req.get("jpegqualityestimate").truthy() || (options.get("RequestAll").truthy() && pl::gt(&options.get("RequestAll"), &n(2))))
+        {
+            let up = crate::perl::pack::unpack(b"C", &seg_data_pt.deref().to_bytes()).unwrap_or_default();
+            let num = ops::bit_and(&arg(&up, 0), &n(0x0f)); // get table index
+            if pl::lt(&num, &n(4)) {
+                dqt.set_at(num.to_i64() as usize, seg_data_pt.deref()); // save for hash calculation
+            }
+        }
+        // handle all other markers
+        let mut dump_type = pl::s("");
+        let (mut desc, mut tip, mut xtra, mut use_jpeg_main) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef);
+        length = len_of(&seg_data_pt.deref());
+        if pl::num_eq(&m_and(0xf0), &n(0xe0)) {
+            app_bytes = pl::add(&app_bytes, &pl::add(&length, &n(4))); // total size of APP segments
+        }
+        if verbose.truthy() {
+            print(it, &[&indent, &pl::s("JPEG "), &marker_name, &pl::s(" ("), &length, &pl::s(" bytes):\n")])?;
+            if pl::gt(&verbose, &n(2)) {
+                let mut extra = vec![("Addr", seg_pos.clone())];
+                if pl::num_eq(&verbose, &n(4)) {
+                    extra.push(("MaxLen", n(128)));
+                }
+                hex_dump(it, &seg_data_pt, &dump_parms, &extra)?;
+            }
+        }
+        // prepare dirInfo hash for processing this information
+        let dinfo = Value::new_hash();
+        dinfo.set("Parent", marker_name.clone());
+        dinfo.set("DataPt", seg_data_pt.clone());
+        dinfo.set("DataPos", seg_pos.clone());
+        dinfo.set("DataLen", length.clone());
+        dinfo.set("DirStart", n(0));
+        dinfo.set("DirLen", length.clone());
+        dinfo.set("Base", n(0));
+        let seg = seg_data_pt.deref();
+        let is = |p: &str, f: &str| re(p, f).is_match(&seg);
+        let dir_start = |it: &mut Interp, args: Vec<Value>| -> ER<()> {
+            let mut a = vec![dinfo.clone()];
+            a.extend(args);
+            dir_start(it, a, Want::Void)?;
+            Ok(())
+        };
+        let process_dir = |it: &mut Interp, di: &Value, t: Value| pl::method(it, &self_, "ProcessDirectory", vec![di.clone(), t]);
+        if mk(&marker, 0xe0) {
+            // APP0 (JFIF, JFXX, CIFF, AVI1, Ocad)
+            if is("^JFIF\\0", "") {
+                dump_type = pl::s("JFIF");
+                dir_start(it, vec![n(5)])?; // start at byte 5
+                set_bo(it, pl::s("MM"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::JFIF::Main")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if let Some(m) = re("^JFXX\\0(\\x10|\\x11|\\x13)", "").m(&seg) {
+                let tag = n(cap(&m, 1).to_bytes().first().copied().unwrap_or(0) as i64);
+                dump_type = pl::s("JFXX");
+                let tag_table_ptr = table(it, "Image::ExifTool::JFIF::Extension")?;
+                let tag_info = get_tag_info_impl(it, vec![self_.clone(), tag_table_ptr, tag])?;
+                let v = substr(it, &seg, &n(6), None)?;
+                found_tag_call(it, &self_, vec![tag_info, v])?;
+            } else if is("^(II|MM).{4}HEAPJPGM", "s") {
+                if pl::gt(&fast, &n(1)) {
+                    continue; // skip processing for very fast
+                }
+                dump_type = pl::s("CIFF");
+                let class = pl::s("File::RandomAccess");
+                let r = scalar_of(it.call_method(&class, "new", vec![class.clone(), seg_data_pt.clone()], Want::Scalar)?);
+                let di = Value::new_hash();
+                di.set("RAF", r);
+                self_.set("SET_GROUP1", pl::s("CIFF"));
+                self_.get_or_new_array("PATH").push(pl::s("CIFF"));
+                runtime::require(it, "Image::ExifTool::CanonRaw")?;
+                pl::call(it, "Image::ExifTool::CanonRaw::ProcessCRW", vec![self_.clone(), di])?;
+                if let Value::ArrayRef(p) = self_.get_or_new_array("PATH") {
+                    p.borrow_mut().pop();
+                }
+                self_.delete("SET_GROUP1");
+            } else if let Some(m) = re("^(AVI1|Ocad)", "").m(&seg) {
+                dump_type = cap(&m, 1);
+                set_bo(it, pl::s("MM"))?;
+                let tag_table_ptr = pl::call(it, "Image::ExifTool::GetTagTable", vec![cat(&[&pl::s("Image::ExifTool::JPEG::"), &dump_type])])?;
+                dir_start(it, vec![n(4)])?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            }
+        } else if mk(&marker, 0xe1) {
+            // APP1 (EXIF, XMP, QVCI, PARROT)
+            // (some Kodak cameras don't put a second "\0", and I have seen an
+            //  example where there was a second 4-byte APP1 segment header)
+            if let Some(m) = re("^(.{0,4})Exif\\0.", "is").m(&seg) {
+                dump_type = Value::Undef; // (will be dumped here)
+                // this is EXIF data --
+                // get the data block (into a common variable)
+                let exif_app1hdr = it.get_scalar("Image::ExifTool::exifAPP1hdr");
+                let mut hdr_len = len_of(&exif_app1hdr);
+                if pl::length(&cap(&m, 1)).truthy() {
+                    hdr_len = pl::add(&hdr_len, &len_of(&cap(&m, 1)));
+                    method(it, "Warn", vec![pl::s("Unknown garbage at start of EXIF segment"), n(1)])?;
+                } else if !is("^Exif\\0", "") {
+                    method(it, "Warn", vec![pl::s("Incorrect EXIF segment identifier"), n(1)])?;
+                }
+                if html_dump.truthy() {
+                    method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), n(4), pl::s("APP1 header"), cat(&[&pl::s("Data size: "), &length, &pl::s(" bytes")])])?;
+                    method(it, "HDump", vec![seg_pos.clone(), hdr_len.clone(), pl::s("Exif header"), pl::s("APP1 data type: Exif")])?;
+                    dump_end = pl::add(&seg_pos, &length);
+                }
+                let mut data_pt = seg_data_pt.clone();
+                if !g(&combined_seg_data).is_undef() {
+                    skip_data.push(Value::new_array(vec![pl::sub(&seg_pos, &n(4)), pl::add(&seg_pos, &hdr_len)]));
+                    let tail = substr(it, &seg_data_pt.deref(), &hdr_len, None)?;
+                    s_(&combined_seg_data, pl::concat(&g(&combined_seg_data), &tail));
+                    set_deref(&seg_data_pt, Value::Undef)?;
+                    data_pt = Value::ScalarRef(combined_seg_data.clone());
+                    seg_pos = first_seg_pos.clone();
+                }
+                // peek ahead to see if the next segment is extended EXIF
+                if pl::num_eq(&next_marker, &marker) && re_var(it, "^", "exifAPP1hdr", "(?!(MM\\0\\x2a|II\\x2a\\0))")?.is_match(&next_seg_data_pt.deref()) {
+                    // initialize combined data if necessary
+                    if g(&combined_seg_data).is_undef() {
+                        s_(&combined_seg_data, seg_data_pt.deref());
+                        set_deref(&seg_data_pt, Value::Undef)?;
+                        first_seg_pos = seg_pos.clone();
+                        method(it, "Warn", vec![pl::s("File contains multi-segment EXIF"), n(1)])?;
+                        self_.set("ExtendedEXIF", n(1));
+                    }
+                    continue;
+                }
+                dinfo.set("DataPt", data_pt.clone());
+                dinfo.set("DataPos", seg_pos.clone());
+                let l = len_of(&data_pt.deref());
+                dinfo.set("DirLen", l.clone());
+                dinfo.set("DataLen", l);
+                dir_start(it, vec![hdr_len.clone(), hdr_len.clone()])?;
+                if !skip_data.is_empty() {
+                    self_.set("SkipData", skip_data.clone());
+                }
+                // extract the EXIF information (it is in standard TIFF format)
+                if !method(it, "ProcessTIFF", vec![dinfo.clone()])?.truthy() {
+                    method(it, "Warn", vec![pl::s("Malformed APP1 EXIF segment")])?;
+                }
+                // scan for Vivo HiddenData if necessary
+                if pl::str_eq(&self_.get("Make"), "vivo") &&
+                    // (stored as UserComment by some models)
+                    !(vget(&self_, &[b"VALUE", b"UserComment"]).truthy() && re("^filter:", "").is_match(&self_.get("VALUE").get("UserComment")))
+                {
+                    if let Some((p, c)) = match_g(b"(filter: .*?; \\n)\\0", "s", &data_pt.deref())? {
+                        if html_dump.truthy() {
+                            let nn = pl::add(&len_of(&cap(&c, 1)), &n(1));
+                            method(it, "HDump", vec![pl::sub(&pl::add(&seg_pos, &n(p as i64)), &nn), nn.clone(), pl::s("[Vivo HiddenData]"), Value::Undef, n(0x08)])?;
+                        }
+                        let tbl = table(it, "Image::ExifTool::Trailer::Vivo")?;
+                        method(it, "HandleTag", vec![tbl, pl::s("HiddenData"), cap(&c, 1)])?;
+                    }
+                }
+                // avoid looking for preview unless necessary because it really slows
+                // us down -- only look for it if we found pointer, and preview is
+                // outside EXIF, and PreviewImage is specifically requested
+                let mut start = method(it, "GetValue", vec![pl::s("PreviewImageStart"), pl::s("ValueConv")])?;
+                let mut plen = method(it, "GetValue", vec![pl::s("PreviewImageLength"), pl::s("ValueConv")])?;
+                if !start.truthy() || (!plen.truthy() && self_.get("PreviewError").truthy()) {
+                    start = self_.get("PreviewImageStart");
+                    plen = self_.get("PreviewImageLength");
+                }
+                if start.truthy()
+                    && plen.truthy()
+                    && pl::call(it, "Image::ExifTool::IsInt", vec![start.clone()])?.truthy()
+                    && pl::call(it, "Image::ExifTool::IsInt", vec![plen.clone()])?.truthy()
+                    && pl::gt(&pl::add(&start, &plen), &pl::add(&self_.get("EXIF_POS"), &len_of(&self_.get("EXIF_DATA"))))
+                    && (req.get("previewimage").truthy() ||
+                    // (extracted normally, so check Binary option)
+                    (options.get("Binary").truthy() && !vget(&self_, &[b"EXCL_TAG_LOOKUP", b"previewimage"]).truthy()))
+                {
+                    self_.set("PreviewImageStart", start);
+                    self_.set("PreviewImageLength", plen);
+                    want_trailer = n(1);
+                }
+                if !skip_data.is_empty() {
+                    if let Value::ArrayRef(sd) = &skip_data {
+                        sd.borrow_mut().clear();
+                    }
+                    self_.delete("SkipData");
+                }
+                set_deref(&data_pt, Value::Undef)?;
+                continue;
+            } else if re_var(it, "^", "xmpExtAPP1hdr", "")?.is_match(&seg) {
+                // off len -- extended XMP header (75 bytes total):
+                //   0  35 bytes - signature
+                //  35  32 bytes - GUID (MD5 hash of full extended XMP data in ASCII)
+                //  67   4 bytes - total size of extended XMP data
+                //  71   4 bytes - offset for this XMP data portion
+                dump_type = pl::s("Extended XMP");
+                if pl::gt(&length, &n(75)) {
+                    let up = crate::perl::pack::unpack(b"x67N2", &seg.to_bytes()).unwrap_or_default();
+                    let (size, off) = (arg(&up, 0), arg(&up, 1));
+                    let guid = substr(it, &seg, &n(35), Some(&n(32)))?;
+                    if re("[^A-Za-z0-9]", "").is_match(&guid) {
+                        // (technically, should be uppercase)
+                        tip = pl::s("Invalid extended XMP GUID");
+                        method(it, "Warn", vec![tip.clone()])?;
+                    } else {
+                        let mut ext_xmp = extended_xmp.get(guid.to_bytes());
+                        if !ext_xmp.truthy() {
+                            ext_xmp = Value::new_hash();
+                            extended_xmp.set(guid.to_bytes(), ext_xmp.clone());
+                        } else if !pl::num_eq(&size, &ext_xmp.get("Size")) {
+                            method(it, "Warn", vec![pl::s("Inconsistent extended XMP size")])?;
+                        }
+                        ext_xmp.set("Size", size.clone());
+                        let chunk = substr(it, &seg, &n(75), None)?;
+                        ext_xmp.set(off.to_bytes(), chunk);
+                        tip = cat(&[&pl::s("Full length: "), &size, &pl::s("\nChunk offset: "), &off, &pl::s("\nChunk length: "), &pl::sub(&length, &n(75)), &pl::s("\nGUID: "), &guid]);
+                        // (delay processing extended XMP until after reading all segments)
+                    }
+                } else {
+                    tip = pl::s("Invalid extended XMP segment");
+                    method(it, "Warn", vec![tip.clone()])?;
+                }
+            } else if is("^QVCI\\0", "") {
+                dump_type = pl::s("QVCI");
+                let tag_table_ptr = table(it, "Image::ExifTool::Casio::QVCI")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^FLIR\\0", "") && pl::ge(&length, &n(8)) {
+                dump_type = pl::s("FLIR");
+                // must concatenate FLIR chunks (note: handle the case where
+                // some software erroneously writes zeros for the chunk counts)
+                let chunk_num = pl::call(it, "Image::ExifTool::Get8u", vec![seg_data_pt.clone(), n(6)])?;
+                let chunks_tot = pl::add(&pl::call(it, "Image::ExifTool::Get8u", vec![seg_data_pt.clone(), n(7)])?, &n(1)); // (note the "+ 1"!)
+                if verbose.truthy() {
+                    let fmt = cat(&[&indent, &pl::s("FLIR chunk %d of %d\n")]);
+                    print_to(it, &out, vec![pl::sprintf_v(&fmt, &[pl::add(&chunk_num, &n(1)), chunks_tot.clone()])])?;
+                }
+                if !flir_total.is_undef() {
+                    // abort parsing FLIR if the total chunk count is inconsistent
+                    if !pl::num_eq(&chunks_tot, &flir_total) {
+                        flir_count = Value::Undef;
+                    }
+                } else {
+                    flir_count = n(0);
+                    flir_total = chunks_tot.clone();
+                }
+                if !flir_count.is_undef() {
+                    let ci = chunk_num.to_i64().max(0) as usize;
+                    if flir_chunk.len() <= ci {
+                        flir_chunk.resize(ci + 1, Value::Undef);
+                    }
+                    let chunk = substr(it, &seg, &n(8), None)?;
+                    if !flir_chunk[ci].is_undef() {
+                        method(it, "Warn", vec![pl::s("Duplicate FLIR chunk number(s)")])?;
+                        flir_chunk[ci] = pl::concat(&flir_chunk[ci], &chunk);
+                    } else {
+                        flir_chunk[ci] = chunk;
+                    }
+                    // process the FLIR information if we have all of the chunks
+                    flir_count = pl::add(&flir_count, &n(1));
+                    if pl::ge(&flir_count, &flir_total) {
+                        let flir = cell(pl::s(""));
+                        for c in flir_chunk.iter() {
+                            if !c.is_undef() {
+                                s_(&flir, pl::concat(&g(&flir), c));
+                            }
+                        }
+                        flir_chunk.clear(); // free memory
+                        let tag_table_ptr = table(it, "Image::ExifTool::FLIR::FFF")?;
+                        let di = Value::new_hash();
+                        di.set("DataPt", Value::ScalarRef(flir));
+                        di.set("Parent", marker_name.clone());
+                        di.set("DirName", pl::s("FLIR"));
+                        process_dir(it, &di, tag_table_ptr)?;
+                        flir_count = Value::Undef; // prevent reprocessing
+                    }
+                } else {
+                    method(it, "Warn", vec![pl::s("Invalid or extraneous FLIR chunk(s)")])?;
+                }
+            } else if is("^PARROT\\0(II\\x2a\\0|MM\\0\\x2a)", "") {
+                // (don't know if this could span multiple segments)
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::Main")?;
+                method(it, "HandleTag", vec![tag_table_ptr, pl::s("APP1"), seg.clone()])?;
+                dump_type = pl::s("Parrot");
+            } else {
+                // Hmmm.  Could be XMP, let's see
+                let mut processed = Value::Undef;
+                if is("^(http|XMP\\0)", "") || is("<(exif:|\\?xpacket)", "") {
+                    dump_type = pl::s("XMP");
+                    // also try to parse XMP with a non-standard header
+                    // (note: this non-standard XMP is ignored when writing)
+                    let start = if re_var(it, "^", "xmpAPP1hdr", "")?.is_match(&seg) { len_of(&it.get_scalar("Image::ExifTool::xmpAPP1hdr")) } else { n(0) };
+                    let tag_table_ptr = table(it, "Image::ExifTool::XMP::Main")?;
+                    dir_start(it, vec![start.clone()])?;
+                    dinfo.set("DirName", pl::s(if start.truthy() { "XMP" } else { "XML" }));
+                    processed = process_dir(it, &dinfo, tag_table_ptr)?;
+                    if processed.truthy() && !start.truthy() {
+                        method(it, "Warn", vec![pl::s("Non-standard header for APP1 XMP segment")])?;
+                    }
+                }
+                if verbose.truthy() && !processed.truthy() {
+                    method(it, "Warn", vec![cat(&[&pl::s("Ignored APP1 segment length "), &length, &pl::s(" (unknown header)")])])?;
+                }
+            }
+        } else if mk(&marker, 0xe2) {
+            // APP2 (ICC Profile, FPXR, MPF, InfiRay, URN, PreviewImage)
+            if is("^ICC_PROFILE\\0", "") && pl::ge(&length, &n(14)) {
+                dump_type = pl::s("ICC_Profile");
+                // must concatenate profile chunks (note: handle the case where
+                // some software erroneously writes zeros for the chunk counts)
+                let chunk_num = pl::call(it, "Image::ExifTool::Get8u", vec![seg_data_pt.clone(), n(12)])?;
+                let chunks_tot = pl::call(it, "Image::ExifTool::Get8u", vec![seg_data_pt.clone(), n(13)])?;
+                if verbose.truthy() {
+                    print(it, &[&indent, &pl::s("ICC_Profile chunk "), &chunk_num, &pl::s(" of "), &chunks_tot, &pl::s("\n")])?;
+                }
+                if !icc_chunks_total.is_undef() {
+                    // abort parsing ICC_Profile if the total chunk count is inconsistent
+                    if !pl::num_eq(&chunks_tot, &icc_chunks_total) {
+                        icc_chunk_count = Value::Undef;
+                    }
+                } else {
+                    icc_chunk_count = n(0);
+                    icc_chunks_total = chunks_tot.clone();
+                    if !chunks_tot.truthy() {
+                        method(it, "Warn", vec![pl::s("ICC_Profile chunk count is zero")])?;
+                    }
+                }
+                if !icc_chunk_count.is_undef() {
+                    let ci = chunk_num.to_i64().max(0) as usize;
+                    if icc_chunk.len() <= ci {
+                        icc_chunk.resize(ci + 1, Value::Undef);
+                    }
+                    let chunk = substr(it, &seg, &n(14), None)?;
+                    if !icc_chunk[ci].is_undef() {
+                        method(it, "Warn", vec![pl::s("Duplicate ICC_Profile chunk number(s)")])?;
+                        icc_chunk[ci] = pl::concat(&icc_chunk[ci], &chunk);
+                    } else {
+                        icc_chunk[ci] = chunk;
+                    }
+                    // process profile if we have all of the chunks
+                    icc_chunk_count = pl::add(&icc_chunk_count, &n(1));
+                    if pl::ge(&icc_chunk_count, &icc_chunks_total) {
+                        let icc_profile = cell(pl::s(""));
+                        for c in icc_chunk.iter() {
+                            if !c.is_undef() {
+                                s_(&icc_profile, pl::concat(&g(&icc_profile), c));
+                            }
+                        }
+                        icc_chunk.clear(); // free memory
+                        let tag_table_ptr = table(it, "Image::ExifTool::ICC_Profile::Main")?;
+                        let l = len_of(&g(&icc_profile));
+                        let di = Value::new_hash();
+                        di.set("DataPt", Value::ScalarRef(icc_profile));
+                        di.set("DataPos", pl::add(&seg_pos, &n(14)));
+                        di.set("DataLen", l.clone());
+                        di.set("DirStart", n(0));
+                        di.set("DirLen", l);
+                        di.set("Parent", marker_name.clone());
+                        process_dir(it, &di, tag_table_ptr)?;
+                        icc_chunk_count = Value::Undef; // prevent reprocessing
+                    }
+                } else {
+                    method(it, "Warn", vec![pl::s("Invalid or extraneous ICC_Profile chunk(s)")])?;
+                }
+            } else if is("^FPXR\\0", "") {
+                if pl::gt(&fast, &n(1)) {
+                    continue; // skip processing for very fast
+                }
+                dump_type = pl::s("FPXR");
+                let tag_table_ptr = table(it, "Image::ExifTool::FlashPix::Main")?;
+                // set flag if this is the last FPXR segment
+                let last = !(pl::num_eq(&next_marker, &marker) && re("^FPXR\\0", "").is_match(&next_seg_data_pt.deref()));
+                dinfo.set("LastFPXR", Value::from(last));
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^MPF\\0", "") {
+                dump_type = Value::Undef; // (will be dumped here)
+                dir_start(it, vec![n(4), n(4)])?;
+                dinfo.set("Multi", n(1)); // the MP Attribute IFD will be MPF1
+                if html_dump.truthy() {
+                    method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), n(4), pl::s("APP2 header"), cat(&[&pl::s("Data size: "), &length, &pl::s(" bytes")])])?;
+                    method(it, "HDump", vec![seg_pos.clone(), n(4), pl::s("MPF header"), pl::s("APP2 data type: MPF")])?;
+                    dump_end = pl::add(&seg_pos, &length);
+                }
+                // extract the MPF information (it is in standard TIFF format)
+                let tag_table_ptr = table(it, "Image::ExifTool::MPF::Main")?;
+                method(it, "ProcessTIFF", vec![dinfo.clone(), tag_table_ptr])?;
+            } else if is("^....IJPEG\\0", "s") {
+                dump_type = pl::s("InfiRay Version");
+                self_.set("HasIJPEG", n(1));
+                set_bo(it, pl::s("II"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::InfiRay::Version")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if let Some(m) = re("^(|QVGA\\0|BGTH)\\xff\\xd8\\xff[\\xdb\\xe0\\xe1]", "").m(&seg) {
+                // Samsung/GE/GoPro="", BenQ DC C1220/Pentacon/Polaroid="QVGA\0",
+                // Digilife DDC-690/Rollei="BGTH"
+                dump_type = pl::s("Preview Image");
+                preview = substr(it, &seg, &len_of(&cap(&m, 1)), None)?;
+            } else if is("^urn:", "") {
+                // (found in Apple HDR images)
+                dump_type = pl::s("URN");
+                use_jpeg_main = n(1);
+            } else if preview.truthy() {
+                dump_type = pl::s("Preview Image");
+                preview = pl::concat(&preview, &seg);
+            }
+            if preview.truthy() && !seq(&next_marker, &marker) {
+                found_tag_call(it, &self_, vec![pl::s("PreviewImage"), preview.clone()])?;
+                preview = Value::Undef;
+            }
+        } else if mk(&marker, 0xe3) {
+            // APP3 (Kodak "Meta", Stim)
+            if is("^(Meta|META|Exif)\\0\\0", "") {
+                dump_type = Value::Undef; // (will be dumped here)
+                dir_start(it, vec![n(6), n(6)])?;
+                if html_dump.truthy() {
+                    method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), n(10), pl::s("APP3 Meta header")])?;
+                    dump_end = pl::add(&seg_pos, &length);
+                }
+                let tag_table_ptr = table(it, "Image::ExifTool::Kodak::Meta")?;
+                method(it, "ProcessTIFF", vec![dinfo.clone(), tag_table_ptr])?;
+            } else if is("^Stim\\0", "") {
+                dump_type = Value::Undef; // (will be dumped here)
+                dir_start(it, vec![n(6), n(6)])?;
+                if html_dump.truthy() {
+                    method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), n(4), pl::s("APP3 header"), cat(&[&pl::s("Data size: "), &length, &pl::s(" bytes")])])?;
+                    method(it, "HDump", vec![seg_pos.clone(), n(5), pl::s("Stim header"), pl::s("APP3 data type: Stim")])?;
+                    dump_end = pl::add(&seg_pos, &length);
+                }
+                // extract the Stim information (it is in standard TIFF format)
+                let tag_table_ptr = table(it, "Image::ExifTool::Stim::Main")?;
+                method(it, "ProcessTIFF", vec![dinfo.clone(), tag_table_ptr])?;
+            } else if is("^_JPSJPS_", "") {
+                dump_type = pl::s("JPS");
+                if pl::str_eq(&self_.get("FILE_TYPE"), "JPEG") {
+                    method(it, "OverrideFileType", vec![pl::s("JPS")])?;
+                }
+                set_bo(it, pl::s("MM"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::JPS")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if self_.get("HasIJPEG").truthy() || pl::str_eq(&self_.get("Make"), "DJI") {
+                dump_type = pl::s(if self_.get("HasIJPEG").truthy() { "InfiRay ImagingData" } else { "DJI ThermalData" });
+                // add this data to the combined data if it exists
+                let mut data_pt = seg_data_pt.clone();
+                if !g(&combined_seg_data).is_undef() {
+                    s_(&combined_seg_data, pl::concat(&g(&combined_seg_data), &seg));
+                    data_pt = Value::ScalarRef(combined_seg_data.clone());
+                }
+                if pl::num_eq(&next_marker, &marker) {
+                    if g(&combined_seg_data).is_undef() {
+                        s_(&combined_seg_data, seg.clone());
+                    }
+                } else {
+                    // process InfiRay/DJI thermal data
+                    let tag_table_ptr = table(it, "Image::ExifTool::JPEG::Main")?;
+                    method(it, "HandleTag", vec![tag_table_ptr, pl::s("APP3"), data_pt.deref()])?;
+                    s_(&combined_seg_data, Value::Undef);
+                }
+            } else if is("^\\xff\\xd8\\xff\\xdb", "") {
+                dump_type = pl::s("PreviewImage"); // (Samsung, HP, BenQ)
+                preview = seg.clone();
+            }
+            if preview.truthy() && !pl::str_eq(&next_marker, "228") {
+                // this preview continues in APP4
+                found_tag_call(it, &self_, vec![pl::s("PreviewImage"), preview.clone()])?;
+                preview = Value::Undef;
+            }
+        } else if mk(&marker, 0xe4) {
+            // APP4 (InfiRay, "SCALADO", FPXR, DJI, PreviewImage)
+            if is("^SCALADO\\0", "") && pl::ge(&length, &n(16)) {
+                dump_type = pl::s("SCALADO");
+                let up = crate::perl::pack::unpack(b"x8n2N", &seg.to_bytes()).unwrap_or_default();
+                let (num, idx, len) = (arg(&up, 0), arg(&up, 1), arg(&up, 2));
+                // assume that the segments are in order and just concatinate them
+                if g(&scalado).is_undef() {
+                    s_(&scalado, pl::s(""));
+                }
+                let chunk = substr(it, &seg, &n(16), None)?;
+                s_(&scalado, pl::concat(&g(&scalado), &chunk));
+                if pl::num_eq(&idx, &pl::sub(&num, &n(1))) {
+                    if !pl::num_eq(&len, &len_of(&g(&scalado))) {
+                        method(it, "Warn", vec![pl::s("Possibly corrupted APP4 SCALADO data"), n(1)])?;
+                    }
+                    let di = Value::new_hash();
+                    di.set("Parent", marker_name.clone());
+                    di.set("DataPt", Value::ScalarRef(scalado.clone()));
+                    let tag_table_ptr = table(it, "Image::ExifTool::Scalado::Main")?;
+                    process_dir(it, &di, tag_table_ptr)?;
+                    s_(&scalado, Value::Undef);
+                }
+            } else if is("^Qualcomm Dual Camera Attributes", "") {
+                dump_type = pl::s("Qualcomm Dual Camera");
+                let tag_table_ptr = table(it, "Image::ExifTool::Qualcomm::DualCamera")?;
+                dir_start(it, vec![n(31)])?;
+                dinfo.set("DirName", pl::s("Qualcomm Dual Camera"));
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^FPXR\\0", "") {
+                if pl::gt(&fast, &n(1)) {
+                    continue; // skip processing for very fast
+                }
+                dump_type = pl::s("FPXR");
+                let tag_table_ptr = table(it, "Image::ExifTool::FlashPix::Main")?;
+                // set flag if this is the last FPXR segment
+                let last = !(pl::num_eq(&next_marker, &marker) && re("^FPXR\\0", "").is_match(&next_seg_data_pt.deref()));
+                dinfo.set("LastFPXR", Value::from(last));
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if pl::str_eq(&self_.get("Make"), "DJI") && is("^\\xaa\\x55\\x12\\x06", "") {
+                dump_type = pl::s("DJI ThermalParams");
+                dir_start(it, vec![n(0), n(0)])?;
+                let tag_table_ptr = table(it, "Image::ExifTool::DJI::ThermalParams")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if let Some(m) = if pl::str_eq(&self_.get("Make"), "DJI") { re("^(.{32})?.{32}\\x2c\\x01\\x20\\0", "s").m(&seg) } else { None } {
+                dump_type = pl::s("DJI ThermalParams2");
+                dir_start(it, vec![if cap(&m, 1).truthy() { n(32) } else { n(0) }, n(0)])?;
+                let tag_table_ptr = table(it, "Image::ExifTool::DJI::ThermalParams2")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if pl::str_eq(&self_.get("Make"), "DJI") && is("^.{32}\\xaa\\x55\\x38\\0", "s") {
+                dump_type = pl::s("DJI ThermalParams3");
+                dir_start(it, vec![n(32), n(0)])?;
+                let tag_table_ptr = table(it, "Image::ExifTool::DJI::ThermalParams3")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if self_.get("HasIJPEG").truthy() && pl::ge(&length, &n(120)) {
+                dump_type = pl::s("InfiRay Factory");
+                set_bo(it, pl::s("II"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::InfiRay::Factory")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if preview.truthy() {
+                // continued Samsung S1060 preview from APP3
+                dump_type = pl::s("PreviewImage");
+                preview = pl::concat(&preview, &seg);
+            }
+            // (also seen "QTI Debug Metadata\0" segment in some newer Samsung images)
+            // BenQ DC E1050 continues preview in APP5
+            if preview.truthy() && !pl::str_eq(&next_marker, "229") {
+                found_tag_call(it, &self_, vec![pl::s("PreviewImage"), preview.clone()])?;
+                preview = Value::Undef;
+            }
+        } else if mk(&marker, 0xe5) {
+            // APP5 (InfiRay, Ricoh "RMETA")
+            if is("^RMETA\\0", "") {
+                // (NOTE: apparently these may span multiple segments, but I haven't seen
+                // a sample like this, so multi-segment support hasn't yet been implemented)
+                dump_type = pl::s("Ricoh RMETA");
+                dir_start(it, vec![n(6), n(6)])?;
+                let tag_table_ptr = table(it, "Image::ExifTool::Ricoh::RMETA")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^ssuniqueid\\0", "") {
+                let tag_table_ptr = table(it, "Image::ExifTool::Samsung::APP5")?;
+                let v = substr(it, &seg, &n(11), None)?;
+                method(it, "HandleTag", vec![tag_table_ptr, pl::s("ssuniqueid"), v])?;
+            } else if pl::str_eq(&self_.get("Make"), "DJI") {
+                dump_type = pl::s("DJI ThermalCal");
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::Main")?;
+                method(it, "HandleTag", vec![tag_table_ptr, pl::s("APP5"), seg.clone()])?;
+            } else if self_.get("HasIJPEG").truthy() && pl::ge(&length, &n(38)) {
+                dump_type = pl::s("InfiRay Picture");
+                set_bo(it, pl::s("II"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::InfiRay::Picture")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if preview.truthy() {
+                dump_type = pl::s("PreviewImage");
+                preview = pl::concat(&preview, &seg);
+                found_tag_call(it, &self_, vec![pl::s("PreviewImage"), preview.clone()])?;
+                preview = Value::Undef;
+            }
+        } else if mk(&marker, 0xe6) {
+            // APP6 (InfiRay, Toshiba EPPIM, NITF, HP_TDHD)
+            if is("^EPPIM\\0", "") {
+                dump_type = Value::Undef; // (will be dumped here)
+                dir_start(it, vec![n(6), n(6)])?;
+                if html_dump.truthy() {
+                    method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), n(10), pl::s("APP6 EPPIM header")])?;
+                    dump_end = pl::add(&seg_pos, &length);
+                }
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::EPPIM")?;
+                method(it, "ProcessTIFF", vec![dinfo.clone(), tag_table_ptr])?;
+            } else if is("^NITF\\0", "") {
+                dump_type = pl::s("NITF");
+                set_bo(it, pl::s("MM"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::NITF")?;
+                dir_start(it, vec![n(5)])?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^TDHD\\x01\\0\\0\\0", "") && pl::gt(&length, &n(12)) {
+                // HP Photosmart R837 APP6 "TDHD" segment
+                dump_type = pl::s("TDHD");
+                let tag_table_ptr = table(it, "Image::ExifTool::HP::TDHD")?;
+                // (ignore first TDHD element because size includes 12-byte tag header)
+                dir_start(it, vec![n(12)])?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^GoPro\\0", "") {
+                // GoPro segment
+                dump_type = pl::s("GoPro");
+                let tag_table_ptr = table(it, "Image::ExifTool::GoPro::GPMF")?;
+                dir_start(it, vec![n(6)])?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^DTAT\\0\\0.\\{", "s") {
+                dump_type = pl::s("DJI_DTAT");
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::Main")?;
+                method(it, "HandleTag", vec![tag_table_ptr, pl::s("APP6"), seg.clone()])?;
+            } else if self_.get("HasIJPEG").truthy() && pl::ge(&length, &n(129)) {
+                dump_type = pl::s("InfiRay MixMode");
+                set_bo(it, pl::s("II"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::InfiRay::MixMode")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            }
+        } else if mk(&marker, 0xe7) {
+            // APP7 (InfiRay, Pentax, Huawei, Qualcomm)
+            if let Some(m) = re("^(PENTAX |RICOH)\\0(II|MM)", "").m(&seg) {
+                // found in K-3 and Ricoh GR_IV images (is this multi-segment??)
+                set_bo(it, cap(&m, 2))?;
+                dump_type = Value::Undef; // (dump this ourself)
+                let hdr_len = pl::add(&len_of(&cap(&m, 1)), &n(3));
+                let tag_table_ptr = table(it, "Image::ExifTool::Pentax::Main")?;
+                dir_start(it, vec![hdr_len.clone(), n(0)])?;
+                dinfo.set("DirName", pl::s("Pentax APP7"));
+                if html_dump.truthy() {
+                    method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), n(4), pl::s("APP7 header"), cat(&[&pl::s("Data size: "), &length, &pl::s(" bytes")])])?;
+                    method(it, "HDump", vec![seg_pos.clone(), hdr_len.clone(), pl::s("Pentax header"), pl::s("APP7 data type: Pentax")])?;
+                    dump_end = pl::add(&seg_pos, &length);
+                }
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if let Some(m) = re("^HUAWEI\\0\\0(II|MM)", "").m(&seg) {
+                set_bo(it, cap(&m, 1))?;
+                dump_type = Value::Undef; // (dump this ourself)
+                let hdr_len = n(16);
+                let tag_table_ptr = table(it, "Image::ExifTool::Unknown::Main")?;
+                dir_start(it, vec![hdr_len.clone(), n(8)])?;
+                dinfo.set("DirName", pl::s("Huawei APP7"));
+                if html_dump.truthy() {
+                    method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), n(4), pl::s("APP7 header"), cat(&[&pl::s("Data size: "), &length, &pl::s(" bytes")])])?;
+                    method(it, "HDump", vec![seg_pos.clone(), hdr_len.clone(), pl::s("Huawei header"), pl::s("APP7 data type: Huawei")])?;
+                    dump_end = pl::add(&seg_pos, &length);
+                }
+                self_.set("SET_GROUP0", pl::s("APP7"));
+                self_.set("SET_GROUP1", pl::s("Huawei"));
+                process_dir(it, &dinfo, tag_table_ptr)?;
+                self_.delete("SET_GROUP0");
+                self_.delete("SET_GROUP1");
+            } else if is("^DJI-DBG\\0", "") {
+                dump_type = pl::s("DJI Info");
+                let tag_table_ptr = table(it, "Image::ExifTool::DJI::Info")?;
+                dir_start(it, vec![n(8), n(0)])?;
+                self_.set("SET_GROUP0", pl::s("APP7"));
+                process_dir(it, &dinfo, tag_table_ptr)?;
+                self_.delete("SET_GROUP0");
+            } else if is("^\\x1aQualcomm Camera Attributes", "") {
+                // found in HP iPAQ_VoiceMessenger
+                dump_type = pl::s("Qualcomm");
+                let tag_table_ptr = table(it, "Image::ExifTool::Qualcomm::Main")?;
+                dir_start(it, vec![n(27)])?;
+                dinfo.set("DirName", pl::s("Qualcomm"));
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if self_.get("HasIJPEG").truthy() && pl::ge(&length, &n(32)) {
+                dump_type = pl::s("InfiRay OpMode");
+                set_bo(it, pl::s("II"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::InfiRay::OpMode")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            }
+        } else if mk(&marker, 0xe8) {
+            // APP8 (InfiRay, SPIFF)
+            // my sample SPIFF has 32 bytes of data, but spec states 30
+            if is("^SPIFF\\0", "") && pl::num_eq(&length, &n(32)) {
+                dump_type = pl::s("SPIFF");
+                dir_start(it, vec![n(6)])?;
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::SPIFF")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if self_.get("HasIJPEG").truthy() && pl::ge(&length, &n(32)) {
+                dump_type = pl::s("InfiRay Isothermal");
+                set_bo(it, pl::s("II"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::InfiRay::Isothermal")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^SEAL\\0", "") {
+                dump_type = pl::s("SEAL");
+                dir_start(it, vec![n(5)])?;
+                let t = table(it, "Image::ExifTool::XMP::SEAL")?;
+                process_dir(it, &dinfo, t)?;
+            }
+        } else if mk(&marker, 0xe9) {
+            // APP9 (InfiRay, Media Jukebox)
+            if is("^Media Jukebox\\0", "") && pl::gt(&length, &n(22)) {
+                dump_type = pl::s("MediaJukebox");
+                // (start parsing after the "<MJMD>")
+                dir_start(it, vec![n(22)])?;
+                dinfo.set("DirName", pl::s("MediaJukebox"));
+                runtime::require(it, "Image::ExifTool::XMP")?;
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::MediaJukebox")?;
+                let p = code_ref(it, "Image::ExifTool::XMP::ProcessXMP");
+                method(it, "ProcessDirectory", vec![dinfo.clone(), tag_table_ptr, p])?;
+            } else if self_.get("HasIJPEG").truthy() && pl::ge(&length, &n(768)) {
+                dump_type = pl::s("InfiRay Sensor");
+                set_bo(it, pl::s("II"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::InfiRay::Sensor")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else if is("^SEAL\\0", "") {
+                dump_type = pl::s("SEAL");
+                dir_start(it, vec![n(5)])?;
+                let t = table(it, "Image::ExifTool::XMP::SEAL")?;
+                process_dir(it, &dinfo, t)?;
+            }
+        } else if mk(&marker, 0xea) {
+            // APP10 (PhotoStudio Unicode comments, HDR gain curve)
+            if is("^UNICODE\\0", "") {
+                dump_type = pl::s("PhotoStudio");
+                let v = substr(it, &seg, &n(8), None)?;
+                let comment = method(it, "Decode", vec![v, pl::s("UTF16"), pl::s("MM")])?;
+                found_tag_call(it, &self_, vec![pl::s("Comment"), comment])?;
+            } else if is("^AROT\\0\\0.{4}", "s") {
+                dump_type = pl::s("AROT"); // (HDR gain curve? PH guess)
+                use_jpeg_main = n(1);
+            }
+        } else if mk(&marker, 0xeb) {
+            // APP11 (JPEG-HDR, JUMBF)
+            if is("^HDR_RI ", "") {
+                dump_type = pl::s("JPEG-HDR");
+                let mut data_pt = seg_data_pt.clone();
+                if !g(&combined_seg_data).is_undef() {
+                    if let Some((p, _)) = match_g(b"~\\0", "", &seg)? {
+                        let tail = substr(it, &seg, &n(p as i64), None)?;
+                        s_(&combined_seg_data, pl::concat(&g(&combined_seg_data), &tail));
+                    } else {
+                        method(it, "Warn", vec![pl::s("Invalid format for JPEG-HDR extended segment")])?;
+                    }
+                    data_pt = Value::ScalarRef(combined_seg_data.clone());
+                }
+                if pl::num_eq(&next_marker, &marker) && re("^HDR_RI ", "").is_match(&next_seg_data_pt.deref()) {
+                    if g(&combined_seg_data).is_undef() {
+                        s_(&combined_seg_data, seg.clone());
+                    }
+                } else {
+                    let tag_table_ptr = table(it, "Image::ExifTool::JPEG::HDR")?;
+                    let di = Value::new_hash();
+                    di.set("DataPt", data_pt);
+                    process_dir(it, &di, tag_table_ptr)?;
+                    s_(&combined_seg_data, Value::Undef);
+                }
+            } else if re("^(JP..)", "s").is_match(&seg) && pl::ge(&len_of(&seg), &n(16)) {
+                // JUMBF extension marker
+                dump_type = pl::s("JUMBF");
+                set_bo(it, pl::s("MM"))?;
+                // (sequence should start from 1, but some software incorrectly writes 0)
+                let seq_ = pl::call(it, "Image::ExifTool::Get32u", vec![seg_data_pt.clone(), n(4)])?;
+                let mut len = pl::call(it, "Image::ExifTool::Get32u", vec![seg_data_pt.clone(), n(8)])?;
+                let mut type_ = substr(it, &seg_data_pt.deref(), &n(12), Some(&n(4)))?;
+                // a Microsoft bug writes $len and $type incorrectly as little-endian
+                if pl::str_eq(&type_, "bmuj") {
+                    method(it, "Warn", vec![pl::s("Wrong byte order in C2PA APP11 JUMBF header")])?;
+                    type_ = pl::s("jumb");
+                    let up = crate::perl::pack::unpack(b"x8V", &seg_data_pt.deref().to_bytes()).unwrap_or_default();
+                    len = arg(&up, 0);
+                    // fix the header
+                    let repl = cat(&[&pl::call(it, "Image::ExifTool::Set32u", vec![len.clone()])?, &type_]);
+                    let cur = seg_data_pt.deref().to_bytes();
+                    if let Some((x, y)) = substr_range(cur.len(), 8, Some(8)) {
+                        let mut nb = cur[..x].to_vec();
+                        nb.extend_from_slice(&repl.to_bytes());
+                        nb.extend_from_slice(&cur[y..]);
+                        set_deref(&seg_data_pt, Value::bytes(nb))?;
+                    } else {
+                        return crate::interp::eval::die("substr outside of string");
+                    }
+                }
+                let hdr_len;
+                if pl::num_eq(&len, &n(1)) && pl::ge(&len_of(&seg_data_pt.deref()), &n(24)) {
+                    // (haven't seen this with the Microsoft bug)
+                    len = pl::call(it, "Image::ExifTool::Get64u", vec![seg_data_pt.deref(), n(16)])?;
+                    hdr_len = n(16);
+                } else {
+                    hdr_len = n(8);
+                }
+                let tk = type_.to_bytes();
+                if !jumbf_chunk.get(&tk).truthy() {
+                    jumbf_chunk.set(&tk, Value::new_array(vec![pl::s("")]));
+                }
+                let chunks = jumbf_chunk.get(&tk);
+                if pl::lt(&len, &hdr_len) {
+                    method(it, "Warn", vec![pl::s("Invalid JUMBF segment")])?;
+                } else if !chunks.at(seq_.to_i64()).is_undef() && pl::length(&chunks.at(seq_.to_i64())).truthy() {
+                    method(it, "Warn", vec![pl::s("Duplicate JUMBF sequence number")])?;
+                } else {
+                    if !seq_.truthy() {
+                        method(it, "Warn", vec![pl::s("Incorrect JUMBF sequence numbering (should start from 0, not 1)")])?;
+                    }
+                    // add to list of JUMBF chunks
+                    let c = substr(it, &seg_data_pt.deref(), &pl::add(&n(8), &hdr_len), None)?;
+                    chunks.set_at(seq_.to_i64().max(0) as usize, c);
+                    // check to see if we have a complete JUMBF box
+                    let mut size = hdr_len.clone();
+                    for c in chunks.items() {
+                        if c.is_undef() {
+                            size = n(0);
+                            break;
+                        }
+                        size = pl::add(&size, &len_of(&c));
+                    }
+                    if pl::num_eq(&size, &len) {
+                        let mut b = substr(it, &seg_data_pt.deref(), &n(8), Some(&hdr_len))?.to_bytes().to_vec();
+                        for c in chunks.items() {
+                            b.extend_from_slice(&c.to_bytes());
+                        }
+                        let buff = cell(Value::bytes(b));
+                        dinfo.set("DataPt", Value::ScalarRef(buff));
+                        dinfo.set("DataPos", pl::add(&seg_pos, &n(8))); // (shows correct offsets for single-segment JUMBF)
+                        dinfo.set("DirLen", size.clone());
+                        dinfo.set("DataLen", size);
+                        dinfo.set("DirName", pl::s("JUMBF"));
+                        let tag_table_ptr = table(it, "Image::ExifTool::Jpeg2000::Main")?;
+                        process_dir(it, &dinfo, tag_table_ptr)?;
+                        jumbf_chunk.delete(&tk);
+                    }
+                }
+            }
+        } else if mk(&marker, 0xec) {
+            // APP12 (Ducky, Picture Info)
+            if is("^Ducky", "") {
+                dump_type = pl::s("Ducky");
+                dir_start(it, vec![n(5)])?;
+                let tag_table_ptr = table(it, "Image::ExifTool::APP12::Ducky")?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            } else {
+                let tag_table_ptr = table(it, "Image::ExifTool::APP12::PictureInfo")?;
+                if process_dir(it, &dinfo, tag_table_ptr)?.truthy() {
+                    dump_type = pl::s("Picture Info");
+                }
+            }
+        } else if mk(&marker, 0xed) {
+            // APP13 (Photoshop, Adobe_CM)
+            let mut is_old = false;
+            let is_ps = re_var(it, "^", "psAPP13hdr", "")?.is_match(&seg) || {
+                is_old = re_var(it, "^", "psAPP13old", "")?.is_match(&seg);
+                is_old
+            };
+            if is_ps {
+                dump_type = pl::s("Photoshop");
+                // add this data to the combined data if it exists
+                let mut data_pt = seg_data_pt.clone();
+                if !g(&combined_seg_data).is_undef() {
+                    let hl = len_of(&it.get_scalar("Image::ExifTool::psAPP13hdr"));
+                    let tail = substr(it, &seg, &hl, None)?;
+                    s_(&combined_seg_data, pl::concat(&g(&combined_seg_data), &tail));
+                    data_pt = Value::ScalarRef(combined_seg_data.clone());
+                }
+                // peek ahead to see if the next segment is photoshop data too
+                if pl::num_eq(&next_marker, &marker) && re_var(it, "^", "psAPP13hdr", "")?.is_match(&next_seg_data_pt.deref()) {
+                    // initialize combined data if necessary
+                    if g(&combined_seg_data).is_undef() {
+                        s_(&combined_seg_data, seg.clone());
+                    }
+                    // (will handle the Photoshop data the next time around)
+                } else {
+                    let hdr_len = n(if is_old { 27 } else { 14 });
+                    // process APP13 Photoshop record
+                    let tag_table_ptr = table(it, "Image::ExifTool::Photoshop::Main")?;
+                    let l = len_of(&data_pt.deref());
+                    let di = Value::new_hash();
+                    di.set("DataPt", data_pt.clone());
+                    di.set("DataPos", seg_pos.clone());
+                    di.set("DataLen", l.clone());
+                    di.set("DirStart", hdr_len.clone()); // directory starts after identifier
+                    di.set("DirLen", pl::sub(&l, &hdr_len));
+                    di.set("Parent", marker_name.clone());
+                    process_dir(it, &di, tag_table_ptr)?;
+                    s_(&combined_seg_data, Value::Undef);
+                }
+            } else if is("^Adobe_CM", "") {
+                dump_type = pl::s("Adobe_CM");
+                set_bo(it, pl::s("MM"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::AdobeCM")?;
+                dir_start(it, vec![n(8)])?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            }
+        } else if mk(&marker, 0xee) {
+            // APP14 (Adobe)
+            if is("^Adobe", "") {
+                // extract as a block if requested, or if copying tags from file
+                if req.get("adobe").truthy() ||
+                    // (not extracted normally, so check TAGS_FROM_FILE)
+                    (self_.get("TAGS_FROM_FILE").truthy() && !vget(&self_, &[b"EXCL_TAG_LOOKUP", b"adobe"]).truthy())
+                {
+                    found_tag_call(it, &self_, vec![pl::s("Adobe"), seg.clone()])?;
+                }
+                dump_type = pl::s("Adobe");
+                set_bo(it, pl::s("MM"))?;
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::Adobe")?;
+                dir_start(it, vec![n(5)])?;
+                process_dir(it, &dinfo, tag_table_ptr)?;
+            }
+        } else if mk(&marker, 0xef) {
+            // APP15 (GraphicConverter)
+            match re("^Q\\s*(\\d+)", "").m(&seg) {
+                Some(m) if pl::num_eq(&length, &n(4)) => {
+                    dump_type = pl::s("GraphicConverter");
+                    let tag_table_ptr = table(it, "Image::ExifTool::JPEG::GraphConv")?;
+                    method(it, "HandleTag", vec![tag_table_ptr, pl::s("Q"), cap(&m, 1)])?;
+                }
+                _ => {}
+            }
+        } else if mk(&marker, 0xfe) {
+            // COM (JPEG comment)
+            dump_type = pl::s("Comment");
+            let mut v = seg_data_pt.deref();
+            if re("\\0+$", "").subst(&mut v, false, |_| Vec::new()) > 0 {
+                // some dumb softwares add null terminators
+                set_deref(&seg_data_pt, v)?;
+            }
+            found_tag_call(it, &self_, vec![pl::s("Comment"), seg_data_pt.deref()])?;
+        } else if mk(&marker, 0x64) {
+            // CME (J2C comment and extension)
+            dump_type = pl::s("Comment");
+            if pl::gt(&length, &n(2)) {
+                let up = crate::perl::pack::unpack(b"n", &seg.to_bytes()).unwrap_or_default();
+                let reg = arg(&up, 0); // get registration value
+                let mut val = substr(it, &seg, &n(2), None)?;
+                if pl::num_eq(&reg, &n(1)) {
+                    val = method(it, "Decode", vec![val, pl::s("Latin")])?;
+                }
+                // (actually an extension for $reg==65535, but store as binary comment)
+                let v = if pl::num_eq(&reg, &n(0)) || pl::num_eq(&reg, &n(65535)) { Value::ScalarRef(cell(val)) } else { val };
+                found_tag_call(it, &self_, vec![pl::s("Comment"), v])?;
+            }
+        } else if mk(&marker, 0x51) {
+            // SIZ (J2C)
+            let up = crate::perl::pack::unpack(b"x2N2", &seg.to_bytes()).unwrap_or_default();
+            let (w, h) = (arg(&up, 0), arg(&up, 1));
+            if !got_size.truthy() {
+                got_size = n(1);
+                found_tag_call(it, &self_, vec![pl::s("ImageWidth"), w])?;
+                found_tag_call(it, &self_, vec![pl::s("ImageHeight"), h])?;
+            }
+        } else if !pl::num_eq(&m_and(0xf0), &n(0xe0)) {
+            dump_type = cat(&[&marker_name, &pl::s(" segment")]);
+            desc = cat(&[&pl::s("[JPEG "), &marker_name, &pl::s("]")]); // (other known JPEG segments)
+        }
+        if !dump_type.is_undef() {
+            let seg = seg_data_pt.deref();
+            if use_jpeg_main.truthy() {
+                let tag_table_ptr = table(it, "Image::ExifTool::JPEG::Main")?;
+                method(it, "HandleTag", vec![tag_table_ptr, marker_name.clone(), seg.clone()])?;
+            }
+            if !dump_type.truthy() && (options.get("Unknown").truthy() || options.get("Validate").truthy()) {
+                let str_ = match re("^([\\x20-\\x7e]{1,20})\\0", "").m(&seg) {
+                    Some(m) => cat(&[&pl::s(" '"), &cap(&m, 1), &pl::s("'")]),
+                    None => pl::s(""),
+                };
+                if !xtra.truthy() {
+                    xtra = pl::s("segment");
+                }
+                method(it, "Warn", vec![cat(&[&pl::s("Unknown "), &marker_name, &str_, &pl::s(" "), &xtra]), n(1)])?;
+            }
+            if html_dump.truthy() {
+                if !desc.truthy() {
+                    desc = cat(&[&marker_name, &if dump_type.truthy() { cat(&[&pl::s(" "), &dump_type]) } else { pl::s("") }, &pl::s(" segment")]);
+                }
+                method(it, "HDump", vec![pl::sub(&seg_pos, &n(4)), pl::add(&length, &n(4)), desc.clone(), tip.clone(), n(0x08)])?;
+                dump_end = pl::add(&seg_pos, &length);
+            }
+        }
+        set_deref(&seg_data_pt, Value::Undef)?;
+    }
+    // print verbose hash message if necessary
+    if hashsize.truthy() && verbose.truthy() {
+        print(it, &[&indent, &pl::s("(ImageDataHash: "), &hashsize, &pl::s(" bytes of JPEG image data)\n")])?;
+    }
+    // calculate JPEGDigest if requested
+    if !dqt.is_empty() {
+        runtime::require(it, "Image::ExifTool::JPEGDigest")?;
+        pl::call(it, "Image::ExifTool::JPEGDigest::Calculate", vec![self_.clone(), dqt.clone(), sub_sampling.clone()])?;
+    }
+    // issue necessary warnings
+    if !jumbf_chunk.is_empty() {
+        method(it, "Warn", vec![pl::s("Invalid JUMBF size or missing JUMBF chunk")])?;
+    }
+    if !icc_chunk_count.is_undef() {
+        method(it, "Warn", vec![pl::s("Incomplete ICC_Profile record"), n(1)])?;
+    }
+    if !flir_count.is_undef() {
+        method(it, "Warn", vec![pl::s("Incomplete FLIR record"), n(1)])?;
+    }
+    if self_.get("PreviewError").truthy() {
+        method(it, "Warn", vec![pl::s("Error reading PreviewImage"), n(1)])?;
+    }
+    if !success.truthy() {
+        method(it, "Warn", vec![pl::s("JPEG format error")])?;
+    }
+    if path.len() > pn {
+        if let Value::ArrayRef(p) = &path {
+            p.borrow_mut().pop();
+        }
+    }
+    Ok(n(1))
+}
+
 /// Register the subs ported so far; the others still run from the Perl.
 pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::DirStart", dir_start);
@@ -2992,4 +4645,5 @@ pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::FoundTag", found_tag);
     it.define_native("Image::ExifTool::ProcessBinaryData", process_binary_data);
     it.define_native("Image::ExifTool::DoProcessTIFF", do_process_tiff);
+    it.define_native("Image::ExifTool::ProcessJPEG", process_jpeg);
 }
