@@ -652,7 +652,13 @@ pub fn extract_object(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
                 {
                     pl::set_deref(&data_pt, d)?;
                     obj_data = cat(&[obj_data, g, s(" R")]);
-                    obj_data = pl::sref(obj_data); // return scalar reference
+                    // return scalar reference
+                    // ($objData = \$objData: the variable then holds a
+                    //  reference to itself, so the result is a REF)
+                    let cell = Rc::new(std::cell::RefCell::new(obj_data));
+                    let self_ref = Value::ScalarRef(cell.clone());
+                    *cell.borrow_mut() = self_ref.clone();
+                    obj_data = self_ref;
                 }
             }
             return ret(obj_data); // return simple scalar or scalar reference
@@ -1034,7 +1040,11 @@ pub fn decode_stream(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
                 let inflate = pl::call(it, "Compress::Zlib::inflateInit", vec![])?;
                 let (mut buff, mut stat) = (Value::Undef, Value::Undef);
                 if inflate.truthy() {
-                    let r = pl::method_list(it, &inflate, "inflate", vec![dict.get("_stream")])?;
+                    // ($$dict{_stream} is passed as an alias: inflate may consume it)
+                    let mut args = [dict.get("_stream")];
+                    let r = pl::method_mut(it, &inflate, "inflate", &mut args, Want::List)?;
+                    let [consumed] = args;
+                    dict.set("_stream", consumed);
                     buff = arg(&r, 0);
                     stat = arg(&r, 1);
                 }
