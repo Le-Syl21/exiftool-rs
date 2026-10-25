@@ -1851,6 +1851,556 @@ fn found_tag_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
     Ok(tag)
 }
 
+/// The value of a lexical held in a cell.
+fn g(c: &Rc<RefCell<Value>>) -> Value {
+    c.borrow().clone()
+}
+
+fn s(c: &Rc<RefCell<Value>>, v: Value) {
+    *c.borrow_mut() = v;
+}
+
+/// An eval scope binding these lexical cells (in declaration order).
+fn scope_of(it: &mut Interp, scalars: &[(&str, &Rc<RefCell<Value>>)]) -> Rc<Scope> {
+    let scope = eval_scope(it);
+    for (name, c) in scalars {
+        bind(&scope, name, c);
+    }
+    scope
+}
+
+/// Process binary data
+/// Inputs: 0) ExifTool object ref, 1) directory information ref, 2) tag table ref
+/// Returns: 1 on success
+/// Notes: dirInfo may contain VarFormatData (reference to empty list) to return
+///        details about any variable-length-format tags in the table (used when writing)
+pub fn process_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    use crate::perl::ops;
+    let args_all: Rc<RefCell<Vec<Value>>> = Rc::new(RefCell::new(a.clone()));
+    let (self_, dir_info, tag_table_ptr) = (cell(arg(&a, 0)), cell(arg(&a, 1)), cell(arg(&a, 2)));
+    let et = g(&self_);
+    let di = g(&dir_info);
+    let ttp = g(&tag_table_ptr);
+    let data_pt = cell(di.get("DataPt"));
+    let dp = g(&data_pt);
+    let data_len = cell(len_of(&dp.deref()));
+    let dir_start = cell(or(di.get("DirStart"), n(0)));
+    let max_len = cell(pl::sub(&g(&data_len), &g(&dir_start)));
+    let size = cell(di.get("DirLen"));
+    let base = cell(or(di.get("Base"), n(0)));
+    let verbose = cell(et.path(&["OPTIONS", "Verbose"]));
+    let unknown = cell(et.path(&["OPTIONS", "Unknown"]));
+    let data_pos = cell(or(di.get("DataPos"), n(0)));
+    let format_size = lex_hash(it, "formatSize");
+
+    if g(&size).is_undef() || pl::gt(&g(&size), &g(&max_len)) {
+        s(&size, g(&max_len));
+    }
+    // get default format ('int8u' unless specified)
+    let default_format = cell(or(ttp.get("FORMAT"), pl::s("int8u")));
+    let increment = cell(format_size.get(g(&default_format).to_bytes()));
+    if !g(&increment).truthy() {
+        it.warn(cat(&[&pl::s("Unknown format "), &g(&default_format), &pl::s("\n")]))?;
+        s(&default_format, pl::s("int8u"));
+        s(&increment, format_size.get(g(&default_format).to_bytes()));
+    }
+    // prepare list of tag numbers to extract
+    let tags: Rc<RefCell<Vec<Value>>> = Rc::new(RefCell::new(Vec::new()));
+    let (top_index, bin_val) = (cell(Value::Undef), cell(Value::Undef));
+    let num_sort = |v: &mut Vec<Value>, key: &dyn Fn(&Value) -> Value| {
+        v.sort_by(|x, y| ops::num_cmp(&key(x), &key(y)).unwrap_or(std::cmp::Ordering::Equal));
+    };
+    if pl::gt(&g(&unknown), &n(1)) && !ttp.get("FIRST_ENTRY").is_undef() {
+        // don't create a stupid number of tags if data is huge
+        let size_limit = if pl::lt(&g(&size), &n(65536)) { g(&size) } else { n(65536) };
+        // scan through entire binary table
+        s(&top_index, pl::int(&pl::div(&size_limit, &g(&increment))?));
+        let (lo, hi) = (ttp.get("FIRST_ENTRY").to_i64(), pl::sub(&g(&top_index), &n(1)).to_i64());
+        let mut t: Vec<Value> = (lo..=hi).map(n).collect();
+        // add in floating point tag ID's if they exist
+        let ftags: Vec<Value> = tag_table_keys_list(it, &ttp).into_iter().filter(|k| re(r"\.", "").is_match(k)).collect();
+        if !ftags.is_empty() {
+            t.extend(ftags);
+            num_sort(&mut t, &|x| x.clone());
+        }
+        *tags.borrow_mut() = t;
+    } else if di.get("DataMember").truthy() {
+        *tags.borrow_mut() = di.get("DataMember").items();
+        s(&verbose, n(0)); // no verbose output of extracted values when writing
+    } else if di.get("MixedTags").truthy() {
+        // process sorted integer-ID tags only
+        let mut t: Vec<Value> = tag_table_keys_list(it, &ttp).into_iter().filter(|k| re(r"^\d+$", "").is_match(k)).collect();
+        num_sort(&mut t, &|x| x.clone());
+        *tags.borrow_mut() = t;
+    } else {
+        // extract known tags in numerical order
+        let mut t = tag_table_keys_list(it, &ttp);
+        num_sort(&mut t, &|x| if pl::lt(x, &n(0)) { pl::add(x, &Value::Num(1e9)) } else { x.clone() });
+        *tags.borrow_mut() = t;
+    }
+    if g(&verbose).truthy() {
+        let bo = pl::call(it, "Image::ExifTool::GetByteOrder", vec![])?;
+        verbose_dir(it, vec![et.clone(), pl::s("BinaryData"), Value::Undef, g(&size), bo], Want::Void)?;
+    }
+    // avoid creating unknown tags for tags that fail condition if Unknown is 1
+    if pl::lt(&g(&unknown), &n(2)) {
+        et.set("NO_UNKNOWN", n(1));
+    }
+    let index = cell(Value::Undef);
+    let val_h: Rc<RefCell<Hash>> = Rc::new(RefCell::new(Hash::default()));
+    let next_index = cell(n(0));
+    let var_size = cell(n(0));
+    let tag_list = tags.borrow().clone();
+    'tags: for idx in tag_list {
+        s(&index, idx);
+        let (tag_info, val, save_next_index, len, mask, was_var, rational, off_adj) = (cell(Value::Undef), cell(Value::Undef), cell(Value::Undef), cell(Value::Undef), cell(Value::Undef), cell(Value::Undef), cell(Value::Undef), cell(Value::Undef));
+        // the lexicals an eval site of this loop sees
+        let base_vars = |extra: &[(&'static str, &Rc<RefCell<Value>>)]| -> Vec<(&'static str, Rc<RefCell<Value>>)> {
+            let mut v: Vec<(&'static str, Rc<RefCell<Value>>)> = vec![
+                ("self", self_.clone()),
+                ("dirInfo", dir_info.clone()),
+                ("tagTablePtr", tag_table_ptr.clone()),
+                ("dataPt", data_pt.clone()),
+                ("dataLen", data_len.clone()),
+                ("dirStart", dir_start.clone()),
+                ("maxLen", max_len.clone()),
+                ("size", size.clone()),
+                ("base", base.clone()),
+                ("verbose", verbose.clone()),
+                ("unknown", unknown.clone()),
+                ("dataPos", data_pos.clone()),
+                ("defaultFormat", default_format.clone()),
+                ("increment", increment.clone()),
+                ("topIndex", top_index.clone()),
+                ("binVal", bin_val.clone()),
+                ("index", index.clone()),
+                ("nextIndex", next_index.clone()),
+                ("varSize", var_size.clone()),
+                ("tagInfo", tag_info.clone()),
+                ("val", val.clone()),
+                ("saveNextIndex", save_next_index.clone()),
+                ("len", len.clone()),
+                ("mask", mask.clone()),
+                ("wasVar", was_var.clone()),
+                ("rational", rational.clone()),
+                ("offAdj", off_adj.clone()),
+            ];
+            for (k, c) in extra {
+                v.push((k, (*c).clone()));
+            }
+            v
+        };
+        let make_scope = |it: &mut Interp, vars: Vec<(&'static str, Rc<RefCell<Value>>)>| -> Rc<Scope> {
+            let refs: Vec<(&str, &Rc<RefCell<Value>>)> = vars.iter().map(|(k, c)| (*k, c)).collect();
+            let scope = scope_of(it, &refs);
+            scope.declare(b'@', "tags", Binding::Array(tags.clone()));
+            scope.declare(b'%', "val", Binding::Hash(val_h.clone()));
+            scope.declare(b'@', "_", Binding::Array(args_all.clone()));
+            scope
+        };
+        let index_v = g(&index);
+        if ttp.get(index_v.to_bytes()).truthy() {
+            s(&tag_info, get_tag_info_impl(it, vec![et.clone(), ttp.clone(), index_v.clone()])?);
+            if !g(&tag_info).truthy() {
+                if g(&tag_info).is_undef() {
+                    continue;
+                }
+                // $entry = offset of value relative to directory start (or end if negative)
+                let mut entry = pl::add(&pl::mul(&pl::int(&index_v), &g(&increment)), &g(&var_size));
+                if pl::lt(&entry, &n(0)) {
+                    entry = pl::add(&entry, &g(&size));
+                    if pl::lt(&entry, &n(0)) {
+                        continue;
+                    }
+                }
+                if pl::ge(&entry, &g(&size)) {
+                    continue;
+                }
+                let mut more = pl::sub(&g(&size), &entry);
+                if pl::gt(&more, &n(128)) {
+                    more = n(128);
+                }
+                let v = substr(it, &g(&data_pt).deref(), &pl::add(&entry, &g(&dir_start)), Some(&more))?;
+                s(&tag_info, get_tag_info_impl(it, vec![et.clone(), ttp.clone(), index_v.clone(), Value::ScalarRef(cell(v))])?);
+                if !g(&tag_info).truthy() {
+                    continue;
+                }
+            }
+            let ti = g(&tag_info);
+            if ti.get("Unknown").truthy() && (pl::gt(&ti.get("Unknown"), &g(&unknown)) || pl::lt(&index_v, &g(&next_index))) {
+                continue;
+            }
+        } else if g(&top_index).truthy() && ttp.get(pl::sub(&index_v, &g(&top_index)).to_bytes()).truthy() {
+            s(&tag_info, get_tag_info_impl(it, vec![et.clone(), ttp.clone(), pl::sub(&index_v, &g(&top_index))])?);
+            if !g(&tag_info).truthy() {
+                continue;
+            }
+        } else {
+            // don't generate unknown tags in binary tables unless Unknown > 1
+            if !pl::gt(&g(&unknown), &n(1)) {
+                continue;
+            }
+            if pl::lt(&index_v, &g(&next_index)) {
+                continue; // skip if data already used
+            }
+            s(&tag_info, get_tag_info_impl(it, vec![et.clone(), ttp.clone(), index_v.clone()])?);
+            if !g(&tag_info).truthy() {
+                continue;
+            }
+            g(&tag_info).set("Unknown", n(2)); // set unknown to 2 for binary unknowns
+        }
+        let mut ti = g(&tag_info);
+        // get relative offset of this entry
+        let entry = cell(pl::add(&pl::mul(&pl::int(&index_v), &g(&increment)), &g(&var_size)));
+        // allow negative indices to represent bytes from end
+        if pl::lt(&g(&entry), &n(0)) {
+            s(&entry, pl::add(&g(&entry), &g(&size)));
+            if pl::lt(&g(&entry), &n(0)) {
+                continue;
+            }
+        }
+        let more = cell(pl::sub(&g(&size), &g(&entry)));
+        if pl::le(&g(&more), &n(0)) {
+            break; // all done if we have reached the end of data
+        }
+        let count = cell(n(1));
+        let format = cell(ti.get("Format"));
+        let loop_vars = |extra: &[(&'static str, &Rc<RefCell<Value>>)]| {
+            let mut v = base_vars(&[("entry", &entry), ("more", &more), ("count", &count), ("format", &format)]);
+            for (k, c) in extra {
+                v.push((k, (*c).clone()));
+            }
+            v
+        };
+        if !g(&format).truthy() {
+            s(&format, g(&default_format));
+        } else if pl::str_eq(&g(&format), "string") {
+            // string with no specified count runs to end of block
+            s(&count, g(&more));
+        } else if pl::str_eq(&g(&format), "pstring") {
+            s(&format, pl::s("string"));
+            let e = g(&entry);
+            s(&entry, pl::add(&e, &n(1)));
+            s(&count, pl::call(it, "Image::ExifTool::Get8u", vec![g(&data_pt), pl::add(&e, &g(&dir_start))])?);
+            s(&more, pl::sub(&g(&more), &n(1)));
+        } else if !format_size.get(g(&format).to_bytes()).truthy() {
+            if let Some(m) = re(r"(.*)\[(.*)\]", "").m(&g(&format)) {
+                // handle format count field
+                s(&format, cap(&m, 1));
+                s(&count, cap(&m, 2));
+                // evaluate count to allow count to be based on previous values
+                //### eval Format size (%val, $size, $varSize, $self)
+                let scope = make_scope(it, loop_vars(&[]));
+                let code = g(&count);
+                let r = scalar_of(eval_site(it, &code, &scope, Want::Scalar));
+                s(&count, r);
+                let err = eval_error(it);
+                if err.truthy() {
+                    it.warn(cat(&[&pl::s("Format "), &ti.get("Name"), &pl::s(": "), &err]))?;
+                    continue;
+                }
+                if pl::lt(&g(&count), &n(0)) {
+                    continue;
+                }
+                // allow a variable-length value of any format
+                // (note: the next incremental index points to data immediately after
+                //  this value, regardless of the size of this value, even if it is zero)
+                let mut f = g(&format);
+                if re("^var_", "").subst(&mut f, false, |_| Vec::new()) > 0 {
+                    s(&format, f);
+                    let fs = or(format_size.get(g(&format).to_bytes()), n(1));
+                    s(&var_size, pl::sub(&pl::add(&g(&var_size), &pl::mul(&g(&count), &fs)), &g(&increment)));
+                    s(&was_var, n(1));
+                    // save variable size data if required for writing
+                    if di.get("VarFormatData").truthy() {
+                        di.get_or_new_array("VarFormatData").push(Value::new_array(vec![g(&index), g(&var_size), g(&format)]));
+                    }
+                    // don't extract value if large and we wanted it just to get
+                    // the variable-format information when writing
+                    if ti.get("LargeTag").truthy() && di.get("VarFormatData").truthy() {
+                        continue;
+                    }
+                }
+            } else if re("^var_", "").is_match(&g(&format)) {
+                // handle variable-length string formats
+                s(&format, substr(it, &g(&format), &n(4), None)?);
+                let pscope = make_scope(it, loop_vars(&[]));
+                snippet(it, "pos($$dataPt) = $entry + $dirStart;", &pscope, Want::Void)?;
+                s(&count, Value::Undef);
+                let fmt = g(&format);
+                if pl::str_eq(&fmt, "ustring") {
+                    let r = scalar_of(snippet(it, "($$dataPt =~ /\\G(..)*?\\0\\0/sg) ? [pos($$dataPt)] : undef", &pscope, Want::Scalar)?);
+                    if r.truthy() {
+                        s(&count, pl::sub(&r.at(0), &pl::add(&g(&entry), &g(&dir_start))));
+                    }
+                    s(&var_size, pl::sub(&g(&var_size), &n(2))); // ($count includes base size of 2 bytes)
+                } else if pl::str_eq(&fmt, "pstring") {
+                    let e = g(&entry);
+                    s(&entry, pl::add(&e, &n(1)));
+                    s(&count, pl::call(it, "Image::ExifTool::Get8u", vec![g(&data_pt), pl::add(&e, &g(&dir_start))])?);
+                    s(&more, pl::sub(&g(&more), &n(1)));
+                } else if pl::str_eq(&fmt, "pstr32") || pl::str_eq(&fmt, "ustr32") {
+                    if pl::lt(&g(&more), &n(4)) {
+                        break;
+                    }
+                    s(&count, pl::call(it, "Image::ExifTool::Get32u", vec![g(&data_pt), pl::add(&g(&entry), &g(&dir_start))])?);
+                    if pl::str_eq(&fmt, "ustr32") {
+                        s(&count, pl::mul(&g(&count), &n(2)));
+                    }
+                    s(&entry, pl::add(&g(&entry), &n(4)));
+                    s(&more, pl::sub(&g(&more), &n(4)));
+                    s(&next_index, pl::add(&g(&next_index), &pl::div(&n(4), &g(&increment))?)); // (increment next index for int32u)
+                } else if pl::str_eq(&fmt, "int16u") {
+                    // int16u size of binary data to follow
+                    if pl::lt(&g(&more), &n(2)) {
+                        break;
+                    }
+                    s(&count, pl::add(&pl::call(it, "Image::ExifTool::Get16u", vec![g(&data_pt), pl::add(&g(&entry), &g(&dir_start))])?, &n(2)));
+                    s(&var_size, pl::sub(&g(&var_size), &n(2))); // ($count includes size word)
+                    s(&format, pl::s("undef"));
+                } else if pl::str_eq(&fmt, "ue7") {
+                    runtime::require(it, "Image::ExifTool::BPG")?;
+                    let r = pl::call_list(it, "Image::ExifTool::BPG::Get_ue7", vec![g(&data_pt), pl::add(&g(&entry), &g(&dir_start))])?;
+                    s(&val, arg(&r, 0));
+                    s(&count, arg(&r, 1));
+                    if g(&val).is_undef() {
+                        break;
+                    }
+                    s(&var_size, pl::sub(&g(&var_size), &n(1))); // ($count includes base size of 1 byte)
+                } else {
+                    let r = scalar_of(snippet(it, "($$dataPt =~ /\\0/g) ? [pos($$dataPt)] : undef", &pscope, Want::Scalar)?);
+                    if r.truthy() {
+                        s(&count, pl::sub(&r.at(0), &pl::add(&g(&entry), &g(&dir_start))));
+                        s(&var_size, pl::sub(&g(&var_size), &n(1))); // ($count includes base size of 1 byte)
+                    }
+                }
+                if g(&count).is_undef() || pl::gt(&g(&count), &g(&more)) {
+                    s(&count, g(&more));
+                }
+                s(&var_size, pl::add(&g(&var_size), &g(&count))); // shift subsequent indices
+                if g(&val).is_undef() {
+                    let mut v = substr(it, &g(&data_pt).deref(), &pl::add(&g(&entry), &g(&dir_start)), Some(&g(&count)))?;
+                    let fmt = g(&format);
+                    if pl::str_eq(&fmt, "ustring") || pl::str_eq(&fmt, "ustr32") {
+                        v = pl::method(it, &et, "Decode", vec![v, pl::s("UTF16")])?;
+                    }
+                    if !pl::str_eq(&fmt, "undef") {
+                        re(r"\0.*", "s").subst(&mut v, false, |_| Vec::new()); // truncate at null
+                    }
+                    s(&val, v);
+                }
+                if et.path(&["OPTIONS", "SaveBin"]).truthy() {
+                    s(&bin_val, substr(it, &g(&data_pt).deref(), &pl::add(&g(&entry), &g(&dir_start)), Some(&g(&count)))?);
+                }
+                s(&was_var, n(1));
+                // save variable size data if required for writing
+                if di.get("VarFormatData").truthy() {
+                    di.get_or_new_array("VarFormatData").push(Value::new_array(vec![g(&index), g(&var_size), g(&format)]));
+                }
+            }
+        }
+        // hook to allow format, etc to be set dynamically
+        if !ti.get("Hook").is_undef() {
+            let old_var_size = cell(g(&var_size));
+            let pos = cell(pl::add(&g(&entry), &g(&dir_start)));
+            //### eval Hook ($format, $varSize, $size, $dataPt, $pos)
+            let scope = make_scope(it, loop_vars(&[("oldVarSize", &old_var_size), ("pos", &pos)]));
+            eval_site(it, &ti.get("Hook"), &scope, Want::Void);
+            ti = g(&tag_info);
+            // save variable size data if required for writing (in case changed by Hook)
+            if di.get("VarFormatData").truthy() {
+                let vfd = di.get_or_new_array("VarFormatData");
+                if g(&was_var).truthy() {
+                    // remove previous entry for this tag
+                    if let Value::ArrayRef(arr) = &vfd {
+                        let l = arr.borrow().len();
+                        arr.borrow_mut().truncate(l.saturating_sub(1));
+                    }
+                }
+                vfd.push(Value::new_array(vec![g(&index), g(&var_size), g(&format)]));
+            } else if !pl::num_eq(&g(&var_size), &g(&old_var_size)) && pl::gt(&g(&verbose), &n(2)) {
+                let (mut tmp, mut sign) = (g(&var_size), "+");
+                if pl::lt(&tmp, &n(0)) {
+                    tmp = pl::neg(&tmp);
+                    sign = "-";
+                }
+                let fmt = cat(&[&et.get("INDENT"), &pl::s("[offsets adjusted by "), &pl::s(sign), &pl::s("0x%.4x after 0x%.4x "), &ti.get("Name"), &pl::s("]\n")]);
+                s(&off_adj, pl::sprintf_v(&fmt, &[tmp, g(&index)]));
+            }
+        }
+        if pl::gt(&g(&unknown), &n(1)) {
+            // calculate next valid index for unknown tag
+            let mut ni = pl::int(&g(&index));
+            if !g(&was_var).truthy() {
+                let fs = or(format_size.get(g(&format).to_bytes()), n(1));
+                ni = pl::add(&ni, &pl::div(&pl::mul(&fs, &g(&count)), &g(&increment))?);
+            }
+            s(&save_next_index, g(&next_index));
+            if !pl::gt(&g(&next_index), &ni) {
+                s(&next_index, ni);
+            }
+        }
+        // allow large tags to be excluded from extraction
+        // (provides a work-around for some tight memory situations)
+        if ti.get("LargeTag").truthy() && vget(&et, &[b"EXCL_TAG_LOOKUP", &lc(&ti.get("Name")).to_bytes()]).truthy() {
+            continue;
+        }
+        // read value now if necessary
+        if !(!g(&val).is_undef() && !ti.get("SubDirectory").truthy()) {
+            let v = pl::call(it, "Image::ExifTool::ReadValue", vec![g(&data_pt), pl::add(&g(&entry), &g(&dir_start)), g(&format), g(&count), g(&more), Value::ScalarRef(rational.clone())])?;
+            s(&val, v);
+            if g(&val).is_undef() {
+                continue;
+            }
+            s(&mask, ti.get("Mask"));
+            if g(&mask).truthy() {
+                s(&val, ops::shift_right(&ops::bit_and(&g(&val), &g(&mask)), &ti.get("BitShift")));
+            }
+        }
+        if g(&verbose).truthy() && !ti.get("Hidden").truthy() {
+            if !ti.get("SubDirectory").truthy() || ti.get("Format").truthy() {
+                let fs = or(format_size.get(g(&format).to_bytes()), n(1));
+                s(&len, pl::mul(&g(&count), &fs));
+                if pl::gt(&g(&len), &g(&more)) {
+                    s(&len, g(&more));
+                }
+            } else {
+                s(&len, g(&more));
+            }
+            let start = pl::add(&g(&entry), &g(&dir_start));
+            let extra = if g(&mask).truthy() { pl::sprintf(", mask 0x%.2x", &[g(&mask)]) } else { Value::Undef };
+            let args = vec![
+                g(&index),
+                ti.clone(),
+                pl::s("Table"),
+                ttp.clone(),
+                pl::s("Value"),
+                g(&val),
+                pl::s("DataPt"),
+                g(&data_pt),
+                pl::s("Size"),
+                g(&len),
+                pl::s("Start"),
+                start.clone(),
+                pl::s("Addr"),
+                pl::add(&pl::add(&start, &g(&base)), &g(&data_pos)),
+                pl::s("Format"),
+                g(&format),
+                pl::s("Count"),
+                g(&count),
+                pl::s("Extra"),
+                extra,
+            ];
+            meth(it, &et, "VerboseInfo", args, Want::Void)?;
+        }
+        if g(&off_adj).truthy() {
+            vprint(it, &et, &n(2), vec![g(&off_adj)])?;
+        }
+        // parse nested BinaryData directories
+        if ti.get("SubDirectory").truthy() {
+            let subdir = cell(ti.get("SubDirectory"));
+            let sd = g(&subdir);
+            let sub_table_ptr = cell(pl::call(it, "Image::ExifTool::GetTagTable", vec![sd.get("TagTable")])?);
+            // use specified subdirectory length if given
+            if ti.get("Format").truthy() && format_size.get(g(&format).to_bytes()).truthy() {
+                s(&len, pl::mul(&g(&count), &format_size.get(g(&format).to_bytes())));
+                if pl::gt(&g(&len), &g(&more)) {
+                    s(&len, g(&more));
+                }
+            } else {
+                s(&len, g(&more)); // directory size is all of remaining data
+                let stp = g(&sub_table_ptr);
+                if stp.get("PROCESS_PROC").truthy() && seq(&stp.get("PROCESS_PROC"), &code_ref(it, "Image::ExifTool::ProcessBinaryData")) {
+                    // the rest of the data will be printed in the subdirectory
+                    s(&next_index, pl::div(&g(&size), &g(&increment))?);
+                }
+            }
+            let subdir_base = cell(g(&base));
+            if !sd.get("Base").is_undef() {
+                //### eval Base ($start,$base)
+                let start = cell(pl::add(&pl::add(&g(&entry), &g(&dir_start)), &g(&data_pos)));
+                let scope = make_scope(it, loop_vars(&[("subdir", &subdir), ("subTablePtr", &sub_table_ptr), ("subdirBase", &subdir_base), ("start", &start)]));
+                let r = scalar_of(eval_site(it, &sd.get("Base"), &scope, Want::Scalar));
+                s(&subdir_base, pl::add(&r, &g(&base)));
+            }
+            let start = cell(or(sd.get("Start"), n(0)));
+            let not_dup = cell(Value::Undef);
+            if re(r"\$", "").is_match(&g(&start)) {
+                // ignore directories with a zero offset (ie. missing Nikon ShotInfo entries)
+                if !g(&val).truthy() {
+                    continue 'tags;
+                }
+                //### eval Start ($val, $dirStart)
+                let scope = make_scope(it, loop_vars(&[("subdir", &subdir), ("subTablePtr", &sub_table_ptr), ("subdirBase", &subdir_base), ("start", &start), ("notDup", &not_dup)]));
+                let code = g(&start);
+                let r = scalar_of(eval_site(it, &code, &scope, Want::Scalar));
+                s(&start, r);
+                if pl::lt(&g(&start), &g(&dir_start)) || pl::gt(&g(&start), &g(&data_len)) {
+                    continue 'tags;
+                }
+                s(&len, sd.get("DirLen"));
+                let room = pl::sub(&g(&data_len), &g(&start));
+                if !(g(&len).truthy() && pl::le(&g(&len), &room)) {
+                    s(&len, room);
+                }
+            } else {
+                s(&start, pl::add(&g(&start), &pl::add(&g(&dir_start), &g(&entry))));
+                s(&not_dup, n(1));
+            }
+            let subdir_info = Value::new_hash();
+            subdir_info.set("DataPt", g(&data_pt));
+            subdir_info.set("DataPos", g(&data_pos));
+            subdir_info.set("DataLen", g(&data_len));
+            subdir_info.set("DirStart", g(&start));
+            subdir_info.set("DirLen", g(&len));
+            subdir_info.set("Base", g(&subdir_base));
+            subdir_info.set("NotDup", g(&not_dup));
+            et.delete("NO_UNKNOWN");
+            pl::method(it, &et, "ProcessDirectory", vec![subdir_info, g(&sub_table_ptr), sd.get("ProcessProc")])?;
+            if pl::lt(&g(&unknown), &n(2)) {
+                et.set("NO_UNKNOWN", n(1));
+            }
+            continue;
+        }
+        if ti.get("IsOffset").truthy() && !pl::str_eq(&ti.get("IsOffset"), "3") {
+            let et_c = cell(et.clone());
+            //### eval IsOffset ($val, $et)
+            let scope = make_scope(it, loop_vars(&[("et", &et_c)]));
+            let r = scalar_of(eval_site(it, &ti.get("IsOffset"), &scope, Want::Scalar));
+            if r.truthy() {
+                s(&val, pl::add(&g(&val), &pl::add(&g(&base), &et.get("BASE"))));
+            }
+        }
+        val_h.borrow_mut().insert(&g(&index).to_bytes(), g(&val));
+        let mut old_base = Value::Undef;
+        if ti.get("SetBase").truthy() {
+            old_base = et.get("BASE");
+            et.set("BASE", pl::add(&et.get("BASE"), &g(&base)));
+        }
+        let key = found_tag_call(it, &et, vec![ti.clone(), g(&val)])?;
+        if !old_base.is_undef() {
+            et.set("BASE", old_base);
+        }
+        if key.truthy() {
+            let r = g(&rational);
+            if !r.is_undef() {
+                et.get_or_new_hash("TAG_EXTRA").get_or_new_hash(key.to_bytes()).set("Rational", r);
+            }
+            let b = g(&bin_val);
+            if !b.is_undef() {
+                et.get_or_new_hash("TAG_EXTRA").get_or_new_hash(key.to_bytes()).set("BinVal", b);
+            }
+        } else {
+            // don't increment nextIndex if we didn't extract a tag
+            if !g(&save_next_index).is_undef() {
+                s(&next_index, g(&save_next_index));
+            }
+        }
+    }
+    et.delete("NO_UNKNOWN");
+    ret(n(1))
+}
+
 /// Register the subs ported so far; the others still run from the Perl.
 pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::DirStart", dir_start);
@@ -1880,4 +2430,5 @@ pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::AddTagToTable", add_tag_to_table);
     it.define_native("Image::ExifTool::HandleTag", handle_tag);
     it.define_native("Image::ExifTool::FoundTag", found_tag);
+    it.define_native("Image::ExifTool::ProcessBinaryData", process_binary_data);
 }
