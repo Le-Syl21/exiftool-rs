@@ -245,7 +245,10 @@ pub fn found_png(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                 let (mut v2, mut stat) = (Value::Undef, Value::Undef);
                 let inflate = pl::call(it, "Compress::Zlib::inflateInit", vec![])?;
                 if inflate.truthy() {
-                    let r = pl::method_list(it, &inflate, "inflate", vec![val.clone()])?;
+                    // (inflate() may consume its input, so $val is passed as an alias)
+                    let mut args = [val.clone()];
+                    let r = pl::method_mut(it, &inflate, "inflate", &mut args, Want::List)?;
+                    val = args[0].clone();
                     v2 = arg(&r, 0);
                     stat = arg(&r, 1);
                 }
