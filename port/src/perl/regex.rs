@@ -61,12 +61,28 @@ fn to_pcre_pattern(pattern: &[u8]) -> String {
         }
     }
     let mut out = String::with_capacity(pattern.len() + 8);
-    for &b in pattern {
+    let mut i = 0;
+    while i < pattern.len() {
+        let b = pattern[i];
+        // An escaped raw byte (quotemeta puts a backslash before NUL and
+        // high bytes): the \x{hh} form replaces both.
+        if b == b'\\' && i + 1 < pattern.len() && (pattern[i + 1] == 0 || pattern[i + 1] >= 0x80) {
+            out.push_str(&format!("\\x{{{:02x}}}", pattern[i + 1]));
+            i += 2;
+            continue;
+        }
+        if b == b'\\' && i + 1 < pattern.len() {
+            out.push('\\');
+            out.push(pattern[i + 1] as char);
+            i += 2;
+            continue;
+        }
         if b == 0 || b >= 0x80 {
             out.push_str(&format!("\\x{{{b:02x}}}"));
         } else {
             out.push(b as char);
         }
+        i += 1;
     }
     out
 }

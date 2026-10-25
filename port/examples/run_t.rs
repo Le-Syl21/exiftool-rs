@@ -9,6 +9,8 @@ fn main() {
     let mut it = exiftool_port::runtime::new_interp();
     it.passthrough = true;
     it.strict = false;
+    let argv: Vec<exiftool_port::perl::Value> = std::env::args().skip(2).map(|a| exiftool_port::perl::Value::str(&a)).collect();
+    it.set_global(b'@', "main::ARGV", exiftool_port::interp::Binding::Array(std::rc::Rc::new(std::cell::RefCell::new(argv))));
     let scope = Scope::new(None);
     if let Err(e) = it.eval_string(&src, "main", &scope, Want::Void) {
         if it.exit_code.is_none() {

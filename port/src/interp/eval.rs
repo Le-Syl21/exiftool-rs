@@ -143,6 +143,8 @@ pub enum Lv {
     Substr(Box<Lv>, i64, Option<i64>),
     /// `$#array = N`
     LastIndex(ArrayRc),
+    /// `pos($x) = N` (the interpreter keeps positions; see assign_scalar)
+    Pos(Cell),
 }
 
 impl Lv {
@@ -166,6 +168,7 @@ impl Lv {
                 }
             }
             Lv::LastIndex(a) => Value::Int(a.borrow().len() as i64 - 1),
+            Lv::Pos(_) => Value::Undef,
         }
     }
 
@@ -209,6 +212,7 @@ impl Lv {
                 let n = (v.to_i64() + 1).max(0) as usize;
                 a.borrow_mut().resize(n, Value::Undef);
             }
+            Lv::Pos(_) => {}
         }
         Ok(())
     }
@@ -319,6 +323,11 @@ pub struct Interp {
     alias_frames: Vec<AliasFrame>,
     /// The last stat, for `stat _` and `-X _`.
     last_stat: Vec<Value>,
+    /// A goto into a nested block, while the blocks on the way are entered.
+    goto_target: Option<Rc<str>>,
+    /// PORT_TRACE: log ExifTool's sub calls, as scripts/trace_db.pl does.
+    trace: Option<std::io::BufWriter<std::fs::File>>,
+    trace_depth: usize,
 }
 
 impl Default for Interp {
@@ -370,6 +379,9 @@ impl Interp {
             pending_aliases: None,
             alias_frames: Vec::new(),
             last_stat: Vec::new(),
+            goto_target: None,
+            trace: std::env::var("PORT_TRACE").ok().and_then(|p| std::fs::File::create(p).ok()).map(std::io::BufWriter::new),
+            trace_depth: 0,
         };
         i.set_scalar("main::\"", Value::str(" "));
         i.set_scalar("main::,", Value::Undef);
@@ -550,6 +562,10 @@ impl Interp {
 
     /// Flush every open output handle.
     pub fn flush_handles(&mut self) {
+        if let Some(t) = &mut self.trace {
+            use std::io::Write;
+            let _ = t.flush();
+        }
         for h in self.handles.values() {
             if let Some(io::Output::File(f)) = &mut h.borrow_mut().output {
                 use std::io::Write;
@@ -582,7 +598,24 @@ impl Interp {
                     let originals = arr.borrow().clone();
                     self.alias_frames.push(AliasFrame { args: Some(arr.clone()), aliases: al, originals });
                 }
+                let traced = self.trace.is_some() && sub.name.as_deref().is_some_and(|n| n.starts_with("Image::ExifTool") || n.starts_with("File::RandomAccess"));
+                if traced {
+                    let line = format!("{}> {} {}\n", "  ".repeat(self.trace_depth), sub.name.as_deref().unwrap(), arr.borrow().iter().map(trace_summary).collect::<Vec<_>>().join("|"));
+                    self.trace_write(&line);
+                    self.trace_depth += 1;
+                }
                 let r = self.call_perl(sub, scope, arr, want);
+                if traced {
+                    self.trace_depth -= 1;
+                    let res = match (&r, want) {
+                        (Ok(v), Want::List) => v.iter().map(trace_summary).collect::<Vec<_>>().join("|"),
+                        (Ok(v), Want::Scalar) => trace_summary(v.last().unwrap_or(&Value::Undef)),
+                        (Ok(_), Want::Void) => "void".to_string(),
+                        (Err(_), _) => "DIED".to_string(),
+                    };
+                    let line = format!("{}< {}\n", "  ".repeat(self.trace_depth), res);
+                    self.trace_write(&line);
+                }
                 if pushed {
                     let frame = self.alias_frames.pop().unwrap();
                     if let Some(arr) = &frame.args {
@@ -598,6 +631,13 @@ impl Interp {
                 }
                 r
             }
+        }
+    }
+
+    fn trace_write(&mut self, line: &str) {
+        use std::io::Write;
+        if let Some(t) = &mut self.trace {
+            let _ = t.write_all(line.as_bytes());
         }
     }
 
@@ -725,6 +765,15 @@ impl Interp {
         let n = block.len();
         let r = (|| {
             let mut k = 0;
+            // Entering this block through a goto into it.
+            if let Some(l) = self.goto_target.clone() {
+                if let Some(j) = block.iter().position(|s| contains_label(s, &l)) {
+                    k = j;
+                    if stmt_label(&block[j]) == Some(&*l) {
+                        self.goto_target = None;
+                    }
+                }
+            }
             while k < n {
                 let st = &block[k];
                 let w = if k + 1 == n { want } else { Want::Void };
@@ -736,7 +785,16 @@ impl Interp {
                             k = j;
                             continue;
                         }
-                        None => return Err(Flow::Goto(l)),
+                        // The label is inside a nested block of this one
+                        // (perl jumps into it).
+                        None => match block.iter().position(|s| contains_label(s, &l)) {
+                            Some(j) => {
+                                self.goto_target = Some(l);
+                                k = j;
+                                continue;
+                            }
+                            None => return Err(Flow::Goto(l)),
+                        },
                     },
                     Err(e) => return Err(e),
                 }
@@ -768,6 +826,19 @@ impl Interp {
                 }
             },
             Stmt::If(arms, otherwise) => {
+                if let Some(l) = self.goto_target.clone() {
+                    // goto into one of the branches: run it without its test.
+                    for (_, body) in arms.iter() {
+                        if body.iter().any(|s| contains_label(s, &l)) {
+                            return self.run_block(body, scope, want);
+                        }
+                    }
+                    if let Some(b) = otherwise {
+                        if b.iter().any(|s| contains_label(s, &l)) {
+                            return self.run_block(b, scope, want);
+                        }
+                    }
+                }
                 for (cond, body) in arms {
                     let c = self.scalar(cond, scope)?;
                     if c.truthy() {
@@ -1589,6 +1660,8 @@ impl Interp {
 
     pub fn lvalue(&mut self, e: &Expr, scope: &Rc<Scope>) -> ER<Lv> {
         Ok(match e {
+            // $1, $&...: read-only values of the last match.
+            Expr::Scalar(name) if is_match_var(name) => Lv::Scalar(Rc::new(RefCell::new(self.read_scalar(name, scope)))),
             Expr::Scalar(name) => Lv::Scalar(self.scalar_cell(scope, name)),
             Expr::ScalarDeref(inner) => {
                 let v = if is_lvalue_like(inner) {
@@ -1667,6 +1740,16 @@ impl Interp {
             Expr::Un(UnOp::PreInc | UnOp::PreDec, inner) => {
                 self.scalar(e, scope)?;
                 self.lvalue(inner, scope)?
+            }
+            Expr::Call { name, args, .. } if &**name == "pos" => {
+                let cell = match args.first() {
+                    Some(e) => match self.lvalue(e, scope)? {
+                        Lv::Scalar(c) => c,
+                        _ => return die("Can't modify pos of this"),
+                    },
+                    None => self.scalar_cell(scope, "_"),
+                };
+                Lv::Pos(cell)
             }
             Expr::Call { name, args, .. } if &**name == "substr" && (2..=3).contains(&args.len()) => {
                 let base = self.lvalue(&args[0], scope)?;
@@ -1773,6 +1856,20 @@ impl Interp {
                 // is_list_lhs; here the lhs is a scalar.
                 let v = self.scalar(r, scope)?;
                 let lv = self.lvalue(l, scope)?;
+                if let Lv::Pos(c) = &lv {
+                    let key = Rc::as_ptr(c) as usize;
+                    if v.is_undef() {
+                        self.pos.remove(&key);
+                    } else {
+                        let len = c.borrow().to_bytes().len() as i64;
+                        let mut p = v.to_i64();
+                        if p < 0 {
+                            p += len;
+                        }
+                        self.pos.insert(key, p.clamp(0, len) as usize);
+                    }
+                    return Ok(lv);
+                }
                 self.forget_pos(&lv);
                 lv.set(v)?;
                 Ok(lv)
@@ -2523,6 +2620,10 @@ impl Interp {
         }
         for x in args {
             match x {
+                Expr::Scalar(n) if is_match_var(n) => {
+                    vals.push(self.read_scalar(n, scope));
+                    al.push(None);
+                }
                 Expr::Scalar(_) | Expr::ScalarDeref(_) | Expr::Elem(..) | Expr::HElem(..) => {
                     let lv = self.lvalue(x, scope)?;
                     vals.push(lv.get());
@@ -2639,12 +2740,56 @@ impl Interp {
     }
 }
 
+/// The variables of the last match: `$1`.., `$&`, `` $` ``, `$'`, `$+`.
+fn is_match_var(name: &str) -> bool {
+    let b = name.as_bytes();
+    (!b.is_empty() && b.iter().all(|c| c.is_ascii_digit()) && name != "0") || matches!(name, "&" | "`" | "'" | "+")
+}
+
+/// A value in a trace line (same format as scripts/trace_db.pl).
+fn trace_summary(v: &Value) -> String {
+    match v {
+        Value::Undef => "U".into(),
+        Value::HashRef(h) => match &h.borrow().blessed {
+            Some(c) => format!("R:{c}"),
+            None => "R:HASH".into(),
+        },
+        v if v.is_ref() => format!("R:{}", v.ref_type()),
+        v => {
+            let b = v.to_bytes();
+            let b = &b[..b.len().min(40)];
+            let mut s = String::from("S:");
+            for &c in b {
+                if (0x20..=0x7e).contains(&c) && c != b'\\' && c != b'|' {
+                    s.push(c as char);
+                } else {
+                    s.push_str(&format!("\\x{c:02x}"));
+                }
+            }
+            s
+        }
+    }
+}
+
 /// The label a statement carries, for `goto`.
 fn stmt_label(s: &Stmt) -> Option<&str> {
     match s {
         Stmt::Label(l) => Some(l),
         Stmt::While { label: Some(l), .. } | Stmt::ForC { label: Some(l), .. } | Stmt::Foreach { label: Some(l), .. } | Stmt::Block(Some(l), _) => Some(l),
         _ => None,
+    }
+}
+
+/// Whether a statement is, or contains in an if/else or bare block, the
+/// label (where a goto may jump into).
+fn contains_label(s: &Stmt, l: &str) -> bool {
+    if stmt_label(s) == Some(l) {
+        return true;
+    }
+    match s {
+        Stmt::If(arms, otherwise) => arms.iter().any(|(_, b)| b.iter().any(|x| contains_label(x, l))) || otherwise.as_ref().is_some_and(|b| b.iter().any(|x| contains_label(x, l))),
+        Stmt::Block(_, b) => b.iter().any(|x| contains_label(x, l)),
+        _ => false,
     }
 }
 
