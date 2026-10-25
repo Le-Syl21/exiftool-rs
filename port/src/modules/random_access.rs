@@ -121,6 +121,13 @@ pub(crate) fn raf_read(it: &mut Interp, raf: &Value, buff: &mut Value, len: Valu
     Ok(v)
 }
 
+/// `$obj->Read($buff, $len)` with `$buff` a `my` variable others may hold
+/// a reference to (`\$buff`): the cell is read into in place.
+pub(crate) fn raf_read_cell(it: &mut Interp, raf: &Value, buff: &Cell, len: Value) -> ER<Value> {
+    let (r, l) = (cell(raf.clone()), cell(len));
+    perl_eval1(it, "$raf->Read($buff, $len)", "File::RandomAccess", &[("raf", &r), ("buff", buff), ("len", &l)])
+}
+
 /// `$obj->ReadLine($buff)`, as `raf_read`.
 #[allow(dead_code)]
 pub(crate) fn raf_read_line(it: &mut Interp, raf: &Value, buff: &mut Value) -> ER<Value> {
