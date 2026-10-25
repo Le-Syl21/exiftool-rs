@@ -2709,98 +2709,1530 @@ pub fn set_found_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
     }
 }
 
-pub fn register(it: &mut Interp) {
-    let subs: &[(&str, Reader)] = &[
-        ("Purge", purge),
-        ("CombineInfo", combine_info),
-        ("GetTableName", get_table_name),
-        ("GetTagIndex", get_tag_index),
-        ("FindValue", find_value),
-        ("NextTagKey", next_tag_key),
-        ("AddCleanup", add_cleanup),
-        ("Warn", warn),
-        ("Error", error),
-        ("AddTagsToLookup", add_tags_to_lookup),
-        ("ExpandFlags", expand_flags),
-        ("SetupTagTable", setup_tag_table),
-        ("IsPC", is_pc),
-        ("IsFloat", is_float),
-        ("IsInt", is_int),
-        ("IsHex", is_hex),
-        ("IsRational", is_rational),
-        ("RoundFloat", round_float),
-        ("ToFloat", to_float),
-        ("SwapBytes", swap_bytes),
-        ("SwapWords", swap_words),
-        ("DoUnpackStd", do_unpack_std),
-        ("DoUnpackRev", do_unpack_rev),
-        ("DoPackStd", do_pack_std),
-        ("DoPackRev", do_pack_rev),
-        ("DoUnpack", do_unpack),
-        ("DoUnpackDbl", do_unpack_dbl),
-        ("Get8s", get8s),
-        ("Get8u", get8u),
-        ("Get16s", get16s),
-        ("Get16u", get16u),
-        ("Get32s", get32s),
-        ("Get32u", get32u),
-        ("GetFloat", get_float),
-        ("GetDouble", get_double),
-        ("Get16uRev", get16u_rev),
-        ("Get32uRev", get32u_rev),
-        ("GetRational32s", get_rational32s),
-        ("GetRational32u", get_rational32u),
-        ("GetRational64s", get_rational64s),
-        ("GetRational64u", get_rational64u),
-        ("GetFixed16s", get_fixed16s),
-        ("GetFixed16u", get_fixed16u),
-        ("GetFixed32s", get_fixed32s),
-        ("GetFixed32u", get_fixed32u),
-        ("Set8s", set8s),
-        ("Set8u", set8u),
-        ("Set16u", set16u),
-        ("Set32u", set32u),
-        ("Set16uRev", set16u_rev),
-        ("GetByteOrder", get_byte_order),
-        ("SetByteOrder", set_byte_order),
-        ("ToggleByteOrder", toggle_byte_order),
-        ("FormatSize", format_size),
-        ("ReadValue", read_value),
-        ("Decode", decode),
-        ("Encode", encode),
-        ("DecodeBits", decode_bits),
-        ("ValidateImage", validate_image),
-        ("ValidTagName", valid_tag_name),
-        ("MakeTagName", make_tag_name),
-        ("MakeDescription", make_description),
-        ("GetDescriptions", get_descriptions),
-        ("Filter", filter),
-        ("Printable", printable),
-        ("ConvertTimeSpan", convert_time_span),
-        ("TimeLocal", time_local),
-        ("GetTimeZone", get_time_zone),
-        ("TimeZoneString", time_zone_string),
-        ("ConvertUnixTime", convert_unix_time),
-        ("GetUnixTime", get_unix_time),
-        ("ConvertFileSize", convert_file_size),
-        ("ConvertDuration", convert_duration),
-        ("ConvertBitrate", convert_bitrate),
-        ("ConvertFileName", convert_file_name),
-        ("InverseFileName", inverse_file_name),
-        ("LimitLongValues", limit_long_values),
-        ("HDump", hdump),
-        ("JpegMarkerName", jpeg_marker_name),
-        ("IsSameID", is_same_id),
-        ("SplitFileName", split_file_name),
-        ("GroupMatches", group_matches),
-        ("RemoveTagsFromList", remove_tags_from_list),
-        ("CopyAltInfo", copy_alt_info),
-        ("ExpandShortcuts", expand_shortcuts),
-        ("AddCompositeTags", add_composite_tags),
-        ("ParseArguments", parse_arguments),
-        ("SetFoundTags", set_found_tags),
-    ];
-    for (name, f) in subs {
-        it.define_native(&format!("{ET}::{name}"), *f);
+// ---- Perl operations run through the interpreter ----
+
+/// Whether a variable still holds the value it was given (the same string
+/// storage, number or reference), as the interpreter judges @_ aliases.
+fn unchanged(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Str(x), Value::Str(y)) => Rc::ptr_eq(x, y) || x == y,
+        (Value::Int(x), Value::Int(y)) => x == y,
+        (Value::UInt(x), Value::UInt(y)) => x == y,
+        (Value::Num(x), Value::Num(y)) => x.to_bits() == y.to_bits(),
+        (Value::Undef, Value::Undef) => true,
+        _ => a.same_ref(b),
     }
+}
+
+/// Run a Perl expression for an operation the shared helpers do not provide
+/// (`open`, `stat`, file tests, `print` to a handle, `pos()=`, and calls
+/// that must see their arguments as aliases), with the given lexicals.
+/// Returns the result and the values the variables hold afterwards. `$@`
+/// is left as it was (the expression is not an `eval` in the Perl).
+fn perl_op(it: &mut Interp, code: &str, vars: &[(&str, Value)], arr: Option<Vec<Value>>, want: Want) -> ER<(Vec<Value>, Vec<Value>, Vec<Value>)> {
+    let scope = crate::interp::Scope::new(None);
+    let cells: Vec<Cell> = vars.iter().map(|(name, v)| scope.scalar(name, v.clone())).collect();
+    let a = arr.map(|v| scope.array("a", v));
+    let saved = it.get_scalar("main::@");
+    match it.eval_string(code.as_bytes(), ET, &scope, want) {
+        Ok(r) => {
+            it.set_scalar("main::@", saved);
+            let vals = cells.iter().map(|c| c.borrow().clone()).collect();
+            let av = a.map(|a| a.borrow().clone()).unwrap_or_default();
+            Ok((r, vals, av))
+        }
+        Err(e) => match it.exit_code {
+            Some(code) => Err(Flow::Exit(code)),
+            None => Err(Flow::Die(e)),
+        },
+    }
+}
+
+/// `perl_op` for a scalar result.
+fn perl_scalar(it: &mut Interp, code: &str, vars: &[(&str, Value)]) -> ER<Value> {
+    Ok(perl_op(it, code, vars, None, Want::Scalar)?.0.pop().unwrap_or_default())
+}
+
+/// `eval { BLOCK }`: `$@` set as perl does, `None` when the block died.
+fn eval_block<T>(it: &mut Interp, f: impl FnOnce(&mut Interp) -> ER<T>) -> ER<Option<T>> {
+    match f(it) {
+        Ok(v) => {
+            it.set_scalar("main::@", pl::s(""));
+            Ok(Some(v))
+        }
+        Err(Flow::Die(e)) => {
+            it.set_scalar("main::@", e);
+            Ok(None)
+        }
+        Err(e) => Err(e),
+    }
+}
+
+/// `eval { require MODULE }`
+fn eval_require(it: &mut Interp, module: &str) -> ER<bool> {
+    Ok(eval_block(it, |it| runtime::require(it, module))?.is_some())
+}
+
+/// `print $out STRING` (or `print STRING` with no handle)
+fn print_to(it: &mut Interp, out: &Value, s: Value) -> ER<()> {
+    if out.is_undef() {
+        perl_op(it, "print $s", &[("s", s)], None, Want::Void)?;
+    } else {
+        perl_op(it, "print $out $s", &[("out", out.clone()), ("s", s)], None, Want::Void)?;
+    }
+    Ok(())
+}
+
+// ---- alternate files, file helpers ----
+
+/// Finish generating tags after extracting information from a file
+/// Inputs: 0) ExifTool ref
+/// Notes: The sequencing here is a bit tricky because tags from the main file
+///        may be used in the names of alternate files, so we finish generating
+///        all main file tags first (including all Composite tags which don't
+///        rely on alternate files) before extracting tags from alternate files,
+///        then we finish by generating the remaingin Composite tags.
+pub fn done_extract(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    let slf = arg(&a, 0);
+    // extract information from alternate files if necessary
+    let mut opts = slf.get("OPTIONS");
+
+    // generate ImageDataHash if requested
+    if slf.get("ImageDataHash").truthy() {
+        let digest = pl::method(it, &slf.get("ImageDataHash"), "hexdigest", vec![])?;
+        // (don't store empty digest)
+        if !(pl::str_eq(&digest, "d41d8cd98f00b204e9800998ecf8427e")
+            || pl::str_eq(&digest, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+            || pl::str_eq(&digest, "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"))
+        {
+            pl::method(it, &slf, "FoundTag", vec![pl::s("ImageDataHash"), digest])?;
+        }
+    }
+    // generate Validate tag if requested
+    if opts.get("Validate").truthy() {
+        let v = slf.get("REQ_TAG_LOOKUP").get("validate");
+        pl::call(it, "Image::ExifTool::Validate::FinishValidate", vec![slf.clone(), v])?;
+    }
+    // generate geolocation tags if requested
+    if opts.get("Geolocation").truthy() {
+        let mut arg_v = Value::Undef;
+        let (mut defaults, mut tags, mut coord, mut refs, mut city): (Vec<Value>, Vec<Value>, Vec<Value>, Vec<Value>, Vec<Value>) = Default::default();
+        let (mut done_city, mut both) = (false, false);
+        let args = pl::split(&re(r"\s*,\s*", ""), &opts.get("Geolocation"), 0);
+        for mut x in args {
+            if pl::str_eq(&lc(&x), "both") {
+                both = true;
+                continue;
+            }
+            if re(r"^\$", "").subst(&mut x, false, |_| Vec::new()) == 0 {
+                defaults.push(x);
+                continue;
+            }
+            tags.push(x); // argument is a tag name
+        }
+        if tags.is_empty() {
+            // default tags to read if not specified
+            tags = "GPSLatitude GPSLongitude GPSLatitudeRef GPSLongitudeRef
+                       GPSCoordinates LocationShownGPSLatitude LocationShownGPSLongitude
+                       XMP:City State CountryCode Country
+                       IPTC:City Province-State Country-PrimaryLocationCode Country-PrimaryLocationName
+                       LocationShownCity LocationShownProvinceState LocationShownCountryCode LocationShownCountryName"
+                .split_whitespace()
+                .map(pl::s)
+                .collect();
+        }
+        // get information for specified tags
+        let o = Value::new_hash();
+        o.set("PrintConv", n(0));
+        o.set("Duplicates", n(0));
+        let tag_list = Value::new_array(tags.clone());
+        let info = pl::method(it, &slf, "GetInfo", vec![tag_list.clone(), o])?; // (returns tags in proper case)
+        tags = tag_list.items();
+        opts = slf.get("OPTIONS"); // (necessary because GetInfo changes the OPTIONS hash)
+        for tag in &tags {
+            let val = info.get(tag.to_bytes());
+            if val.is_undef() {
+                continue;
+            }
+            pl::method(it, &slf, "VPrint", vec![n(0), cat(&[&pl::s("Found "), tag, &pl::s(" ("), &val, &pl::s(")\n")])])?;
+            if re("Coordinates", "").is_match(tag) {
+                if !arg(&coord, 0).is_undef() && !arg(&coord, 1).is_undef() {
+                    continue;
+                }
+                coord = pl::split_ws(&val);
+                continue;
+            }
+            let nn: Option<usize> = if re("Latitude", "").is_match(tag) {
+                Some(0)
+            } else if re("Longitude", "").is_match(tag) {
+                Some(1)
+            } else {
+                None
+            };
+            if let Some(nn) = nn {
+                let set = |list: &mut Vec<Value>, v: Value| {
+                    if list.len() <= nn {
+                        list.resize(nn + 1, Value::Undef);
+                    }
+                    list[nn] = v;
+                };
+                if re("Ref$", "").is_match(tag) {
+                    if !arg(&refs, nn).truthy() {
+                        set(&mut refs, val);
+                    }
+                } else if arg(&coord, nn).is_undef() {
+                    set(&mut coord, val);
+                }
+                continue;
+            }
+            // handle city tags (save info for first city found)
+            if re("City", "").is_match(tag) {
+                if !city.is_empty() {
+                    done_city = true;
+                    continue;
+                }
+                city.push(val);
+            } else if !city.is_empty() {
+                if !done_city {
+                    city.push(val);
+                }
+                if done_city {
+                    continue;
+                }
+            }
+        }
+        if !arg(&coord, 0).is_undef() && !arg(&coord, 1).is_undef() {
+            if arg(&refs, 0).truthy() && pl::gt(&coord[0], &n(0)) && pl::str_eq(&refs[0], "S") {
+                coord[0] = pl::neg(&coord[0]);
+            }
+            if arg(&refs, 1).truthy() && pl::gt(&coord[1], &n(0)) && pl::str_eq(&refs[1], "W") {
+                coord[1] = pl::neg(&coord[1]);
+            }
+            arg_v = join(b",", &coord);
+        } else if !city.is_empty() {
+            arg_v = join(b",", &city);
+        }
+        if arg_v.is_undef() {
+            // use specified default values if no tags found
+            arg_v = join(b",", &defaults);
+            if pl::str_eq(&arg_v, "1") {
+                arg_v = Value::Undef;
+            }
+            both = true; // use 'both' GPS and place names if provided
+        }
+        if arg_v.truthy() {
+            if both {
+                arg_v = pl::concat(&arg_v, &pl::s(",both"));
+            }
+            arg_v = encode(it, vec![slf.clone(), arg_v, pl::s("UTF8")], Want::Scalar)?.pop().unwrap_or_default();
+            runtime::require(it, "Image::ExifTool::Geolocation")?;
+            if opts.get("Verbose").truthy() {
+                let db_info = it.get_scalar("Image::ExifTool::Geolocation::dbInfo");
+                if db_info.truthy() {
+                    print_to(it, &Value::Undef, cat(&[&pl::s("Loaded "), &db_info, &pl::s("\n")]))?;
+                } else {
+                    print_to(it, &Value::Undef, pl::s("Error loading Geolocation.dat\n"))?;
+                }
+            }
+            with_set_warning(it, |it| {
+                *pkg_scalar(it, "evalWarning").borrow_mut() = Value::Undef;
+                opts.set("GeolocMulti", opts.get("Duplicates"));
+                pl::method(it, &slf, "VPrint", vec![n(0), cat(&[&pl::s("Geolocation arguments: '"), &arg_v, &pl::s("'\n")])])?;
+                let r = pl::call_list(it, "Image::ExifTool::Geolocation::Geolocate", vec![arg_v.clone(), opts.clone()])?;
+                let (cities, dist) = (arg(&r, 0), arg(&r, 1));
+                opts.delete("GeolocMulti");
+                let ok = cities.truthy()
+                    && (cities.len() < 2 || dist.truthy() || !warn(it, vec![slf.clone(), pl::s("Multiple Geolocation cities are possible"), n(2)], Want::Scalar)?.pop().unwrap_or_default().truthy());
+                if ok {
+                    if cities.len() > 1 {
+                        pl::method(it, &slf, "FoundTag", vec![pl::s("GeolocationWarning"), pl::s(&format!("Search matched {} cities", cities.len()))])?;
+                    }
+                    for c in cities.items() {
+                        if c.to_bytes() != cities.at(0).to_bytes() {
+                            let dc = pl::add(&slf.get("DOC_COUNT"), &n(1));
+                            slf.set("DOC_COUNT", dc.clone());
+                            slf.set("DOC_NUM", dc);
+                        }
+                        let geo = pl::call_list(it, "Image::ExifTool::Geolocation::GetEntry", vec![c.clone(), opts.get("Lang")])?;
+                        let g = |i: usize| arg(&geo, i);
+                        let found = |it: &mut Interp, name: &str, v: Value| -> ER<()> {
+                            pl::method(it, &slf, "FoundTag", vec![pl::s(name), v])?;
+                            Ok(())
+                        };
+                        found(it, "GeolocationCity", g(0))?;
+                        if g(1).truthy() {
+                            found(it, "GeolocationRegion", g(1))?;
+                        }
+                        if g(2).truthy() {
+                            found(it, "GeolocationSubregion", g(2))?;
+                        }
+                        found(it, "GeolocationCountryCode", g(3))?;
+                        if g(4).truthy() {
+                            found(it, "GeolocationCountry", g(4))?;
+                        }
+                        if g(5).truthy() {
+                            found(it, "GeolocationTimeZone", g(5))?;
+                        }
+                        found(it, "GeolocationFeatureCode", g(6))?;
+                        if g(10).truthy() {
+                            found(it, "GeolocationFeatureType", g(10))?;
+                        }
+                        found(it, "GeolocationPopulation", g(7))?;
+                        found(it, "GeolocationPosition", cat(&[&g(8), &pl::s(" "), &g(9)]))?;
+                        if dist.truthy() {
+                            found(it, "GeolocationDistance", dist.at(0).at(0))?;
+                            found(it, "GeolocationBearing", dist.at(0).at(1))?;
+                            if let Value::ArrayRef(d) = &dist {
+                                if !d.borrow().is_empty() {
+                                    d.borrow_mut().remove(0);
+                                }
+                            }
+                        }
+                        if !opts.get("Duplicates").truthy() {
+                            break;
+                        }
+                    }
+                    slf.delete("DOC_NUM");
+                } else if pkg_scalar(it, "evalWarning").borrow().truthy() {
+                    let w = pl::call(it, "Image::ExifTool::CleanWarning", vec![])?;
+                    warn(it, vec![slf.clone(), w], Want::Scalar)?;
+                }
+                Ok(())
+            })?;
+        }
+    }
+    // generate tags for user-defined parameters that ended with '#'
+    if !opts.get("UserParam").is_empty() {
+        let mut do_msg = opts.get("Verbose");
+        let table = pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s("Image::ExifTool::UserParam")])?;
+        let up = opts.get("UserParam");
+        let mut keys: Vec<Value> = up.keys().into_iter().map(Value::Str).collect();
+        keys.sort_by(ops::str_cmp);
+        for k in keys {
+            if !re("#$", "").is_match(&k) {
+                continue;
+            }
+            if do_msg.truthy() {
+                pl::method(it, &slf, "VPrint", vec![n(0), pl::s("UserParam tags:\n")])?;
+                do_msg = Value::Undef;
+            }
+            pl::method(it, &slf, "HandleTag", vec![table.clone(), k.clone(), up.get(k.to_bytes())])?;
+        }
+    }
+    if opts.get("Composite").truthy() && (!opts.get("FastScan").truthy() || pl::lt(&opts.get("FastScan"), &n(5))) {
+        // build all composite tags except those requiring tags from alternate files
+        pl::method(it, &slf, "BuildCompositeTags", vec![])?;
+    }
+    let alt = slf.get("ALT_EXIFTOOL");
+    let mut g8s: Vec<Value> = alt.keys().into_iter().map(Value::Str).collect();
+    g8s.sort_by(ops::str_cmp);
+    for g8 in g8s {
+        let alt_exif_tool = slf.get("ALT_EXIFTOOL").get(g8.to_bytes());
+        if alt_exif_tool.get("DID_EXTRACT").truthy() {
+            continue; // avoid extracting twice
+        }
+        alt_exif_tool.set("OPTIONS", slf.get("OPTIONS"));
+        alt_exif_tool.set("GLOBAL_TIME_OFFSET", slf.get("GLOBAL_TIME_OFFSET"));
+        alt_exif_tool.set("REQ_TAG_LOOKUP", slf.get("REQ_TAG_LOOKUP"));
+        alt_exif_tool.set("ReqTagAlreadySet", n(1));
+        let mut file_name = alt_exif_tool.get("ALT_FILE");
+        // allow tags from the main file to be used in the alternate file names
+        // (eg. -file1 '$originalfilename')
+        if re(r"\$", "").is_match(&file_name) {
+            let mut tags: Vec<Value> = slf.get("VALUE").keys().into_iter().map(Value::Str).collect();
+            tags.sort_by(ops::str_cmp);
+            tags.reverse();
+            file_name = pl::method(it, &slf, "InsertTagValues", vec![file_name, Value::new_array(tags), pl::s("Warn")])?;
+            if file_name.is_undef() {
+                continue;
+            }
+        }
+        pl::method(it, &alt_exif_tool, "ExtractInfo", vec![file_name.clone()])?;
+        let err = alt_exif_tool.get("VALUE").get("Error");
+        if err.truthy() {
+            warn(it, vec![slf.clone(), cat(&[&err, &pl::s(" \""), &file_name, &pl::s("\"")])], Want::Scalar)?;
+        }
+        // set family 8 group name for all tags
+        for k in alt_exif_tool.get("VALUE").keys() {
+            alt_exif_tool.get_or_new_hash("TAG_EXTRA").get_or_new_hash(&k).set("G8", g8.clone());
+        }
+        // prepare our sorted list of found tags
+        let found = set_found_tags(it, vec![alt_exif_tool.clone()], Want::Scalar)?.pop().unwrap_or_default();
+        alt_exif_tool.set("FoundTags", found);
+        alt_exif_tool.set("DID_EXTRACT", n(1));
+    }
+    // if necessary, build composite tags that rely on tags from alternate files
+    if slf.get("DoAltComposite").truthy() {
+        return pl::method_list(it, &slf, "BuildCompositeTags", vec![n(1)]).map(|v| if want == Want::List { v } else { vec![v.into_iter().last().unwrap_or_default()] });
+    }
+    pl::ret_nothing(want)
+}
+
+/// IsUTF8 with the string position it leaves (`pos($$strPt)`).
+fn is_utf8_v(s: &[u8], trunc: bool) -> (i64, Option<usize>) {
+    let high = crate::perl::regex::compile(br"([\x80-\xff])", "").unwrap();
+    let find_high = |from: usize| -> Option<(u8, usize)> {
+        match high.match_at(s, from) {
+            Ok(Some(sp)) => sp[0].map(|(a, e)| (s[a], e)),
+            _ => None,
+        }
+    };
+    // pos($$strPt) = 0; # start at beginning of string
+    let Some((mut ch, mut pos)) = find_high(0) else { return (0, None) };
+    let mut rtn_val = 1;
+    loop {
+        // minimum lead byte for 2-byte sequence is 0xc2 (overlong sequences
+        // not allowed), 0xf8-0xfd are restricted by RFC 3629 (no 5 or 6 byte
+        // sequences), and 0xfe and 0xff are not valid in UTF-8 strings
+        if ch < 0xc2 || ch >= 0xf8 {
+            return (-1, Some(pos));
+        }
+        // determine number of bytes remaining in sequence
+        let n: usize = if ch < 0xe0 {
+            1
+        } else if ch < 0xf0 {
+            2
+        } else {
+            // character code is greater than 0xffff if more than 2 extra bytes
+            // were required in the UTF-8 character
+            rtn_val = 2;
+            3
+        };
+        let cont = crate::perl::regex::compile(format!(r"\G([\x80-\xbf]{{{n}}})").as_bytes(), "").unwrap();
+        let m = match cont.match_at(s, pos) {
+            Ok(Some(sp)) => sp[1],
+            _ => None,
+        };
+        let Some((a, e)) = m else {
+            if trunc && pos + n > s.len() {
+                return (rtn_val, None);
+            }
+            return (-1, None);
+        };
+        pos = e;
+        let c1 = &s[a..e];
+        // the following is ref https://www.cl.cam.ac.uk/%7Emgk25/ucs/utf8_check.c
+        if n == 2 {
+            if (ch == 0xe0 && (c1[0] & 0xe0) == 0x80) || (ch == 0xed && (c1[0] & 0xe0) == 0xa0) || (ch == 0xef && c1[0] == 0xbf && (c1[1] & 0xfe) == 0xbe) {
+                return (-1, Some(pos));
+            }
+        } else if (ch == 0xf0 && (c1[0] & 0xf0) == 0x80) || (ch == 0xf4 && c1[0] > 0x8f) || ch > 0xf4 {
+            return (-1, Some(pos));
+        }
+        match find_high(pos) {
+            Some((c, p)) => {
+                ch = c;
+                pos = p;
+            }
+            None => break,
+        }
+    }
+    (rtn_val, None)
+}
+
+/// Does a string contain valid UTF-8 characters?
+/// Inputs: 0) string reference, 1) true to allow last character to be truncated
+/// Returns: 0=regular ASCII, -1=invalid UTF-8, 1=valid UTF-8 with maximum 16-bit
+///          wide characters, 2=valid UTF-8 requiring 32-bit wide characters
+/// Notes: Changes current string position
+/// (see http://www.fileformat.info/info/unicode/utf8.htm for help understanding this)
+pub fn is_utf8(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (str_pt, trunc) = (arg(&a, 0), arg(&a, 1));
+    let s = deref_scalar(&str_pt)?;
+    let (r, pos) = is_utf8_v(&s.to_bytes(), trunc.truthy());
+    // (a failed //g match resets the position)
+    let p = pos.map(|p| n(p as i64)).unwrap_or_default();
+    perl_op(it, "pos($$p) = $n", &[("p", str_pt), ("n", p)], None, Want::Void)?;
+    ret(n(r))
+}
+
+/// EncodeFileName: returns the flag and the new value for `$_[1]`, if any.
+fn encode_file_name_v(it: &mut Interp, slf: &Value, file: &Value, force: bool) -> ER<(i64, Option<Value>)> {
+    let mut file = file.clone();
+    if pl::str_eq(&file, "-") {
+        return Ok((0, None)); // special case for stdin pipe
+    }
+    let mut enc = slf.path(&["OPTIONS", "CharsetFileName"]);
+    let mut has_special_chars = false;
+    if re(r"[\x80-\xff]", "").is_match(&file) {
+        has_special_chars = true;
+        if !enc.truthy() && pl::str_eq(&os_name(it), "MSWin32") {
+            if is_utf8_v(&file.to_bytes(), false).0 < 0 {
+                if enc.is_undef() {
+                    warn(it, vec![slf.clone(), pl::s("FileName encoding must be specified")], Want::Scalar)?;
+                }
+                return Ok((0, None));
+            } else {
+                enc = pl::s("UTF8"); // assume UTF8
+            }
+        }
+    }
+    if has_special_chars || force || slf.path(&["OPTIONS", "WindowsLongPath"]).truthy() || slf.path(&["OPTIONS", "WindowsWideFile"]).truthy() {
+        if !enc.truthy() {
+            enc = pl::s("UTF8");
+        }
+        if pl::str_eq(&os_name(it), "MSWin32") {
+            let r = with_set_warning(it, |it| {
+                if eval_require(it, "Win32API::File")? {
+                    if slf.path(&["OPTIONS", "WindowsLongPath"]).truthy() {
+                        file = windows_long_path(it, vec![slf.clone(), file.clone()], Want::Scalar)?.pop().unwrap_or_default();
+                    }
+                    // recode as UTF-16LE and add null terminator
+                    let d = decode(it, vec![slf.clone(), file.clone(), enc.clone(), Value::Undef, pl::s("UTF16"), pl::s("II")], Want::Scalar)?.pop().unwrap_or_default();
+                    return Ok(Some(pl::concat(&d, &pl::s("\0\0"))));
+                }
+                Ok(None)
+            })?;
+            if let Some(v) = r {
+                return Ok((1, Some(v)));
+            }
+            warn(it, vec![slf.clone(), pl::s("Install Win32API::File for Windows wide/long file name support")], Want::Scalar)?;
+        } else if !pl::str_eq(&enc, "UTF8") {
+            // recode as UTF-8 for other platforms if necessary
+            let d = decode(it, vec![slf.clone(), file.clone(), enc.clone(), Value::Undef, pl::s("UTF8")], Want::Scalar)?.pop().unwrap_or_default();
+            return Ok((0, Some(d)));
+        }
+    }
+    Ok((0, None))
+}
+
+/// Encode file name for calls to system i/o routines
+/// Inputs: 0) ExifTool ref, 1) file name in CharsetFileName encoding,
+///         2) flag to force conversion even if no special characters
+/// Returns: true if Windows Unicode routines should be used (in which case
+///          the file name will be encoded as a null-terminated UTF-16LE string)
+pub fn encode_file_name(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (r, new) = encode_file_name_v(it, &arg(&a, 0), &arg(&a, 1), arg(&a, 2).truthy())?;
+    if let Some(v) = new {
+        it.set_arg(1, v)?;
+    }
+    ret(n(r))
+}
+
+/// Rebuild a path as an absolute long path to be usable in Windows system calls
+/// Inputs: 0) ExifTool ref, 1) path string (CharsetFileName)
+/// Returns: normalized long path (CharsetFileName)
+/// Note: this should only be called for Windows systems
+pub fn windows_long_path(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (slf, mut path) = (arg(&a, 0), arg(&a, 1));
+    let debug = slf.path(&["OPTIONS", "Debug"]);
+    let out = slf.path(&["OPTIONS", "TextOut"]);
+    let mut suffix = pl::s("");
+    let mut long_path;
+
+    // remove common suffixes to make cache more effective
+    let mut c1 = Value::Undef;
+    if re(r"(_original|_exiftool_tmp|:Zone\.Identifier)$", "").subst(&mut path, false, |c| {
+        c1 = cap(c, 1);
+        Vec::new()
+    }) > 0
+    {
+        suffix = c1;
+        if path.to_bytes().is_empty() || re(r"[:./\\]$", "").is_match(&path) {
+            // don't remove suffix if it could be the whole file name
+            path = pl::concat(&path, &suffix);
+            suffix = pl::s("");
+        }
+    }
+    if !slf.get("LONG_PATH_IN").is_undef() && slf.get("LONG_PATH_IN").to_bytes() == path.to_bytes() {
+        return ret(pl::concat(&slf.get("LONG_PATH_OUT"), &suffix));
+    }
+
+    if debug.truthy() {
+        print_to(it, &out, cat(&[&pl::s("WindowsLongPath input : "), &path, &suffix, &pl::s("\n")]))?;
+    }
+
+    let k32 = my_scalar(it, "k32GetFullPathName");
+    loop {
+        // (cheap goto)
+        long_path = path.clone();
+        tr(&mut long_path, b"/", b"\\\\", ""); // convert slashes to backslashes
+        if re(r"^\\\\\?\\", "").is_match(&long_path) {
+            break; // already a device path in the format we want
+        }
+
+        if !k32.borrow().truthy() {
+            // need to import (once) GetFullPathNameW
+            if !k32.borrow().is_undef() {
+                break;
+            }
+            if !eval_require(it, "Win32::API")? {
+                warn(it, vec![slf.clone(), pl::s("Install Win32::API to use WindowsLongPath option")], Want::Scalar)?;
+                break;
+            }
+            let f = pl::method(it, &pl::s("Win32::API"), "new", vec![pl::s("KERNEL32"), pl::s("GetFullPathNameW"), pl::s("PNPP"), pl::s("I")])?;
+            *k32.borrow_mut() = f;
+            if !k32.borrow().truthy() {
+                *k32.borrow_mut() = n(0);
+                warn(it, vec![slf.clone(), pl::s("Error loading Win32::API GetFullPathNameW")], Want::Scalar)?;
+                break;
+            }
+        }
+        let e = slf.path(&["OPTIONS", "CharsetFileName"]);
+        let enc = if e.truthy() { e } else { pl::s("UTF8") };
+        let enc_path = decode(it, vec![slf.clone(), long_path.clone(), enc.clone(), Value::Undef, pl::s("UTF16"), pl::s("II")], Want::Scalar)?.pop().unwrap_or_default(); // need to encode to UTF16
+        let k = k32.borrow().clone();
+        let len_req = pl::add(&pl::method(it, &k, "Call", vec![enc_path.clone(), n(0), n(0), n(0)])?, &n(1)); // first pass gets length required, +1 for safety (null?)
+        let full_path = Value::bytes(vec![0u8; (len_req.to_i64().max(0) * 2) as usize]); // create buffer to hold full path
+        let (_, vals, _) = perl_op(it, "$k->Call($e, $l, $f, 0)", &[("k", k), ("e", enc_path), ("l", len_req), ("f", full_path)], None, Want::Void)?; // fullPath is UTF16 now
+        let full_path = vals[3].clone();
+        long_path = decode(it, vec![slf.clone(), full_path, pl::s("UTF16"), pl::s("II"), enc], Want::Scalar)?.pop().unwrap_or_default();
+
+        if (long_path.to_bytes().len() as i64) <= 247 - suffix.to_bytes().len() as i64 {
+            break;
+        }
+
+        if re(r"^\\\\", "").is_match(&long_path) {
+            long_path = pl::concat(&pl::s(r"\\?\UNC"), &substr(&long_path, 1, None));
+        } else {
+            long_path = pl::concat(&pl::s(r"\\?\"), &long_path);
+        }
+        break;
+    }
+    // this may be called repeatedly for the same file file (exists, stat, open),
+    // so cache the last return value (without any of the suffixes that we use)
+    slf.set("LONG_PATH_IN", path);
+    slf.set("LONG_PATH_OUT", long_path.clone());
+    if debug.truthy() {
+        print_to(it, &out, cat(&[&pl::s("WindowsLongPath return: "), &long_path, &suffix, &pl::s("\n")]))?;
+    }
+    ret(pl::concat(&long_path, &suffix))
+}
+
+/// `Win32API::File::NAME()`
+fn win32(it: &mut Interp, name: &str) -> ER<Value> {
+    pl::call(it, &format!("Win32API::File::{name}"), vec![])
+}
+
+/// Modified perl open() routine to properly handle special characters in file names
+/// Inputs: 0) ExifTool ref, 1) filehandle, 2) filename,
+///         3) mode: '<' or undef = read, '>' = write, '+<' = update
+/// Returns: true on success
+/// Note: Must call like "$et->Open(\*FH,$file)", not "$et->Open(FH,$file)" to avoid
+///       "unopened filehandle" errors due to a change in scope of the filehandle
+pub fn open(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (slf, fh, mut file, mut mode) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
+
+    re(r"^([\s&])", "").subst(&mut file, false, |c| [&b"./"[..], &cap(c, 1).to_bytes()].concat()); // protect leading whitespace or ampersand
+    // default to read mode ('<') unless input is a trusted pipe
+    if !mode.truthy() {
+        mode = pl::s(if re(r"\|$", "").is_match(&file) && slf.get("TRUST_PIPE").truthy() { "" } else { "<" });
+    }
+    slf.delete("TRUST_PIPE");
+    if mode.truthy() {
+        let (wide, new) = encode_file_name_v(it, &slf, &file, false)?;
+        if let Some(v) = new {
+            file = v;
+        }
+        if wide != 0 {
+            // handle Windows Unicode file name
+            let r = with_set_warning(it, |it| -> ER<Option<Value>> {
+                let (mut access, mut create) = (Value::Undef, Value::Undef);
+                if pl::str_eq(&mode, ">") || pl::str_eq(&mode, ">>") {
+                    eval_block(it, |it| {
+                        access = win32(it, "GENERIC_WRITE")?;
+                        if pl::str_eq(&mode, ">>") {
+                            access = ops::bit_or(&access, &win32(it, "FILE_APPEND_DATA")?);
+                            create = win32(it, "OPEN_ALWAYS")?;
+                        } else {
+                            create = win32(it, "CREATE_ALWAYS")?;
+                        }
+                        Ok(())
+                    })?;
+                } else {
+                    eval_block(it, |it| {
+                        access = win32(it, "GENERIC_READ")?;
+                        if pl::str_eq(&mode, "+<") {
+                            access = ops::bit_or(&access, &win32(it, "GENERIC_WRITE")?); // update
+                        }
+                        create = win32(it, "OPEN_EXISTING")?;
+                        Ok(())
+                    })?;
+                }
+                let mut share = n(0);
+                eval_block(it, |it| {
+                    if !ops::bit_and(&access, &win32(it, "GENERIC_WRITE")?).truthy() {
+                        share = ops::bit_or(&win32(it, "FILE_SHARE_READ")?, &win32(it, "FILE_SHARE_WRITE")?);
+                    }
+                    Ok(())
+                })?;
+                let wh = eval_block(it, |it| pl::call(it, "Win32API::File::CreateFileW", vec![file.clone(), access.clone(), share.clone(), Value::new_array(vec![]), create.clone(), n(0), Value::new_array(vec![])]))?.unwrap_or_default();
+                if !wh.truthy() {
+                    return Ok(None);
+                }
+                let fd = eval_block(it, |it| pl::call(it, "Win32API::File::OsFHandleOpenFd", vec![wh.clone(), n(0)]))?.unwrap_or_default();
+                if fd.is_undef() || pl::lt(&fd, &n(0)) {
+                    eval_block(it, |it| pl::call(it, "Win32API::File::CloseHandle", vec![wh.clone()]))?;
+                    return Ok(None);
+                }
+                Ok(Some(pl::concat(&pl::s("&="), &fd))) // specify file by descriptor
+            })?;
+            match r {
+                Some(f) => file = f,
+                None => return pl::ret_undef(),
+            }
+        } else {
+            // add leading space to protect against leading characters like '>'
+            // in file name, and trailing "\0" to protect trailing spaces
+            file = cat(&[&pl::s(" "), &file, &pl::s("\0")]);
+        }
+    }
+    // (open sets our copy of the handle variable, not the caller's)
+    let (r, _, _) = perl_op(it, "open $fh, $spec", &[("fh", fh), ("spec", pl::concat(&mode, &file))], None, Want::Scalar)?;
+    ret(r.into_iter().last().unwrap_or_default())
+}
+
+/// Check to see if a file exists (with Windows Unicode support)
+/// Inputs: 0) ExifTool ref, 1) file name, 2) flag if we are writing this file
+/// Returns: true if file exists
+pub fn exists(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (slf, mut file, writing) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
+
+    let (wide, new) = encode_file_name_v(it, &slf, &file, false)?;
+    if let Some(v) = new {
+        file = v;
+    }
+    if wide != 0 {
+        let wh = with_set_warning(it, |it| {
+            let wh = eval_block(it, |it| {
+                let args = vec![file.clone(), win32(it, "GENERIC_READ")?, win32(it, "FILE_SHARE_READ")?, Value::new_array(vec![]), win32(it, "OPEN_EXISTING")?, n(0), Value::new_array(vec![])];
+                pl::call(it, "Win32API::File::CreateFileW", args)
+            })?
+            .unwrap_or_default();
+            if wh.truthy() {
+                eval_block(it, |it| pl::call(it, "Win32API::File::CloseHandle", vec![wh.clone()]))?;
+            }
+            Ok(wh)
+        })?;
+        if !wh.truthy() {
+            return ret(n(0));
+        }
+    } else if writing.truthy() {
+        // (named pipes already exist, but we pretend that they don't
+        //  so we will be able to write them, so test for pipe with -p)
+        return ret(perl_scalar(it, "-e $file and not -p $file", &[("file", file)])?);
+    } else {
+        return ret(perl_scalar(it, "-e $file", &[("file", file)])?);
+    }
+    ret(n(1))
+}
+
+fn is_directory_v(it: &mut Interp, et: &Value, file: &Value) -> ER<Value> {
+    let mut file = file.clone();
+    let (wide, new) = encode_file_name_v(it, et, &file, false)?;
+    if let Some(v) = new {
+        file = v;
+    }
+    if wide != 0 {
+        let yes = with_set_warning(it, |it| {
+            let attrs = eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributesW", vec![file.clone()]))?.unwrap_or_default();
+            let d = eval_block(it, |it| win32(it, "FILE_ATTRIBUTE_DIRECTORY"))?.unwrap_or_default();
+            let dir_bit = if d.truthy() { d } else { n(0) };
+            Ok(attrs.truthy() && !pl::num_eq(&attrs, &Value::Int(0xffffffff)) && ops::bit_and(&attrs, &dir_bit).truthy())
+        })?;
+        if yes {
+            return Ok(n(1));
+        }
+    } else {
+        return perl_scalar(it, "-d $file", &[("file", file)]);
+    }
+    Ok(n(0))
+}
+
+/// Return true if file is a directory (with Windows Unicode support)
+/// Inputs: 0) ExifTool ref, 1) file name
+/// Returns: true if file is a directory (false if file isn't, or doesn't exist)
+pub fn is_directory(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    ret(is_directory_v(it, &arg(&a, 0), &arg(&a, 1))?)
+}
+
+/// Create directory for specified file
+/// Inputs: 0) ExifTool ref, 1) complete file name including path
+/// Returns: '' = directory created, undef = nothing done, otherwise error string
+pub fn create_directory(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    // (local $_: the loop variable is a Rust one)
+    let (slf, file) = (arg(&a, 0), arg(&a, 1));
+    let mut err = Value::Undef;
+    let mut dir = file.clone();
+    re(r"[^\/]*$", "").subst(&mut dir, false, |_| Vec::new()); // remove filename from path specification
+    if dir.truthy() && !is_directory_v(it, &slf, &dir)?.truthy() {
+        let parts = pl::split(&re(r"\/", ""), &dir, 0);
+        dir = pl::s("");
+        let k32 = my_scalar(it, "k32CreateDir");
+        for part in parts {
+            dir = pl::concat(&dir, &part);
+            let pc = is_pc(it, vec![], Want::Scalar)?.pop().unwrap_or_default();
+            if !part.to_bytes().is_empty() && !is_directory_v(it, &slf, &dir)?.truthy() &&
+                // don't try to create a network drive root directory
+                !(pc.truthy() && re(r"^//[^/]*$", "").is_match(&dir))
+            {
+                let success;
+                // create directory since it doesn't exist
+                let mut d2 = dir.clone(); // (must make a copy in case EncodeFileName recodes it)
+                let (wide, new) = encode_file_name_v(it, &slf, &d2, false)?;
+                if let Some(v) = new {
+                    d2 = v;
+                }
+                if wide != 0 {
+                    // handle Windows Unicode directory names
+                    if k32.borrow().is_undef() {
+                        if !eval_require(it, "Win32::API")? {
+                            err = pl::s("Install Win32::API to create directories with Unicode names");
+                            break;
+                        }
+                        let f = pl::method(it, &pl::s("Win32::API"), "new", vec![pl::s("KERNEL32"), pl::s("CreateDirectoryW"), pl::s("PP"), pl::s("I")])?;
+                        *k32.borrow_mut() = f;
+                        if !k32.borrow().truthy() {
+                            *k32.borrow_mut() = n(0);
+                            // give this error once, then just "Error creating" for subsequent attempts
+                            return ret(pl::s("Error loading Win32::API CreateDirectoryW"));
+                        }
+                    }
+                    let k = k32.borrow().clone();
+                    success = if k.truthy() { pl::method(it, &k, "Call", vec![d2, n(0)])? } else { Value::Undef };
+                } else {
+                    success = perl_scalar(it, "mkdir($d2, 0777)", &[("d2", d2)])?;
+                }
+                if !success.truthy() {
+                    err = pl::concat(&pl::s("Error creating directory "), &dir);
+                    break;
+                }
+                err = pl::s("");
+            }
+            dir = pl::concat(&dir, &pl::s("/"));
+        }
+    }
+    ret(err)
+}
+
+/// `(stat $file)[8, 9, 10]`
+fn stat_times(it: &mut Interp, file: &Value) -> ER<Vec<Value>> {
+    Ok(perl_op(it, "(stat $file)[8, 9, 10]", &[("file", file.clone())], None, Want::List)?.0)
+}
+
+/// Get file times (Unix seconds since the epoch)
+/// Inputs: 0) ExifTool ref, 1) file name or ref
+/// Returns: 0) access time, 1) modification time, 2) creation time (or undefs on error)
+pub fn get_file_time(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    let (slf, mut file) = (arg(&a, 0), arg(&a, 1));
+
+    // open file by name if necessary
+    if !file.is_ref() {
+        // (local *FH: the glob is a name here)
+        let opened = perl_scalar(it, "$self->Open(\\*FH, $file)", &[("self", slf.clone()), ("file", file.clone())])?;
+        if !opened.truthy() {
+            if is_directory_v(it, &slf, &file)?.truthy() {
+                let rtn = stat_times(it, &file)?;
+                if !arg(&rtn, 0).is_undef() {
+                    return Ok(rtn);
+                }
+            }
+            warn(it, vec![slf.clone(), cat(&[&pl::s("GetFileTime error for '"), &file, &pl::s("'")])], Want::Scalar)?;
+            return pl::ret_nothing(want);
+        }
+        file = perl_scalar(it, "*FH", &[])?; // (not \*FH, so *FH will be kept open until $file goes out of scope)
+    }
+    // on Windows, try to work around incorrect file times when daylight saving time is in effect
+    if pl::str_eq(&os_name(it), "MSWin32") {
+        if !eval_require(it, "Win32::API")? {
+            warn(it, vec![slf.clone(), pl::s("Install Win32::API for proper handling of Windows file times"), n(1)], Want::Scalar)?;
+        } else if !eval_require(it, "Win32API::File")? {
+            warn(it, vec![slf.clone(), pl::s("Install Win32API::File for proper handling of Windows file times"), n(1)], Want::Scalar)?;
+        } else {
+            // get Win32 handle, needed for GetFileTime
+            let win32_handle = eval_block(it, |it| pl::call(it, "Win32API::File::GetOsFHandle", vec![file.clone()]))?.unwrap_or_default();
+            if !win32_handle.truthy() {
+                warn(it, vec![slf.clone(), pl::s("Win32API::File::GetOsFHandle returned invalid handle")], Want::Scalar)?;
+                return pl::ret_nothing(want);
+            }
+            // get FILETIME structs
+            let zero = pack_v(b"LL", &[n(0), n(0)])?;
+            let k32 = my_scalar(it, "k32GetFileTime");
+            if !k32.borrow().truthy() {
+                if !k32.borrow().is_undef() {
+                    return pl::ret_nothing(want);
+                }
+                let f = pl::method(it, &pl::s("Win32::API"), "new", vec![pl::s("KERNEL32"), pl::s("GetFileTime"), pl::s("NPPP"), pl::s("I")])?;
+                *k32.borrow_mut() = f;
+                if !k32.borrow().truthy() {
+                    warn(it, vec![slf.clone(), pl::s("Error loading Win32::API GetFileTime")], Want::Scalar)?;
+                    *k32.borrow_mut() = n(0);
+                    return pl::ret_nothing(want);
+                }
+            }
+            let k = k32.borrow().clone();
+            let (r, vals, _) = perl_op(it, "$k->Call($h, $ctime, $atime, $mtime)", &[("k", k), ("h", win32_handle), ("ctime", zero.clone()), ("atime", zero.clone()), ("mtime", zero)], None, Want::Scalar)?;
+            if !r.last().is_some_and(|v| v.truthy()) {
+                let e = pl::call(it, "Win32::GetLastError", vec![])?;
+                warn(it, vec![slf.clone(), pl::concat(&pl::s("Win32::API GetFileTime returned "), &e)], Want::Scalar)?;
+                return pl::ret_nothing(want);
+            }
+            // convert FILETIME structs to Unix seconds
+            let mut times = Vec::new();
+            for time in [&vals[3], &vals[4], &vals[2]] {
+                let lh = match pack::unpack(b"LL", &time.to_bytes()) {
+                    Ok(v) => v,
+                    Err(e) => return die(e),
+                }; // unpack FILETIME struct
+                let (lo, hi) = (arg(&lh, 0), arg(&lh, 1));
+                // FILETIME is in 100 ns intervals since 0:00 UTC Jan 1, 1601
+                // (89 leap years between 1601 and 1970)
+                times.push(pl::sub(&pl::mul(&pl::add(&pl::mul(&hi, &n(4294967296)), &lo), &Value::Num(1e-7)), &n(((1970 - 1601) * 365 + 89) * 24 * 3600)));
+            }
+            return Ok(times);
+        }
+    }
+    // other os (or Windows fallback)
+    stat_times(it, &file)
+}
+
+// ---- autoloading ----
+
+/// DoAutoLoad: the result, and the final values of the arguments (written
+/// back to the caller's variables, as @_ aliases them).
+fn do_auto_load_v(it: &mut Interp, autoload: &Value, args: Vec<Value>, want: Want) -> ER<(Vec<Value>, Vec<Value>)> {
+    let call_info = pl::split(&re("::", ""), autoload, 0);
+    let mut file = pl::s("Image/ExifTool/Write");
+
+    if call_info.last().is_some_and(|v| pl::str_eq(v, "DESTROY")) {
+        return Ok((pl::ret_nothing(want)?, args));
+    }
+    if call_info.len() == 4 {
+        // load Image/ExifTool/WriteMODULE.pl
+        file = cat(&[&file, &call_info[2], &pl::s(".pl")]);
+    } else if call_info.last().is_some_and(|v| pl::str_eq(v, "ShiftTime")) {
+        file = pl::s("Image/ExifTool/Shift.pl"); // load Shift.pl
+    } else {
+        // load Image/ExifTool/Writer.pl
+        file = pl::concat(&file, &pl::s("r.pl"));
+    }
+    // attempt to load the package
+    if !eval_require(it, &file.to_text())? {
+        let e = it.get_scalar("main::@");
+        return Err(Flow::Die(cat(&[&pl::s("Error while attempting to call "), autoload, &pl::s("\n"), &e, &pl::s("\n")])));
+    }
+    let name = autoload.to_text();
+    if it.sub(&name).is_none() {
+        // (caller(0) as the interpreter gives it)
+        let caller = it.package.to_string();
+        let _ = caller;
+        // reproduce Perl's standard 'undefined subroutine' message:
+        return Err(Flow::Die(Value::from(format!("Undefined subroutine {name} called at (eval) line 1\n"))));
+    }
+    // call the function (with @_ aliased to our arguments)
+    let (r, _, after) = perl_op(it, "no strict 'refs'; &$f(@a)", &[("f", autoload.clone())], Some(args), want)?;
+    Ok((r, after))
+}
+
+/// Write back the arguments a call changed (`$_[i]` aliases).
+fn write_back(it: &mut Interp, before: &[Value], after: &[Value], offset: usize) -> ER<()> {
+    for (i, (b, a)) in before.iter().zip(after.iter()).enumerate() {
+        if !unchanged(a, b) {
+            it.set_arg(i + offset, a.clone())?;
+        }
+    }
+    Ok(())
+}
+
+/// Utility to load our write routines if required (called via AUTOLOAD)
+/// Inputs: 0) autoload function, 1-N) function arguments
+/// Returns: result of function or dies if function not available
+pub fn do_auto_load(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    let mut a = a;
+    let autoload = if a.is_empty() { Value::Undef } else { a.remove(0) };
+    let (r, after) = do_auto_load_v(it, &autoload, a.clone(), want)?;
+    write_back(it, &a, &after, 1)?;
+    Ok(r)
+}
+
+/// AutoLoad our writer routines when necessary
+pub fn autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    let name = pkg_scalar(it, "AUTOLOAD").borrow().clone();
+    let (r, after) = do_auto_load_v(it, &name, a.clone(), want)?;
+    write_back(it, &a, &after, 0)?;
+    Ok(r)
+}
+
+// ---- dates, trailers ----
+
+/// `Image::ExifTool::ShiftTime($val, $shift, $dir, $offset)` (ShiftTime
+/// updates its first argument): returns the shifted value.
+fn shift_time(it: &mut Interp, val: &Value, shift: &Value, dir: &Value, offset: &Value) -> ER<Value> {
+    let vars = [("v", val.clone()), ("s", shift.clone()), ("d", dir.clone()), ("o", offset.clone())];
+    let (_, vals, _) = perl_op(it, "Image::ExifTool::ShiftTime($v, $s, $d, $o)", &vars, None, Want::Void)?;
+    Ok(vals[0].clone())
+}
+
+/// `$fmt =~ s/(^|[^%])((%%)*)CODE/$1$2$rep/g`
+fn subst_code(fmt: &mut Value, code: &str, rep: &Value) -> ER<()> {
+    let r = pl::re_dyn(format!("(^|[^%])((%%)*){code}").as_bytes(), "")?;
+    let rb = rep.to_bytes();
+    r.subst(fmt, true, |c| [&cap(c, 1).to_bytes()[..], &cap(c, 2).to_bytes()[..], &rb[..]].concat());
+    Ok(())
+}
+
+/// Convert date/time from Exif format
+/// Inputs: 0) ExifTool object reference, 1) Date/time in EXIF format
+/// Returns: Formatted date/time string
+pub fn convert_date_time(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (slf, mut date) = (arg(&a, 0), arg(&a, 1));
+    let mut fmt = slf.path(&["OPTIONS", "DateFormat"]);
+    let mut shift = slf.path(&["OPTIONS", "GlobalTimeShift"]);
+    if shift.truthy() {
+        let mut offset = slf.get("GLOBAL_TIME_OFFSET");
+        let (mut g, mut t, dir);
+        let mut matches: Vec<Value> = Vec::new();
+        let mut caps = None;
+        re(r"^((\d?[A-Z][-\w]*\w:)*)([A-Z][-\w]*\w)([-+])", "i").subst(&mut shift, false, |c| {
+            caps = Some(c.clone());
+            Vec::new()
+        });
+        if let Some(c) = caps {
+            g = cap(&c, 1);
+            t = cap(&c, 3);
+            dir = n(if pl::str_eq(&cap(&c, 4), "-") { -1 } else { 1 });
+        } else {
+            g = Value::Undef;
+            t = Value::Undef;
+            let mut c1 = Value::Undef;
+            let m = re(r"^([-+])", "").subst(&mut shift, false, |c| {
+                c1 = cap(c, 1);
+                Vec::new()
+            }) > 0;
+            dir = n(if m && pl::str_eq(&c1, "-") { -1 } else { 1 });
+        }
+        if !offset.truthy() {
+            offset = Value::new_hash();
+            slf.set("GLOBAL_TIME_OFFSET", offset.clone());
+            // (see forum16692 for a discussion about why this code was added)
+            if t.truthy() {
+                // determine initial shift from specified tag
+                let keys: Vec<Value> = slf.get("VALUE").keys().into_iter().map(Value::Str).collect();
+                matches = grep_re(&re_full("^", &t, r"( \(|$)", "i")?, &keys);
+                matches.sort_by(ops::str_cmp);
+                if g.truthy() && !matches.is_empty() {
+                    re(":$", "").subst(&mut g, false, |_| Vec::new());
+                    matches = group_matches_v(it, &slf, &g, &Value::new_array(matches), Want::List)?;
+                }
+            }
+            if matches.is_empty() && slf.get("TAGS_FROM_FILE").truthy() && slf.path(&["OPTIONS", "RequestTags"]).truthy() {
+                // determine initial shift from first requested date/time tag
+                let mut req_date = grep_re(&re("date", "i"), &slf.path(&["OPTIONS", "RequestTags"]).items());
+                while !req_date.is_empty() {
+                    t = req_date.remove(0);
+                    let keys: Vec<Value> = slf.get("VALUE").keys().into_iter().map(Value::Str).collect();
+                    matches = grep_re(&re_full("^", &t, r"( \(|$)", "i")?, &keys);
+                    matches.sort_by(ops::str_cmp);
+                    let ti = slf.get("TAG_INFO");
+                    while !matches.is_empty() {
+                        // select the first tag that calls this routine in its PrintConv
+                        let pc = ti.get(matches[0].to_bytes()).get("PrintConv");
+                        if pc.truthy() && re("ConvertDateTime", "").is_match(&pc) {
+                            req_date.clear();
+                            break;
+                        }
+                        matches.remove(0);
+                    }
+                }
+            }
+            if !matches.is_empty() {
+                let val = pl::method(it, &slf, "GetValue", vec![matches[0].clone(), pl::s("ValueConv")])?;
+                if !val.is_undef() {
+                    shift_time(it, &val, &shift, &dir, &offset)?;
+                }
+            }
+        }
+        date = shift_time(it, &date, &shift, &dir, &offset)?;
+    }
+    // only convert date if a format was specified and the date is recognizable
+    if fmt.truthy() {
+        // separate time zone if it exists
+        let mut tz = Value::Undef;
+        let mut c1 = Value::Undef;
+        if re(r"([-+]\d{2}:\d{2}|Z)$", "").subst(&mut date, false, |c| {
+            c1 = cap(c, 1);
+            Vec::new()
+        }) > 0
+        {
+            tz = c1;
+        }
+        // a few cameras use incorrect date/time formatting:
+        // - slashes instead of colons in date (RolleiD330, ImpressCam)
+        // - date/time values separated by colon instead of space (Polariod, Sanyo, Sharp, Vivitar)
+        // - single-digit seconds with leading space (HP scanners)
+        let mut a = re(r"\d+", "").all(&date); // be very flexible about date/time format
+        a.reverse();
+        if !a.is_empty() && pl::ge(a.last().unwrap(), &n(1000)) && pl::lt(a.last().unwrap(), &n(3000)) && eval_require(it, "POSIX")? {
+            while a.len() > 6 {
+                a.remove(0); // remove superfluous entries
+            }
+            while a.len() < 3 {
+                a.insert(0, n(1)); // add month and day if necessary
+            }
+            while a.len() < 6 {
+                a.insert(0, n(0)); // add h,m,s if necessary
+            }
+            a[4] = pl::sub(&a[4], &n(1)); // base month is 1
+            // parse our %f fractional seconds first (and round up seconds if necessary)
+            // - if there are multiple %f codes, they all get the same number of digits as the first
+            if let Some(c) = re(r"%(-?)\.?(\d*)f", "").m(&fmt) {
+                let (neg, dig) = (cap(&c, 1), cap(&c, 2));
+                let mut frac = match re(r"(\.\d+)", "").m(&date) {
+                    Some(c) => cap(&c, 1),
+                    None => pl::s(""),
+                };
+                let flen = |f: &Value| n(f.to_bytes().len() as i64);
+                if !frac.truthy() {
+                    if dig.truthy() {
+                        frac = pl::concat(&pl::s("."), &Value::bytes(b"0".repeat(dig.to_i64().max(0) as usize)));
+                    }
+                } else if !dig.to_bytes().is_empty() {
+                    let d1 = pl::add(&dig, &n(1));
+                    if pl::gt(&d1, &flen(&frac)) {
+                        let k = pl::sub(&d1, &flen(&frac)).to_i64().max(0) as usize;
+                        frac = pl::concat(&frac, &Value::bytes(b"0".repeat(k)));
+                    } else if pl::lt(&d1, &flen(&frac)) {
+                        frac = pl::sprintf_v(&cat(&[&pl::s("%."), &dig, &pl::s("f")]), &[frac]);
+                        loop {
+                            let mut c1 = Value::Undef;
+                            if !(re(r"^(\d)", "").subst(&mut frac, false, |c| {
+                                c1 = cap(c, 1);
+                                Vec::new()
+                            }) > 0
+                                && !pl::str_eq(&c1, "0"))
+                            {
+                                break;
+                            }
+                            // this is a pain, but we must round up to the next second
+                            a[0] = pl::add(&a[0], &n(1));
+                            if pl::lt(&a[0], &n(60)) {
+                                break;
+                            }
+                            a[0] = n(0);
+                            a[1] = pl::add(&a[1], &n(1));
+                            if pl::lt(&a[1], &n(60)) {
+                                break;
+                            }
+                            a[1] = n(0);
+                            a[2] = pl::add(&a[2], &n(1));
+                            if pl::lt(&a[2], &n(24)) {
+                                break;
+                            }
+                            a[2] = n(0);
+                            runtime::require(it, "Image/ExifTool/Shift.pl")?;
+                            a[3] = pl::add(&a[3], &n(1));
+                            let dim = pl::call(it, "Image::ExifTool::DaysInMonth", vec![pl::add(&a[4], &n(1)), a[5].clone()])?;
+                            if pl::le(&a[3], &dim) {
+                                break;
+                            }
+                            a[3] = n(1);
+                            a[4] = pl::add(&a[4], &n(1));
+                            if pl::lt(&a[4], &n(12)) {
+                                break;
+                            }
+                            a[4] = n(0);
+                            a[5] = pl::add(&a[5], &n(1));
+                            break; // (this was a goto)
+                        }
+                    }
+                }
+                if neg.truthy() {
+                    re(r"^\.", "").subst(&mut frac, false, |_| Vec::new());
+                }
+                subst_code(&mut fmt, r"%-?\.?\d*f", &frac)?;
+            }
+            // parse %z and %s ourself (to handle time zones properly)
+            if re(r"%:?[sz]", "").is_match(&fmt) {
+                // use system time zone unless otherwise specified
+                if !tz.truthy() && eval_require(it, "Time::Local")? {
+                    let tl = time_local_v(it, a.clone())?;
+                    tz = time_zone_string_v(it, Value::new_array(a.clone()), tl)?;
+                }
+                // remove colon, setting to UTC if time zone is not numeric
+                if !(tz.truthy() && re(r"^[-+]\d{2}:\d{2}$", "").is_match(&tz)) {
+                    tz = pl::s("+00:00");
+                }
+                subst_code(&mut fmt, "%:z", &tz)?; // convert '%:z' format codes
+                re(":", "").subst(&mut tz, false, |_| Vec::new());
+                subst_code(&mut fmt, "%z", &tz)?; // convert '%z' format codes
+                if re("%s", "").is_match(&fmt) && eval_require(it, "Time::Local")? {
+                    // calculate seconds since the Epoch, UTC
+                    let gm = pl::call(it, "Time::Local::timegm", a.clone())?;
+                    let s = pl::sub(&gm, &pl::mul(&n(60), &pl::sub(&tz, &pl::mul(&pl::int(&pl::div(&tz, &n(100))?), &n(40)))));
+                    subst_code(&mut fmt, "%s", &s)?; // convert '%s' format codes
+                }
+            }
+            a[5] = pl::sub(&a[5], &n(1900)); // strftime year starts from 1900
+            let mut args = vec![fmt.clone()];
+            args.extend(a);
+            date = pl::call(it, "POSIX::strftime", args)?; // generate the formatted date/time
+            // apparently strftime can set the UTF-8 flag (argh!), so reset this if necessary
+            if re(r"[\x80-\xff]", "").is_match(&fmt) {
+                let r = Value::ScalarRef(Rc::new(std::cell::RefCell::new(date.clone())));
+                pl::method(it, &slf, "Sanitize", vec![r.clone()])?;
+                date = r.deref();
+            }
+        } else if slf.path(&["OPTIONS", "StrictDate"]).truthy() {
+            date = Value::Undef;
+        }
+    }
+    ret(date)
+}
+
+/// `$raf->Read($buff, $len)`: the count and the bytes read.
+fn raf_read(it: &mut Interp, raf: &Value, len: &Value) -> ER<(Value, Value)> {
+    let (r, vals, _) = perl_op(it, "$raf->Read($buff, $len)", &[("raf", raf.clone()), ("buff", Value::Undef), ("len", len.clone())], None, Want::Scalar)?;
+    Ok((r.into_iter().last().unwrap_or_default(), vals[1].clone()))
+}
+
+fn identify_trailer_v(it: &mut Interp, slf: &Value, raf: &Value, offset: &Value) -> ER<Value> {
+    let offset = if offset.truthy() { offset.clone() } else { n(0) };
+    let pos = pl::method(it, raf, "Tell", vec![])?;
+    let mut typ = Value::Undef;
+    while pl::method(it, raf, "Seek", vec![pl::neg(&offset), n(2)])?.truthy() {
+        let mut len = pl::method(it, raf, "Tell", vec![])?;
+        if !pl::gt(&len, &n(0)) {
+            break;
+        }
+        // read up to 64 bytes before specified offset from end of file
+        if pl::gt(&len, &n(64)) {
+            len = n(64);
+        }
+        if !pl::method(it, raf, "Seek", vec![pl::neg(&len), n(1)])?.truthy() {
+            break;
+        }
+        let (got, buff) = raf_read(it, raf, &len)?;
+        if !pl::num_eq(&got, &len) {
+            break;
+        }
+        let m = |p: &str| re(p, "s").is_match(&buff);
+        let t = if re(r"AXS(!|\*).{8}$", "s").is_match(&buff) {
+            "AFCP"
+        } else if re(r"\xa1\xb2\xc3\xd4$", "").is_match(&buff) {
+            "FotoStation"
+        } else if re(r"cbipcbbl$", "").is_match(&buff) {
+            "PhotoMechanic"
+        } else if re(r"^CANON OPTIONAL DATA\0", "").is_match(&buff) {
+            "CanonVRD"
+        } else if m(r"~\0\x04\0zmie~\0\0\x06.{4}[\x10\x18]\x04$") || m(r"~\0\x04\0zmie~\0\0\x0a.{8}[\x10\x18]\x08$") {
+            "MIE"
+        } else if re(r"\0\0(QDIOBS|SEFT)$", "").is_match(&buff) {
+            "Samsung"
+        } else if m(r"8db42d694ccc418790edff439fe026bf$") {
+            "Insta360"
+        } else if re(r"\0{6}/NIKON APP$", "").is_match(&buff) {
+            "NikonApp"
+        } else if re(r"\xff{4}\x1b\*9HWfu\x84\x93\xa2\xb1$", "").is_match(&buff) {
+            "Vivo"
+        } else if m(r"jxrs...\0$") {
+            "OnePlus"
+        } else if slf.get("ProcessGoogleTrailer").truthy() {
+            // check for Google trailer information if specific XMP tags exist
+            "Google"
+        } else {
+            ""
+        };
+        if !t.is_empty() {
+            typ = pl::s(t);
+        }
+        break;
+    }
+    pl::method(it, raf, "Seek", vec![pos, n(0)])?; // restore original file position
+    if typ.truthy() {
+        let h = Value::new_hash();
+        h.set("RAF", raf.clone());
+        h.set("DirName", typ);
+        return Ok(h);
+    }
+    Ok(Value::Undef)
+}
+
+/// Identify trailer ending at specified offset from end of file
+/// Inputs: 0) RAF reference, 1) offset from end of file (0 by default)
+/// Returns: Trailer info hash (with RAF and DirName set),
+///          or undef if no recognized trailer was found
+/// Notes: leaves file position unchanged
+pub fn identify_trailer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    ret(identify_trailer_v(it, &arg(&a, 0), &arg(&a, 1), &arg(&a, 2))?)
+}
+
+/// Read/rewrite trailer information (including multiple trailers)
+/// Inputs: 0) ExifTool object ref, 1) DirInfo ref:
+/// - requires RAF and DirName
+/// - OutFile is a scalar reference for writing
+/// - scans from current file position for each trailer if ScanForTrailer is set
+///   (current file position is just after JPEG EOF for a JPEG image)
+/// Returns: 1 if trailer was processed or couldn't be processed (or written OK)
+///          0 if trailer was recognized but offsets need fixing (or write error)
+/// - DirName, DirLen, DataPos, Offset, Fixup and OutFile are updated
+/// - preserves current file position and byte order
+pub fn process_trailers(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (slf, dir_info) = (arg(&a, 0), arg(&a, 1));
+    let mut dir_name = dir_info.get("DirName");
+    let outfile = dir_info.get("OutFile");
+    let mut offset = {
+        let o = dir_info.get("Offset");
+        if o.truthy() {
+            o
+        } else {
+            n(0)
+        }
+    };
+    let mut fixup = dir_info.get("Fixup");
+    let raf = dir_info.get("RAF");
+    let pos = pl::method(it, &raf, "Tell", vec![])?;
+    let byte_order = get_byte_order(it, vec![], Want::Scalar)?.pop().unwrap_or_default();
+    let mut success = n(1);
+    let path = slf.get("PATH");
+
+    // get position of end of file
+    pl::method(it, &raf, "Seek", vec![n(0), n(2)])?;
+    let end = pl::method(it, &raf, "Tell", vec![])?;
+    slf.set("FileEnd", end);
+
+    loop {
+        // loop through all trailers
+        pl::method(it, &raf, "Seek", vec![pos.clone()])?;
+        let out_buff: Cell = Rc::new(std::cell::RefCell::new(Value::Undef));
+        // trailer-processing procs residing in modules of a different name
+        let mut module = pl::s(match &*dir_name.to_bytes() {
+            b"Insta360" => "QuickTimeStream.pl",
+            b"NikonApp" => "Nikon.pm",
+            b"Vivo" => "Trailer.pm",
+            b"OnePlus" => "Trailer.pm",
+            b"Google" => "Trailer.pm",
+            _ => "",
+        });
+        if !module.truthy() {
+            module = pl::concat(&dir_name, &pl::s(".pm"));
+        }
+        runtime::require(it, &format!("Image/ExifTool/{}", module.to_text()))?;
+        re(r"(Stream)?\..*", "").subst(&mut module, false, |_| Vec::new()); // remove extension and change QuickTimeStream to QuickTime
+        let proc_ = format!("Image::ExifTool::{}::Process{}", module.to_text(), dir_name.to_text());
+        if outfile.truthy() {
+            // write to local buffer so we can add trailer in proper order later
+            if outfile.deref().truthy() {
+                dir_info.set("OutFile", Value::ScalarRef(out_buff.clone()));
+                *out_buff.borrow_mut() = pl::s("");
+            }
+            // must generate new fixup if necessary so we can shift
+            // the old fixup separately after we prepend this trailer
+            dir_info.delete("Fixup");
+        }
+        dir_info.delete("DirLen"); // reset trailer length
+        dir_info.set("Offset", offset.clone()); // set offset from end of file
+        dir_info.set("Trailer", n(1)); // set Trailer flag in case proc cares
+        // add trailer and DirName to SubDirectory PATH
+        path.push(pl::s("Trailer"));
+        path.push(dir_name.clone());
+        //
+        // Call proc to read or write this trailer (see the Perl for the
+        // inputs and returns of the procs)
+        //
+        let mut result = pl::call(it, &proc_, vec![slf.clone(), dir_info.clone()])?;
+
+        // restore PATH (pop last 2 items)
+        if let Value::ArrayRef(p) = &path {
+            let mut p = p.borrow_mut();
+            let k = p.len().saturating_sub(2);
+            p.truncate(k);
+        }
+
+        let (mut data_pos, mut dir_len) = (dir_info.get("DataPos"), dir_info.get("DirLen"));
+        if outfile.truthy() {
+            if pl::lt(&result, &n(0)) {
+                // copy or delete the trailer ourself
+                result = n(1);
+                if slf.get("TrailerStart").truthy() {
+                    if !data_pos.truthy() {
+                        data_pos = slf.get("TrailerStart");
+                    }
+                    if !dir_len.truthy() {
+                        dir_len = pl::sub(&pl::sub(&slf.get("FileEnd"), &offset), &data_pos);
+                    }
+                }
+                if slf.path(&["DEL_GROUP", "Trailer"]).truthy() || slf.get("DEL_GROUP").get(dir_name.to_bytes()).truthy() {
+                    let bytes = if dir_len.truthy() { cat(&[&pl::s(" ("), &dir_len, &pl::s(" bytes)")]) } else { pl::s("") };
+                    pl::method(it, &slf, "VPrint", vec![n(0), cat(&[&pl::s("Deleting "), &dir_name, &pl::s(" trailer"), &bytes, &pl::s("\n")])])?;
+                    slf.set("CHANGED", pl::add(&slf.get("CHANGED"), &n(1)));
+                } else if data_pos.truthy() && dir_len.truthy() {
+                    pl::method(it, &slf, "VPrint", vec![n(0), cat(&[&pl::s("Copying "), &dir_name, &pl::s(" trailer ("), &dir_len, &pl::s(" bytes)\n")])])?;
+                    let ok = pl::method(it, &raf, "Seek", vec![data_pos.clone()])?.truthy() && {
+                        let (r, vals, _) = perl_op(it, "$raf->Read($$out, $len)", &[("raf", raf.clone()), ("out", dir_info.get("OutFile")), ("len", dir_len.clone())], None, Want::Scalar)?;
+                        let _ = vals;
+                        pl::num_eq(&r.into_iter().last().unwrap_or_default(), &dir_len)
+                    };
+                    if !ok {
+                        result = n(0);
+                    }
+                } else {
+                    result = n(0);
+                }
+            }
+            if pl::gt(&result, &n(0)) {
+                let ob = out_buff.borrow().clone();
+                if ob.truthy() {
+                    // write trailers to OutFile in original order
+                    assign_deref(&outfile, pl::concat(&ob, &outfile.deref()))?;
+                    // must adjust old fixup start if it exists
+                    if fixup.truthy() {
+                        fixup.set("Start", pl::add(&fixup.get("Start"), &n(ob.to_bytes().len() as i64)));
+                    }
+                    *out_buff.borrow_mut() = pl::s(""); // free memory
+                }
+                if dir_info.get("Fixup").truthy() {
+                    if fixup.truthy() {
+                        // add fixup for subsequent trailers to the fixup for this trailer
+                        // (but first we must adjust for the new start position)
+                        let start = dir_info.get("Fixup").get("Start");
+                        fixup.set("Shift", pl::add(&fixup.get("Shift"), &start));
+                        fixup.set("Start", pl::sub(&fixup.get("Start"), &start));
+                        pl::method(it, &dir_info.get("Fixup"), "AddFixup", vec![fixup.clone()])?;
+                    }
+                    fixup = dir_info.get("Fixup"); // save fixup
+                }
+            } else {
+                let msg = cat(&[&pl::s("Error rewriting "), &dir_name, &pl::s(" trailer")]);
+                if error(it, vec![slf.clone(), msg, n(2)], Want::Scalar)?.pop().unwrap_or_default().truthy() {
+                    success = n(0);
+                }
+                break;
+            }
+        } else if pl::lt(&result, &n(0)) {
+            // can't continue if we must scan for this trailer
+            success = n(0);
+            break;
+        }
+        if !(pl::gt(&result, &n(0)) && dir_len.truthy()) {
+            break;
+        }
+        offset = pl::add(&offset, &dir_len);
+        if data_pos.truthy() && slf.get("TrailerStart").truthy() && pl::le(&data_pos, &slf.get("TrailerStart")) {
+            break;
+        }
+        // look for next trailer
+        let mut next_trail = identify_trailer_v(it, &slf, &raf, &offset)?;
+        // process Google trailer after all others if necessary and not done already
+        if !next_trail.truthy() {
+            if !slf.get("ProcessGoogleTrailer").truthy() {
+                break;
+            }
+            next_trail = Value::new_hash();
+            next_trail.set("DirName", pl::s("Google"));
+            next_trail.set("RAF", raf.clone());
+        }
+        dir_name = next_trail.get("DirName");
+        dir_info.set("DirName", dir_name.clone());
+    }
+    set_byte_order(it, vec![byte_order], Want::Scalar)?; // restore original byte order
+    pl::method(it, &raf, "Seek", vec![pos])?; // restore original file position
+    dir_info.set("OutFile", outfile); // restore original outfile
+    dir_info.set("Offset", offset); // return offset from EOF to start of first trailer
+    dir_info.set("Fixup", fixup); // return fixup information
+    ret(success)
+}
+
+pub fn register(it: &mut Interp) {
+    it.define_native("Image::ExifTool::Purge", purge);
+    it.define_native("Image::ExifTool::CombineInfo", combine_info);
+    it.define_native("Image::ExifTool::GetTableName", get_table_name);
+    it.define_native("Image::ExifTool::GetTagIndex", get_tag_index);
+    it.define_native("Image::ExifTool::FindValue", find_value);
+    it.define_native("Image::ExifTool::NextTagKey", next_tag_key);
+    it.define_native("Image::ExifTool::AddCleanup", add_cleanup);
+    it.define_native("Image::ExifTool::Warn", warn);
+    it.define_native("Image::ExifTool::Error", error);
+    it.define_native("Image::ExifTool::AddTagsToLookup", add_tags_to_lookup);
+    it.define_native("Image::ExifTool::ExpandFlags", expand_flags);
+    it.define_native("Image::ExifTool::SetupTagTable", setup_tag_table);
+    it.define_native("Image::ExifTool::IsPC", is_pc);
+    it.define_native("Image::ExifTool::IsFloat", is_float);
+    it.define_native("Image::ExifTool::IsInt", is_int);
+    it.define_native("Image::ExifTool::IsHex", is_hex);
+    it.define_native("Image::ExifTool::IsRational", is_rational);
+    it.define_native("Image::ExifTool::RoundFloat", round_float);
+    it.define_native("Image::ExifTool::ToFloat", to_float);
+    it.define_native("Image::ExifTool::SwapBytes", swap_bytes);
+    it.define_native("Image::ExifTool::SwapWords", swap_words);
+    it.define_native("Image::ExifTool::DoUnpackStd", do_unpack_std);
+    it.define_native("Image::ExifTool::DoUnpackRev", do_unpack_rev);
+    it.define_native("Image::ExifTool::DoPackStd", do_pack_std);
+    it.define_native("Image::ExifTool::DoPackRev", do_pack_rev);
+    it.define_native("Image::ExifTool::DoUnpack", do_unpack);
+    it.define_native("Image::ExifTool::DoUnpackDbl", do_unpack_dbl);
+    it.define_native("Image::ExifTool::Get8s", get8s);
+    it.define_native("Image::ExifTool::Get8u", get8u);
+    it.define_native("Image::ExifTool::Get16s", get16s);
+    it.define_native("Image::ExifTool::Get16u", get16u);
+    it.define_native("Image::ExifTool::Get32s", get32s);
+    it.define_native("Image::ExifTool::Get32u", get32u);
+    it.define_native("Image::ExifTool::GetFloat", get_float);
+    it.define_native("Image::ExifTool::GetDouble", get_double);
+    it.define_native("Image::ExifTool::Get16uRev", get16u_rev);
+    it.define_native("Image::ExifTool::Get32uRev", get32u_rev);
+    it.define_native("Image::ExifTool::GetRational32s", get_rational32s);
+    it.define_native("Image::ExifTool::GetRational32u", get_rational32u);
+    it.define_native("Image::ExifTool::GetRational64s", get_rational64s);
+    it.define_native("Image::ExifTool::GetRational64u", get_rational64u);
+    it.define_native("Image::ExifTool::GetFixed16s", get_fixed16s);
+    it.define_native("Image::ExifTool::GetFixed16u", get_fixed16u);
+    it.define_native("Image::ExifTool::GetFixed32s", get_fixed32s);
+    it.define_native("Image::ExifTool::GetFixed32u", get_fixed32u);
+    it.define_native("Image::ExifTool::Set8s", set8s);
+    it.define_native("Image::ExifTool::Set8u", set8u);
+    it.define_native("Image::ExifTool::Set16u", set16u);
+    it.define_native("Image::ExifTool::Set32u", set32u);
+    it.define_native("Image::ExifTool::Set16uRev", set16u_rev);
+    it.define_native("Image::ExifTool::GetByteOrder", get_byte_order);
+    it.define_native("Image::ExifTool::SetByteOrder", set_byte_order);
+    it.define_native("Image::ExifTool::ToggleByteOrder", toggle_byte_order);
+    it.define_native("Image::ExifTool::FormatSize", format_size);
+    it.define_native("Image::ExifTool::ReadValue", read_value);
+    it.define_native("Image::ExifTool::Decode", decode);
+    it.define_native("Image::ExifTool::Encode", encode);
+    it.define_native("Image::ExifTool::DecodeBits", decode_bits);
+    it.define_native("Image::ExifTool::ValidateImage", validate_image);
+    it.define_native("Image::ExifTool::ValidTagName", valid_tag_name);
+    it.define_native("Image::ExifTool::MakeTagName", make_tag_name);
+    it.define_native("Image::ExifTool::MakeDescription", make_description);
+    it.define_native("Image::ExifTool::GetDescriptions", get_descriptions);
+    it.define_native("Image::ExifTool::Filter", filter);
+    it.define_native("Image::ExifTool::Printable", printable);
+    it.define_native("Image::ExifTool::ConvertTimeSpan", convert_time_span);
+    it.define_native("Image::ExifTool::TimeLocal", time_local);
+    it.define_native("Image::ExifTool::GetTimeZone", get_time_zone);
+    it.define_native("Image::ExifTool::TimeZoneString", time_zone_string);
+    it.define_native("Image::ExifTool::ConvertUnixTime", convert_unix_time);
+    it.define_native("Image::ExifTool::GetUnixTime", get_unix_time);
+    it.define_native("Image::ExifTool::ConvertFileSize", convert_file_size);
+    it.define_native("Image::ExifTool::ConvertDuration", convert_duration);
+    it.define_native("Image::ExifTool::ConvertBitrate", convert_bitrate);
+    it.define_native("Image::ExifTool::ConvertFileName", convert_file_name);
+    it.define_native("Image::ExifTool::InverseFileName", inverse_file_name);
+    it.define_native("Image::ExifTool::LimitLongValues", limit_long_values);
+    it.define_native("Image::ExifTool::HDump", hdump);
+    it.define_native("Image::ExifTool::JpegMarkerName", jpeg_marker_name);
+    it.define_native("Image::ExifTool::IsSameID", is_same_id);
+    it.define_native("Image::ExifTool::SplitFileName", split_file_name);
+    it.define_native("Image::ExifTool::GroupMatches", group_matches);
+    it.define_native("Image::ExifTool::RemoveTagsFromList", remove_tags_from_list);
+    it.define_native("Image::ExifTool::CopyAltInfo", copy_alt_info);
+    it.define_native("Image::ExifTool::ExpandShortcuts", expand_shortcuts);
+    it.define_native("Image::ExifTool::AddCompositeTags", add_composite_tags);
+    it.define_native("Image::ExifTool::ParseArguments", parse_arguments);
+    it.define_native("Image::ExifTool::SetFoundTags", set_found_tags);
+    it.define_native("Image::ExifTool::DoneExtract", done_extract);
+    it.define_native("Image::ExifTool::IsUTF8", is_utf8);
+    it.define_native("Image::ExifTool::EncodeFileName", encode_file_name);
+    it.define_native("Image::ExifTool::WindowsLongPath", windows_long_path);
+    it.define_native("Image::ExifTool::Open", open);
+    it.define_native("Image::ExifTool::Exists", exists);
+    it.define_native("Image::ExifTool::IsDirectory", is_directory);
+    it.define_native("Image::ExifTool::CreateDirectory", create_directory);
+    it.define_native("Image::ExifTool::GetFileTime", get_file_time);
+    it.define_native("Image::ExifTool::DoAutoLoad", do_auto_load);
+    it.define_native("Image::ExifTool::AUTOLOAD", autoload);
+    it.define_native("Image::ExifTool::ConvertDateTime", convert_date_time);
+    it.define_native("Image::ExifTool::IdentifyTrailer", identify_trailer);
+    it.define_native("Image::ExifTool::ProcessTrailers", process_trailers);
 }
