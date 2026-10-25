@@ -2401,6 +2401,566 @@ pub fn process_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     ret(n(1))
 }
 
+/// `$raf->Read($buff, $len)`, where `$buff` holds `initial` before the call
+/// (Read writes its first argument through `@_`): the result and the new
+/// value of the buffer.
+fn raf_read(it: &mut Interp, raf: &Value, initial: Value, len: &Value) -> ER<(Value, Value)> {
+    let scope = Scope::new(None);
+    scope.scalar("raf", raf.clone());
+    scope.scalar("len", len.clone());
+    let buff = scope.scalar("buff", initial);
+    let r = scalar_of(snippet(it, "$raf->Read($buff, $len)", &scope, Want::Scalar)?);
+    let b = buff.borrow().clone();
+    Ok((r, b))
+}
+
+/// `\$$h{key}`: a reference to a hash element.
+fn elem_ref(h: &Value, key: &str) -> Value {
+    match h {
+        Value::HashRef(hr) => Value::LvRef(Rc::new(crate::interp::eval::Lv::HElem(hr.clone(), Rc::from(key.as_bytes())))),
+        _ => Value::Undef,
+    }
+}
+
+/// `$$r = $v` on a scalar reference.
+fn set_deref(r: &Value, v: Value) -> ER<()> {
+    match r {
+        Value::ScalarRef(c) => {
+            *c.borrow_mut() = v;
+            Ok(())
+        }
+        Value::LvRef(l) => l.set(v),
+        _ => Ok(()),
+    }
+}
+
+/// `Write($outfile, ...)` (Writer.pl)
+fn write_out(it: &mut Interp, outfile: &Value, data: Vec<Value>) -> ER<Value> {
+    let mut a = vec![outfile.clone()];
+    a.extend(data);
+    pl::call(it, "Image::ExifTool::Write", a)
+}
+
+/// Process TIFF data
+/// Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) optional tag table ref
+/// Returns: 1 if this looked like a valid EXIF block, 0 otherwise, or -1 on write error
+pub fn do_process_tiff(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (self_, dir_info, mut tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
+    let mut data_pt = dir_info.get("DataPt");
+    let mut file_type = or(dir_info.get("Parent"), pl::s(""));
+    let mut raf = dir_info.get("RAF");
+    let base = or(dir_info.get("Base"), n(0));
+    let outfile = dir_info.get("OutFile");
+    let (mut err, mut sig, mut canon_sig, mut other_sig) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef);
+    let set_err = |e: &mut Value, r: &Value| {
+        if !r.truthy() {
+            *e = n(1);
+        }
+    };
+
+    // attempt to read TIFF header
+    if raf.truthy() {
+        self_.set("EXIF_DATA", pl::s(""));
+        if outfile.truthy() {
+            if !pl::method(it, &raf, "Seek", vec![n(0), n(0)])?.truthy() {
+                return ret(n(0));
+            }
+            if base.truthy() {
+                let (r, b) = raf_read(it, &raf, data_pt.deref(), &base)?;
+                set_deref(&data_pt, b)?;
+                if !pl::num_eq(&r, &base) {
+                    return ret(n(0));
+                }
+                let r = write_out(it, &outfile, vec![data_pt.deref()])?;
+                set_err(&mut err, &r);
+            }
+        } else if !pl::method(it, &raf, "Seek", vec![base.clone(), n(0)])?.truthy() {
+            return ret(n(0));
+        }
+        // extract full EXIF block (for block copy) from EXIF file
+        let amount = if pl::str_eq(&file_type, "EXIF") { n(65536 * 8) } else { n(8) };
+        let (nr, b) = raf_read(it, &raf, self_.get("EXIF_DATA"), &amount)?;
+        self_.set("EXIF_DATA", b);
+        if pl::lt(&nr, &n(8)) {
+            if nr.truthy() || !outfile.truthy() || !pl::str_eq(&file_type, "EXIF") {
+                return ret(n(0));
+            }
+            // create EXIF file from scratch
+            self_.delete("EXIF_DATA");
+            raf = Value::Undef;
+        }
+        if pl::gt(&nr, &n(8)) {
+            pl::method(it, &raf, "Seek", vec![n(8), n(0)])?;
+            if pl::num_eq(&nr, &amount) {
+                let d = substr(it, &self_.get("EXIF_DATA"), &n(0), Some(&n(8)))?;
+                self_.set("EXIF_DATA", d);
+                pl::method(it, &self_, "Warn", vec![pl::s("EXIF too large to extract as a block")])?; //(shouldn't happen)
+            }
+        }
+    } else if data_pt.truthy() && pl::length(&data_pt.deref()).truthy() {
+        // save a copy of the EXIF data
+        let dir_start = or(dir_info.get("DirStart"), n(0));
+        let dir_len = or(dir_info.get("DirLen"), pl::sub(&len_of(&data_pt.deref()), &dir_start));
+        if pl::gt(&dir_len, &n(0)) || !outfile.truthy() {
+            let d = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+            self_.set("EXIF_DATA", d);
+        } else {
+            self_.delete("EXIF_DATA"); // create from scratch;
+        }
+        if self_.path(&["OPTIONS", "Verbose"]).truthy() && pl::gt(&len_of(&self_.get("INDENT")), &n(2)) {
+            verbose_dir(it, vec![self_.clone(), pl::s("TIFF")], Want::Void)?;
+        }
+    } else if outfile.truthy() {
+        self_.delete("EXIF_DATA"); // create from scratch
+    } else {
+        self_.set("EXIF_DATA", pl::s(""));
+    }
+    if self_.get("EXIF_DATA").is_undef() {
+        // set default byte order for creating new GPS in CR3 images
+        let mut default_byte_order = Value::Undef;
+        if dir_info.get("DirName").truthy() && pl::str_eq(&dir_info.get("DirName"), "GPS") {
+            default_byte_order = self_.get("SaveExifByteOrder");
+        }
+        // create TIFF information from scratch
+        if pl::str_eq(&pl::method(it, &self_, "SetPreferredByteOrder", vec![default_byte_order])?, "MM") {
+            self_.set("EXIF_DATA", Value::bytes(b"MM\0\x2a\0\0\0\x08"));
+        } else {
+            self_.set("EXIF_DATA", Value::bytes(b"II\x2a\0\x08\0\0\0"));
+        }
+    }
+    self_.set("EXIF_POS", pl::add(&base, &self_.get("BASE")));
+    if self_.get("FIRST_EXIF_POS").is_undef() {
+        self_.set("FIRST_EXIF_POS", self_.get("EXIF_POS"));
+    }
+    data_pt = elem_ref(&self_, "EXIF_DATA");
+
+    // set byte ordering
+    let byte_order = substr(it, &data_pt.deref(), &n(0), Some(&n(2)))?;
+    if !pl::call(it, "Image::ExifTool::SetByteOrder", vec![byte_order.clone()])?.truthy() {
+        return ret(n(0));
+    }
+
+    // verify the byte ordering
+    let identifier = pl::call(it, "Image::ExifTool::Get16u", vec![data_pt.clone(), n(2)])?;
+    // identifier is 0x2a for TIFF (but 0x4f52, 0x5352 or ?? for ORF)
+    // no longer do this because various files use different values
+    // (TIFF=0x2a, RW2/RWL=0x55, HDP=0xbc, BTF=0x2b, ORF=0x4f52/0x5352/0x????)
+    //  return 0 unless $identifier == 0x2a;
+    if pl::str_eq(&file_type, "APP1") && !pl::num_eq(&identifier, &n(0x2a)) {
+        pl::method(it, &self_, "Warn", vec![pl::s("Invalid magic number in EXIF TIFF header")])?;
+    }
+
+    // get offset to IFD0
+    if pl::lt(&len_of(&data_pt.deref()), &n(8)) {
+        return ret(n(0));
+    }
+    let offset = pl::call(it, "Image::ExifTool::Get32u", vec![data_pt.clone(), n(4)])?;
+    if !pl::ge(&offset, &n(8)) {
+        return ret(n(0));
+    }
+
+    if raf.truthy() {
+        // check for canon or EXIF signature
+        // (Canon CR2 images should have an offset of 16, but it may be
+        //  greater if edited by PhotoMechanic)
+        if pl::num_eq(&identifier, &n(0x2a)) && pl::ge(&offset, &n(16)) {
+            let (r, b) = raf_read(it, &raf, sig.clone(), &n(8))?;
+            sig = b;
+            if !pl::num_eq(&r, &n(8)) {
+                return ret(n(0));
+            }
+            set_deref(&data_pt, pl::concat(&data_pt.deref(), &sig))?;
+            if re("^(CR\\x02\\0|\\xba\\xb0\\xac\\xbb|ExifMeta)", "").is_match(&sig) {
+                if pl::str_eq(&sig, "ExifMeta") {
+                    file_type = pl::s("EXIF");
+                    pl::method(it, &self_, "SetFileType", vec![file_type.clone()])?;
+                    other_sig = sig.clone();
+                } else {
+                    file_type = pl::s(if re("^CR", "").is_match(&sig) { "CR2" } else { "Canon 1D RAW" });
+                    canon_sig = sig.clone();
+                }
+                if self_.get("HTML_DUMP").truthy() {
+                    pl::method(it, &self_, "HDump", vec![pl::add(&base, &n(8)), n(8), cat(&[&pl::s("["), &file_type, &pl::s(" header]")])])?;
+                }
+            }
+        } else if pl::num_eq(&identifier, &n(0x55)) && re("^(RAW|RW2|RWL|TIFF)$", "").is_match(&file_type) {
+            // panasonic RAW, RW2 or RWL file
+            let mut magic = Value::Undef;
+            // test for RW2/RWL magic number
+            let mut ok = false;
+            if pl::ge(&offset, &n(0x18)) {
+                let (r, b) = raf_read(it, &raf, magic.clone(), &n(16))?;
+                magic = b;
+                ok = r.truthy() && &magic.to_bytes()[..] == b"\x88\xe7\x74\xd8\xf8\x25\x1d\x4d\x94\x7a\x6e\x77\x82\x2b\x5d\x6a";
+            }
+            if ok {
+                if !pl::str_eq(&file_type, "RWL") {
+                    file_type = pl::s("RW2");
+                }
+                if self_.get("HTML_DUMP").truthy() {
+                    pl::method(it, &self_, "HDump", vec![pl::add(&base, &n(8)), n(16), pl::s("[RW2/RWL header]")])?;
+                }
+                other_sig = magic; // save signature for writing
+            } else {
+                file_type = pl::s("RAW");
+            }
+            tag_table_ptr = pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s("Image::ExifTool::PanasonicRaw::Main")])?;
+        } else if pl::str_eq(&file_type, "TIFF") {
+            if pl::num_eq(&identifier, &n(0x2b)) {
+                // this looks like a BigTIFF image
+                pl::method(it, &raf, "Seek", vec![n(0)])?;
+                runtime::require(it, "Image::ExifTool::BigTIFF")?;
+                let result = pl::call(it, "Image::ExifTool::BigTIFF::ProcessBTF", vec![self_.clone(), dir_info.clone()])?;
+                if result.truthy() {
+                    if self_.get("MultiPage").truthy() {
+                        found_tag_call(it, &self_, vec![pl::s("PageCount"), self_.get("PageCount")])?;
+                    }
+                    return ret(n(1));
+                }
+            } else if pl::num_eq(&identifier, &n(0x4f52)) || pl::num_eq(&identifier, &n(0x5352)) {
+                // Olympus ORF image (set FileType now because base type is 'ORF')
+                file_type = pl::s("ORF");
+                pl::method(it, &self_, "SetFileType", vec![file_type.clone()])?;
+            } else if pl::num_eq(&identifier, &n(0x4352)) {
+                file_type = pl::s("DCP");
+            } else if pl::str_eq(&byte_order, "II") && pl::num_eq(&crate::perl::ops::bit_and(&identifier, &n(0xff)), &n(0xbc)) {
+                file_type = pl::s("HDP"); // Windows HD Photo file
+                // check version number
+                let ver = pl::call(it, "Image::ExifTool::Get8u", vec![data_pt.clone(), n(3)])?;
+                if pl::gt(&ver, &n(1)) {
+                    let msg = cat(&[&pl::s("Windows HD Photo version "), &ver, &pl::s(" files not yet supported")]);
+                    pl::method(it, &self_, "Error", vec![msg])?;
+                    return ret(n(1));
+                }
+            }
+        } else if pl::str_eq(&file_type, "ARW") {
+            self_.get_or_new_hash("LOW_PRIORITY_DIR").set("IFD1", n(1)); // lower priority of IFD1 tags in ARW files
+        }
+        // we have a valid TIFF (or whatever) file
+        if file_type.truthy() && !vget(&self_, &[b"VALUE", b"FileType"]).truthy() {
+            let file_type_lookup = pkg_hash(it, "fileTypeLookup");
+            let mut lookup = file_type_lookup.get(file_type.to_bytes());
+            if !(lookup.is_ref() || !lookup.truthy()) {
+                lookup = file_type_lookup.get(lookup.to_bytes());
+            }
+            // use file extension to pre-determine type if extension is TIFF-based or type is RAW
+            let base_type = if lookup.truthy() {
+                if lookup.at(0).is_ref() {
+                    lookup.at(0).at(0)
+                } else {
+                    lookup.at(0)
+                }
+            } else {
+                pl::s("")
+            };
+            let t = if pl::str_eq(&base_type, "TIFF") || re("RAW", "").is_match(&file_type) { file_type.clone() } else { Value::Undef };
+            pl::method(it, &self_, "SetFileType", vec![t])?;
+        }
+        // don't process file if FastScan > 2
+        if !outfile.truthy() && self_.path(&["OPTIONS", "FastScan"]).truthy() && pl::gt(&self_.path(&["OPTIONS", "FastScan"]), &n(2)) {
+            return ret(n(1));
+        }
+    }
+    // (accommodate CR3 images which have a TIFF directory with ExifIFD at the top level)
+    let mut ifd_name = pl::s("IFD0");
+    if dir_info.get("DirName").truthy() {
+        if let Some(m) = re("^(ExifIFD|GPS)$", "").m(&dir_info.get("DirName")) {
+            ifd_name = cap(&m, 1);
+        }
+    }
+    if !tag_table_ptr.truthy() || pl::str_eq(&vget(&tag_table_ptr, &[b"GROUPS", b"0"]), "EXIF") {
+        if !outfile.truthy() {
+            found_tag_call(it, &self_, vec![pl::s("ExifByteOrder"), byte_order.clone()])?;
+        }
+        self_.set("ExifByteOrder", byte_order.clone());
+    } else if pl::str_eq(&vget(&tag_table_ptr, &[b"GROUPS", b"0"]), "MakerNotes") {
+        // (for writing CR3 maker notes)
+        ifd_name = vget(&tag_table_ptr, &[b"GROUPS", b"0"]);
+    } else {
+        ifd_name = vget(&tag_table_ptr, &[b"GROUPS", b"1"]);
+    }
+    if self_.get("HTML_DUMP").truthy() {
+        let fmt = cat(&[&pl::s("Byte order: %s endian\nIdentifier: 0x%.4x\n"), &ifd_name, &pl::s(" offset: 0x%.4x")]);
+        let tip = pl::sprintf_v(&fmt, &[pl::s(if pl::str_eq(&byte_order, "II") { "Little" } else { "Big" }), identifier.clone(), offset.clone()]);
+        pl::method(it, &self_, "HDump", vec![base.clone(), n(8), pl::s("TIFF header"), tip, n(0)])?;
+    }
+    // remember where we found the TIFF data (APP1, APP3, TIFF, NEF, etc...)
+    self_.set("TIFF_TYPE", file_type.clone());
+
+    // get reference to the main EXIF table
+    if !tag_table_ptr.truthy() {
+        tag_table_ptr = pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s("Image::ExifTool::Exif::Main")])?;
+    }
+
+    // build directory information hash
+    let dinfo = Value::new_hash();
+    dinfo.set("Base", base.clone());
+    dinfo.set("DataPt", data_pt.clone());
+    dinfo.set("DataLen", len_of(&data_pt.deref()));
+    dinfo.set("DataPos", n(0));
+    dinfo.set("DirStart", offset.clone());
+    dinfo.set("DirLen", pl::sub(&len_of(&data_pt.deref()), &offset));
+    dinfo.set("RAF", raf.clone());
+    dinfo.set("DirName", ifd_name.clone());
+    dinfo.set("Parent", file_type.clone());
+    dinfo.set("ImageData", pl::s("Main")); // set flag to get information to copy main image data later
+    dinfo.set("Multi", dir_info.get("Multi"));
+
+    // extract information from the image
+    if !outfile.truthy() {
+        // process the directory
+        pl::method(it, &self_, "ProcessDirectory", vec![dinfo.clone(), tag_table_ptr.clone()])?;
+        // process GeoTiff information if available
+        if vget(&self_, &[b"VALUE", b"GeoTiffDirectory"]).truthy() {
+            runtime::require(it, "Image::ExifTool::GeoTiff")?;
+            pl::call(it, "Image::ExifTool::GeoTiff::ProcessGeoTiff", vec![self_.clone()])?;
+        }
+        // process information in recognized trailers
+        if raf.truthy() {
+            let trail_info = pl::method(it, &self_, "IdentifyTrailer", vec![raf.clone()])?;
+            if trail_info.truthy() {
+                // scan to find AFCP if necessary (Note: we are scanning
+                // from a random file position in the TIFF)
+                trail_info.set("ScanForTrailer", n(1));
+                pl::method(it, &self_, "ProcessTrailers", vec![trail_info.clone()])?;
+            }
+            // dump any other known trailer (eg. A100 RAW Data)
+            if self_.get("HTML_DUMP").truthy() && self_.get("KnownTrailer").truthy() {
+                let known = self_.get("KnownTrailer");
+                pl::method(it, &raf, "Seek", vec![n(0), n(2)])?;
+                let mut len = pl::sub(&pl::method(it, &raf, "Tell", vec![])?, &known.get("Start"));
+                if trail_info.truthy() {
+                    len = pl::sub(&len, &trail_info.get("Offset")); // account for other trailers
+                }
+                if pl::gt(&len, &n(0)) {
+                    pl::method(it, &self_, "HDump", vec![known.get("Start"), len, cat(&[&pl::s("["), &known.get("Name"), &pl::s("]")])])?;
+                }
+            }
+        }
+        // update FileType if necessary now that we know more about the file
+        if self_.get("DNGVersion").truthy() && pl::str_eq(&self_.get("FILE_TYPE"), "TIFF") && !re("^(DNG|GPR)$", "").is_match(&self_.get("FileType")) {
+            // override whatever FileType we set since we now know it is DNG
+            self_.set("TIFF_TYPE", pl::s("DNG"));
+            pl::method(it, &self_, "OverrideFileType", vec![pl::s("DNG")])?;
+        }
+        if pl::str_eq(&self_.get("TIFF_TYPE"), "TIFF") {
+            if self_.get("MultiPage").truthy() {
+                found_tag_call(it, &self_, vec![pl::s("PageCount"), self_.get("PageCount")])?;
+            }
+        } else if pl::str_eq(&self_.get("TIFF_TYPE"), "NRW") && vget(&self_, &[b"VALUE", b"NEFLinearizationTable"]).truthy() {
+            // fix NEF type if misidentified as NRW
+            self_.set("TIFF_TYPE", pl::s("NEF"));
+            pl::method(it, &self_, "OverrideFileType", vec![pl::s("NEF")])?;
+        }
+        if self_.get("ImageDataHash").truthy() && self_.get("A100DataOffset").truthy() && pl::method(it, &raf, "Seek", vec![self_.get("A100DataOffset"), n(0)])?.truthy() {
+            pl::method(it, &self_, "ImageDataHash", vec![raf.clone(), Value::Undef, pl::s("A100")])?;
+        }
+        return ret(n(1));
+    }
+//
+// rewrite the image
+//
+    if dir_info.get("NoTiffEnd").truthy() {
+        self_.delete("TIFF_END");
+    } else {
+        // initialize TIFF_END so it will be updated by WriteExif()
+        self_.set("TIFF_END", n(0));
+    }
+    if canon_sig.truthy() {
+        // write Canon CR2 specially because it has a header we want to preserve,
+        // and possibly trailers added by the Canon utilities and/or PhotoMechanic
+        dinfo.set("OutFile", outfile.clone());
+        runtime::require(it, "Image::ExifTool::CanonRaw")?;
+        let r = pl::call(it, "Image::ExifTool::CanonRaw::WriteCR2", vec![self_.clone(), dinfo.clone(), tag_table_ptr.clone()])?;
+        set_err(&mut err, &r);
+    } else {
+        // write TIFF header (8 bytes [plus optional signature] followed by IFD)
+        if pl::str_eq(&file_type, "EXIF") {
+            other_sig = pl::s("ExifMeta"); // force this signature for all EXIF files
+        } else if other_sig.is_undef() {
+            other_sig = pl::s("");
+        }
+        let offset = pl::add(&n(8), &len_of(&other_sig));
+        // construct tiff header
+        let h4 = substr(it, &data_pt.deref(), &n(0), Some(&n(4)))?;
+        let s32 = pl::call(it, "Image::ExifTool::Set32u", vec![offset.clone()])?;
+        let header = cell(cat(&[&h4, &s32, &other_sig]));
+        dinfo.set("NewDataPos", offset.clone());
+        dinfo.set("HeaderPtr", Value::ScalarRef(header.clone()));
+        // preserve padding between image data blocks in ORF images
+        // (otherwise dcraw has problems because it assumes fixed block spacing)
+        if pl::str_eq(&file_type, "ORF") || !pl::num_eq(&identifier, &n(0x2a)) {
+            dinfo.set("PreserveImagePadding", n(1));
+        }
+        let mut new_data = pl::method(it, &self_, "WriteDirectory", vec![dinfo.clone(), tag_table_ptr.clone()])?;
+        if new_data.is_undef() {
+            err = n(1);
+        } else if pl::length(&new_data).truthy() {
+            // update header length in case more was added
+            let hdr_len = len_of(&g(&header));
+            if !pl::num_eq(&hdr_len, &n(8)) {
+                pl::call(it, "Image::ExifTool::Set32u", vec![hdr_len.clone(), Value::ScalarRef(header.clone()), n(4)])?;
+                // also update preview fixup if necessary
+                let pi = self_.get("PREVIEW_INFO");
+                if pi.truthy() && pi.get("Fixup").truthy() {
+                    let fx = pi.get("Fixup");
+                    fx.set("Start", pl::add(&fx.get("Start"), &pl::sub(&hdr_len, &n(8))));
+                }
+            }
+            if pl::str_eq(&self_.get("TIFF_TYPE"), "ARW") && !err.truthy() {
+                // write any required ARW trailer and patch other ARW quirks
+                runtime::require(it, "Image::ExifTool::Sony")?;
+                let nd = cell(new_data.clone());
+                let err_str = pl::call(it, "Image::ExifTool::Sony::FinishARW", vec![self_.clone(), dir_info.clone(), Value::ScalarRef(nd.clone()), dinfo.get("ImageData")])?;
+                new_data = g(&nd);
+                if err_str.truthy() {
+                    pl::method(it, &self_, "Error", vec![err_str])?;
+                }
+                dinfo.delete("ImageData"); // (was copied by FinishARW)
+            } else {
+                let r = write_out(it, &outfile, vec![g(&header), new_data.clone()])?;
+                set_err(&mut err, &r);
+            }
+            let _ = new_data; // free memory
+        }
+        // copy over image data now if necessary
+        if dinfo.get("ImageData").is_ref() && !err.truthy() {
+            let r = pl::method(it, &self_, "CopyImageData", vec![dinfo.get("ImageData"), outfile.clone()])?;
+            set_err(&mut err, &r);
+            dinfo.delete("ImageData");
+        }
+    }
+    // make local copy of TIFF_END now (it may be reset when processing trailers)
+    let mut tiff_end = self_.get("TIFF_END");
+    self_.delete("TIFF_END");
+
+    // rewrite trailers if they exist
+    if raf.truthy() && tiff_end.truthy() && !err.truthy() {
+        let mut buf = Value::Undef;
+        let mut trail_info = Value::Undef;
+        let r = pl::method(it, &raf, "Seek", vec![n(0), n(2)])?;
+        set_err(&mut err, &r);
+        let mut extra = pl::sub(&pl::method(it, &raf, "Tell", vec![])?, &tiff_end);
+        // check for trailer and process if possible
+        #[allow(clippy::never_loop)]
+        loop {
+            if !pl::gt(&extra, &n(12)) {
+                break;
+            }
+            pl::method(it, &raf, "Seek", vec![tiff_end.clone()])?; // seek back to end of image
+            trail_info = pl::method(it, &self_, "IdentifyTrailer", vec![raf.clone()])?;
+            if !trail_info.truthy() {
+                break;
+            }
+            let tbuf = cell(pl::s(""));
+            trail_info.set("OutFile", Value::ScalarRef(tbuf)); // rewrite trailer(s)
+            trail_info.set("ScanForTrailer", n(1)); // scan for AFCP if necessary
+            self_.set("TrailerStart", tiff_end.clone());
+            // rewrite all trailers to buffer
+            if !pl::method(it, &self_, "ProcessTrailers", vec![trail_info.clone()])?.truthy() {
+                trail_info = Value::Undef;
+                err = n(1);
+                break;
+            }
+            // calculate unused bytes before trailer
+            extra = pl::sub(&trail_info.get("DataPos"), &tiff_end);
+            break; // yes, the 'for' loop was just a cheap 'goto'
+        }
+        // ignore a single zero byte if used for padding
+        if pl::gt(&extra, &n(0)) && crate::perl::ops::bit_and(&tiff_end, &n(0x01)).truthy() {
+            let r = pl::method(it, &raf, "Seek", vec![tiff_end.clone(), n(0)])?;
+            set_err(&mut err, &r);
+            let (r, b) = raf_read(it, &raf, buf.clone(), &n(1))?;
+            buf = b;
+            set_err(&mut err, &r);
+            if !buf.is_undef() && pl::str_eq(&buf, "\0") {
+                extra = pl::sub(&extra, &n(1));
+                tiff_end = pl::add(&tiff_end, &n(1));
+            }
+        }
+        if pl::gt(&extra, &n(0)) {
+            let known = self_.get("KnownTrailer");
+            if vget(&self_, &[b"DEL_GROUP", b"Trailer"]).truthy() && !known.truthy() {
+                vprint(it, &self_, &n(0), vec![cat(&[&pl::s("  Deleting unknown trailer ("), &extra, &pl::s(" bytes)\n")])])?;
+                self_.set("CHANGED", pl::add(&self_.get("CHANGED"), &n(1)));
+            } else if known.truthy() {
+                vprint(it, &self_, &n(0), vec![cat(&[&pl::s("  Copying "), &known.get("Name"), &pl::s(" ("), &extra, &pl::s(" bytes)\n")])])?;
+                let r = pl::method(it, &raf, "Seek", vec![tiff_end.clone(), n(0)])?;
+                set_err(&mut err, &r);
+                let r = pl::call(it, "Image::ExifTool::CopyBlock", vec![raf.clone(), outfile.clone(), extra.clone()])?;
+                set_err(&mut err, &r);
+            } else {
+                let r = pl::method(it, &raf, "Seek", vec![tiff_end.clone(), n(0)])?;
+                set_err(&mut err, &r);
+                // preserve unknown trailer only if it contains non-null data
+                // (Photoshop CS adds a trailer with 2 null bytes)
+                let mut size = extra.clone();
+                loop {
+                    let nn = if pl::gt(&size, &n(65536)) { n(65536) } else { size.clone() };
+                    let (r, b) = raf_read(it, &raf, buf.clone(), &nn)?;
+                    buf = b;
+                    if !pl::num_eq(&r, &nn) {
+                        err = n(1);
+                        break;
+                    }
+                    if re("[^\\0]", "").is_match(&buf) {
+                        vprint(it, &self_, &n(0), vec![cat(&[&pl::s("  Preserving unknown trailer ("), &extra, &pl::s(" bytes)\n")])])?;
+                        // copy the trailer since it contains non-null data
+                        if !pl::num_eq(&size, &extra) {
+                            let pad = Value::bytes(vec![0u8; pl::sub(&extra, &size).to_i64().max(0) as usize]);
+                            if !write_out(it, &outfile, vec![pad])?.truthy() {
+                                err = n(1);
+                                break;
+                            }
+                        }
+                        if !write_out(it, &outfile, vec![buf.clone()])?.truthy() {
+                            err = n(1);
+                            break;
+                        }
+                        if pl::gt(&size, &nn) {
+                            let r = pl::call(it, "Image::ExifTool::CopyBlock", vec![raf.clone(), outfile.clone(), pl::sub(&size, &nn)])?;
+                            set_err(&mut err, &r);
+                        }
+                        break;
+                    }
+                    size = pl::sub(&size, &nn);
+                    if pl::gt(&size, &n(0)) {
+                        continue;
+                    }
+                    vprint(it, &self_, &n(0), vec![cat(&[&pl::s("  Deleting blank trailer ("), &extra, &pl::s(" bytes)\n")])])?;
+                    break;
+                }
+            }
+        }
+        // write trailer buffer if necessary
+        if trail_info.truthy() {
+            let r = pl::method(it, &self_, "WriteTrailerBuffer", vec![trail_info.clone(), outfile.clone()])?;
+            set_err(&mut err, &r);
+        }
+        // add any new trailers we are creating
+        let trail_pt = pl::method(it, &self_, "AddNewTrailers", vec![])?;
+        if trail_pt.truthy() {
+            let r = write_out(it, &outfile, vec![trail_pt.deref()])?;
+            set_err(&mut err, &r);
+        }
+    }
+    // check DNG version
+    if self_.get("DNGVersion").truthy() {
+        let mut ver = self_.get("DNGVersion");
+        // currently support up to DNG version 1.7
+        let ok = match re(r"^(\d+) (\d+)", "").m(&ver) {
+            Some(m) => pl::le(&cat(&[&cap(&m, 1), &pl::s("."), &cap(&m, 2)]), &Value::Num(1.7)),
+            None => false,
+        };
+        if !ok {
+            re(" ", "").subst(&mut ver, true, |_| b".".to_vec());
+            let msg = cat(&[&pl::s("DNG Version "), &ver, &pl::s(" not yet tested")]);
+            pl::method(it, &self_, "Error", vec![msg, n(1)])?;
+        }
+    }
+    ret(if err.truthy() { n(-1) } else { n(1) })
+}
+
 /// Register the subs ported so far; the others still run from the Perl.
 pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::DirStart", dir_start);
@@ -2431,4 +2991,5 @@ pub fn register(it: &mut Interp) {
     it.define_native("Image::ExifTool::HandleTag", handle_tag);
     it.define_native("Image::ExifTool::FoundTag", found_tag);
     it.define_native("Image::ExifTool::ProcessBinaryData", process_binary_data);
+    it.define_native("Image::ExifTool::DoProcessTIFF", do_process_tiff);
 }
