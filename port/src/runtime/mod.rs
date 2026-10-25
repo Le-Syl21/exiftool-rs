@@ -203,9 +203,18 @@ fn require_file(it: &mut Interp, path: &str, key: &str) -> ER<()> {
     it.strict = false;
     let r = it.eval_string(&src, "main", &scope, Want::Scalar);
     it.strict = saved;
+    // The file's `my` variables, under MODULE::<my>::name when the module
+    // has none of that name (a Write*.pl file shares its module's package
+    // but has its own lexicals: `my $pdfVer` in WritePDF.pl must not hide
+    // PDF.pm's), and always under MODULE::<my:FILE>::name.
     let module = module_of_path(path);
+    let file = path.rsplit('/').next().unwrap_or(path);
     for (sigil, name, b) in scope.vars() {
-        it.set_global(sigil, &format!("{module}::<my>::{name}"), b);
+        let shared = format!("{module}::<my>::{name}");
+        if it.globals_with_prefix(&shared).iter().all(|(s, n, _)| *s != sigil || n != &shared) {
+            it.set_global(sigil, &shared, b.clone());
+        }
+        it.set_global(sigil, &format!("{module}::<my:{file}>::{name}"), b);
     }
     // The ported subs of this file replace the Perl ones it defined.
     if let Some(r) = registrar(&file_key(path)) {
