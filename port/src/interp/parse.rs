@@ -5,6 +5,7 @@
 //! an operator or a name. The scanner therefore lives in the parser, which
 //! always knows which of the two it expects, as perl's own `toke.c` does.
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::ast::*;
@@ -38,6 +39,57 @@ pub fn parse_program(src: &[u8], package: &str) -> R<Block> {
         return Err(p.err("syntax error"));
     }
     Ok(block)
+}
+
+thread_local! {
+    /// The prototypes of the subs declared in the Perl code parsed so far.
+    static PROTOS: RefCell<std::collections::HashMap<String, String>> = RefCell::new(std::collections::HashMap::new());
+    /// The modules loaded from their data dumps (see module_loaded).
+    static LOADED: RefCell<std::collections::HashSet<String>> = RefCell::new(std::collections::HashSet::new());
+}
+
+/// The prototype of a sub, by full name: declared in parsed code, or one of
+/// ExifTool's (its modules may come from data dumps, without their source).
+fn prototype_of(full: &str) -> Option<String> {
+    if let Some(p) = PROTOS.with(|m| m.borrow().get(full).cloned()) {
+        return Some(p);
+    }
+    // perl knows a prototype only once the file declaring it is loaded
+    let t = crate::runtime::prototypes::PROTOTYPES;
+    let i = t.binary_search_by(|(k, _, _)| (*k).cmp(full)).ok()?;
+    LOADED.with(|l| l.borrow().contains(t[i].2)).then(|| t[i].1.to_string())
+}
+
+/// A module (by its file's module name) is loaded: the prototypes it
+/// declares apply to the code parsed from now on.
+pub fn module_loaded(key: &str) {
+    LOADED.with(|l| {
+        l.borrow_mut().insert(key.to_string());
+    });
+}
+
+/// A call to a sub with a prototype: each `$` (or `_`) argument is
+/// evaluated in scalar context, as perl compiles it.
+fn apply_prototype(proto: &str, args: Vec<Expr>) -> Vec<Expr> {
+    let slots: Vec<char> = proto.chars().filter(|c| *c != ';').collect();
+    let mut rest = false;
+    args.into_iter()
+        .enumerate()
+        .map(|(i, a)| {
+            if rest {
+                return a;
+            }
+            match slots.get(i) {
+                Some('$') | Some('_') if !matches!(a, Expr::Scalar(_) | Expr::Const(_) | Expr::ScalarDeref(_)) => Expr::Call { name: Rc::from("scalar"), args: vec![a], amp: false },
+                Some('@') | Some('%') => {
+                    // the rest of the list as it is
+                    rest = true;
+                    a
+                }
+                _ => a,
+            }
+        })
+        .collect()
 }
 
 /// Parse the text of an interpolated string (the inside of `"..."`).
@@ -232,12 +284,70 @@ impl<'a> Parser<'a> {
         Ok(b)
     }
 
+    /// perl's guess (toke.c) for a `{` that starts a statement: an
+    /// anonymous hash if it is empty, or if its first term (a quoted string,
+    /// a q// string or a word) is followed by `=>`, or by a comma when that
+    /// term does not start with a lower-case letter; a block otherwise.
+    fn brace_is_anon_hash(&self) -> bool {
+        let s = self.s;
+        let mut i = self.pos + 1;
+        while i < s.len() && s[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        if s.get(i) == Some(&b'}') {
+            return true;
+        }
+        let first = s.get(i).copied().unwrap_or(0);
+        let mut t = i;
+        if matches!(first, b'\'' | b'"' | b'`') {
+            t += 1;
+            while t < s.len() && s[t] != first {
+                if s[t] == b'\\' {
+                    t += 1;
+                }
+                t += 1;
+            }
+            t += 1;
+        } else if first == b'q' && matches!(s.get(i + 1), Some(b'q') | Some(b'w') | Some(b'x') | Some(b'r')) && s.get(i + 2).is_some_and(|c| !c.is_ascii_alphanumeric() && *c != b'_') {
+            // q-like quote: skip to its closing delimiter
+            let open = s[i + 2];
+            let close = match open { b'(' => b')', b'[' => b']', b'{' => b'}', b'<' => b'>', c => c };
+            t = i + 3;
+            while t < s.len() && s[t] != close {
+                if s[t] == b'\\' {
+                    t += 1;
+                }
+                t += 1;
+            }
+            t += 1;
+        } else if first == b'q' && s.get(i + 1).is_some_and(|c| !c.is_ascii_alphanumeric() && *c != b'_' && !c.is_ascii_whitespace()) {
+            let open = s[i + 1];
+            let close = match open { b'(' => b')', b'[' => b']', b'{' => b'}', b'<' => b'>', c => c };
+            t = i + 2;
+            while t < s.len() && s[t] != close {
+                if s[t] == b'\\' {
+                    t += 1;
+                }
+                t += 1;
+            }
+            t += 1;
+        } else {
+            while t < s.len() && (s[t].is_ascii_alphanumeric() || s[t] == b'_') {
+                t += 1;
+            }
+        }
+        while t < s.len() && s[t].is_ascii_whitespace() {
+            t += 1;
+        }
+        (s.get(t) == Some(&b',') && (first == b'q' || !first.is_ascii_lowercase())) || (s.get(t) == Some(&b'=') && s.get(t + 1) == Some(&b'>'))
+    }
+
     fn statement(&mut self) -> R<Option<Stmt>> {
         self.ws();
         if self.eat(";") {
             return Ok(None);
         }
-        if self.at(0) == b'{' {
+        if self.at(0) == b'{' && !self.brace_is_anon_hash() {
             return Ok(Some(Stmt::Block(None, self.block()?)));
         }
         // LABEL: (any identifier but a keyword)
@@ -315,7 +425,14 @@ impl<'a> Parser<'a> {
                 self.pos += 3;
                 if let Some(name) = self.peek_ident() {
                     self.pos += name.len();
+                    self.ws();
+                    let pstart = self.pos;
                     self.skip_prototype();
+                    if self.pos > pstart {
+                        let proto: String = String::from_utf8_lossy(&self.s[pstart + 1..self.pos - 1]).chars().filter(|c| !c.is_whitespace()).collect();
+                        let full = if name.contains("::") { name.to_string() } else { format!("{}::{}", self.package, name) };
+                        PROTOS.with(|m| m.borrow_mut().insert(full, proto));
+                    }
                     if self.eat(";") {
                         return Ok(None);
                     }
@@ -353,6 +470,11 @@ impl<'a> Parser<'a> {
                 }
                 let name = self.peek_ident().ok_or_else(|| self.err("module name expected"))?;
                 self.pos += name.len();
+                // perl loads a used module while it compiles: the prototypes
+                // it declares apply to the code that follows
+                if word == Some("use") {
+                    module_loaded(name);
+                }
                 let args = if self.starts(";") { None } else { Some(self.expr()?) };
                 self.eat(";");
                 let name = if word == Some("no") { format!("no {name}") } else { name.to_string() };
@@ -491,6 +613,17 @@ impl<'a> Parser<'a> {
         self.expect(")")?;
         let body = self.block()?;
         Ok(Stmt::Foreach { label, var, list, body })
+    }
+
+    /// The prototype of the sub a call names (as perl resolves the name in
+    /// the current package).
+    fn sub_prototype(&self, id: &str) -> Option<String> {
+        let full = match id.strip_prefix("::") {
+            Some(n) => format!("main::{n}"),
+            None if id.contains("::") => id.to_string(),
+            None => format!("{}::{id}", self.package),
+        };
+        prototype_of(&full)
     }
 
     fn skip_prototype(&mut self) {
@@ -1631,7 +1764,12 @@ impl<'a> Parser<'a> {
         let is_unary = NAMED_UNARY.contains(&id);
         let is_list = LIST_OPS.contains(&id);
         if self.starts("(") {
-            let args = self.paren_args()?;
+            let mut args = self.paren_args()?;
+            if !is_unary && !is_list {
+                if let Some(p) = self.sub_prototype(id) {
+                    args = apply_prototype(&p, args);
+                }
+            }
             return Ok(Expr::Call { name: Rc::from(id), args, amp: false });
         }
         if self.starts("->") || id.ends_with("::") {
@@ -1659,7 +1797,10 @@ impl<'a> Parser<'a> {
             matches!(self.at(w), b'(' | b'{' | b'[' | b'/' | b'<' | b'!' | b'|')
         };
         if (matches!(self.at(0), b'$' | b'"' | b'\'' | b'@') && !self.starts("$)")) || quote_arg {
-            let args = flatten_list(self.comma()?);
+            let mut args = flatten_list(self.comma()?);
+            if let Some(p) = self.sub_prototype(id) {
+                args = apply_prototype(&p, args);
+            }
             return Ok(Expr::Call { name: Rc::from(id), args, amp: false });
         }
         Ok(Expr::Call { name: Rc::from(id), args: vec![], amp: true })

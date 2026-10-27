@@ -6,6 +6,7 @@
 //! top-level code did (AddCompositeTags). `%INC` records it, as in perl.
 
 pub mod pld;
+pub mod prototypes;
 
 use std::rc::Rc;
 
@@ -81,6 +82,7 @@ pub fn new_interp() -> Interp {
     crate::modules::archive_zip::register(&mut it);
     crate::modules::brotli::register(&mut it);
     crate::modules::bunzip2::register(&mut it);
+    crate::modules::time_piece::register(&mut it);
     it
 }
 
@@ -99,7 +101,7 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
         return require_file(it, what, &key);
     }
     // Pragmas and modules perl provides: nothing to load.
-    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname" | "Compress::Zlib" | "IO::Uncompress::RawInflate" | "IO::Uncompress::Gunzip" | "IO::Compress::RawDeflate" | "Archive::Zip" | "IO::Compress::Brotli" | "IO::Uncompress::Brotli" | "IO::Uncompress::Bunzip2") {
+    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname" | "Compress::Zlib" | "IO::Uncompress::RawInflate" | "IO::Uncompress::Gunzip" | "IO::Compress::RawDeflate" | "Archive::Zip" | "IO::Compress::Brotli" | "IO::Uncompress::Brotli" | "IO::Uncompress::Bunzip2" | "Time::Piece") {
         inc.borrow_mut().insert(key.as_bytes(), Value::str(&key));
         return Ok(());
     }
@@ -131,6 +133,7 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
     if let Some(r) = registrar(what) {
         r(it);
     }
+    crate::interp::parse::module_loaded(what);
     let md = match pld::load(it, what, data) {
         Ok(m) => m,
         Err(e) => return die(format!("loading {what}: {e}")),
@@ -376,4 +379,5 @@ const PROVIDED_EXPORTS: &[(&str, &str)] = &[
     ("Sys::Hostname", "hostname"),
     ("Carp", "confess croak carp"),
     ("File::Find", "find finddepth"),
+    ("Time::Piece", ""),
 ];
