@@ -372,7 +372,11 @@ fn split_time_v(it: &mut Interp, val: &Value, vals: &Value, time: Option<&Value>
 ///         5) reference to return time difference due to rounding
 /// Returns: error string or undef on success
 pub fn shift_components(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    let (time, shift, dir, to_time, dec, rnd_pt) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3), arg(&a, 4), arg(&a, 5));
+    let (time, shift, dir, mut to_time, dec, rnd_pt) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3), arg(&a, 4), arg(&a, 5));
+    // ($$toTime[$i] = ... autovivifies the list of an undefined $toTime)
+    if to_time.is_undef() {
+        to_time = Value::new_array(Vec::new());
+    }
     // min/max for Y, M, D, h, m, s
     let min = [0, 1, 1, 0, 0, 0];
     let max = [10000, 12, 28, 24, 60, 60];
@@ -383,7 +387,8 @@ pub fn shift_components(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     //
     let mut c = n(0);
     let mut i = 0usize;
-    while i < time.len() {
+    pl::at(190);
+    while i < pl::aderef(&time)?.len() {
         let mut v = pl::add(&pl::add(&or0(&time.at(i as i64)), &pl::mul(&dir, &or0(&shift.at(i as i64)))), &c);
         // handle fractional values by propagating remainders downwards
         if !pl::num_eq(&v, &pl::int(&v)) && i < 5 {

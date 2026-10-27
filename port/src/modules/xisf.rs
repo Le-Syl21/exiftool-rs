@@ -6,6 +6,18 @@ use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
 
+/// `$raf->Read(...)` runs as a perl statement (random_access::perl_eval),
+/// whose errors would name "(eval N)": an invocant that is not an object
+/// gives perl's error here instead, at the native's location.
+fn need_obj(v: &Value, method: &str) -> ER<()> {
+    match v {
+        Value::Undef => crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value")),
+        Value::HashRef(h) if h.borrow().blessed.is_none() => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        Value::ArrayRef(_) | Value::ScalarRef(_) | Value::Code(_) => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        _ => Ok(()),
+    }
+}
+
 /// `\$buff` of a `my` variable kept in a cell.
 fn rf(c: &Cell) -> Value {
     Value::ScalarRef(c.clone())
@@ -36,7 +48,8 @@ pub fn handle_xisf_attrs(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
         pl::set_deref(&val_pt, attrs.get("value"))?;
         changed = n(1);
     }
-    let attrs_l = attr_list.items();
+    pl::at(102);
+    let attrs_l = pl::aderef(&attr_list)?;
     if let Value::ArrayRef(r) = &attr_list {
         r.borrow_mut().clear();
     }
@@ -58,6 +71,8 @@ pub fn process_xisf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
 
+    pl::at(124);
+    need_obj(&raf, "Read")?;
     if !(pl::num_eq(&raf_read_cell(it, &raf, &buff, n(16))?, &n(16)) && re(r"^XISF0100", "").is_match(&buff.borrow())) {
         return ret(n(0));
     }

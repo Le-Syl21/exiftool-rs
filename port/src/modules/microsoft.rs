@@ -24,7 +24,8 @@ pub fn check_xtra(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             return ret(pl::s("Not an integer"));
         }
     } else if !pl::str_eq(&format, "Unicode") {
-        let vals = Value::new_array(vec![val_pt.deref()]);
+        pl::at(959);
+        let vals = Value::new_array(vec![pl::sderef(&val_pt)?]);
         if !write_xtra_value_impl(it, &et_, &tag_info, &vals)?.truthy() {
             return ret(pl::s("Invalid format"));
         }
@@ -229,7 +230,8 @@ pub fn write_xtra(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     }
 
     let mut data_pt = dir_info.get("DataPt");
-    let mut data_len = pl::length(&data_pt.deref());
+    pl::at(1108);
+    let mut data_len = pl::length(&pl::sderef(&data_pt)?);
     let mut new_data = pl::s("");
     let mut pos = n(0);
     let (mut err, mut changed) = (false, false);
@@ -258,7 +260,8 @@ pub fn write_xtra(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             err = true;
             break;
         }
-        tag = pl::substr(&data_pt.deref(), pl::add(&pos, &n(8)).to_i64(), Some(tag_len.to_i64()));
+        pl::at(1125);
+        tag = pl::substr(&pl::sderef(&data_pt)?, pl::add(&pos, &n(8)).to_i64(), Some(tag_len.to_i64()));
         let new_vals = Value::new_array(Vec::new());
         #[allow(clippy::never_loop)]
         while new_tags.get(tag.to_bytes()).truthy() {
@@ -304,7 +307,8 @@ pub fn write_xtra(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             }
         } else {
             // nothing changed; just copy over
-            new_data = pl::concat(&new_data, &pl::substr(&data_pt.deref(), pos.to_i64(), Some(size.to_i64())));
+            pl::at(1157);
+            new_data = pl::concat(&new_data, &pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(size.to_i64())));
         }
         pos = pl::add(&pos, &size); // step to next entry
     }
@@ -369,7 +373,8 @@ pub fn process_xtra(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         }
         let val_len = pl::sub(&pl::sub(&size, &n(8)), &tag_len);
         if pl::gt(&tag_len, &n(0)) && pl::gt(&val_len, &n(0)) {
-            let tag = pl::substr(&data_pt.deref(), pl::add(&pos, &n(8)).to_i64(), Some(tag_len.to_i64()));
+            pl::at(1207);
+            let tag = pl::substr(&pl::sderef(&data_pt)?, pl::add(&pos, &n(8)).to_i64(), Some(tag_len.to_i64()));
             let val_pos = pl::add(&pl::add(&pos, &n(8)), &tag_len);
             let raw = pl::substr(&data_pt.deref(), val_pos.to_i64(), Some(val_len.to_i64()));
             let r = read_xtra_value(it, vec![et_.clone(), raw], Want::List)?;

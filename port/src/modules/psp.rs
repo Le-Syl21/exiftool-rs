@@ -8,6 +8,18 @@ use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
 
+/// `$raf->Read(...)` runs as a perl statement (random_access::perl_eval),
+/// whose errors would name "(eval N)": an invocant that is not an object
+/// gives perl's error here instead, at the native's location.
+fn need_obj(v: &Value, method: &str) -> ER<()> {
+    match v {
+        Value::Undef => crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value")),
+        Value::HashRef(h) if h.borrow().blessed.is_none() => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        Value::ArrayRef(_) | Value::ScalarRef(_) | Value::Code(_) => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        _ => Ok(()),
+    }
+}
+
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
@@ -32,7 +44,8 @@ pub fn process_ext_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let mut pos = n(0);
     // loop through sub-blocks
     while pl::lt(&pl::add(&pos, &n(10)), &dir_len) {
-        if !substr(it, &data_pt.deref(), &pos, Some(&n(4)))?.eq_str("~FL\0") {
+        pl::at(172);
+        if !substr(it, &pl::sderef(&data_pt)?, &pos, Some(&n(4)))?.eq_str("~FL\0") {
             pl::method(it, &et, "Warn", vec![pl::s("Lost synchronization while reading sub blocks")])?;
             break;
         }
@@ -53,7 +66,8 @@ pub fn process_ext_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         }
         let mut start = pl::sub(&pos, &len);
         if !tag_info.get("Name").eq_str("EXIFInfo") {
-            let data_len = pl::length(&data_pt.deref());
+            pl::at(187);
+            let data_len = pl::length(&pl::sderef(&data_pt)?);
             pl::method(
                 it,
                 &et,
@@ -79,9 +93,12 @@ pub fn process_ext_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             continue;
         }
         // validate EXIF block header and set byte order
-        if !(pl::gt(&len, &n(14)) && substr(it, &data_pt.deref(), &pl::sub(&pos, &len), Some(&n(6)))?.eq_str("Exif\0\0")) {
+        pl::at(198);
+        if !(pl::gt(&len, &n(14)) && substr(it, &pl::sderef(&data_pt)?, &pl::sub(&pos, &len), Some(&n(6)))?.eq_str("Exif\0\0")) {
             continue;
         }
+        // (a sub argument: substr($$dataPt...) is an lvalue there, so an
+        // undefined $dataPt is autovivified, not an error)
         let order = substr(it, &data_pt.deref(), &pl::add(&start, &n(6)), Some(&n(2)))?;
         if !call(it, "SetByteOrder", vec![order])?.truthy() {
             continue;
@@ -96,7 +113,8 @@ pub fn process_ext_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         sub_dir_info.set("Parent", pl::s("PSP"));
         sub_dir_info.set("DataPt", data_pt.clone());
         sub_dir_info.set("DataPos", pl::neg(&start)); // data position relative to Base
-        sub_dir_info.set("DataLen", pl::length(&data_pt.deref()));
+        pl::at(205);
+        sub_dir_info.set("DataLen", pl::length(&pl::sderef(&data_pt)?));
         sub_dir_info.set("DirStart", start.clone());
         sub_dir_info.set("Base", pl::add(&start, &dir_info.get("DataPos"))); // absolute base offset
         sub_dir_info.set("Multi", n(0));
@@ -115,6 +133,8 @@ pub fn process_psp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
     let (mut tag, mut len, mut err) = (Value::Undef, Value::Undef, false);
+    pl::at(231);
+    need_obj(&raf, "Read")?;
     if !(pl::num_eq(&read(it, &raf, &buff, &n(32))?, &n(32))
         && val(&buff).eq_str("Paint Shop Pro Image File\x0a\x1a\0\0\0\0\0")
         && pl::num_eq(&read(it, &raf, &buff, &n(4))?, &n(4)))

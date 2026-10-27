@@ -63,7 +63,11 @@ pub fn process_distortion_info(it: &mut Interp, a: Vec<Value>, want: Want) -> ER
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let start = or(dir_info.get("DirStart"), || n(0));
-    let size = or(dir_info.get("DirLen"), || pl::sub(&pl::length(&data_pt.deref()), &start));
+    let mut size = dir_info.get("DirLen");
+    if !size.truthy() {
+        pl::at(719);
+        size = pl::sub(&pl::length(&pl::sderef(&data_pt)?), &start);
+    }
     if pl::num_eq(&size, &n(32)) {
         // verify the checksums (ref 3)
         let csum1 = csum(it, &data_pt, pl::add(&start, &n(4)), 12, 1)?;
@@ -180,11 +184,15 @@ pub fn patch_raw_data_offset(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
         offset_info.delete("280");
     }
     // determine the length of the raw data
+    pl::at(812);
     let pos = pl::method(it, &raf, "Tell", vec![])?;
+    pl::at(813);
     if !pl::method(it, &raf, "Seek", vec![n(0), n(2)])?.truthy() {
         err = true; // seek to end of file
     }
+    pl::at(814);
     let len = pl::sub(&pl::method(it, &raf, "Tell", vec![])?, &strip_offsets.at(3).at(0));
+    pl::at(815);
     pl::method(it, &raf, "Seek", vec![pos, n(0)])?;
     // quick check to be sure the raw data length isn't unreasonable
     // (the 22-byte length is for '<Dummy raw image data>' in our tests)
@@ -213,8 +221,10 @@ pub fn write_jpg_from_raw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     let dir_start = dir_info.get("DirStart");
     if dir_start.truthy() {
         // DirStart is non-zero in DNG-converted RW2/RWL
-        let dir_len = ops::bit_or(&dir_info.get("DirLen"), &pl::sub(&pl::length(&data_pt.deref()), &dir_start));
-        let buff = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+        pl::at(839);
+        let dir_len = ops::bit_or(&dir_info.get("DirLen"), &pl::sub(&pl::length(&pl::sderef(&data_pt)?), &dir_start));
+        pl::at(840);
+        let buff = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?;
         data_pt = pl::sref(buff);
     }
     let raf = pl::method(it, &pl::s("File::RandomAccess"), "new", vec![data_pt.clone()])?;
@@ -238,7 +248,8 @@ pub fn write_jpg_from_raw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     et.set("EDIT_DIRS", edit_dirs);
     et.set("ADD_DIRS", add_dirs);
     call(it, "SetByteOrder", vec![byte_order])?;
-    let v = if pl::gt(&result, &n(0)) { outbuff.borrow().clone() } else { data_pt.deref() };
+    pl::at(865);
+    let v = if pl::gt(&result, &n(0)) { outbuff.borrow().clone() } else { pl::sderef(&data_pt)? };
     ret(v)
 }
 
@@ -263,8 +274,10 @@ pub fn process_jpg_from_raw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     let dir_start = dir_info.get("DirStart");
     if dir_start.truthy() {
         // DirStart is non-zero in DNG-converted RW2/RWL
-        let dir_len = ops::bit_or(&dir_info.get("DirLen"), &pl::sub(&pl::length(&data_pt.deref()), &dir_start));
-        let buff = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+        pl::at(884);
+        let dir_len = ops::bit_or(&dir_info.get("DirLen"), &pl::sub(&pl::length(&pl::sderef(&data_pt)?), &dir_start));
+        pl::at(885);
+        let buff = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?;
         data_pt = pl::sref(buff);
     }
     et.set("BASE", pl::add(&dir_info.get("DataPos"), &or(dir_start.clone(), || n(0))));
