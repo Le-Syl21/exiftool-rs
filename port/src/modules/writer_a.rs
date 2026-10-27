@@ -697,7 +697,8 @@ pub fn get_new_values(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
 pub fn sanitize(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (self_, val_pt) = (arg(&a, 0), arg(&a, 1));
     // de-reference SCALAR references
-    let cur = val_pt.deref();
+    pl::at(2930);
+    let cur = pl::sderef(&val_pt)?;
     if cur.rtype() == "SCALAR" {
         pl::set_deref(&val_pt, cur.deref())?;
     }
@@ -742,6 +743,16 @@ pub fn sanitize(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     pl::ret_undef()
 }
 
+/// `push @$list, ...` on a variable under strict refs: an undefined `$list`
+/// is autovivified (to a lexical copy nobody sees), anything else must be
+/// an array reference.
+fn push_check(list: &Value) -> ER<()> {
+    if !list.is_undef() {
+        pl::aderef(list)?;
+    }
+    Ok(())
+}
+
 /// Dereference value and push onto list
 /// Inputs: 0) ExifTool ref, 1) value, 2) list ref, 3) flag to push MissingTagValue for undef value
 pub fn push_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
@@ -754,20 +765,30 @@ pub fn push_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         } else if val.rtype() == "SCALAR" {
             let d = val.deref();
             if opt(&self_, "Binary").truthy() || re(r"^Binary data", "").is_match(&d) {
+                pl::at(3164);
+                push_check(&list)?;
                 list.push(d);
             } else {
+                pl::at(3166);
+                push_check(&list)?;
                 list.push(s(&format!("Binary data {} bytes", length_of(&d))));
             }
         } else if val.rtype() == "HASH" || val.rtype() == "ARRAY" {
             crate::runtime::require(it, "Image/ExifTool/XMPStruct.pl")?;
+            pl::at(3170);
+            push_check(&list)?;
             let v = pl::call(it, "Image::ExifTool::XMP::SerializeStruct", vec![self_.clone(), val])?;
             list.push(v);
         } else if val.is_undef() {
             let mval = opt(&self_, "MissingTagValue");
             if missing.truthy() && !mval.is_undef() {
+                pl::at(3173);
+                push_check(&list)?;
                 list.push(mval);
             }
         } else {
+            pl::at(3175);
+            push_check(&list)?;
             list.push(val);
         }
         pl::ret_undef()
@@ -1905,12 +1926,15 @@ pub fn is_overwriting(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         return ret(n(0));
     }
     // overwrite regardless if no DelValues specified
+    pl::at(3681);
+    pl::hderef(&nv_hash)?;
     if !nv_hash.get("DelValue").truthy() {
         return ret(n(1));
     }
     // never overwrite if DelValue list exists but is empty
     let shift = nv_hash.get("Shift");
-    if nv_hash.get("DelValue").len() == 0 && shift.is_undef() {
+    pl::at(3684);
+    if pl::aderef(&nv_hash.get("DelValue"))?.is_empty() && shift.is_undef() {
         return ret(n(0));
     }
     // return "don't know" if we don't have a value to test
@@ -5812,9 +5836,11 @@ fn write_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         } else {
             let mut doit = opt(&self_, "EncodeHangs").truthy();
             if !doit {
-                let v = in_ref.deref();
+                let r1 = in_ref.clone();
                 let r = pl::eval_block(it, |it| {
                     crate::runtime::require(it, "Encode")?;
+                    pl::at(2351);
+                    let v = pl::sderef(&r1)?;
                     pl::call(it, "Encode::is_utf8", vec![v])
                 })?;
                 doit = r.map(|x| x.truthy()).unwrap_or(false) || eval_error(it).truthy();
@@ -5824,10 +5850,11 @@ fn write_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 let r0 = in_ref.clone();
                 let buff = pl::local_sig_warn(it, h, |it| {
                     // convert image data from UTF-8 to character stream if necessary
+                    pl::at(2355);
                     if opt(&self_, "EncodeHangs").truthy() || eval_error(it).truthy() {
-                        pl::pack("C*", &pl::unpack("C0C*", &r0.deref())?)
+                        pl::pack("C*", &pl::unpack("C0C*", &pl::sderef(&r0)?)?)
                     } else {
-                        pl::call(it, "Encode::encode", vec![s("utf8"), r0.deref()])
+                        pl::call(it, "Encode::encode", vec![s("utf8"), pl::sderef(&r0)?])
                     }
                 })?;
                 if !outfile.is_undef() {
@@ -5902,7 +5929,8 @@ fn write_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
             out_pos = snippet1(it, "tell($r)", &[("r", out_ref.clone())])?;
         } else {
             // initialize our output buffer if necessary
-            if out_ref.deref().is_undef() {
+            pl::at(2420);
+            if pl::sderef(&out_ref)?.is_undef() {
                 pl::set_deref(&out_ref, s(""))?;
             }
             out_pos = n(length_of(&out_ref.deref()));

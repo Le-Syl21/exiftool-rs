@@ -188,7 +188,8 @@ pub fn write_canon_custom2(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     }
     let data_pt = dir_info.get("DataPt");
     // edit a copy of the custom function 2 data
-    let buff = substr(it, &data_pt.deref(), &dir_info.get("DirStart"), Some(&dir_info.get("DirLen")))?;
+    pl::at(2757);
+    let buff = substr(it, &pl::sderef(&data_pt)?, &dir_info.get("DirStart"), Some(&dir_info.get("DirLen")))?;
     let buff_ref = pl::sref(buff);
     let d = Value::new_hash();
     d.set("DataPt", buff_ref.clone());
@@ -255,9 +256,11 @@ pub fn write_canon_custom(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     let ds = dir_info.get("DirStart");
     let dir_start = if ds.truthy() { ds } else { n(0) };
     let dl = dir_info.get("DirLen");
-    let dir_len = if dl.truthy() { dl } else { pl::sub(&pl::length(&data_pt.deref()), &dir_start) };
+    pl::at(2823);
+    let dir_len = if dl.truthy() { dl } else { pl::sub(&pl::length(&pl::sderef(&data_pt)?), &dir_start) };
     let dir_name = dir_info.get("DirName");
-    let new_data = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+    pl::at(2825);
+    let new_data = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?;
     if !new_data.truthy() {
         return pl::ret_undef();
     }

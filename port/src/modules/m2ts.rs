@@ -104,6 +104,9 @@ fn escape_desc(s: &mut Value) {
 /// Reference: http://www.atsc.org/standards/a_52b.pdf
 pub fn parse_ac3_audio(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (et, data_pt) = (arg(&a, 0), arg(&a, 1));
+    // ($$dataPt read under strict refs before the match below)
+    pl::at(256);
+    pl::sderef(&data_pt)?;
     if let Some(c) = gmatch(it, r"/\x0b\x77..(.)/sg", &data_pt, 1)? {
         let sample_rate = n((arg(&c, 1).to_bytes().first().copied().unwrap_or(0) as i64) >> 6);
         let tag_table_ptr = call(it, "GetTagTable", vec![pl::s("Image::ExifTool::M2TS::AC3")])?;
@@ -120,7 +123,8 @@ pub fn parse_ac3_audio(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
 ///       is somewhat easier to extract it from the descriptor instead
 pub fn parse_ac3_descriptor(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (et, data_pt) = (arg(&a, 0), arg(&a, 1));
-    if pl::lt(&pl::length(&data_pt.deref()), &n(3)) {
+    pl::at(272);
+    if pl::lt(&pl::length(&pl::sderef(&data_pt)?), &n(3)) {
         return pl::ret_nothing(want);
     }
     let v = pl::unpack("C3", &data_pt.deref())?;
@@ -148,7 +152,10 @@ pub fn parse_pid(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let verbose = m(it, &et, "Options", vec![pl::s("Verbose")])?;
     if pl::gt(&verbose, &n(1)) {
         let out = m(it, &et, "Options", vec![pl::s("TextOut")])?;
-        let s = pl::sprintf("Parsing stream 0x%.4x (%s) %d bytes\n", &[pid.clone(), pid_name.clone(), pl::length(&data_pt.deref())]);
+        let s = pl::sprintf("Parsing stream 0x%.4x (%s) %d bytes\n", &[pid.clone(), pid_name.clone(), {
+            pl::at(296);
+            pl::length(&pl::sderef(&data_pt)?)
+        }]);
         out_print(it, &out, s)?;
         m(it, &et, "VerboseDump", vec![data_pt.clone()])?;
     }
@@ -166,7 +173,8 @@ pub fn parse_pid(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         // LIGOGPSINFO
         // unknown dashcam (../testpics/gps_video/Wrong Way pass.ts, 160 bytes, not fuzzed)
         // Pruveeo D90 dashcam (../testpics/gps_video/20260216_101326F.ts, 200 bytes, fuzzed)
-        let data = data_pt.deref();
+        pl::at(312);
+        let data = pl::sderef(&data_pt)?;
         if re(r"^LIGOGPSINFO", "s").is_match(&data) {
             let tbl = call(it, "GetTagTable", vec![pl::s("Image::ExifTool::QuickTime::Stream")])?;
             let dir_info = Value::new_hash();
@@ -221,7 +229,8 @@ pub fn parse_pid(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         parse_ac3_audio(it, vec![et.clone(), data_pt.clone()], Want::Void)?;
     } else if pl::num_eq(&type_, &n(0x15)) {
         // packetized metadata (look for MISB code starting after 5-byte header)
-        if re(r"^.{5}\x06\x0e\x2b\x34", "s").is_match(&data_pt.deref()) {
+        pl::at(357);
+        if re(r"^.{5}\x06\x0e\x2b\x34", "s").is_match(&pl::sderef(&data_pt)?) {
             let tbl = call(it, "GetTagTable", vec![pl::s("Image::ExifTool::MISB::Main")])?;
             more = pl::call(it, "Image::ExifTool::MISB::ParseMISB", vec![et.clone(), data_pt.clone(), tbl])?;
             let ee = opts.get("ExtractEmbedded");
@@ -249,7 +258,8 @@ pub fn parse_pid(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// The `$type < 0` branch of ParsePID (GPS from dashcam streams): the new `$more`.
 fn parse_pid_gps(it: &mut Interp, et: &Value, pid: &Value, data_pt: &Value) -> ER<Value> {
     let mut more = n(0);
-    let data = data_pt.deref();
+    pl::at(374);
+    let data = pl::sderef(data_pt)?;
     let qt_stream = "Image::ExifTool::QuickTime::Stream";
     if let Some(c) = re(r"^(.{164})?(.{24})A[NS][EW]", "s").m(&data) {
         // (Blueskysea B4K, Novatek NT96670)

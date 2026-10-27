@@ -28,6 +28,17 @@ fn cs_type(it: &mut Interp) -> Value {
     pl::pkg_hash(it, "Image::ExifTool::Charset::csType")
 }
 
+/// `foreach (@$r)` (also `f(@$r)`, sub arguments) on a variable: an
+/// undefined `$r` is autovivified to an empty array, anything else is read
+/// as `@$r` under strict refs.
+fn foreach_av(r: &mut Value) -> ER<Vec<Value>> {
+    if r.is_undef() {
+        *r = Value::new_array(Vec::new());
+        return Ok(Vec::new());
+    }
+    pl::aderef(r)
+}
+
 /// `$$h{$k}` with a value as the key.
 fn hget(h: &Value, k: &Value) -> Value {
     h.get(&*k.to_bytes())
@@ -69,9 +80,10 @@ pub fn load_charset(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 // Inputs: 0) array reference to list of UCS-2 values
 // Returns: 0=invalid UTF-16, 1=valid UTF-16 with no surrogates, 2=valid UTF-16 with surrogates
 pub fn is_utf16(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    let uni = arg(&a, 0);
+    let mut uni = arg(&a, 0);
     let mut surrogate = Value::Undef;
-    for v in uni.items() {
+    pl::at(122);
+    for v in foreach_av(&mut uni)? {
         let hi_bits = band(&v, 0xfc00);
         if pl::num_eq(&hi_bits, &n(0xfc00)) {
             // check for invalid values in UTF-16
@@ -347,7 +359,7 @@ fn set_items(r: &Value, items: Vec<Value>) {
 }
 
 fn recompose_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
-    let (et, uni, mut charset) = (arg(&a, 0), arg(&a, 1), arg(&a, 2)); // ($byteOrder assigned later if required)
+    let (et, mut uni, mut charset) = (arg(&a, 0), arg(&a, 1), arg(&a, 2)); // ($byteOrder assigned later if required)
     let mut out_val;
     let (mut conv, mut inv) = (Value::Undef, Value::Undef);
     if !charset.truthy() {
@@ -360,10 +372,13 @@ fn recompose_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         let perl_ver = it.get_scalar("main::]");
         if pl::ge(&perl_ver, &Value::Num(5.006001)) {
             // let Perl do it
-            out_val = pl::pack("C0U*", &uni.items())?;
+            pl::at(321);
+            out_val = pl::pack("C0U*", &pl::aderef(&uni)?)?;
         } else {
             // do it ourself
-            out_val = pl::call(it, "Image::ExifTool::PackUTF8", uni.items())?;
+            pl::at(324);
+            let items = foreach_av(&mut uni)?;
+            out_val = pl::call(it, "Image::ExifTool::PackUTF8", items)?;
         }
         re(r"\0.*", "s").subst(&mut out_val, false, |_| Vec::new()); // truncate at null terminator
         return ret(out_val);
@@ -399,7 +414,8 @@ fn recompose_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
     if band(&cs_type, 0x100).truthy() {
         // 1-byte fixed-width
         // convert to specified character set
-        let mut items = uni.items();
+        pl::at(353);
+        let mut items = foreach_av(&mut uni)?;
         for v in items.iter_mut() {
             if pl::lt(v, &n(0x80)) {
                 continue;
@@ -427,18 +443,22 @@ fn recompose_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         re(r"\0.*", "s").subst(&mut out_val, false, |_| Vec::new());
     } else {
         // 2-byte and 4-byte fixed-width
-        let mut items = uni.items();
         // convert if required
         if inv.truthy() {
+            pl::at(372);
+            let mut items = foreach_av(&mut uni)?;
             for v in items.iter_mut() {
                 let x = hget(&inv, v);
                 if x.truthy() {
                     *v = x;
                 }
             }
+            set_items(&uni, items);
         }
         // generate surrogate pairs of UTF-16
         if pl::str_eq(&charset, "UTF16") {
+            pl::at(377);
+            let mut items = pl::aderef(&uni)?;
             let mut i = 0usize;
             while i < items.len() {
                 if pl::ge(&items[i], &n(0x10000)) && pl::lt(&items[i], &n(0x10ffff)) {
@@ -450,8 +470,8 @@ fn recompose_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 }
                 i += 1;
             }
+            set_items(&uni, items);
         }
-        set_items(&uni, items.clone());
         // pack as 2- or 4-byte integer in specified byte order
         let mut byte_order = arg(&a, 3);
         if !byte_order.truthy() {
@@ -461,7 +481,8 @@ fn recompose_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         if band(&cs_type, 0x400).truthy() {
             fmt = pl::uc(&fmt);
         }
-        out_val = pl::pack(&fmt.to_text(), &items)?;
+        pl::at(390);
+        out_val = pl::pack(&fmt.to_text(), &pl::aderef(&uni)?)?;
     }
     ret(out_val)
 }

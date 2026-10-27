@@ -70,7 +70,8 @@ pub fn process_real_properties(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<V
     }
 
     while pl::le(&pl::add(&pos, &n(6)), &dir_len) {
-        let data = data_pt.deref();
+        pl::at(369);
+        let data = pl::sderef(&data_pt)?;
 
         // get property size and version
         let u = unpack_at(&pos, "Nn", &data)?;
@@ -106,6 +107,7 @@ pub fn process_real_properties(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<V
         let pt = property_type.get(type_.to_bytes());
         let format = if pt.truthy() { pt } else { pl::s("undef") };
         let fsize = call(it, "FormatSize", vec![format.clone()])?;
+        pl::at(390);
         let count = pl::int(&pl::div(&val_len, &fsize)?);
         let val = call(it, "ReadValue", vec![data_pt.clone(), pos.clone(), format.clone(), count.clone(), pl::sub(&dir_len, &pos)])?;
 
@@ -177,7 +179,9 @@ pub fn process_real_meta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
         if pl::gt(&pl::add(&pos, &n(28)), &dir_end) {
             break;
         }
-        let data = data_pt.deref();
+        // (the statement starts on line 439)
+        pl::at(439);
+        let data = pl::sderef(&data_pt)?;
         // extract fixed-position metadata structure members
         let u = unpack_at(&pos, "N7", &data)?;
         let (size, type_, mut flags, mut value_pos, mut sub_prop_pos, num_sub_props, name_len) = (arg(&u, 0), arg(&u, 1), arg(&u, 2), arg(&u, 3), arg(&u, 4), arg(&u, 5), arg(&u, 6));
@@ -239,6 +243,7 @@ pub fn process_real_meta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                 }
             }
             let fsize = call(it, "FormatSize", vec![format.clone()])?;
+            pl::at(481);
             let count = pl::int(&pl::div(&value_len, &fsize)?);
             let val = call(it, "ReadValue", vec![data_pt.clone(), value_pos.clone(), format.clone(), count, pl::sub(&dir_end, &value_pos)])?;
             let fmt = pl::concat(&pl::concat(&pl::concat(&pl::s("type="), &type_), &pl::s(", flags=")), &flags);

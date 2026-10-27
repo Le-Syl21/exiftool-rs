@@ -51,7 +51,8 @@ pub fn build_maker_notes(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<V
     }
     let format = pl::pkg_hash(it, "Image::ExifTool::Exif::formatNumber").get(form_name.to_bytes());
     let fsiz = pl::pkg_array(it, "Image::ExifTool::Exif::formatSize").at(format.to_i64());
-    let mut size = len(&value_pt.deref());
+    pl::at(88);
+    let mut size = len(&pl::sderef(&value_pt)?);
     let value;
     if count.truthy() && !pl::num_eq(&size, &pl::mul(&count, &fsiz)) {
         if pl::lt(&size, &pl::mul(&count, &fsiz)) {
@@ -62,6 +63,7 @@ pub fn build_maker_notes(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<V
         size = pl::mul(&count, &fsiz);
         value = substr(it, &value_pt.deref(), &n(0), Some(&size))?;
     } else {
+        pl::at(99);
         count = pl::div(&size, &fsiz)?;
         value = value_pt.deref();
     }
@@ -150,7 +152,8 @@ pub fn check_canon_raw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let (et, tag_info, val_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let tag_name = tag_info.get("Name");
     if tag_name.eq_str("JpgFromRaw") || tag_name.eq_str("ThumbnailImage") {
-        if !(re(r"^\xff\xd8", "").is_match(&val_ptr.deref()) || opt(it, &et, "IgnoreMinorErrors")?.truthy()) {
+        pl::at(176);
+        if !(re(r"^\xff\xd8", "").is_match(&pl::sderef(&val_ptr)?) || opt(it, &et, "IgnoreMinorErrors")?.truthy()) {
             return ret(pl::s("[Minor] Not a valid image"));
         }
     } else {
@@ -186,7 +189,8 @@ pub fn write_cr2(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     }
 
     // check CR2 signature
-    if !re(r"^.{8}CR\x02\0", "s").is_match(&data_pt.deref()) {
+    pl::at(204);
+    if !re(r"^.{8}CR\x02\0", "s").is_match(&pl::sderef(&data_pt)?) {
         let (msg, mut minor) = (pl::s(""), Value::Undef);
         let msg = if re(r"^.{8}CR", "s").is_match(&data_pt.deref()) {
             minor = n(1);
@@ -431,6 +435,7 @@ pub fn write_canon_raw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
             // set count according to format and size
             let fnum = pl::pkg_hash(it, "Image::ExifTool::Exif::formatNumber").get(format.to_bytes());
             let fsiz = pl::pkg_array(it, "Image::ExifTool::Exif::formatSize").at(fnum.to_i64());
+            pl::at(392);
             count = pl::int(&pl::div(&size, &fsiz)?);
         }
         // edit subdirectory if necessary

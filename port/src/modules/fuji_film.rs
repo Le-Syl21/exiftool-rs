@@ -111,7 +111,8 @@ pub fn process_face_rec(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         if pl::lt(&p, &dir_start) || pl::gt(&pl::add(&p, &nn), &end) {
             break;
         }
-        let mut v = substr(it, &data_pt.deref(), &p, Some(&nn))?;
+        pl::at(1650);
+        let mut v = substr(it, &pl::sderef(&data_pt)?, &p, Some(&nn))?;
         let parms = |p: &Value, nn: &Value| vec![pl::s("DataPt"), data_pt.clone(), pl::s("DataPos"), data_pos.clone(), pl::s("Start"), p.clone(), pl::s("Size"), nn.clone()];
         let mut args = vec![tag_table_ptr.clone(), cat(&[pl::s("Face"), i.clone(), pl::s("Name")]), v];
         args.extend(parms(&p, &nn));
@@ -121,7 +122,8 @@ pub fn process_face_rec(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         if pl::lt(&p, &dir_start) || pl::gt(&pl::add(&p, &nn), &end) {
             break;
         }
-        v = substr(it, &data_pt.deref(), &p, Some(&nn))?;
+        pl::at(1660);
+        v = substr(it, &pl::sderef(&data_pt)?, &p, Some(&nn))?;
         re(r"(\d{4})(\d{2})(\d{2})", "").subst(&mut v, false, |c| cat(&[cap(c, 1), pl::s(":"), cap(c, 2), pl::s(":"), cap(c, 2)]).to_bytes().to_vec());
         let mut args = vec![tag_table_ptr.clone(), cat(&[pl::s("Face"), i.clone(), pl::s("Birthday")]), v];
         args.extend(parms(&p, &nn));
@@ -208,7 +210,8 @@ pub fn process_mraw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     }
     let data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("DataPos");
-    let data_len = pl::length(&data_pt.deref());
+    pl::at(1735);
+    let data_len = pl::length(&pl::sderef(&data_pt)?);
     if pl::lt(&data_len, &n(44)) {
         pl::method(it, &et, "Warn", vec![pl::s("Short M-RAW header")])?;
         return ret(n(0));

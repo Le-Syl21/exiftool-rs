@@ -14,6 +14,24 @@ use crate::pl::{self, arg, cap, re, ret};
 
 const MODULE: &str = "Image::ExifTool::Nikon";
 
+/// An element access `$$r{k}` on a variable, under strict refs: an
+/// undefined `$r` is autovivified (unobservable here), anything else must
+/// be a hash reference.
+fn helem_check(r: &Value) -> ER<()> {
+    if !r.is_undef() {
+        pl::hderef(r)?;
+    }
+    Ok(())
+}
+
+/// `$$r[i]` on a variable, as `helem_check` for arrays.
+fn aelem_check(r: &Value) -> ER<()> {
+    if !r.is_undef() {
+        pl::aderef(r)?;
+    }
+    Ok(())
+}
+
 fn n(i: i64) -> Value {
     Value::Int(i)
 }
@@ -141,6 +159,10 @@ pub fn print_af_points(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
                 if !ops::bit_and(&d, &n(1 << j)).truthy() {
                     continue;
                 }
+                pl::at(13318);
+                if !is_hash {
+                    aelem_check(&af_points)?;
+                }
                 let point = if is_hash { af_points.get((i as i64 * 8 + j + 1).to_string()) } else { af_points.at(i as i64 * 8 + j) };
                 if !point.is_undef() {
                     points.push(point);
@@ -175,7 +197,8 @@ pub fn print_af_points_inv(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     let (val, af_points) = (arg(&a, 0), arg(&a, 1));
     let points = re(r"[A-Za-z]\d+", "").all(&val);
     let is_hash = pl::ref_of(&af_points) == "HASH";
-    let num = if is_hash { af_points.keys().len() } else { af_points.len() };
+    pl::at(13339);
+    let num = if is_hash { af_points.keys().len() } else { pl::aderef(&af_points)?.len() };
     let size = (num + 7) / 8;
     let mut dat: Vec<Value> = vec![n(0); size];
     if !points.is_empty() {
@@ -226,6 +249,7 @@ fn get_af_point_grid_rs(it: &mut Interp, val: &Value, ncol: &Value, inv: &Value)
         let o = n(pl::uc(&cap(&m, 1)).to_bytes()[0] as i64 - 65);
         Ok(pl::sub(&pl::add(&pl::mul(&o, ncol), &cap(&m, 2)), &n(1)))
     } else {
+        pl::at(13368);
         let row = ops::bit_and(&pl::int(&pl::div(&pl::add(val, &Value::Num(0.5)), ncol)?), &n(0xff));
         let col = pl::add(&pl::sub(val, &pl::mul(ncol, &row)), &n(1));
         let c = chr(it, &pl::add(&n(65), &row))?;
@@ -363,6 +387,7 @@ pub fn print_pc(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     }
     let fmt = if fmt.truthy() { fmt } else { s("%+d") };
     let div = if div.truthy() { div } else { n(1) };
+    pl::at(13458);
     ret(pl::sprintf_v(&fmt, &[pl::div(&val, &div)?]))
 }
 
@@ -398,6 +423,8 @@ pub fn lens_id_conv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     }
     let key = |i: i64| pl::concat(&pl::concat(&val, &s(".")), &n(i)).to_bytes();
     // multiple lenses with the same LensID are distinguished by decimal values
+    pl::at(13484);
+    helem_check(&conv)?;
     if conv.get(key(1)).truthy() {
         let (mut vals, mut user): (Vec<Value>, Vec<Value>) = (Vec::new(), Vec::new());
         let user_lens = pl::pkg_hash(it, "Image::ExifTool::userLens");
@@ -535,7 +562,8 @@ fn decrypt_rs(it: &mut Interp, data_pt: &Value, mut start: Value, mut len: Value
     if !start.truthy() {
         start = n(0);
     }
-    let data = data_pt.deref();
+    pl::at(13610);
+    let data = pl::sderef(data_pt)?;
     let max_len = pl::sub(&pl::length(&data), &start);
     if len.is_undef() || pl::gt(&len, &max_len) {
         len = max_len;
@@ -925,7 +953,8 @@ pub fn prepare_nikon_offsets(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
 
 fn prepare_nikon_offsets_rs(it: &mut Interp, et: &Value, data_pt: &Value, tag_table_ptr: &Value, start: &Value, decrypt_mode: &Value) -> ER<Value> {
     let offset = tag_table_ptr.get("VARS").get("NIKON_OFFSETS");
-    let data_len = pl::length(&data_pt.deref());
+    pl::at(13862);
+    let data_len = pl::length(&pl::sderef(data_pt)?);
     if pl::gt(&pl::add(&offset, &n(4)), &data_len) || pl::lt(&offset, start) {
         return Ok(Value::Undef);
     }
@@ -1082,7 +1111,8 @@ pub fn process_nikon_encrypted(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<V
     let tag_info = dir_info.get("TagInfo");
     let dir_start = dir_info.get("DirStart");
     let dl = dir_info.get("DirLen");
-    let data0 = substr_w(it, &dir_info.get("DataPt").deref(), &dir_start, Some(&dl))?;
+    pl::at(13967);
+    let data0 = substr_w(it, &pl::sderef(&dir_info.get("DataPt"))?, &dir_start, Some(&dl))?;
     let data = pl::sref(data0); // (\$data)
 
     let (mut start, offset);

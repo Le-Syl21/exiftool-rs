@@ -16,8 +16,9 @@ use crate::pl::{self, arg, re, ret};
 pub fn process_mett(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
     let data_pos = dir_info.get("DataPos");
+    pl::at(796);
+    let data = pl::sderef(&data_pt)?;
     let dir_end = len_of(&data);
     let ds = dir_info.get("DirStart");
     let mut pos = if ds.truthy() { ds.to_i64() } else { 0 };

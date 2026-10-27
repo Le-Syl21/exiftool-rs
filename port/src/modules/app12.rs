@@ -53,7 +53,8 @@ pub fn write_ducky(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                 pl::method(it, &et, "Warn", vec![s("Invalid Ducky block length")])?;
                 return pl::ret_undef();
             }
-            val = pl::substr(&data_pt.deref(), pos.to_i64(), Some(l.to_i64()));
+            pl::at(164);
+            val = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(l.to_i64()));
             pos = pl::add(&pos, &l);
         } else {
             let Some(t) = add_tags.pop() else { break };
@@ -118,7 +119,8 @@ pub fn process_ducky(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
             pl::method(it, &et, "Warn", vec![s("Invalid Ducky block length")])?;
             break;
         }
-        let val = pl::substr(&data_pt.deref(), pos.to_i64(), Some(l.to_i64()));
+        pl::at(225);
+        let val = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(l.to_i64()));
         pl::method(
             it,
             &et,
@@ -139,9 +141,13 @@ pub fn process_app12(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     let ds = dir_info.get("DirStart");
     let dir_start = if ds.truthy() { ds } else { n(0) };
     let dl = dir_info.get("DirLen");
-    let dir_len = if dl.truthy() { dl } else { pl::sub(&len(&data_pt.deref()), &dir_start) };
-    if !pl::num_eq(&dir_len, &pl::add(&dir_start, &len(&data_pt.deref()))) {
-        let buff = crate::modules::write_exif::substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+    pl::at(246);
+    let dir_len = if dl.truthy() { dl } else { pl::sub(&len(&pl::sderef(&data_pt)?), &dir_start) };
+    pl::at(247);
+    let d = pl::sderef(&data_pt)?;
+    if !pl::num_eq(&dir_len, &pl::add(&dir_start, &len(&d))) {
+        pl::at(248);
+        let buff = crate::modules::write_exif::substr(it, &d, &dir_start, Some(&dir_len))?;
         data_pt = pl::sref(buff);
     }
     // (pos($$dataPt) is set here, then reset to 0 before the search below)
