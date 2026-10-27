@@ -199,15 +199,19 @@ pub fn print_lens_id(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
                     // remove previous entry if same lens
                     let mut p = b"^".to_vec();
                     p.extend_from_slice(&cap(&m, 1).to_bytes());
-                    let lns = pl::re_dyn(&p, "")?;
-                    if !maybe.is_empty() && lns.is_match(maybe.last().unwrap()) {
+                    // (the pattern is compiled only when the list is not empty)
+                    pl::at(10225);
+                    if !maybe.is_empty() && pl::re_dyn(&p, "")?.is_match(maybe.last().unwrap()) {
                         maybe.pop();
                     }
-                    if !likely.is_empty() && lns.is_match(likely.last().unwrap()) {
+                    pl::at(10226);
+                    if !likely.is_empty() && pl::re_dyn(&p, "")?.is_match(likely.last().unwrap()) {
                         likely.pop();
                     }
-                    if !matches.is_empty() && lns.is_match(matches.last().unwrap()) {
+                    pl::at(10227);
+                    if !matches.is_empty() && pl::re_dyn(&p, "")?.is_match(matches.last().unwrap()) {
                         matches.pop();
+
                     }
                 } else if pl::gt(tc, &n(1)) {
                     tclens = pl::concat(&tclens, &pl::concat(&pl::concat(&pl::s(" + "), tc), &pl::s("x")));
@@ -855,7 +859,8 @@ pub fn process_serial_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
                     et.get_or_new_hash("TAG_EXTRA").get_or_new_hash(key.to_bytes()).set("G6", format.clone());
                 }
                 if opts.get("SaveBin").truthy() {
-                    let bin = substr(&data_pt.deref(), pl::add(&pos, &offset).to_i64(), Some(len.to_i64()));
+                    pl::at(10592);
+                    let bin = substr(&pl::sderef(&data_pt)?, pl::add(&pos, &offset).to_i64(), Some(len.to_i64()));
                     et.get_or_new_hash("TAG_EXTRA").get_or_new_hash(key.to_bytes()).set("BinVal", bin);
                 }
             }
@@ -885,6 +890,12 @@ pub fn process_cmt3(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
     {
         let data_pt = dir_info.get("DataPt");
         // remove old (unused) trailer
+        // (s/// on $$dataPt autovivifies an undefined $dataPt, but a string
+        //  or another kind of reference dies)
+        pl::at(10717);
+        if !data_pt.is_undef() {
+            pl::sderef(&data_pt)?;
+        }
         let mut d = data_pt.deref();
         if re(r"(II\x2a\0|MM\0\x2a)\0{4,10}$", "").subst(&mut d, false, |_| Vec::new()) > 0 {
             set_deref(&data_pt, d.clone())?;
@@ -908,7 +919,8 @@ pub fn process_exif_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     let start = dir_info.get("DirStart");
     let start = if start.truthy() { start } else { n(0) };
     let dir_len = dir_info.get("DirLen");
-    let dir_len = if dir_len.truthy() { dir_len } else { pl::sub(&pl::length(&data_pt.deref()), &start) };
+    pl::at(10735);
+    let dir_len = if dir_len.truthy() { dir_len } else { pl::sub(&pl::length(&pl::sderef(&data_pt)?), &start) };
     let dir_end = pl::add(&start, &dir_len);
     // loop through TIFF-format EXIF/MakerNote records
     let mut pos = start.clone();
@@ -956,8 +968,10 @@ pub fn process_ctmd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
-    let dir_len = pl::length(&data_pt.deref());
+    pl::at(10765);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?);
     let mut pos = n(0);
+
     pl::call(it, "Image::ExifTool::SetByteOrder", vec![pl::s("II")])?;
     while pl::lt(&pl::add(&pos, &n(6)), &dir_len) {
         let size = get32u(it, &data_pt, pos.clone())?;
