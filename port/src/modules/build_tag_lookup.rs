@@ -1053,6 +1053,7 @@ fn new_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                         if writable.truthy() && format.truthy() && !eq(&writable, &format) && !pl::str_eq(&writable, "string") && !pl::str_eq(&format, "string") && format_number.get(writable.to_bytes()).truthy() && format_number.get(format.to_bytes()).truthy() {
                             let n1 = format_number.get(format.to_bytes());
                             let n2 = format_number.get(writable.to_bytes());
+                            pl::at(1404);
                             count = pl::mul(&count, &pl::div(&format_size.at(n1.to_i64()), &format_size.at(n2.to_i64()))?);
                         }
                         if !pl::num_eq(&count, &n(1)) {
@@ -1751,6 +1752,7 @@ fn tweak_order_rs(_it: &mut Interp, sorted_tables: &Value, tweak_order: &Value) 
             continue;
         }
         let Some(c) = re(r"^Image::ExifTool::(\w+)::(\w+)", "").m(&entry.at(0)) else {
+            pl::at(1913);
             return die("Internal error");
         };
         let m1 = cap(&c, 1);

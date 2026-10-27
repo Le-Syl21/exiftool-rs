@@ -19,7 +19,8 @@ fn set_resource_name_mut(it: &mut Interp, tag_info: &Value, name: &mut Value, va
     if !set_name.is_undef() {
         let mut nm;
         // extract resource name from value
-        if let Some(c) = re(r".*/#(.{0,255})#/$", "s").m(&val_pt.deref()) {
+        pl::at(23);
+        if let Some(c) = re(r".*/#(.{0,255})#/$", "s").m(&pl::sderef(val_pt)?) {
             nm = cap(&c, 1);
             // strip name from value
             let v = substr(it, &val_pt.deref(), &n(0), Some(&pl::sub(&n(-4), &len(&nm))))?;

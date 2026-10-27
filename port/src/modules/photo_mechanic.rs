@@ -50,6 +50,7 @@ pub fn process_photo_mechanic(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
     #[allow(clippy::never_loop)]
     loop {
         // read and validate trailer footer (last 12 bytes)
+        pl::at(163);
         if !(seek(it, &raf, pl::sub(&n(-12), &offset), 2)? && read_eq(it, &raf, &footer, &n(12))?) {
             break;
         }

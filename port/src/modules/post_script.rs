@@ -161,6 +161,7 @@ pub fn ps_err(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 }
 
 fn get_input_record_separator_impl(it: &mut Interp, raf: &Value) -> ER<Value> {
+    pl::at(195);
     let pos = pl::method(it, raf, "Tell", vec![])?; // save current position
     let mut data = Value::Undef;
     let mut sep = Value::Undef;
@@ -233,7 +234,8 @@ fn split_line_impl(data: &mut Value, lines: &Value) {
 /// Notes: Fills @$lines with lines from splitting $$dataPt
 pub fn split_line(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (data_pt, lines) = (arg(&a, 0), arg(&a, 1));
-    let mut data = data_pt.deref();
+    pl::at(226);
+    let mut data = pl::sderef(&data_pt)?;
     split_line_impl(&mut data, &lines);
     pl::set_deref(&data_pt, data)?;
     // (the value of the loop that ends the sub)
@@ -260,16 +262,32 @@ fn check_ps_end_impl(it: &mut Interp, raf: &Value, data: &mut Value) -> ER<Value
 /// - modifies data and sets RAF to EOF if end of PS is reached
 pub fn check_ps_end(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (raf, data_pt) = (arg(&a, 0), arg(&a, 1));
-    let mut data = data_pt.deref();
-    let r = check_ps_end_impl(it, &raf, &mut data)?;
-    pl::set_deref(&data_pt, data)?;
-    ret(r)
+    // ($$dataPt is read only when the data goes past the end)
+    pl::at(256);
+    let pos = pl::method(it, &raf, "Tell", vec![])?;
+    let ps_end = raf.get("PSEnd");
+    if pl::ge(&pos, &ps_end) {
+        let r = pl::method(it, &raf, "Seek", vec![n(0), n(2)])?; // seek to end of file so we can't read any more
+        if pl::gt(&pos, &ps_end) {
+            pl::at(259);
+            let data = pl::sderef(&data_pt)?;
+            let len = pl::add(&pl::sub(&pl::length(&data), &pos), &ps_end);
+            let v = substr(it, &data, &n(0), Some(&len))?;
+            pl::set_deref(&data_pt, v.clone())?;
+            return ret(v);
+        }
+        // (the value of the false statement modifier)
+        let _ = r;
+        return ret(Value::from(false));
+    }
+    ret(Value::from(false))
 }
 
 fn get_next_line_impl(it: &mut Interp, raf: &Value, lines: &Value) -> ER<Value> {
     let mut data = Value::Undef;
     let mut changed_nl = Value::Undef;
     let mut altnl: Value = Value::bytes(if pl::str_eq(&irs(it), "\x0d") { b"\x0a" } else { b"\x0d" });
+    pl::at(274);
     loop {
         if !read_line(it, raf, &mut data)?.truthy() {
             break;
@@ -361,6 +379,11 @@ fn unescape_loop(s: &mut Value, cont: bool) {
 fn decode_comment_impl(it: &mut Interp, mut v: Value, raf: &Value, lines: &Value, data_pt: &Value) -> ER<Value> {
     re(r"\x0d*\x0a*$", "").subst(&mut v, false, |_| Vec::new()); // remove trailing CR, LF or CR/LF
     // check for continuation comments
+    // (`@$lines or ...` dies when $lines is not an array reference)
+    pl::at(318);
+    if !lines.is_array() {
+        pl::aderef(lines)?;
+    }
     loop {
         if lines.is_empty() && !get_next_line_impl(it, raf, lines)?.truthy() {
             break;

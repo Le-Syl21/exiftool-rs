@@ -67,7 +67,9 @@ fn new_raf(it: &mut Interp, data_ref: Value) -> ER<Value> {
 /// Returns: Converted string
 pub fn extract_unicode_string(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, chars, pos) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let list = chars.items();
+    // ($i<@$chars dies when $chars is not an array reference)
+    pl::at(278);
+    let list = pl::aderef(&chars)?;
     let mut i = pos.to_i64();
     while i < list.len() as i64 {
         if !chars.at(i).truthy() {
@@ -94,7 +96,8 @@ pub fn process_x3f_header(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     pl::method(it, &et, "ProcessBinaryData", vec![dir_info.clone(), tag_table_ptr.clone()])?;
 
     // process extended data if available
-    if pl::ge(&pl::sub(&pl::length(&data_pt.deref()), &hdr_len), &n(160)) {
+    pl::at(299);
+    if pl::ge(&pl::sub(&pl::length(&pl::sderef(&data_pt)?), &hdr_len), &n(160)) {
         let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
         if verbose.truthy() {
             pl::method(it, &et, "VerboseDir", vec![pl::s("X3F HeaderExt"), n(32)])?;
@@ -129,7 +132,8 @@ pub fn process_x3f_header(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
 pub fn process_x3f_properties(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(331);
+    let data = pl::sderef(&data_pt)?;
     let size = pl::length(&data);
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
     let unknown = pl::method(it, &et, "Options", vec![pl::s("Unknown")])?;
@@ -210,6 +214,7 @@ pub fn write_x3f(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut did_contain = false;
     let order = Value::new_hash();
 
+    pl::at(390);
     if !seek(it, &raf, dir_info.get("DirStart"), 0)? {
         return err("Error seeking to directory start");
     }
@@ -391,6 +396,7 @@ pub fn process_x3f_directory(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
     let raf = dir_info.get("RAF");
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
 
+    pl::at(522);
     if !seek(it, &raf, dir_info.get("DirStart"), 0)? {
         return err("Error seeking to directory start");
     }
@@ -505,6 +511,7 @@ pub fn process_x3f(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let buff = cell(Value::Undef);
     let mut hdr_len = Value::Undef;
 
+    pl::at(603);
     if !read_eq(it, &raf, &buff, &n(40))? {
         return ret(n(0));
     }

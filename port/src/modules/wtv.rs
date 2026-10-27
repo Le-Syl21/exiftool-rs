@@ -16,7 +16,8 @@ fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
 fn read_sectors_impl(it: &mut Interp, raf: &Value, sec_pt: &Value, pos: &Value, sec_size: &Value) -> ER<Value> {
     let mut pos = pos.clone();
     let (mut data, mut buff) = (Value::Undef, Value::Undef);
-    while pl::le(&pos, &pl::sub(&pl::length(&sec_pt.deref()), &n(4))) {
+    pl::at(157);
+    while pl::le(&pos, &pl::sub(&pl::length(&pl::sderef(sec_pt)?), &n(4))) {
         let sec = call(it, "Get32u", vec![sec_pt.clone(), pos.clone()])?;
         if pl::num_eq(&sec, &n(0xffff)) {
             return Ok(Value::Undef); // (just in case)
@@ -29,6 +30,7 @@ fn read_sectors_impl(it: &mut Interp, raf: &Value, sec_pt: &Value, pos: &Value, 
         } else {
             data = buff.clone();
         }
+        pl::at(162);
         if !(pl::method(it, raf, "Seek", vec![pl::mul(&sec, sec_size), n(0)])?.truthy() && pl::num_eq(&raf_read(it, raf, &mut buff, sec_size.clone())?, sec_size)) {
             return Ok(Value::Undef);
         }
@@ -50,7 +52,8 @@ pub fn read_sectors(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 pub fn process_metadata(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(177);
+    let data = pl::sderef(&data_pt)?;
     let mut pos = n(0);
     let end = pl::length(&data);
     pl::method(it, &et, "VerboseDir", vec![pl::s("WTV Metadata"), Value::Undef, end.clone()])?;
@@ -124,6 +127,7 @@ pub fn process_wtv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let buff_c = cell(Value::Undef);
 
     // verify this is a valid WTV file
+    pl::at(236);
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff_c, n(0x60))?, &n(0x60)) {
         return ret(n(0));
     }

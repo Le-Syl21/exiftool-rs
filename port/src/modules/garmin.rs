@@ -57,6 +57,7 @@ fn process_fit_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
     let base_type = runtime::lex_hash(it, PKG, "baseType");
 
     // verify this is a valid Garmin FIT file
+    pl::at(6305);
     if !(pl::num_eq(&raf_read(it, &raf, &mut buff, n(12))?, &n(12)) && re(r"^.{8}\.FIT", "s").is_match(&buff)) {
         return ret(n(0));
     }
@@ -384,6 +385,7 @@ fn process_fit_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
             if bt.truthy() {
                 let fmt = bt.at(0);
                 let fs = scalar(part2_format_size(it, fmt.clone()))?;
+                pl::at(6552);
                 let count = pl::div(&size, &fs)?;
                 if pl::num_eq(&pl::int(&count), &count) {
                     let val = read_value(it, &buff_ref, pos.clone(), fmt.clone(), count, size.clone())?;
