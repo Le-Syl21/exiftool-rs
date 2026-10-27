@@ -4,7 +4,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use flate2::{Compress, Compression, Decompress, FlushCompress, FlushDecompress, Status};
+use flate2::{Decompress, FlushDecompress, Status};
 
 use crate::interp::eval::ER;
 use crate::interp::{Interp, Want};
@@ -16,7 +16,85 @@ const Z_DATA_ERROR: i64 = -3;
 
 enum Stream {
     Inflate(Decompress),
-    Deflate(Compress),
+    Deflate(ZDeflate),
+}
+
+/// A zlib deflate stream made as Compress::Raw::Zlib makes it: memLevel 9
+/// (MAX_MEM_LEVEL, its default and Compress::Zlib's) where flate2 uses 8.
+/// The memory level sets the size of zlib's symbol buffer, so where blocks
+/// end: with 8 the compressed bytes differ from perl's.
+struct ZDeflate {
+    strm: Box<libz_sys::z_stream>,
+}
+
+/// zlib's allocator, on the C runtime's.
+extern "C" fn z_alloc(_: libz_sys::voidpf, items: libz_sys::uInt, size: libz_sys::uInt) -> libz_sys::voidpf {
+    extern "C" {
+        fn calloc(n: usize, size: usize) -> *mut std::ffi::c_void;
+    }
+    unsafe { calloc(items as usize, size as usize) }
+}
+
+extern "C" fn z_free(_: libz_sys::voidpf, p: libz_sys::voidpf) {
+    extern "C" {
+        fn free(p: *mut std::ffi::c_void);
+    }
+    unsafe { free(p) }
+}
+
+/// What a deflate call did: input bytes taken, output bytes written, zlib's
+/// return code.
+struct ZStep {
+    consumed: usize,
+    produced: usize,
+    ret: i32,
+}
+
+impl ZDeflate {
+    /// deflateInit2(level, Z_DEFLATED, ±MAX_WBITS, MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY):
+    /// a zlib header and trailer unless `raw`.
+    fn new(level: i32, raw: bool) -> Self {
+        let mut strm = Box::new(libz_sys::z_stream {
+            next_in: std::ptr::null_mut(),
+            avail_in: 0,
+            total_in: 0,
+            next_out: std::ptr::null_mut(),
+            avail_out: 0,
+            total_out: 0,
+            msg: std::ptr::null_mut(),
+            state: std::ptr::null_mut(),
+            zalloc: z_alloc,
+            zfree: z_free,
+            opaque: std::ptr::null_mut(),
+            data_type: 0,
+            adler: 0,
+            reserved: 0,
+        });
+        let bits = if raw { -15 } else { 15 };
+        let r = unsafe { libz_sys::deflateInit2_(&mut *strm, level, libz_sys::Z_DEFLATED, bits, 9, libz_sys::Z_DEFAULT_STRATEGY, libz_sys::zlibVersion(), std::mem::size_of::<libz_sys::z_stream>() as i32) };
+        assert_eq!(r, libz_sys::Z_OK, "deflateInit2");
+        ZDeflate { strm }
+    }
+
+    fn deflate(&mut self, input: &[u8], output: &mut [u8], finish: bool) -> ZStep {
+        let s = &mut *self.strm;
+        s.next_in = input.as_ptr() as *mut u8;
+        s.avail_in = input.len() as libz_sys::uInt;
+        s.next_out = output.as_mut_ptr();
+        s.avail_out = output.len() as libz_sys::uInt;
+        let ret = unsafe { libz_sys::deflate(s, if finish { libz_sys::Z_FINISH } else { libz_sys::Z_NO_FLUSH }) };
+        let consumed = input.len() - s.avail_in as usize;
+        let produced = output.len() - s.avail_out as usize;
+        s.next_in = std::ptr::null_mut();
+        s.next_out = std::ptr::null_mut();
+        ZStep { consumed, produced, ret }
+    }
+}
+
+impl Drop for ZDeflate {
+    fn drop(&mut self) {
+        unsafe { libz_sys::deflateEnd(&mut *self.strm) };
+    }
 }
 
 thread_local! {
@@ -76,24 +154,127 @@ fn inflate_all(d: &mut Decompress, input: &[u8]) -> (Vec<u8>, i64) {
     }
 }
 
-fn deflate_some(c: &mut Compress, input: &[u8], flush: FlushCompress) -> Vec<u8> {
-    let mut out = Vec::with_capacity(input.len() + 64);
-    let start_in = c.total_in();
+/// IO::Uncompress::RawInflate's rawinflate, with its default Transparent
+/// mode. Its magic check reads the first block (BlockSize, 16 KiB) into a
+/// string and makes one inflate call with LimitOutput into that same string
+/// once emptied: so at most its allocated length less one byte of output,
+/// raised to Bufsize (4 KiB) plus perl's rounding. If that call fails, or
+/// it took the whole input without reaching the end of the stream, the
+/// input is passed through as it is. Past that check, a stream cut short
+/// gives what was inflated and an error. Data after the end of the stream
+/// is ignored.
+fn raw_inflate(input: &[u8]) -> (Vec<u8>, Option<&'static str>) {
+    const BLOCK: usize = 16 * 1024;
+    let first = &input[..input.len().min(BLOCK)];
+    let eof = input.len() <= BLOCK;
+    // The output room is that of `$buffer`, a lexical of _isRawx, after
+    // `substr($buffer, 0) = <first block>` (sv_grow rounds to 8 bytes),
+    // raised to Bufsize by the XS inflate, less one byte. Perl keeps that
+    // allocation from one call to the next, so in a process that inflated
+    // something before, the room (and with it the transparent/error
+    // outcome on a truncated stream) depends on the earlier calls: an
+    // accident of perl's memory reuse, not of the data. This follows a
+    // perl that has not inflated anything yet.
+    let mut len = ((first.len() + 2).max(STRLEN_NEW_MIN) + 7) & !7;
+    if len - 1 < BUFSIZE {
+        len = (BUFSIZE + 2 + 7) & !7;
+    }
+    let room = len - 1;
+    let mut d = Decompress::new(false);
+    let mut probe = vec![0u8; room];
+    match d.decompress(first, &mut probe, FlushDecompress::Sync) {
+        Err(_) => return (input.to_vec(), None),
+        Ok(Status::StreamEnd) => {}
+        Ok(_) => {
+            if eof && d.total_in() as usize >= input.len() {
+                return (input.to_vec(), None);
+            }
+        }
+    }
+    let (out, st) = inflate_all(&mut Decompress::new(false), input);
+    match st {
+        Z_STREAM_END => (out, None),
+        Z_DATA_ERROR => (out, Some("Inflation Error: data error")),
+        _ => (out, Some("unexpected end of file")),
+    }
+}
+
+/// A perl string used as Compress::Raw::Zlib's output buffer: its bytes and
+/// its allocated length (SvLEN). The XS code gives zlib the free space of
+/// the buffer and grows it by Bufsize, doubling at each step, and zlib cuts
+/// stored blocks to the space it is given: so the compressed bytes of
+/// incompressible data depend on these sizes, which are reproduced here.
+struct PerlBuf {
+    data: Vec<u8>,
+    len: usize,
+}
+
+/// PERL_STRLEN_NEW_MIN on a 64-bit perl.
+const STRLEN_NEW_MIN: usize = 16;
+/// Compress::Raw::Zlib's default Bufsize.
+const BUFSIZE: usize = 4096;
+
+impl PerlBuf {
+    /// `my $out = ''` (or undef) once the XS code has forced it to a string:
+    /// sv_grow(sv, 1) on an unallocated scalar.
+    fn fresh() -> Self {
+        let mut b = PerlBuf { data: Vec::new(), len: 0 };
+        b.grow(0, 1);
+        b
+    }
+
+    /// sv_grow(sv, newlen) with SvCUR(sv) == cur (perl 5.38, no perl malloc).
+    fn grow(&mut self, cur: usize, newlen: usize) {
+        let mut newlen = newlen + 1; // the COW byte
+        if newlen > self.len {
+            let minlen = cur + (cur >> 2) + STRLEN_NEW_MIN;
+            if newlen < minlen {
+                newlen = minlen;
+            }
+            if self.len != 0 {
+                newlen = (newlen + 7) & !7;
+            }
+            self.len = newlen;
+        }
+    }
+}
+
+/// Compress::Raw::Zlib's deflate (finish false) or flush(Z_FINISH) (finish
+/// true), appending to `out` as with AppendOutput.
+fn xs_deflate(c: &mut ZDeflate, out: &mut PerlBuf, input: &[u8], finish: bool) -> i32 {
+    let prefix = out.data.len();
+    let mut avail = out.len - prefix;
+    let mut bufinc = BUFSIZE;
+    let mut pos = 0;
+    let mut ret = libz_sys::Z_OK;
     loop {
-        let consumed = (c.total_in() - start_in) as usize;
-        if out.capacity() - out.len() < 1024 {
-            out.reserve(out.capacity().max(4096));
+        if !finish && pos >= input.len() {
+            break;
         }
-        let before = out.len();
-        let st = c.compress_vec(&input[consumed..], &mut out, flush).unwrap_or(Status::StreamEnd);
-        let done_input = (c.total_in() - start_in) as usize >= input.len();
-        match flush {
-            FlushCompress::Finish if st == Status::StreamEnd => return out,
-            FlushCompress::Finish => {}
-            _ if done_input && out.len() < out.capacity() => return out,
-            _ if done_input && out.len() == before => return out,
-            _ => {}
+        if avail == 0 {
+            out.grow(prefix, out.len + bufinc);
+            avail = bufinc;
+            bufinc *= 2;
         }
+        let mut tmp = vec![0u8; avail];
+        let step = c.deflate(&input[pos..], &mut tmp, finish);
+        pos += step.consumed;
+        out.data.extend_from_slice(&tmp[..step.produced]);
+        let available_before = avail;
+        avail -= step.produced;
+        ret = step.ret;
+        // the second of two consecutive flushes
+        if finish && available_before == avail && ret == libz_sys::Z_BUF_ERROR {
+            ret = libz_sys::Z_OK;
+        }
+        if ret != libz_sys::Z_OK || (finish && avail != 0) {
+            break;
+        }
+    }
+    if finish && ret == libz_sys::Z_STREAM_END {
+        libz_sys::Z_OK
+    } else {
+        ret
     }
 }
 
@@ -152,7 +333,7 @@ pub fn register(it: &mut Interp) {
         Ok(if want == Want::List { vec![obj, Value::Int(Z_OK)] } else { vec![obj] })
     });
     it.define_native("Compress::Zlib::deflateInit", |_, a, want| {
-        let obj = new_object("Compress::Zlib::deflateStream", Stream::Deflate(Compress::new(Compression::new(6), !raw_window(&a))));
+        let obj = new_object("Compress::Zlib::deflateStream", Stream::Deflate(ZDeflate::new(6, raw_window(&a))));
         Ok(if want == Want::List { vec![obj, Value::Int(Z_OK)] } else { vec![obj] })
     });
     it.define_native("Compress::Zlib::inflateStream::inflate", |it, a, want| {
@@ -174,7 +355,11 @@ pub fn register(it: &mut Interp) {
     it.define_native("Compress::Zlib::deflateStream::deflate", |_, a, want| {
         let input = arg(&a, 1).to_bytes();
         let out = with_stream(&arg(&a, 0), |s| match s {
-            Stream::Deflate(c) => deflate_some(c, &input, FlushCompress::None),
+            Stream::Deflate(c) => {
+                let mut out = PerlBuf::fresh();
+                xs_deflate(c, &mut out, &input, false);
+                out.data
+            }
             Stream::Inflate(_) => Vec::new(),
         })
         .unwrap_or_default();
@@ -182,15 +367,23 @@ pub fn register(it: &mut Interp) {
     });
     it.define_native("Compress::Zlib::deflateStream::flush", |_, a, want| {
         let out = with_stream(&arg(&a, 0), |s| match s {
-            Stream::Deflate(c) => deflate_some(c, &[], FlushCompress::Finish),
+            Stream::Deflate(c) => {
+                let mut out = PerlBuf::fresh();
+                xs_deflate(c, &mut out, &[], true);
+                out.data
+            }
             Stream::Inflate(_) => Vec::new(),
         })
         .unwrap_or_default();
         Ok(if want == Want::List { vec![Value::bytes(out), Value::Int(Z_OK)] } else { vec![Value::bytes(out)] })
     });
     it.define_native("Compress::Zlib::compress", |_, a, _| {
-        let mut c = Compress::new(Compression::new(6), true);
-        Ok(vec![Value::bytes(deflate_some(&mut c, &arg(&a, 0).to_bytes(), FlushCompress::Finish))])
+        // one output string for the deflate and the flush, as Compress::Zlib::compress
+        let mut c = ZDeflate::new(6, false);
+        let mut out = PerlBuf::fresh();
+        xs_deflate(&mut c, &mut out, &arg(&a, 0).to_bytes(), false);
+        xs_deflate(&mut c, &mut out, &[], true);
+        Ok(vec![Value::bytes(out.data)])
     });
     it.define_native("Compress::Zlib::uncompress", |_, a, _| {
         let mut d = Decompress::new(true);
@@ -202,11 +395,15 @@ pub fn register(it: &mut Interp) {
         Ok(vec![Value::Int(crc32_combine_from(prev, &arg(&a, 0).to_bytes()) as i64)])
     });
     it.define_native("IO::Uncompress::RawInflate::rawinflate", |it, a, _| {
-        io_call(it, a, "IO::Uncompress::RawInflate::RawInflateError", |inp| {
-            let mut d = Decompress::new(false);
-            let (out, st) = inflate_all(&mut d, inp);
-            (st != Z_DATA_ERROR).then_some(out)
-        })
+        let err_var = "IO::Uncompress::RawInflate::RawInflateError";
+        let Some(input) = input_bytes(&arg(&a, 0)) else {
+            it.set_scalar(err_var, Value::str("input file does not exist"));
+            return Ok(vec![Value::from(false)]);
+        };
+        let (out, err) = raw_inflate(&input);
+        let ok = output(it, &arg(&a, 1), out);
+        it.set_scalar(err_var, Value::str(err.unwrap_or("")));
+        Ok(vec![if err.is_some() { Value::Undef } else { Value::from(ok) }])
     });
     it.define_native("IO::Uncompress::Gunzip::gunzip", |it, a, _| {
         io_call(it, a, "IO::Uncompress::Gunzip::GunzipError", |inp| {
@@ -217,8 +414,14 @@ pub fn register(it: &mut Interp) {
     });
     it.define_native("IO::Compress::RawDeflate::rawdeflate", |it, a, _| {
         io_call(it, a, "IO::Compress::RawDeflate::RawDeflateError", |inp| {
-            let mut c = Compress::new(Compression::new(6), false);
-            Some(deflate_some(&mut c, inp, FlushCompress::Finish))
+            // IO::Compress::Base: one syswrite of the data into a fresh
+            // buffer, then the close into another
+            let mut c = ZDeflate::new(6, true);
+            let (mut body, mut trailer) = (PerlBuf::fresh(), PerlBuf::fresh());
+            xs_deflate(&mut c, &mut body, inp, false);
+            xs_deflate(&mut c, &mut trailer, &[], true);
+            body.data.extend_from_slice(&trailer.data);
+            Some(body.data)
         })
     });
 }

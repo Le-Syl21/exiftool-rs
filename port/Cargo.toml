@@ -25,6 +25,9 @@ sha1 = "0.10"
 # Compress::Zlib and IO::(Un)Compress: zlib itself, as perl uses, so
 # compressed output is byte for byte the same
 flate2 = { version = "1", default-features = false, features = ["zlib"] }
+# zlib's deflateInit2 directly: Compress::Raw::Zlib deflates with memLevel 9,
+# which flate2 cannot set, and the memory level changes the output bytes
+libz-sys = "1"
 # IO::(Un)Compress::Brotli: Google's brotli library itself, as the perl module
 brotlic = "0.8"
 
