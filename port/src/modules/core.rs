@@ -183,6 +183,8 @@ pub fn register(it: &mut Interp) {
             ret(Value::bytes(b))
         }
     });
+    it.define_native("File::Glob::bsd_glob", |_, a, _| Ok(crate::interp::eval::glob::bsd_glob(&arg(&a, 0).to_bytes()).into_iter().map(Value::bytes).collect()));
+    it.define_native("File::Glob::csh_glob", |_, a, _| Ok(crate::interp::eval::glob::csh_glob(&arg(&a, 0).to_bytes()).into_iter().map(Value::bytes).collect()));
     it.define_native("Cwd::getcwd", |_, _, _| ret(Value::str(&std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default())));
     it.define_native("Cwd::cwd", |_, _, _| ret(Value::str(&std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default())));
     it.define_native("Cwd::abs_path", |_, a, _| {
@@ -194,13 +196,16 @@ pub fn register(it: &mut Interp) {
     });
     // Time::Local: timelocal/timegm with perl's year rules (two-digit years
     // in a rolling century, 4-digit as is, years >= 1000 taken literally).
-    it.define_native("Time::Local::timegm", |_, a, _| timegm_native(&a, false));
+    it.define_native("Time::Local::timegm", |_, a, _| ret(num(timegm_value(&a, true)?)));
     it.define_native("Time::Local::timelocal", |it, a, _| {
         crate::interp::time::sync_tz(it);
-        timegm_native(&a, true)
+        ret(num(timelocal_value(&a, true)?))
     });
-    it.define_native("Time::Local::timegm_nocheck", |_, a, _| timegm_native(&a, false));
-    it.define_native("Time::Local::timelocal_nocheck", |_, a, _| timegm_native(&a, true));
+    it.define_native("Time::Local::timegm_nocheck", |_, a, _| ret(num(timegm_value(&a, false)?)));
+    it.define_native("Time::Local::timelocal_nocheck", |it, a, _| {
+        crate::interp::time::sync_tz(it);
+        ret(num(timelocal_value(&a, false)?))
+    });
     it.define_native("POSIX::floor", |_, a, _| ret(Value::Num(arg(&a, 0).to_f64().floor())));
     it.define_native("POSIX::ceil", |_, a, _| ret(Value::Num(arg(&a, 0).to_f64().ceil())));
     it.define_native("POSIX::fmod", |_, a, _| ret(Value::Num(arg(&a, 0).to_f64() % arg(&a, 1).to_f64())));
@@ -222,8 +227,15 @@ pub fn register(it: &mut Interp) {
         ret(Value::str(&crate::interp::time::strftime(&fmt, &tm)))
     });
     it.define_native("POSIX::mktime", |it, a, _| {
+        // mktime(sec, min, hour, mday, mon, year): year is tm_year (from
+        // 1900) and out-of-range fields carry over, as the C function
         crate::interp::time::sync_tz(it);
-        timegm_native(&a, true)
+        let g = |i: usize| a.get(i).map(|v| v.to_f64().trunc() as i64).unwrap_or(0);
+        let months = g(5) * 12 + g(4);
+        let (y, m) = (1900 + months.div_euclid(12), months.rem_euclid(12));
+        let days = crate::interp::time::days_from_civil(y, m + 1, 1) + g(3) - 1;
+        let t = (days * 86400 + g(2) * 3600 + g(1) * 60 + g(0)) as f64;
+        ret(Value::Int(crate::interp::time::local_to_utc(t) as i64))
     });
     it.define_native("Scalar::Util::blessed", |_, a, _| {
         ret(match arg(&a, 0) {
@@ -253,32 +265,98 @@ pub fn register(it: &mut Interp) {
     it.define_native("utf8::valid", |_, a, _| ret(Value::from(std::str::from_utf8(&arg(&a, 0).to_bytes()).is_ok())));
 }
 
-fn timegm_native(a: &[Value], local: bool) -> ER<Vec<Value>> {
+/// Time::Local's _daygm: days since the epoch of (mday, month, tm_year),
+/// with its arithmetic (perl's % and int on possibly fractional values).
+fn daygm(mday: f64, month: f64, year: f64) -> f64 {
+    let raw = |mday: f64, month: f64, year: f64| {
+        let m = ((month + 10.0).trunc() as i64).rem_euclid(12) as f64;
+        let y = year + 1900.0 - (m / 10.0).trunc();
+        mday + (365.0 * y + (y / 4.0).trunc() - (y / 100.0).trunc() + (y / 400.0).trunc() + ((m * 306.0 + 5.0) / 10.0).trunc())
+    };
+    raw(mday, month, year) - raw(1.0, 0.0, 70.0)
+}
+
+/// Time::Local's _timegm on a localtime() list.
+fn timegm_tm(tm: &[i64; 9]) -> f64 {
+    tm[0] as f64 + 60.0 * tm[1] as f64 + 3600.0 * tm[2] as f64 + 86400.0 * daygm(tm[3] as f64, tm[4] as f64, tm[5] as f64)
+}
+
+fn num(t: f64) -> Value {
+    if t.fract() == 0.0 && t.abs() < 9.0e15 { Value::Int(t as i64) } else { Value::Num(t) }
+}
+
+/// Time::Local's timegm (`check`: the range checks the _nocheck variants
+/// skip, with its messages).
+fn timegm_value(a: &[Value], check: bool) -> ER<f64> {
     let g = |i: usize| a.get(i).map(|v| v.to_f64()).unwrap_or(0.0);
-    let (sec, min, hour, mday, mon) = (g(0), g(1) as i64, g(2) as i64, g(3) as i64, g(4) as i64);
-    let mut year = g(5) as i64;
-    // Time::Local's year interpretation.
-    if year >= 1000 {
-    } else if (100..1000).contains(&year) {
-        year += 1900;
-    } else {
-        // 0..99: rolling century, within 50 years of now.
-        let now_year = 1900 + crate::interp::time::broken_down(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0), false)[5];
-        let century = now_year / 100 * 100;
-        year += century;
-        if year > now_year + 50 {
-            year -= 100;
-        } else if year <= now_year - 50 {
-            year += 100;
+    let (sec, min, hour, mday, mon) = (g(0), g(1), g(2), g(3), g(4));
+    let fmt = |i: usize| a.get(i).map(|v| v.to_string()).unwrap_or_default();
+    // 1000 and up is a year, 0..99 a year in the century within 50 years
+    // of now, anything else an offset from 1900
+    let mut year = g(5);
+    if year >= 1000.0 {
+        year -= 1900.0;
+    } else if (0.0..100.0).contains(&year) {
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
+        let this_year = crate::interp::time::broken_down(now, true)[5];
+        let breakpoint = (this_year + 50) % 100;
+        let mut next_century = this_year - this_year % 100;
+        if breakpoint < 50 {
+            next_century += 100;
+        }
+        let century = next_century - 100;
+        year += if year > breakpoint as f64 { century as f64 } else { next_century as f64 };
+    }
+    if check {
+        if mon > 11.0 || mon < 0.0 {
+            return die(format!("Month '{}' out of range 0..11", fmt(4)));
+        }
+        const MONTH_DAYS: [i64; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let mut md = MONTH_DAYS[mon as usize];
+        let fy = (year + 1900.0) as i64;
+        if mon as usize == 1 && fy % 4 == 0 && (fy % 100 != 0 || fy % 400 == 0) {
+            md += 1;
+        }
+        if mday > md as f64 || mday < 1.0 {
+            return die(format!("Day '{}' out of range 1..{md}", fmt(3)));
+        }
+        if hour > 23.0 || hour < 0.0 {
+            return die(format!("Hour '{}' out of range 0..23", fmt(2)));
+        }
+        if min > 59.0 || min < 0.0 {
+            return die(format!("Minute '{}' out of range 0..59", fmt(1)));
+        }
+        if sec >= 60.0 || sec < 0.0 {
+            return die(format!("Second '{}' out of range 0..59", fmt(0)));
         }
     }
-    if !(0..=11).contains(&mon) {
-        return die(format!("Month '{mon}' out of range 0..11"));
+    Ok(sec + 60.0 * min + 3600.0 * hour + 86400.0 * daygm(mday, mon, year))
+}
+
+/// Time::Local's timelocal: timegm, then corrected by the local offset at
+/// that time, with its DST adjustments (and its rounding of fractional
+/// seconds through localtime).
+fn timelocal_value(a: &[Value], check: bool) -> ER<f64> {
+    let lt = |t: f64| crate::interp::time::broken_down(t.trunc() as i64, true);
+    let ref_t = timegm_value(a, check)?;
+    let loc_for_ref_t = timegm_tm(&lt(ref_t));
+    let zone_off = loc_for_ref_t - ref_t;
+    if zone_off == 0.0 {
+        return Ok(loc_for_ref_t);
     }
-    let days = crate::interp::time::days_from_civil(year, mon + 1, mday);
-    let mut t = days as f64 * 86400.0 + (hour * 3600 + min * 60) as f64 + sec;
-    if local {
-        t = crate::interp::time::local_to_utc(t);
+    let mut loc_t = ref_t - zone_off;
+    let dst_off = ref_t - timegm_tm(&lt(loc_t));
+    if dst_off == 0.0 && (ref_t - 3600.0) - timegm_tm(&lt(loc_t - 3600.0)) < 0.0 {
+        return Ok(loc_t - 3600.0);
     }
-    Ok(vec![if t.fract() == 0.0 { Value::Int(t as i64) } else { Value::Num(t) }])
+    loc_t += dst_off;
+    if dst_off > 0.0 {
+        return Ok(loc_t);
+    }
+    let tm = lt(loc_t);
+    let g = |i: usize| a.get(i).map(|v| v.to_f64()).unwrap_or(0.0);
+    if tm[0] as f64 != g(0) || tm[1] as f64 != g(1) || tm[2] as f64 != g(2) {
+        loc_t -= dst_off;
+    }
+    Ok(loc_t)
 }
