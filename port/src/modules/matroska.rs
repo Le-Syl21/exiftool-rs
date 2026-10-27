@@ -7,6 +7,7 @@ use crate::interp::{Interp, Want};
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, ret};
+use crate::modules::quick_time_stream::check_invocant;
 
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
@@ -42,7 +43,8 @@ fn handle_struct_impl(it: &mut Interp, et: &Value, struct_: &Value, pid: &Value,
         id = pl::concat(&pl::concat(pid, &pl::s("/")), &tag);
         nm = pl::concat(&pl::concat(pname, &pl::s("/")), &tag_info.get("Name"));
         if !tag_tbl.get(id.to_bytes()).truthy() {
-            let copy = tag_info.hash_copy();
+            pl::at(918);
+            let copy = pl::hderef(&tag_info)?.hash_copy();
             copy.set("Name", nm.clone());
             let msg = pl::concat(&pl::concat(&pl::concat(&pl::concat(&pl::s("  [adding "), &id), &pl::s(" = ")), &nm), &pl::s("]\n"));
             pl::method(it, et, "VPrint", vec![n(0), msg])?;
@@ -87,7 +89,8 @@ fn handle_struct_impl(it: &mut Interp, et: &Value, struct_: &Value, pid: &Value,
     let st = struct_.get("struct");
     if st.truthy() {
         // step into each contained structure
-        for s in st.items() {
+        pl::at(946);
+        for s in pl::aderef(&st)? {
             handle_struct_impl(it, et, &s, &id, &nm, &lang, &ctry)?;
         }
     }
@@ -205,6 +208,8 @@ pub fn process_mkv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut seek_info = Value::new_hash();
     let seek = Value::new_hash();
 
+    pl::at(995);
+    check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(4))?, &n(4)) {
         return ret(n(0));
     }

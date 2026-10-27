@@ -74,7 +74,8 @@ pub fn process_meta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         if v.truthy() {
             v
         } else {
-            pl::length(&data_pt.deref())
+            pl::at(295);
+            pl::length(&pl::sderef(&data_pt)?)
         }
     };
     let mut pos = {
@@ -98,7 +99,8 @@ pub fn process_meta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         if pl::ge(&pos, &dir_len) {
             break;
         }
-        typ = ord(&pl::substr(&data_pt.deref(), pos.to_i64(), None));
+        pl::at(303);
+        typ = ord(&pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), None));
         pos = pl::add(&pos, &n(1));
         let t = typ.to_i64();
         if t == 0x00 || t == 0x0b {
@@ -426,6 +428,7 @@ pub fn process_flv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let mut buff = Value::Undef;
 
+    pl::at(474);
     if !pl::num_eq(&read(it, &raf, &mut buff, n(9))?, &n(9)) {
         return pl::ret(n(0));
     }
@@ -576,6 +579,7 @@ fn read_compressed_io(
 ) -> ER<Value> {
     let mut inflate = compressed.clone();
     let mut buff = Value::Undef;
+    pl::at(547);
     if !read(it, raf, &mut buff, len.clone())?.truthy() {
         *set_comp = true;
         *compressed = pl::s("Error reading file");
@@ -671,6 +675,7 @@ pub fn process_swf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut buff = Value::Undef;
     let mut has_meta = false;
 
+    pl::at(597);
     if !pl::num_eq(&read(it, &raf, &mut buff, n(8))?, &n(8)) {
         return pl::ret(n(0));
     }

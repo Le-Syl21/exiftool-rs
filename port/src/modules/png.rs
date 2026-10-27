@@ -521,7 +521,8 @@ pub fn process_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     // ImageMagick 5.3.6 writes profiles with the following headers:
     // "\nICC Profile\n", "\nIPTC profile\n", "\n\xaa\x01{generic prof\n"
     // and "\ngeneric profile\n"
-    let Some(c) = re(r"^\n(.*?)\n\s*(\d+)\n(.*)", "s").m(&data_pt.deref()) else {
+    pl::at(1166);
+    let Some(c) = re(r"^\n(.*?)\n\s*(\d+)\n(.*)", "s").m(&pl::sderef(&data_pt)?) else {
         return ret(n(0));
     };
     let (profile_type, mut len) = (cap(&c, 1), cap(&c, 2));
@@ -674,7 +675,8 @@ pub fn process_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
 /// Notes: writes new chunk data to ${$$dirInfo{OutBuff}} if writing tag
 pub fn process_png_compressed(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, mut tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let parts = split0(&dir_info.get("DataPt").deref(), 2);
+    pl::at(1291);
+    let parts = split0(&pl::sderef(&dir_info.get("DataPt"))?, 2);
     let (tag, mut val) = (arg(&parts, 0), arg(&parts, 1));
     if val.is_undef() {
         return ret(n(0));
@@ -715,7 +717,8 @@ pub fn process_png_compressed(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
 /// Notes: writes new chunk data to ${$$dirInfo{OutBuff}} if writing tag
 pub fn process_png_text(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let parts = split0(&dir_info.get("DataPt").deref(), 2);
+    pl::at(1328);
+    let parts = split0(&pl::sderef(&dir_info.get("DataPt"))?, 2);
     let (tag, val) = (arg(&parts, 0), arg(&parts, 1));
     let out_buff = dir_info.get("OutBuff");
     if et.path(&["OPTIONS", "Verbose"]).truthy() {
@@ -730,7 +733,8 @@ pub fn process_png_text(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 /// Notes: writes new chunk data to ${$$dirInfo{OutBuff}} if writing tag
 pub fn process_png_itxt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let parts = split0(&dir_info.get("DataPt").deref(), 2);
+    pl::at(1342);
+    let parts = split0(&pl::sderef(&dir_info.get("DataPt"))?, 2);
     let (tag, dat) = (arg(&parts, 0), arg(&parts, 1));
     if !(!dat.is_undef() && pl::ge(&pl::length(&dat), &n(4))) {
         return ret(n(0));
@@ -762,7 +766,8 @@ pub fn process_png_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let tag = tag_info.get("TagID");
     let del = if out_buff.truthy() { Value::from(et.get("DEL_GROUP").get("EXIF").truthy() || et.get("DEL_GROUP").get("IFD0").truthy()) } else { out_buff.clone() };
 
-    if re(r"^Exif\0\0", "").is_match(&data_pt.deref()) {
+    pl::at(1368);
+    if re(r"^Exif\0\0", "").is_match(&pl::sderef(&data_pt)?) {
         m(it, &et, "Warn", vec![pl::s("Improper \"Exif00\" header in EXIF chunk")])?;
         pl::set_deref(&data_pt, pl::substr(&data_pt.deref(), 6, None))?;
         dir_info.set("DataLen", pl::length(&data_pt.deref()));
@@ -839,6 +844,7 @@ pub fn process_png(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let std_case = pl::pkg_hash(it, "Image::ExifTool::PNG::stdCase");
 
     // check to be sure this is a valid PNG/MNG/JNG image
+    pl::at(1424);
     if !(pl::num_eq(&read(it, &raf, &mut sig, n(8))?, &n(8)) && png_lookup.get(sig.to_bytes()).truthy()) {
         return ret(n(0));
     }

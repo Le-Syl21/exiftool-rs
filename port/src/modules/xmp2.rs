@@ -15,7 +15,8 @@ use crate::pl::{self, arg};
 pub fn found_seal(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (et, tag_table_ptr, props, val, attrs) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3), arg(&a, 4));
     // remove 'seal' container property from name
-    let mut seal_props = props.items();
+    pl::at(1911);
+    let mut seal_props = pl::aderef(&props)?;
     if !seal_props.is_empty() && pl::str_eq(&seal_props[0], "seal") {
         seal_props.remove(0);
     }
@@ -40,7 +41,8 @@ pub fn init_crd(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let crs_table = pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s("Image::ExifTool::XMP::crs")])?;
     for tag in pl::call_list(it, "Image::ExifTool::TagTableKeys", vec![crs_table.clone()])? {
         let crs_info = crs_table.get(tag.to_bytes());
-        let tag_info = crs_info.hash_copy();
+        pl::at(1938);
+        let tag_info = pl::hderef(&crs_info)?.hash_copy();
         tag_table_ptr.set(tag.to_bytes(), tag_info.clone());
         if crs_info.get("Groups").truthy() {
             let groups = Value::new_hash();

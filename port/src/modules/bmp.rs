@@ -5,6 +5,7 @@ use crate::interp::{Interp, Want};
 use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
+use crate::modules::quick_time_stream::check_invocant;
 
 /// `\$buff` of a `my` variable kept in a cell.
 fn rf(c: &Cell) -> Value {
@@ -25,6 +26,8 @@ pub fn process_bmp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let tag_table_ptr;
 
     // verify this is a valid BMP file
+    pl::at(261);
+    check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(18))?, &n(18)) {
         return ret(n(0));
     }

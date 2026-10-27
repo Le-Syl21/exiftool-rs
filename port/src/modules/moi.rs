@@ -7,6 +7,7 @@ use crate::interp::{Interp, Want};
 use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
+use crate::modules::quick_time_stream::check_invocant;
 
 fn s(x: &str) -> Value {
     pl::s(x)
@@ -21,6 +22,8 @@ pub fn process_moi(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
     // read enough to allow skipping over run-in if it exists
+    pl::at(110);
+    check_invocant(it, &raf, "Read")?;
     if !(pl::num_eq(&raf_read_cell(it, &raf, &buff, n(256))?, &n(256)) && re(r"^V6", "").is_match(&buff.borrow())) {
         return ret(n(0));
     }

@@ -7,6 +7,7 @@ use crate::interp::{Interp, Want};
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
+use crate::modules::quick_time_stream::check_invocant;
 
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
@@ -59,7 +60,8 @@ pub fn process_content_description(it: &mut Interp, a: Vec<Value>, _w: Want) -> 
     if pl::lt(&dir_len, &n(10)) {
         return ret(n(0));
     }
-    let data = data_pt.deref();
+    pl::at(545);
+    let data = pl::sderef(&data_pt)?;
     let mut lens = pl::unpack("v5", &data)?.into_iter();
     let mut pos = n(10);
     for tag in 0..=4 {
@@ -88,7 +90,8 @@ pub fn process_content_branding(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<
     if pl::lt(&dir_len, &n(40)) {
         return ret(n(0));
     }
-    let data = data_pt.deref();
+    pl::at(570);
+    let data = pl::sderef(&data_pt)?;
     // decode banner image type
     let v = pl::unpack1("V", &data)?;
     pl::method(it, &et, "HandleTag", vec![tag_table_ptr.clone(), n(0), v])?;
@@ -98,6 +101,7 @@ pub fn process_content_branding(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<
         if pl::gt(&pl::add(&pos, &n(4)), &dir_len) {
             return ret(n(0));
         }
+        pl::at(576);
         let size = arg(&unpack_at(&pos, "V", &data)?, 0);
         pos = pl::add(&pos, &n(4));
         if !size.truthy() {
@@ -118,7 +122,10 @@ fn read_asf_impl(it: &mut Interp, et: &Value, data_pt: &Value, pos: &Value, form
     let read_value = |it: &mut Interp, fmt: &str| pl::call_list(it, "Image::ExifTool::ReadValue", vec![data_pt.clone(), pos.clone(), pl::s(fmt), Value::Undef, size.clone()]);
     if pl::num_eq(format, &n(0)) {
         // unicode string
-        let s = substr(it, &data_pt.deref(), pos, Some(size))?;
+        // (an argument of a call: an undefined $dataPt autovivifies)
+        pl::at(597);
+        let d = if data_pt.is_undef() { Value::Undef } else { pl::sderef(data_pt)? };
+        let s = substr(it, &d, pos, Some(size))?;
         vals.push(decode16(it, et, s)?);
     } else if pl::num_eq(format, &n(2)) {
         // 4-byte boolean
@@ -137,7 +144,8 @@ fn read_asf_impl(it: &mut Interp, et: &Value, data_pt: &Value, pos: &Value, form
         vals = read_value(it, "int16u")?;
     } else {
         // any other format (including 1, byte array): return raw data
-        vals.push(substr(it, &data_pt.deref(), pos, Some(size))?);
+        pl::at(610);
+        vals.push(substr(it, &pl::sderef(data_pt)?, pos, Some(size))?);
     }
     Ok(pl::join(" ", &vals))
 }
@@ -175,7 +183,8 @@ pub fn process_extended_content_description(it: &mut Interp, a: Vec<Value>, _w: 
         if pl::gt(&pl::add(&pos, &n(6)), &dir_len) {
             return ret(n(0));
         }
-        let data = data_pt.deref();
+        pl::at(631);
+        let data = pl::sderef(&data_pt)?;
         let name_len = arg(&unpack_at(&pos, "v", &data)?, 0);
         pos = pl::add(&pos, &n(2));
         if pl::gt(&pl::add(&pl::add(&pos, &name_len), &n(4)), &dir_len) {
@@ -184,6 +193,7 @@ pub fn process_extended_content_description(it: &mut Interp, a: Vec<Value>, _w: 
         let s = substr(it, &data, &pos, Some(&name_len))?;
         let tag = wm_tag(it, s)?;
         pos = pl::add(&pos, &name_len);
+        pl::at(637);
         let u = unpack_at(&pos, "v2", &data)?;
         let (d_type, d_len) = (arg(&u, 0), arg(&u, 1));
         pos = pl::add(&pos, &n(4));
@@ -216,7 +226,8 @@ pub fn process_metadata(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         if pl::gt(&pl::add(&pos, &n(12)), &dir_len) {
             return ret(n(0));
         }
-        let data = data_pt.deref();
+        pl::at(667);
+        let data = pl::sderef(&data_pt)?;
         let u = unpack_at(&pos, "v4V", &data)?;
         let (_index, _stream, name_len, d_type, d_len) = (arg(&u, 0), arg(&u, 1), arg(&u, 2), arg(&u, 3), arg(&u, 4));
         pos = pl::add(&pos, &n(12));
@@ -245,8 +256,9 @@ pub fn process_picture(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     if !pl::gt(&dir_len, &n(9)) {
         return ret(n(0));
     }
-    let data = data_pt.deref();
     // extract picture type and length
+    pl::at(696);
+    let data = pl::sderef(&data_pt)?;
     let u = unpack_at(&dir_start, "CV", &data)?;
     let (type_, pic_len) = (arg(&u, 0), arg(&u, 1));
     pl::method(it, &et, "VerboseDir", vec![pl::s("Picture")])?;
@@ -338,6 +350,8 @@ pub fn process_asf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let process_asf_ref = Value::Code(it.sub_ref("Image::ExifTool::ASF::ProcessASF"));
 
     loop {
+        pl::at(761);
+        check_invocant(it, &raf, "Read")?;
         if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(24))?, &n(24)) {
             break;
         }

@@ -28,11 +28,13 @@ fn cat(parts: &[Value]) -> Value {
 pub fn handle_cos_attrs(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (attr_list, attrs, prop, val_pt) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
     let mut changed = Value::Undef;
-    if !pl::length(&val_pt.deref()).truthy() && !attrs.get("K").is_undef() && !attrs.get("V").is_undef() {
+    pl::at(41);
+    if !pl::length(&pl::sderef(&val_pt)?).truthy() && !attrs.get("K").is_undef() && !attrs.get("V").is_undef() {
         pl::set_deref(&prop, attrs.get("K"))?;
         pl::set_deref(&val_pt, attrs.get("V"))?;
         // remove these attributes from the list
-        let attrs_list = attr_list.items();
+        pl::at(45);
+        let attrs_list = pl::aderef(&attr_list)?;
         if let Value::ArrayRef(r) = &attr_list {
             r.borrow_mut().clear();
         }
@@ -127,6 +129,7 @@ fn process_eip_body(it: &mut Interp, et: &Value, zip: &Value) -> ER<Vec<Value>> 
     let (mut file, mut member) = (Value::Undef, Value::Undef);
     let mut parse_file: Vec<Value> = Vec::new(); // (keys of %parseFile, all set to 1)
     // find all manifest files
+    pl::at(131);
     let mut members = pl::method_list(it, zip, "membersMatching", vec![s(r"^manifest\d*.xml$")])?;
     // and choose the one with the highest version number (any better ideas?)
     while !members.is_empty() {

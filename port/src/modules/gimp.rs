@@ -6,6 +6,7 @@ use crate::modules::exiftool::part2::get32u;
 use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
+use crate::modules::quick_time_stream::check_invocant;
 
 fn val(c: &Cell) -> Value {
     c.borrow().clone()
@@ -52,7 +53,8 @@ pub fn process_parasites(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
             n(0)
         }
     };
-    let end = pl::length(&data_pt.deref());
+    pl::at(174);
+    let end = pl::length(&pl::sderef(&data_pt)?);
     pl::method(it, &et, "VerboseDir", vec![pl::s("Parasites"), Value::Undef, end.clone()])?;
     loop {
         if pl::gt(&pl::add(&pos, &n(4)), &end) {
@@ -108,6 +110,8 @@ pub fn process_xcf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
 
+    pl::at(218);
+    check_invocant(it, &raf, "Read")?;
     if !read_eq(it, &raf, &buff, &n(26))? {
         return ret(n(0));
     }

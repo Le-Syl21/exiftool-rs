@@ -75,11 +75,13 @@ pub fn read_next_word(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let bstr = arg(&a, 0);
     let pos = bstr.get("Pos");
     if pl::le(&pl::add(&pos, &n(4)), &bstr.get("Len")) {
-        bstr.set("Word", pl::unpack1(&format!("x{} N", pos.to_text()), &bstr.get("DataPt").deref())?);
+        pl::at(604);
+        bstr.set("Word", pl::unpack1(&format!("x{} N", pos.to_text()), &pl::sderef(&bstr.get("DataPt"))?)?);
         bstr.set("Mask", n(0x80000000));
         bstr.set("Pos", pl::add(&bstr.get("Pos"), &n(4)));
     } else if pl::lt(&pos, &bstr.get("Len")) {
-        let mut bytes = pl::unpack(&format!("x{} C*", pos.to_text()), &bstr.get("DataPt").deref())?;
+        pl::at(608);
+        let mut bytes = pl::unpack(&format!("x{} C*", pos.to_text()), &pl::sderef(&bstr.get("DataPt"))?)?;
         let mut word = if bytes.is_empty() { 0 } else { bits(&bytes.remove(0)) };
         let mut mask: u64 = 0x80;
         while !bytes.is_empty() {
@@ -106,7 +108,8 @@ pub fn new_bit_stream(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let data_pt = arg(&a, 0);
     let mut bstr = Value::new_hash();
     bstr.set("DataPt", data_pt.clone());
-    bstr.set("Len", pl::length(&data_pt.deref()));
+    pl::at(630);
+    bstr.set("Len", pl::length(&pl::sderef(&data_pt)?));
     bstr.set("Pos", n(0));
     bstr.set("Mask", n(0));
     if !read_next_word1(it, &bstr)? {
@@ -474,7 +477,8 @@ pub fn parse_picture_timing(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Ve
 pub fn process_sei(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(934);
+    let data = pl::sderef(&data_pt)?;
     let mut end = pl::length(&data).to_i64();
     let mut pos: i64 = 0;
     let mut size: i64;
@@ -613,7 +617,8 @@ pub fn parse_h264_video(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let tag_table_ptr = call(it, "GetTagTable", vec![pl::s("Image::ExifTool::H264::Main")])?;
     let mut parse_nal_unit: Vec<i64> = vec![0x06, 0x07]; // NAL unit types to parse
     let mut found_user_data = Value::Undef;
-    let len = pl::length(&data_pt.deref()).to_i64();
+    pl::at(1040);
+    let len = pl::length(&pl::sderef(&data_pt)?).to_i64();
     let mut pos: i64 = 0;
     while pos < len {
         let (next_pos, end);

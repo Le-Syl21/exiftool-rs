@@ -284,11 +284,8 @@ pub fn get_matrix_structure(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
 /// Returns: average sample rate (in Hz)
 pub fn calc_sample_rate(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, val_pt) = (arg(&a, 0), arg(&a, 1));
-    if !val_pt.is_scalar_ref() {
-        // ($$valPt of anything else)
-        return crate::interp::eval::die(if val_pt.is_undef() { "Can't use an undefined value as a SCALAR reference" } else { "Not a SCALAR reference" });
-    }
-    let dat = pl::unpack("N*", &val_pt.deref())?;
+    pl::at(8859);
+    let dat = pl::unpack("N*", &pl::sderef(&val_pt)?)?;
     let (mut num, mut dur) = (n(0), n(0));
     let mut i = 2usize;
     while (i as i64) < dat.len() as i64 - 1 {
@@ -299,6 +296,7 @@ pub fn calc_sample_rate(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     if !(num.truthy() && dur.truthy() && et.get("MediaTS").truthy()) {
         return pl::ret_undef();
     }
+    pl::at(8867);
     ret(pl::div(&pl::mul(&num, &et.get("MediaTS")), &dur)?)
 }
 
@@ -535,7 +533,8 @@ pub fn get_var_int(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 fn get_var_int_impl(it: &mut Interp, data_pt: &Value, pos_arg: &mut Value, nn: &Value, default: &Value) -> ER<Value> {
     let pos = pos_arg.clone();
-    let len = n(data_pt.deref().to_bytes().len() as i64);
+    pl::at(9045);
+    let len = n(pl::sderef(data_pt)?.to_bytes().len() as i64);
     *pos_arg = pl::add(&pos, nn); // update current position
     if pl::gt(&pl::add(&pos, nn), &len) {
         return Ok(Value::Undef);
@@ -561,7 +560,8 @@ pub fn get_string(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 }
 
 fn get_string_impl(_it: &mut Interp, data_pt: &Value, pos_arg: &mut Value) -> ER<Value> {
-    let data = data_pt.deref().to_bytes();
+    pl::at(9065);
+    let data = pl::sderef(data_pt)?.to_bytes();
     let len = n(data.len() as i64);
     let mut pos = pos_arg.clone();
     let mut out = Vec::new();
@@ -937,7 +937,8 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
         et.get_or_new_array("PATH").push(s("ItemInformation"));
         let cur_pos = raf_tell(it, &raf)?;
         let primary = et.get("PrimaryItem");
-        m(it, &et, "VerboseDir", vec![s("Processing items from ItemInformation"), n(items.len() as i64)])?;
+        pl::at(9357);
+        m(it, &et, "VerboseDir", vec![s("Processing items from ItemInformation"), n(pl::hderef(&items)?.len() as i64)])?;
         for id in sorted_num_keys(&items) {
             let item = items.get(id.to_bytes());
             let mut typ = item.get("ContentType");
@@ -1203,7 +1204,9 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
     // process the item properties now that we should know their associations and document numbers
     let ipc = et.get("ItemPropertyContainer");
     if ipc.truthy() {
-        let (dir_info, sub_table, proc) = (ipc.at(0), ipc.at(1), ipc.at(2));
+        pl::at(9531);
+        let ipc_list = pl::aderef(&ipc)?;
+        let (dir_info, sub_table, proc) = (arg(&ipc_list, 0), arg(&ipc_list, 1), arg(&ipc_list, 2));
         et.set("IsItemProperty", n(1)); // set item property flag
         m(it, &et, "ProcessDirectory", vec![dir_info, sub_table, proc])?;
         et.delete("ItemPropertyContainer");
@@ -1258,7 +1261,8 @@ fn quick_time_format_impl(flags: &Value, len: &Value) -> Value {
 pub fn process_meta_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(9580);
+    let data = pl::sderef(&data_pt)?;
     let dir_len = n(data.to_bytes().len() as i64);
     let verbose = m(it, &et, "Options", vec![s("Verbose")])?;
     if !pl::ge(&dir_len, &n(2)) {
@@ -1323,7 +1327,12 @@ pub fn process_sample_desc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     let ds = dir_info.get("DirStart");
     let mut pos = if ds.truthy() { ds } else { n(0) };
     let dl = dir_info.get("DirLen");
-    let dir_len = if dl.truthy() { dl } else { pl::sub(&n(data_pt.deref().to_bytes().len() as i64), &pos) };
+    let dir_len = if dl.truthy() {
+        dl
+    } else {
+        pl::at(9634);
+        pl::sub(&n(pl::sderef(&data_pt)?.to_bytes().len() as i64), &pos)
+    };
     if pl::gt(&pl::add(&pos, &n(8)), &dir_len) {
         return ret(n(0));
     }
@@ -1372,14 +1381,20 @@ pub fn process_hybrid(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let ds = dir_info.get("DirStart");
     let dir_start = if ds.truthy() { ds } else { n(0) };
     let dl = dir_info.get("DirLen");
-    let dir_len = if dl.truthy() { dl } else { pl::sub(&n(data_pt.deref().to_bytes().len() as i64), &dir_start) };
+    let dir_len = if dl.truthy() {
+        dl
+    } else {
+        pl::at(9666);
+        pl::sub(&n(pl::sderef(&data_pt)?.to_bytes().len() as i64), &dir_start)
+    };
     let end = pl::add(&dir_start, &dir_len);
     let mut pos = pl::add(&dir_start, &n(8)); // skip length/version
     let mut try_ = pos.clone();
     let mut child_pos = Value::Undef;
 
     while pl::le(&pos, &pl::sub(&end, &n(8))) {
-        let tag = substr_w(it, &data_pt.deref(), &pl::add(&try_, &n(4)), Some(&n(4)))?;
+        pl::at(9673);
+        let tag = substr_w(it, &pl::sderef(&data_pt)?, &pl::add(&try_, &n(4)), Some(&n(4)))?;
         // look only for well-behaved tag ID's
         if re(r"[^\w ]", "").is_match(&tag) {
             pos = pl::add(&pos, &n(1));
@@ -1419,7 +1434,8 @@ pub fn process_rights(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("Base");
-    let data = data_pt.deref();
+    pl::at(9710);
+    let data = pl::sderef(&data_pt)?;
     let dir_len = n(data.to_bytes().len() as i64);
     let opts = et.get("OPTIONS");
     let mut unknown = opts.get("Unknown");
@@ -1462,7 +1478,8 @@ pub fn process_rights(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 pub fn process_nextbase(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(9748);
+    let data = pl::sderef(&data_pt)?;
     m(it, &et, "VerboseDir", vec![s("Nextbase"), Value::Undef, n(data.to_bytes().len() as i64)])?;
     for c in re(r"(.*?): +(.*)\x0d", "").each(&data) {
         let (id, val) = (cap(&c, 1), cap(&c, 2));
@@ -1483,7 +1500,8 @@ pub fn process_nextbase(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 pub fn process_encoding_params(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(9765);
+    let data = pl::sderef(&data_pt)?;
     let dir_len = data.to_bytes().len() as i64;
     m(it, &et, "VerboseDir", vec![s("Encoding Params"), pl::div(&n(dir_len), &n(8))?])?;
     let mut pos = 0i64;
@@ -1505,7 +1523,8 @@ pub fn process_keys(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 fn process_keys_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(a, 0), arg(a, 1), arg(a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(9784);
+    let data = pl::sderef(&data_pt)?;
     let dir_len = data.to_bytes().len() as i64;
     let mut out = Value::Undef;
     if m(it, &et, "Options", vec![s("Verbose")])?.truthy() {
@@ -1612,7 +1631,8 @@ fn process_keys_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
             // delete other languages too if they exist
             let other = old_info.get("OtherLang");
             if other.truthy() {
-                for k in other.items() {
+                pl::at(9862);
+                for k in pl::aderef(&other)? {
                     item_list.delete(k.to_bytes());
                 }
             }
@@ -1660,6 +1680,7 @@ pub fn identify_trailers(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
 fn identify_trailers_impl(it: &mut Interp, raf: &Value) -> ER<Value> {
     let (mut trailer, mut next_trail, mut buff) = (Value::Undef, Value::Undef, Value::Undef);
     let (mut typ, mut len);
+    pl::at(9901);
     let pos = raf_tell(it, raf)?;
     let mut offset = n(0); // positive offset back from end of file
     while raf_seek(it, raf, pl::sub(&n(-40), &offset), n(2))? && pl::num_eq(&raf_read(it, raf, &mut buff, n(40))?, &n(40)) {
