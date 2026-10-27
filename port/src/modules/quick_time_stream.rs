@@ -424,19 +424,19 @@ fn save_meta_keys_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
 /// Inputs: 0) ExifTool ref, 1) tag table ref, 2) sample time, 3) sample duration
 pub fn found_something(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, tag_tbl, time, dur) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
-    found_some(it, &et, &tag_tbl, &time, &dur)?;
-    ret(Value::Undef)
+    ret(found_some(it, &et, &tag_tbl, &time, &dur)?)
 }
 
-fn found_some(it: &mut Interp, et: &Value, tag_tbl: &Value, time: &Value, dur: &Value) -> ER<()> {
+/// (returns the value of the last statement, as the sub does)
+fn found_some(it: &mut Interp, et: &Value, tag_tbl: &Value, time: &Value, dur: &Value) -> ER<Value> {
     new_doc(et);
     if defined(time) {
         ht(it, et, tag_tbl, "SampleTime", time.clone())?;
     }
     if defined(dur) {
-        ht(it, et, tag_tbl, "SampleDuration", dur.clone())?;
+        return ht(it, et, tag_tbl, "SampleDuration", dur.clone());
     }
-    Ok(())
+    Ok(s(""))
 }
 
 /// Approximate GPSDateTime value from sample time and CreateDate
@@ -619,15 +619,19 @@ fn add_text(tags: &Value, txt: Value) {
 ///         3) flag set if text was already stored
 pub fn process_text(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (et, data_pt, tag_tbl, handled) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
-    process_text_impl(it, &et, data_pt, &tag_tbl, &handled)?;
-    pl::ret_nothing(want)
+    match process_text_impl(it, &et, data_pt, &tag_tbl, &handled)? {
+        Some(v) => ret(v),
+        None => pl::ret_nothing(want),
+    }
 }
 
-fn process_text_impl(it: &mut Interp, et: &Value, mut data_pt: Value, tag_tbl: &Value, handled: &Value) -> ER<()> {
+/// The result is what the sub returns: None for `return;`, or the value of
+/// its last statement.
+fn process_text_impl(it: &mut Interp, et: &Value, mut data_pt: Value, tag_tbl: &Value, handled: &Value) -> ER<Option<Value>> {
     let tags = Value::new_hash();
 
     if et.get("NoMoreTextDecoding").truthy() {
-        return Ok(());
+        return Ok(None);
     }
 
     if pl::ref_of(&data_pt) == "HASH" {
@@ -729,7 +733,7 @@ fn process_text_impl(it: &mut Interp, et: &Value, mut data_pt: Value, tag_tbl: &
             tags.set("GPSDateTime", cat(&[&et.get("LastDate"), &s(" "), &tags.get("GPSTimeStamp"), &s("Z")]));
         }
         handle_text(it, et, tag_tbl, &tags)?;
-        return Ok(());
+        return Ok(None);
     }
     // check for enciphered binary GPS data
     // BlueSkySea:
@@ -815,7 +819,7 @@ fn process_text_impl(it: &mut Interp, et: &Value, mut data_pt: Value, tag_tbl: &
         }
         if !tags.is_empty() {
             handle_text(it, et, tag_tbl, &tags)?;
-            return Ok(());
+            return Ok(None);
         }
     }
 
@@ -851,7 +855,7 @@ fn process_text_impl(it: &mut Interp, et: &Value, mut data_pt: Value, tag_tbl: &
             tags.set("ISO", cap(&c, 1));
         }
         handle_text(it, et, tag_tbl, &tags)?;
-        return Ok(());
+        return Ok(None);
     }
 
     // check for Mini 0806 dashcam GPS, eg:
@@ -887,7 +891,7 @@ fn process_text_impl(it: &mut Interp, et: &Value, mut data_pt: Value, tag_tbl: &
             }
         }
         handle_text(it, et, tag_tbl, &tags)?;
-        return Ok(());
+        return Ok(None);
     }
 
     // check for Roadhawk dashcam text
@@ -942,14 +946,17 @@ fn process_text_impl(it: &mut Interp, et: &Value, mut data_pt: Value, tag_tbl: &
 
     if !tags.is_empty() {
         handle_text(it, et, tag_tbl, &tags)?;
+        Ok(Some(Value::Undef)) // (the value of "undef %$tags")
     } else {
         et.set("UnknownTextCount", pl::add(&or(et.get("UnknownTextCount"), n(0)), &n(1)));
         // give up trying to decode useful information if we haven't found anything for a while
         if pl::gt(&et.get("UnknownTextCount"), &n(100)) {
             et.set("NoMoreTextDecoding", n(1));
+            Ok(Some(n(1)))
+        } else {
+            Ok(Some(s(""))) // (the value of the false condition)
         }
     }
-    Ok(())
 }
 
 /// Extract embedded metadata from media samples
