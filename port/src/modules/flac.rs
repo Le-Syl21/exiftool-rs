@@ -13,6 +13,14 @@ fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
 }
 
+/// `$$ref` under `use strict`: undef is fatal.
+fn deref(r: &Value) -> ER<Value> {
+    if r.is_undef() {
+        return crate::interp::eval::die("Can't use an undefined value as a SCALAR reference");
+    }
+    Ok(r.deref())
+}
+
 /// Process information in a bit stream
 /// Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
 /// Notes: Byte order is used to determine the ordering of bits in the stream:
@@ -25,7 +33,7 @@ pub fn process_bit_stream(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     let ds = dir_info.get("DirStart");
     let dir_start = if ds.truthy() { ds } else { n(0) };
     let dl = dir_info.get("DirLen");
-    let dir_len = if dl.truthy() { dl } else { pl::sub(&pl::length(&data_pt.deref()), &dir_start) };
+    let dir_len = if dl.truthy() { dl } else { pl::sub(&pl::length(&deref(&data_pt)?), &dir_start) };
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
     let byte_order = call(it, "GetByteOrder", vec![])?;
 
