@@ -64,6 +64,16 @@ const GREY_SUMS: [i64; 100] = [
     667, 592, 518, 441, 369, 292, 221, 151, 86, 64,
 ];
 
+/// `foreach (@$r)` at perl line `line`: an undefined `$r` is autovivified
+/// (an empty list here), anything but an ARRAY reference dies.
+fn foreach_items(r: &Value, line: u32) -> ER<Vec<Value>> {
+    if r.is_undef() {
+        return Ok(Vec::new());
+    }
+    pl::at(line);
+    pl::aderef(r)
+}
+
 /// Estimate JPEG quality from quantization tables (ref 3)
 /// Inputs: 0) 1) DQT segments array ref
 /// Returns: JPEG quality, or undefined if it can't be calculated
@@ -75,7 +85,7 @@ pub fn estimate_quality(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
 
     // unpack DQT segments and sum quantization tables
     let mut sum: i64 = 0;
-    'dqt: for dqt in dqt_list.items() {
+    'dqt: for dqt in foreach_items(&dqt_list, 2458)? {
         if dqt.is_undef() {
             continue;
         }
@@ -144,7 +154,7 @@ pub fn calculate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     }
     // create a string of DQT tables (in indexed order), separated by zero bytes
     let mut dqt: Vec<u8> = Vec::new();
-    for dat in dqt_list.items() {
+    for dat in foreach_items(&dqt_list, 2555)? {
         if !dat.truthy() {
             continue;
         }

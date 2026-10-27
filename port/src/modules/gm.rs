@@ -53,17 +53,20 @@ pub fn print_csv(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     if !csv.truthy() {
         return pl::ret_nothing(want);
     }
-    if csv.is_empty() {
+    pl::at(274);
+    if pl::aderef(&csv)?.is_empty() {
         return pl::ret_nothing(want);
     }
     let vals = et.get("GMVals");
     let gm_dict = et.get("GMDictionary");
-    let items = Value::new_array(vec![s(""); gm_dict.len()]);
+    pl::at(277);
+    let items = Value::new_array(vec![s(""); pl::aderef(&gm_dict)?.len()]);
     let t = if ts.truthy() { ts } else { et.get("GMMaxTS") };
     items.set_at(0, pl::div(&t, &Value::Num(1e7))?);
     // fill in scaled measurements for this TimeStamp
     for c in csv.items() {
         let gm_chan = gm_dict.at(pl::int(&c).to_i64());
+        pl::at(282);
         let i = lv_index(&items, &c)?;
         let v = pl::add(&pl::mul(&vals.at(pl::int(&c).to_i64()), &gm_chan.get("Mult")), &gm_chan.get("Off"));
         items.set_at(i, v);
@@ -92,7 +95,8 @@ pub fn process_mrlv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("DataPos");
-    let dir_len = pl::length(&data_pt.deref()).to_i64();
+    pl::at(301);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?).to_i64();
     let mut pos: i64 = 0;
     // data lengths for known formats
     let fmt_len = |f: &[u8]| -> i64 {
@@ -116,6 +120,7 @@ pub fn process_mrlv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         let len = fmt_len(&fmt.to_bytes());
         if len == 0 {
             // (PrintableTagID isn't imported into this package: perl dies here too)
+            pl::at(314);
             tag = call(it, "GM::PrintableTagID", vec![tag])?;
             fmt = call(it, "GM::PrintableTagID", vec![fmt])?;
             pl::method(it, &et, "Warn", vec![cat(&[s("Unknown format ("), fmt, s(") for tag "), tag])])?;
@@ -143,7 +148,8 @@ pub fn process_mrlv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 pub fn process_mrld(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let dir_len = pl::length(&data_pt.deref()).to_i64();
+    pl::at(339);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?).to_i64();
     let st = pl::method(it, &et, "Options", vec![s("Struct")])?;
     let struct_ = if st.truthy() { st } else { n(0) };
     let gm_dict = Value::new_array(Vec::new());
@@ -262,11 +268,13 @@ pub fn process_mrld(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         ch.set("Mult", mult);
         ch.set("Off", off);
         ch.set("Init", init);
+        pl::at(407);
         let ci = lv_index(&gm_dict, &chan)?;
         gm_dict.set_at(ci, ch.clone());
         ch.set("Conv", tag_info.get("CSVConv"));
         if csv.truthy() {
             let v = pl::concat(&a[12], &if a[3].truthy() { cat(&[s(" ("), a[3].clone(), s(")")]) } else { s("") });
+            pl::at(409);
             let ci = lv_index(&csv, &chan)?;
             csv.set_at(ci, v);
         }
@@ -306,7 +314,8 @@ pub fn process_marl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let data_pt = dir_info.get("DataPt");
     let or0 = |v: Value| if v.truthy() { v } else { n(0) };
     let data_pos = pl::add(&or0(dir_info.get("DataPos")), &or0(dir_info.get("Base")));
-    let data_len = pl::length(&data_pt.deref()).to_i64();
+    pl::at(440);
+    let data_len = pl::length(&pl::sderef(&data_pt)?).to_i64();
     let mut vals = et.get("GMVals"); // running values for each channel (0=TimeStamp)
     let mut chan = et.get("GMChan"); // running channel number
     let gm_dict = et.get("GMDictionary");
@@ -356,6 +365,7 @@ pub fn process_marl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                 continue; // (shouldn't happen)
             }
             val = pl::sub(&a1, &n(if ops::bit_and(&a1, &n(0x80000000)).truthy() { 4294967296 } else { 0 }));
+            pl::at(467);
             let vi = lv_index(&vals, &chan)?;
             vals.set_at(vi, val.clone());
             if pos + 16 > data_len {
@@ -378,6 +388,7 @@ pub fn process_marl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                 pos += 8;
                 continue; // (shouldn't happen)
             }
+            pl::at(478);
             let vi = lv_index(&vals, &chan)?;
             if vals.at(vi as i64).is_undef() {
                 vals.set_at(vi, gm_chan.get("Init")); // init if necessary

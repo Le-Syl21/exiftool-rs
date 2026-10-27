@@ -51,7 +51,8 @@ pub fn get_tag_id(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 // Returns: 1 if valid tag was found
 pub fn found_tag(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, tag_table_ptr, props, mut val) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
-    if props.is_empty() {
+    pl::at(85);
+    if pl::aderef(&props)?.is_empty() {
         return ret(n(0));
     }
     let verbose = pl::method(it, &et, "Options", vec![s("Verbose")])?;

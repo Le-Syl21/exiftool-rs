@@ -12,6 +12,16 @@ use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
 use crate::runtime;
 
+/// `$raf->METHOD(...)` on an undefined `$raf` dies as perl does, at the
+/// statement's location (the Read helpers run the call as an eval string,
+/// which has a location of its own).
+fn check_invocant(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 const MODULE: &str = "Image::ExifTool::InDesign";
 
 fn s(x: &str) -> Value {
@@ -51,6 +61,8 @@ pub fn process_ind(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let bget = |c: &crate::interp::eval::Cell| c.borrow().clone();
 
     // validate the InDesign file
+    pl::at(41);
+    check_invocant(&raf, "Read")?;
     if !pl::num_eq(&raf_read(it, &raf, &mut hdr, n(16))?, &n(16)) {
         return ret(n(0));
     }

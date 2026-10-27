@@ -86,7 +86,13 @@ pub fn process_leica_leic(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let dir_start = or(dir_info.get("DirStart"), || n(0));
-    let dir_len = or(dir_info.get("DirLen"), || pl::sub(&pl::length(&data_pt.deref()), &dir_start));
+    let dir_len = dir_info.get("DirLen");
+    let dir_len = if dir_len.truthy() {
+        dir_len
+    } else {
+        pl::at(2752);
+        pl::sub(&pl::length(&pl::sderef(&data_pt)?), &dir_start)
+    };
     if pl::lt(&dir_len, &n(6)) {
         return ret(n(0));
     }

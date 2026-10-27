@@ -14,6 +14,16 @@ use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
 use crate::runtime;
 
+/// `$raf->METHOD(...)` on an undefined `$raf` dies as perl does, at the
+/// statement's location (the Read helpers run the call as an eval string,
+/// which has a location of its own).
+fn check_invocant(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
@@ -144,7 +154,14 @@ pub fn set_mac_os_tags(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let mut result = n(0);
     let del_x_attr = runtime::lex_hash(it, "Image::ExifTool::MacOS", "delXAttr");
 
-    for tag in set_tags.items() {
+    // (foreach autovivifies an undefined $setTags)
+    let set_tags_items = if set_tags.is_undef() {
+        Vec::new()
+    } else {
+        pl::at(395);
+        pl::aderef(&set_tags)?
+    };
+    for tag in set_tags_items {
         let mut cmd: Vec<Value> = Vec::new();
         let (mut attr, mut err, mut silent_err) = (Value::Undef, Value::Undef, Value::Undef);
         let nv_ref = pl::sref(Value::Undef);
@@ -179,8 +196,12 @@ pub fn set_mac_os_tags(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
         } else if pl::str_eq(&tag, "MDItemUserTags") {
             // (tested with "tag" version 0.9.0)
             let vals = pl::method_list(it, &et, "GetNewValue", vec![nv_hash.clone()])?;
-            let dels = nv_hash.get("DelValue").items();
-            if pl::lt(&overwrite, &n(0)) && !dels.is_empty() {
+            let dels: Vec<Value>;
+            if pl::lt(&overwrite, &n(0)) && {
+                pl::at(420);
+                dels = pl::aderef(&nv_hash.get("DelValue"))?;
+                !dels.is_empty()
+            } {
                 // delete specified tags
                 let del = pl::join(",", &dels);
                 err = system_impl(it, vec![pl::s("/usr/local/bin/tag"), pl::s("-r"), del.clone(), file.clone()])?;
@@ -513,7 +534,8 @@ pub fn process_attr(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("DataPos");
-    let data_len = pl::length(&data_pt.deref());
+    pl::at(660);
+    let data_len = pl::length(&pl::sderef(&data_pt)?);
 
     if !(pl::ge(&data_len, &n(58)) && re(r"^.{34}ATTR", "s").is_match(&data_pt.deref())) {
         warn(it, &et, pl::s("Invalid ATTR header"))?;
@@ -572,6 +594,8 @@ pub fn process_mac_os(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let raf = dir_info.get("RAF");
     let (hdr, buff) = (cell(Value::Undef), cell(Value::Undef));
 
+    pl::at(706);
+    check_invocant(&raf, "Read")?;
     if !pl::num_eq(&read(it, &raf, &hdr, n(26))?, &n(26)) {
         return ret(n(0));
     }

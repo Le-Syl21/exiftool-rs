@@ -53,7 +53,8 @@ pub fn check_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         if !pl::num_eq(&bytes, &n(1)) && !pl::num_eq(&bytes, &n(2)) && !pl::num_eq(&bytes, &n(4)) {
             return ret(pl::s(&format!("Can't write {}-byte integer", bytes.to_text())));
         }
-        let mut val = val_ptr.deref();
+        pl::at(111);
+        let mut val = pl::sderef(&val_ptr)?;
         if !pl::call(it, "Image::ExifTool::IsInt", vec![val.clone()])?.truthy() {
             if !pl::call(it, "Image::ExifTool::IsHex", vec![val.clone()])?.truthy() {
                 return ret(pl::s("Not an integer"));
@@ -71,7 +72,8 @@ pub fn check_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         }
     } else if let Some(c) = re(r"^(string|digits|undef)\[?(\d+),?(\d*)\]?$", "").m(&format) {
         let (fmt, minlen, mut maxlen) = (cap(&c, 1), cap(&c, 2), cap(&c, 3));
-        let mut l = len(&val_ptr.deref());
+        pl::at(121);
+        let mut l = len(&pl::sderef(&val_ptr)?);
         if fmt.eq_str("digits") {
             if !re(r"^\d*$", "").is_match(&val_ptr.deref()) {
                 return ret(pl::s("Non-numeric characters in value"));
@@ -116,7 +118,8 @@ fn format_iptc_v(it: &mut Interp, et: &Value, tag_info: &Value, val_ptr: &Value,
     }
     if let Some(c) = re(r"^int(\d+)", "").m(&format) {
         if read.truthy() {
-            let l = len(&val_ptr.deref());
+            pl::at(161);
+            let l = len(&pl::sderef(val_ptr)?);
             if pl::le(&l, &n(8)) {
                 // limit integer conversion to 8 bytes long
                 let mut val = n(0);
@@ -133,32 +136,46 @@ fn format_iptc_v(it: &mut Interp, et: &Value, tag_info: &Value, val_ptr: &Value,
             let l = pl::int(&pl::div(&if c1.truthy() { c1 } else { n(0) }, &n(8))?);
             if pl::num_eq(&l, &n(1)) {
                 // 1 byte
-                let v = crate::modules::write_exif::chr(&band(&val_ptr.deref(), 0xff));
+                pl::at(173);
+                let v = crate::modules::write_exif::chr(&band(&pl::sderef(val_ptr)?, 0xff));
                 pl::set_deref(val_ptr, v)?;
             } else if pl::num_eq(&l, &n(2)) {
                 // 2-byte integer
-                let v = pl::pack("n", &[val_ptr.deref()])?;
+                pl::at(175);
+                let v = pl::pack("n", &[pl::sderef(val_ptr)?])?;
                 pl::set_deref(val_ptr, v)?;
             } else {
                 // 4-byte integer
-                let v = pl::pack("N", &[val_ptr.deref()])?;
+                pl::at(177);
+                let v = pl::pack("N", &[pl::sderef(val_ptr)?])?;
                 pl::set_deref(val_ptr, v)?;
             }
         }
     } else if re(r"^string", "").is_match(&format) {
         if pl::num_eq(rec, &n(1)) {
             if tag_info.get("Name").eq_str("CodedCharacterSet") {
+                // ($$valPtr as a sub argument autovivifies: no dereference error)
+                pl::at(183);
                 let x = pl::call(it, "Image::ExifTool::IPTC::HandleCodedCharset", vec![et.clone(), val_ptr.deref()])?;
                 pl::set_deref(xlat_ptr, x)?;
             }
-        } else if xlat_ptr.deref().truthy() && pl::lt(rec, &n(7)) && re(r"[\x80-\xff]", "").is_match(&val_ptr.deref()) {
+        } else if {
+            pl::at(185);
+            pl::sderef(xlat_ptr)?.truthy()
+        } && pl::lt(rec, &n(7))
+            && {
+                pl::at(185);
+                re(r"[\x80-\xff]", "").is_match(&pl::sderef(val_ptr)?)
+            }
+        {
             pl::call(it, "Image::ExifTool::IPTC::TranslateCodedString", vec![et.clone(), val_ptr.clone(), xlat_ptr.clone(), read.clone()])?;
         }
         // must check length now (after any string recoding)
         if !read.truthy() {
             if let Some(c) = re(r"^string\[(\d+),?(\d*)\]$", "").m(&format) {
                 let (minlen, mut maxlen) = (cap(&c, 1), cap(&c, 2));
-                let l = len(&val_ptr.deref());
+                pl::at(191);
+                let l = len(&pl::sderef(val_ptr)?);
                 if !maxlen.truthy() {
                     maxlen = minlen.clone();
                 }
@@ -772,7 +789,8 @@ pub fn write_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         }
         let mut values = pl::method_list(it, &et, "GetNewValue", vec![nv_hash.clone()])?;
         if nv_hash.get("DelValue").truthy() {
-            values.extend(nv_hash.get("DelValue").items());
+            pl::at(653);
+            values.extend(pl::aderef(&nv_hash.get("DelValue"))?);
         }
         let new = values.iter().filter(|v| re(r"^new$", "").is_match(v)).count();
         let old = values.iter().filter(|v| re(r"^old$", "").is_match(v)).count();
@@ -789,13 +807,18 @@ pub fn write_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                 data_pt = rf(&new_data);
             } else {
                 data_pt = dir_info.get("DataPt");
-                if dir_info.get("DirStart").truthy() || !pl::num_eq(&len(&data_pt.deref()), &dir_info.get("DirLen")) {
-                    let b = substr(it, &data_pt.deref(), &dir_info.get("DirStart"), Some(&dir_info.get("DirLen")))?;
+                if dir_info.get("DirStart").truthy() || {
+                    pl::at(667);
+                    !pl::num_eq(&len(&pl::sderef(&data_pt)?), &dir_info.get("DirLen"))
+                } {
+                    pl::at(668);
+                    let b = substr(it, &pl::sderef(&data_pt)?, &dir_info.get("DirStart"), Some(&dir_info.get("DirLen")))?;
                     data_pt = pl::sref(b);
                 }
             }
             // set NewIPTCDigest data member unless IPTC is being deleted
-            if len(&data_pt.deref()).truthy() {
+            pl::at(673);
+            if len(&pl::sderef(&data_pt)?).truthy() {
                 let d = pl::call(it, "Digest::MD5::md5", vec![data_pt.deref()])?;
                 et.set("NewIPTCDigest", d);
             }

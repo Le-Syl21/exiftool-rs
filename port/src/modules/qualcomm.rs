@@ -64,6 +64,12 @@ pub fn process_dual_camera(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     pl::method(it, &et, "VerboseDir", vec![pl::s("Qualcomm Dual Camera"), Value::Undef, dir_info.get("DirLen")])?;
     // pos($$dataPt) = $pos; while ($$dataPt =~ /\x0a/g) { ... }
     // (the loop ends on a failed match, which resets pos() of the scalar)
+    // (pos($$dataPt) = ... autovivifies an undefined $dataPt, but dies on
+    // anything else that is not a SCALAR reference)
+    if !data_pt.is_undef() {
+        pl::at(1327);
+        pl::sderef(&data_pt)?;
+    }
     let subject = data_pt.deref();
     let b = subject.to_bytes();
     let mut g = pos.to_i64().clamp(0, b.len() as i64) as usize;
@@ -101,7 +107,8 @@ pub fn process_qualcomm(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         if pl::gt(&pl::add(&pl::add(&pl::add(&pos, &n(8)), &tag_len), &val_len), &dir_end) {
             break;
         }
-        let tag = substr(it, &data_pt.deref(), &pl::add(&pos, &n(3)), Some(&tag_len))?;
+        pl::at(1357);
+        let tag = substr(it, &pl::sderef(&data_pt)?, &pl::add(&pos, &n(3)), Some(&tag_len))?;
         pos = pl::add(&pos, &pl::add(&n(3), &tag_len)); // point to format byte
         let fmt = call(it, "Get8u", vec![data_pt.clone(), pos.clone()])?;
         // (not sure what these counts are for -- both are always 1 in my samples)
@@ -114,7 +121,8 @@ pub fn process_qualcomm(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             val = call(it, "ReadValue", vec![data_pt.clone(), pos.clone(), format.clone(), Value::Undef, val_len.clone()])?;
         } else {
             format = pl::concat(&pl::s("format "), &fmt);
-            let value = substr(it, &data_pt.deref(), &pos, Some(&val_len))?;
+            pl::at(1370);
+            let value = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&val_len))?;
             val = pl::sref(value);
         }
         let special = pl::pkg_hash(it, "Image::ExifTool::specialTags");

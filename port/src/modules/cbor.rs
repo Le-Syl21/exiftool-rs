@@ -192,7 +192,8 @@ pub fn read_cbor_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
             et.set("INDENT", indent);
             return Ok(vec![string, Value::Undef, pos]); // return concatenated byte/text string
         } else {
-            val = pl::substr(&data_pt.deref(), pos.to_i64(), Some(num.to_i64()));
+            pl::at(138);
+            val = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(num.to_i64()));
         }
         pos = pl::add(&pos, &num);
         if pl::num_eq(&fmt, &n(2)) {

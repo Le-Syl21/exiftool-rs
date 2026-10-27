@@ -428,7 +428,10 @@ pub fn clear_options(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
 /// Inputs: 0) ExifTool object reference
 /// Returns: List of requested tag keys
 pub fn get_requested_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
-    local_topic(it, |_it| ret_count(arg(&a, 0).get("REQUESTED_TAGS").items(), want))
+    local_topic(it, |_it| {
+        pl::at(3427);
+        ret_count(pl::aderef(&arg(&a, 0).get("REQUESTED_TAGS"))?, want)
+    })
 }
 
 /// Get tag identification number
@@ -728,9 +731,16 @@ pub fn can_create(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// Returns: List of ordered/sorted keys
 pub fn ordered_keys(_it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let hash = arg(&a, 0);
+    // ($$hash{...} autovivifies an undefined $hash, but dies on anything
+    // else that is not a HASH reference)
+    if !hash.is_undef() {
+        pl::at(4319);
+        pl::hderef(&hash)?;
+    }
     let ok = hash.get("_ordered_keys_");
     if ok.truthy() {
-        ret_count(ok.items(), want)
+        pl::at(4319);
+        ret_count(pl::aderef(&ok)?, want)
     } else {
         ret_sorted(sort_str(keys(&hash)), want)
     }
@@ -1371,9 +1381,17 @@ fn call_code(it: &mut Interp, code: &Value, args: Vec<Value>, want: Want) -> ER<
     match code {
         Value::Code(c) => it.call(c, args, want),
         Value::Undef => crate::interp::eval::die("Can't use an undefined value as a subroutine reference"),
-        Value::Str(s) => {
-            let name = String::from_utf8_lossy(s).into_owned();
-            it.call_named(&name, args, want)
+        // (its callers run under "strict refs": a sub name is not a code ref)
+        v if !v.is_ref() => {
+            let b = v.to_bytes();
+            let mut m = String::from("Can't use string (\"");
+            m.push_str(&String::from_utf8_lossy(&b[..b.len().min(32)]));
+            m.push('"');
+            if b.len() > 32 {
+                m.push_str("...");
+            }
+            m.push_str(") as a subroutine ref while \"strict refs\" in use");
+            crate::interp::eval::die(m)
         }
         _ => crate::interp::eval::die("Not a CODE reference"),
     }
@@ -1412,6 +1430,7 @@ fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
         let (gp, mut tg) = (cap(&c, 1), cap(&c, 2));
         let mut keys_: Vec<Value> = Vec::new();
         if raw_value.get(tg.to_bytes()).is_undef() {
+            pl::at(3452);
             let m = grep_first_ci(&tg, &keys(&raw_value))?;
             if m.truthy() {
                 tg = m;
@@ -1441,6 +1460,7 @@ fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
     } else if raw_value.get(tag.to_bytes()).is_undef() && !re(r" ", "").is_match(&tag) {
         // fix case of tag name
         if raw_value.get(tag.to_bytes()).is_undef() {
+            pl::at(3469);
             let m = grep_first_ci(&tag, &keys(&raw_value))?;
             if m.truthy() {
                 tag = m;
@@ -1656,6 +1676,7 @@ fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
                                 let h = set_warning_ref(it);
                                 value = local_sig_warn(it, h, |it| {
                                     it.set_scalar(EVAL_WARNING, Value::Undef);
+                                    pl::at(3624);
                                     let v = call_code(it, &conv.get("OTHER"), vec![val.clone(), Value::Undef, conv.clone()], Want::Scalar)?.pop().unwrap_or_default();
                                     if it.get_scalar(EVAL_WARNING).truthy() {
                                         let cw = clean_warning(it, vec![], Want::Scalar)?.pop().unwrap_or_default();
@@ -2209,6 +2230,7 @@ fn options_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         // fix parameter case if necessary
         if !options.exists(param.to_bytes()) {
             plus = re(r"\+$", "").subst(&mut param, false, |_| Vec::new()) > 0;
+            pl::at(2437);
             let fixed = grep_first_ci(&param, &keys(&options))?;
             if fixed.truthy() {
                 param = fixed;
@@ -3300,7 +3322,9 @@ fn extract_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         // call cleanup routines if necessary
         let cleanup = self_.get("Cleanup");
         if cleanup.truthy() {
-            for f in cleanup.items() {
+            pl::at(3215);
+            for f in pl::aderef(&cleanup)? {
+                pl::at(3215);
                 call_code(it, &f, vec![self_.clone()], Want::Void)?;
             }
             self_.delete("Cleanup");

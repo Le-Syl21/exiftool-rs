@@ -13,6 +13,16 @@ use crate::perl::regex::{self as pre, PerlRegex, Spans};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, ret, Caps};
 
+/// `$raf->METHOD(...)` on an undefined `$raf` dies as perl does, at the
+/// statement's location (the Read helpers run the call as an eval string,
+/// which has a location of its own).
+fn check_invocant(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 // ---- local helpers (Perl idioms the shared helpers don't cover yet) ----
 
 /// A piece of a string concatenation (`"...$x..."`).
@@ -66,6 +76,16 @@ macro_rules! cat {
 }
 #[allow(unused_imports)]
 pub(crate) use cat;
+
+/// `foreach (@$r)` at perl line `line`: an undefined `$r` is autovivified
+/// (an empty list here), anything but an ARRAY reference dies.
+fn foreach_items(r: &Value, line: u32) -> ER<Vec<Value>> {
+    if r.is_undef() {
+        return Ok(Vec::new());
+    }
+    pl::at(line);
+    pl::aderef(r)
+}
 
 /// A constant pattern (cached).
 pub(crate) fn rx(pat: &str, flags: &str) -> Rc<PerlRegex> {
@@ -499,6 +519,12 @@ pub(crate) fn unescape_char_v(it: &mut Interp, ch: &Value, conv: &Value, enc: &V
 pub fn fix_utf8(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (str_pt, mut bad) = (arg(&a, 0), arg(&a, 1));
     let mut fixed = Value::Undef;
+    // (pos($$strPt) = 0 autovivifies an undefined $strPt, but dies on
+    // anything else that is not a SCALAR reference)
+    if !str_pt.is_undef() {
+        pl::at(2947);
+        pl::sderef(&str_pt)?;
+    }
     let mut s: Vec<u8> = str_pt.deref().to_bytes().to_vec();
     let mut p = 0usize; // start at beginning of string
     let hi = rx(r"([\x80-\xff])", "");
@@ -610,7 +636,7 @@ pub(crate) fn get_xmp_tag_id_v(it: &mut Interp, props: &Value, struct_props: &Va
     let ignore_et_prop = lex(it, "ignoreEtProp");
     let std_xlat_ns = pkg_hash(it, "Image::ExifTool::XMP::stdXlatNS");
     let main = pkg_hash(it, "Image::ExifTool::XMP::Main");
-    for prop in props.items() {
+    for prop in foreach_items(props, 3022)? {
         // split name into namespace and property name
         // (Note: namespace can be '' for property qualifiers)
         let (ns, mut nm) = match m(&rx(r"(.*?):(.*)", ""), &prop) {
@@ -697,7 +723,8 @@ pub(crate) fn register_namespace_v(it: &mut Interp, table: &Value) -> ER<Value> 
         uri2ns.set(ns_ref.at(1).to_bytes(), ns.clone());
     } else {
         // must be a hash
-        let mut nss = ns_ref.keys(); // allow multiple namespace definitions
+        pl::at(3089);
+        let mut nss = pl::hderef(&ns_ref)?.keys(); // allow multiple namespace definitions
         nss.sort();
         while let Some(k) = nss.pop() {
             ns = Value::from(k.clone());
@@ -995,6 +1022,8 @@ pub fn scan_for_xmp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     pl::method(it, &et, "VPrint", vec![n(0), pl::s("Scanning for XMP\n")])?;
     loop {
         if buff.is_undef() {
+            pl::at(3260);
+            check_invocant(&raf, "Read")?;
             let mut args = [buff.clone(), n(65536)];
             let r = method_aliased(it, &raf, "Read", &mut args)?;
             buff = args[0].clone();
@@ -1644,6 +1673,15 @@ fn parse_xmp_element_body(it: &mut Interp, et: &Value, tag_table_ptr: &Value, da
         found_proc = if fp.truthy() { fp } else { code_ref(it, "Image::ExifTool::XMP::FoundXMP") };
     } else {
         found_proc = code_ref(it, "Image::ExifTool::XMP::FoundXMP");
+    }
+    // ($end or $end = length $$dataPt; then pos($$dataPt) = $start, which
+    // autovivifies an undefined $dataPt but dies on any other non-reference)
+    if !end.truthy() {
+        pl::at(3788);
+        pl::sderef(data_pt)?;
+    } else if !data_pt.is_undef() {
+        pl::at(3796);
+        pl::sderef(data_pt)?;
     }
     let data = data_pt.deref().to_bytes();
     let mut start: i64 = if start.truthy() { start.to_i64() } else { 0 };
