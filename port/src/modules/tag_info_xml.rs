@@ -1,5 +1,1130 @@
 //! Image::ExifTool::TagInfoXML (Image/ExifTool/TagInfoXML.pm), ported sub by sub (see docs/port/PORTING.md).
+//!
+//! Read/write tag information XML database
 
-use crate::interp::Interp;
+use std::cmp::Ordering;
 
-pub fn register(_it: &mut Interp) {}
+use crate::interp::eval::ER;
+use crate::interp::{Interp, Want};
+use crate::modules::random_access::{cell, perl_eval1};
+use crate::perl::{ops, Value};
+use crate::pl::{self, arg, cap, n, re, ret, s};
+use crate::runtime;
+
+const MODULE: &str = "Image::ExifTool::TagInfoXML";
+const ET: &str = "Image::ExifTool";
+
+// ---- local helpers ----
+
+/// A file lexical scalar of TagInfoXML.pm (`my $numbersFirst`...).
+fn my_scalar(it: &mut Interp, name: &str) -> Value {
+    runtime::lex_scalar(it, MODULE, name).borrow().clone()
+}
+
+fn set_my_scalar(it: &mut Interp, name: &str, v: Value) {
+    *runtime::lex_scalar(it, MODULE, name).borrow_mut() = v;
+}
+
+/// A file lexical hash of TagInfoXML.pm (`my %credits`...).
+fn my_hash(it: &mut Interp, name: &str) -> Value {
+    runtime::lex_hash(it, MODULE, name)
+}
+
+/// `keys %$h` as values.
+fn keys(h: &Value) -> Vec<Value> {
+    h.keys().into_iter().map(Value::Str).collect()
+}
+
+/// `sort keys %$h`
+fn sorted_keys(h: &Value) -> Vec<Value> {
+    let mut k = keys(h);
+    k.sort_by(ops::str_cmp);
+    k
+}
+
+/// `$a eq $b`
+fn eq(a: &Value, b: &Value) -> bool {
+    a.to_bytes()[..] == b.to_bytes()[..]
+}
+
+/// Concatenate several values (`"$a$b$c"`).
+fn cat(parts: &[&Value]) -> Value {
+    let mut v = Vec::new();
+    for p in parts {
+        v.extend_from_slice(&p.to_bytes());
+    }
+    Value::bytes(v)
+}
+
+/// `print $fp LIST`: true on success.
+fn pr(it: &mut Interp, fp: &Value, v: Value) -> ER<bool> {
+    pl::print_to(it, Some(fp), &[v])
+}
+
+/// `Image::ExifTool::XMP::NAME($v)`
+fn xmp(it: &mut Interp, name: &str, v: &Value) -> ER<Value> {
+    pl::call(it, &format!("Image::ExifTool::XMP::{name}"), vec![v.clone()])
+}
+
+/// A Perl statement on bareword filehandles or the file system (`open`,
+/// `close`, `rename`, `-e`...) with `$f`/`$g` bound, in this package.
+fn snippet(it: &mut Interp, code: &str, f: &Value, g: &Value) -> ER<Value> {
+    let (cf, cg) = (cell(f.clone()), cell(g.clone()));
+    perl_eval1(it, code, MODULE, &[("f", &cf), ("g", &cg)])
+}
+
+/// `$tagInfo{KEY} & MASK` (numeric bit and).
+fn bit_and(v: &Value, mask: i64) -> bool {
+    v.to_i64() & mask != 0
+}
+
+/// `my (..., %opts) = @_` from the arguments after the first `skip`.
+fn opts_of(a: &[Value], skip: usize) -> Value {
+    let h = Value::new_hash();
+    let rest = if a.len() > skip { &a[skip..] } else { &[] };
+    for kv in rest.chunks(2) {
+        h.set(kv[0].to_bytes(), kv.get(1).cloned().unwrap_or_default());
+    }
+    h
+}
+
+/// `/^PAT$/FLAGS` with PAT interpolated (no quotemeta).
+fn anchored(p: &Value) -> Vec<u8> {
+    let mut v = b"^".to_vec();
+    v.extend_from_slice(&p.to_bytes());
+    v.push(b'$');
+    v
+}
+
+/// The ordering of a `sort` comparator's result.
+fn ord_of(v: &Value) -> Ordering {
+    v.to_i64().cmp(&0)
+}
+
+//------------------------------------------------------------------------------
+/// Utility to print tag information database as an XML list
+/// Inputs: 0) output file name (undef to send to console),
+///         1) group name (may be undef), 2) options hash ('Flags','NoDesc','Lang')
+/// Returns: true on success
+pub fn write(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    // local ($_, *PTIFILE);
+    pl::local_topic(it, |it| write_body(it, a))
+}
+
+fn write_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
+    let (file, group) = (arg(&a, 0), arg(&a, 1));
+    let opts = opts_of(&a, 2);
+    let et = pl::method(it, &s(ET), "new", vec![])?;
+    let lang_info = Value::new_hash();
+    let mut langs: Vec<Value> = Vec::new();
+    let mut default_lang = Value::Undef;
+    let mut groups: Vec<Value> = Vec::new();
+    if group.truthy() {
+        groups = pl::split(&re(":", ""), &group, 0);
+    }
+
+    pl::call(it, "Image::ExifTool::LoadAllTables", vec![])?; // first load all our tables
+    if !opts.get("NoDesc").truthy() {
+        default_lang = it.get_scalar("Image::ExifTool::defaultLang");
+        load_lang_modules_rs(it, &lang_info, opts.get("Lang"))?; // load necessary Lang modules
+        if opts.get("Lang").truthy() {
+            let r = pl::re_dyn(&anchored(&opts.get("Lang")), "i")?;
+            langs = keys(&lang_info).into_iter().filter(|k| r.is_match(k)).collect();
+        } else {
+            langs = sorted_keys(&lang_info);
+        }
+    }
+    let fp;
+    if !file.is_undef() {
+        fp = snippet(it, r#"open(PTIFILE, ">$f") ? \*PTIFILE : undef"#, &file, &Value::Undef)?;
+        if fp.is_undef() {
+            return ret(n(0));
+        }
+    } else {
+        fp = snippet(it, r"\*STDOUT", &Value::Undef, &Value::Undef)?;
+    }
+    pr(it, &fp, s("<?xml version='1.0' encoding='UTF-8'?>\n"))?;
+    let version = it.get_scalar("Image::ExifTool::VERSION");
+    pr(it, &fp, cat(&[&s("<!-- Generated by Image::ExifTool "), &version, &s(" -->\n")]))?;
+    pr(it, &fp, s("<taginfo>\n\n"))?;
+
+    let fake_write_group = my_hash(it, "fakeWriteGroup");
+    let pbd = Value::Code(it.sub_ref("Image::ExifTool::ProcessBinaryData"));
+    // loop through all tables and save tag names to %allTags hash
+    let all_tables = pl::pkg_hash(it, "Image::ExifTool::allTables");
+    for table_name in sorted_keys(&all_tables) {
+        let table = pl::call(it, "Image::ExifTool::GetTagTable", vec![table_name.clone()])?;
+        let grps = table.get("GROUPS");
+        let mut did_tag = false;
+        // sort in same order as tag name documentation
+        let ci = if re(r"::XMP::", "").is_match(&table_name) { n(1) } else { s("") };
+        set_my_scalar(it, "caseInsensitive", ci);
+        // get list of languages defining elements in this table
+        let is_binary = table.get("PROCESS_PROC").truthy() && table.get("PROCESS_PROC").same_ref(&pbd);
+        // generate flattened tag names for structure fields if this is an XMP table
+        if table.get("GROUPS").truthy() && pl::str_eq(&table.get("GROUPS").get("0"), "XMP") {
+            pl::call_list(it, "Image::ExifTool::XMP::AddFlattenedTags", vec![table.clone()])?;
+        }
+        set_my_scalar(it, "numbersFirst", n(2));
+        if table.get("VARS").truthy() && table.get("VARS").get("ALPHA_FIRST").truthy() {
+            set_my_scalar(it, "numbersFirst", n(-1));
+        }
+        let mut keys_ = pl::call_list(it, "Image::ExifTool::TagTableKeys", vec![table.clone()])?;
+        sort_numbers_first(it, &mut keys_);
+        set_my_scalar(it, "numbersFirst", n(1));
+        // loop through all tag ID's in this table
+        for tag_id in keys_ {
+            let info_array = pl::call_list(it, "Image::ExifTool::GetTagInfoList", vec![table.clone(), tag_id.clone()])?;
+            let xml_id = xmp(it, "FullEscapeXML", &tag_id)?;
+            // get a list of languages defining elements for this ID
+            'pti: for (index, tag_info) in info_array.iter().enumerate() {
+                // don't list subdirectories unless they are writable
+                if !(tag_info.get("Writable").truthy() || !tag_info.get("SubDirectory").truthy()) {
+                    continue;
+                }
+                if tag_info.get("Hidden").truthy() {
+                    continue;
+                }
+                if !groups.is_empty() {
+                    let tg = pl::method_list(it, &et, "GetGroup", vec![tag_info.clone()])?;
+                    for group in &groups {
+                        let r = pl::re_dyn(&anchored(group), "i")?;
+                        if !tg.iter().any(|g| r.is_match(g)) {
+                            continue 'pti;
+                        }
+                    }
+                }
+                if !did_tag {
+                    let tname = table.get("SHORT_NAME");
+                    pr(it, &fp, cat(&[&s("<table name='"), &tname, &s("' g0='"), &grps.get("0"), &s("' g1='"), &grps.get("1"), &s("' g2='"), &grps.get("2"), &s("'>\n")]))?;
+                    if !opts.get("NoDesc").truthy() {
+                        // print table description
+                        let mut desc = table.get("TABLE_DESC");
+                        if !desc.truthy() {
+                            desc = tname.clone();
+                            re(r"::Main$", "").subst(&mut desc, false, |_| Vec::new());
+                            re(r"::", "").subst(&mut desc, true, |_| b" ".to_vec());
+                        }
+                        // print alternate language descriptions
+                        pr(it, &fp, cat(&[&s(" <desc lang='en'>"), &desc, &s("</desc>\n")]))?;
+                        for l in &langs {
+                            desc = lang_info.get(l.to_bytes()).get(table_name.to_bytes());
+                            if !desc.truthy() {
+                                continue;
+                            }
+                            desc = xmp(it, "EscapeXML", &desc)?;
+                            pr(it, &fp, cat(&[&s(" <desc lang='"), l, &s("'>"), &desc, &s("</desc>\n")]))?;
+                        }
+                    }
+                    did_tag = true;
+                }
+                let name = tag_info.get("Name");
+                let ind = if info_array.len() > 1 { s(&format!(" index='{index}'")) } else { s("") };
+                let mut format = if tag_info.get("Writable").truthy() { tag_info.get("Writable") } else { table.get("WRITABLE") };
+                let mut writable = s(if format.truthy() { "true" } else { "false" });
+                // check our conversions to make sure we can really write this tag
+                if pl::str_eq(&writable, "true") {
+                    if !tag_info.get("Writable").is_undef() && !tag_info.get("Writable").truthy() {
+                        writable = s("false");
+                    }
+                    for c in ["PrintConv", "ValueConv"] {
+                        if !tag_info.get(c).truthy() {
+                            continue;
+                        }
+                        if tag_info.get(format!("{c}Inv")).truthy() {
+                            continue;
+                        }
+                        let rt = pl::ref_of(&tag_info.get(c));
+                        if rt == "HASH" || rt == "ARRAY" {
+                            continue;
+                        }
+                        if tag_info.get("WriteAlso").truthy() {
+                            continue;
+                        }
+                        writable = s("false");
+                        break;
+                    }
+                }
+                if !format.truthy() || pl::str_eq(&format, "1") {
+                    format = if tag_info.get("Format").truthy() { tag_info.get("Format") } else { table.get("FORMAT") };
+                }
+                if tag_info.get("Struct").truthy() {
+                    format = s("struct");
+                }
+                if !format.is_undef() {
+                    re(r"\[.*\$.*\]", "").subst(&mut format, false, |_| Vec::new()); // remove expressions from format
+                    if pl::str_eq(&format, "2") {
+                        format = s("undef"); // (special case)
+                    }
+                } else if is_binary {
+                    format = s("int8u");
+                } else {
+                    format = s("?");
+                }
+                let mut count = s("");
+                let mut c1 = None;
+                if re(r"\[.*?(\d*)\]$", "").subst(&mut format, false, |c| {
+                    c1 = Some(cap(c, 1));
+                    Vec::new()
+                }) > 0
+                {
+                    let c1 = c1.unwrap_or_default();
+                    if pl::length(&c1).truthy() {
+                        count = cat(&[&s(" count='"), &c1, &s("'")]);
+                    }
+                } else if tag_info.get("Count").truthy() && pl::gt(&tag_info.get("Count"), &n(1)) {
+                    count = cat(&[&s(" count='"), &tag_info.get("Count"), &s("'")]);
+                }
+                let mut groups_t = pl::method_list(it, &et, "GetGroup", vec![tag_info.clone()])?;
+                let write_group = if tag_info.get("WriteGroup").truthy() { tag_info.get("WriteGroup") } else { table.get("WRITE_GROUP") };
+                // use common write group for group 1 (unless fake)
+                if write_group.truthy() && !fake_write_group.get(write_group.to_bytes()).truthy() {
+                    while groups_t.len() < 2 {
+                        groups_t.push(Value::Undef);
+                    }
+                    groups_t[1] = write_group.clone();
+                }
+                // add group names if different from table defaults
+                let mut grp = s("");
+                for fam in 0..3usize {
+                    let g = groups_t.get(fam).cloned().unwrap_or_default();
+                    if !eq(&g, &grps.get(fam.to_string())) {
+                        grp = cat(&[&grp, &s(&format!(" g{fam}='")), &g, &s("'")]);
+                    }
+                }
+                // add flags if necessary
+                if opts.get("Flags").truthy() {
+                    let mut flags: Vec<Value> = Vec::new();
+                    for f in ["Avoid", "Binary", "List", "Mandatory", "Unknown"] {
+                        if tag_info.get(f).truthy() {
+                            flags.push(s(f));
+                        }
+                    }
+                    if tag_info.get("List").truthy() && re(r"^(Alt|Bag|Seq)$", "").is_match(&tag_info.get("List")) {
+                        flags.push(tag_info.get("List"));
+                    }
+                    if !tag_info.get("Flat").is_undef() {
+                        flags.push(s("Flattened"));
+                    }
+                    if tag_info.get("Protected").truthy() && bit_and(&tag_info.get("Protected"), 0x01) {
+                        flags.push(s("Unsafe"));
+                    }
+                    if tag_info.get("Protected").truthy() && bit_and(&tag_info.get("Protected"), 0x02) {
+                        flags.push(s("Protected"));
+                    }
+                    let g0 = groups_t.first().cloned().unwrap_or_default();
+                    if tag_info.get("Permanent").truthy() || (pl::str_eq(&g0, "MakerNotes") && tag_info.get("Permanent").is_undef()) {
+                        flags.push(s("Permanent"));
+                    }
+                    if !flags.is_empty() {
+                        flags.sort_by(ops::str_cmp);
+                        grp = cat(&[&s(" flags='"), &pl::join(",", &flags), &s("'"), &grp]);
+                    }
+                    // add parent structure tag ID
+                    if tag_info.get("ParentTagInfo").truthy() {
+                        grp = cat(&[&grp, &s(" struct='"), &tag_info.get("ParentTagInfo").get("TagID"), &s("'")]);
+                    }
+                }
+                pr(it, &fp, cat(&[&s(" <tag id='"), &xml_id, &s("' name='"), &name, &s("'"), &ind, &s(" type='"), &format, &s("'"), &count, &s(" writable='"), &writable, &s("'"), &grp]))?;
+                if opts.get("NoDesc").truthy() {
+                    // short output format
+                    pr(it, &fp, s("/>\n"))?; // empty tag element
+                    continue; // no descriptions or values
+                } else {
+                    pr(it, &fp, s(">"))?;
+                }
+                let mut desc = tag_info.get("Description");
+                if desc.is_undef() {
+                    desc = pl::call(it, "Image::ExifTool::MakeDescription", vec![name.clone()])?;
+                }
+                // add alternate language descriptions and get references
+                // to alternate language PrintConv hashes
+                let mut alt_descr = s("");
+                let lang_conv = Value::new_hash();
+                for l in &langs {
+                    let mut ld = lang_info.get(l.to_bytes()).get(name.to_bytes());
+                    if !ld.truthy() {
+                        continue;
+                    }
+                    if ld.is_ref() {
+                        lang_conv.set(l.to_bytes(), ld.get("PrintConv"));
+                        ld = ld.get("Description");
+                        if !ld.truthy() {
+                            continue;
+                        }
+                    }
+                    // ignore descriptions that are the same as the default language
+                    if eq(&ld, &desc) {
+                        continue;
+                    }
+                    ld = xmp(it, "EscapeXML", &ld)?;
+                    alt_descr = cat(&[&alt_descr, &s("\n  <desc lang='"), l, &s("'>"), &ld, &s("</desc>")]);
+                }
+                // print tag descriptions
+                desc = xmp(it, "EscapeXML", &desc)?;
+                if !(opts.get("Lang").truthy() && alt_descr.truthy()) {
+                    pr(it, &fp, cat(&[&s("\n  <desc lang='"), &default_lang, &s("'>"), &desc, &s("</desc>")]))?;
+                }
+                pr(it, &fp, cat(&[&alt_descr, &s("\n")]))?;
+                let mut i = 0i64;
+                loop {
+                    let mut conv = tag_info.get("PrintConv");
+                    // (hidden = '' disables PrintConv in -listx output)
+                    if !tag_info.get("Hidden").is_undef() && pl::str_eq(&tag_info.get("Hidden"), "") {
+                        break;
+                    }
+                    let mut idx = s("");
+                    if pl::ref_of(&conv) == "ARRAY" {
+                        if i >= conv.len() as i64 {
+                            break;
+                        }
+                        conv = conv.at(i);
+                        idx = s(&format!(" index='{i}'"));
+                    } else if i != 0 {
+                        break;
+                    }
+                    if pl::ref_of(&conv) != "HASH" {
+                        i += 1;
+                        continue;
+                    }
+                    // make a list of available alternate languages
+                    let lang_conv_list = sorted_keys(&lang_conv);
+                    pr(it, &fp, cat(&[&s("  <values"), &idx, &s(">\n")]))?;
+                    set_my_scalar(it, "caseInsensitive", n(0));
+                    // add bitmask values to main lookup
+                    if conv.get("BITMASK").truthy() {
+                        let bm = conv.get("BITMASK");
+                        for key in keys(&bm) {
+                            let mask = cat(&[&s("Bit"), &key]);
+                            if !mask.truthy() || conv.get(mask.to_bytes()).truthy() {
+                                continue;
+                            }
+                            conv.set(mask.to_bytes(), bm.get(key.to_bytes()));
+                        }
+                    }
+                    let mut ck = keys(&conv);
+                    sort_numbers_first(it, &mut ck);
+                    for key in ck {
+                        if pl::str_eq(&key, "BITMASK") || pl::str_eq(&key, "OTHER") || pl::str_eq(&key, "Notes") {
+                            continue;
+                        }
+                        let val = conv.get(key.to_bytes());
+                        let xml_val = xmp(it, "EscapeXML", &val)?;
+                        let xml_key = xmp(it, "FullEscapeXML", &key)?;
+                        pr(it, &fp, cat(&[&s("   <key id='"), &xml_key, &s("'>\n")]))?;
+                        // add alternate language values
+                        let mut alt_conv = s("");
+                        for l in &lang_conv_list {
+                            let mut lv = lang_conv.get(l.to_bytes());
+                            // handle indexed PrintConv entries
+                            if pl::ref_of(&lv) == "ARRAY" {
+                                lv = lv.at(i);
+                                if !lv.truthy() {
+                                    continue;
+                                }
+                            }
+                            lv = lv.get(val.to_bytes());
+                            // ignore values that are missing or same as default
+                            if !(!lv.is_undef() && !eq(&lv, &val)) {
+                                continue;
+                            }
+                            lv = xmp(it, "EscapeXML", &lv)?;
+                            alt_conv = cat(&[&alt_conv, &s("    <val lang='"), l, &s("'>"), &lv, &s("</val>\n")]);
+                        }
+                        if !(opts.get("Lang").truthy() && alt_conv.truthy()) {
+                            pr(it, &fp, cat(&[&s("    <val lang='"), &default_lang, &s("'>"), &xml_val, &s("</val>\n")]))?;
+                        }
+                        pr(it, &fp, cat(&[&alt_conv, &s("   </key>\n")]))?;
+                    }
+                    pr(it, &fp, s("  </values>\n"))?;
+                    i += 1;
+                }
+                pr(it, &fp, s(" </tag>\n"))?;
+            }
+        }
+        if did_tag {
+            pr(it, &fp, s("</table>\n\n"))?;
+        }
+    }
+    let mut success = 1;
+    if !pr(it, &fp, s("</taginfo>\n"))? {
+        success = 0;
+    }
+    if !file.is_undef() && !snippet(it, "close $f", &fp, &Value::Undef)?.truthy() {
+        success = 0;
+    }
+    ret(n(success))
+}
+
+/// `@list = sort NumbersFirst @list` (with this file's NumbersFirst).
+fn sort_numbers_first(it: &mut Interp, list: &mut [Value]) {
+    let nf = my_scalar(it, "numbersFirst");
+    let ci = my_scalar(it, "caseInsensitive").truthy();
+    list.sort_by(|x, y| ord_of(&numbers_first_rs(x, y, &nf, ci)));
+}
+
+//------------------------------------------------------------------------------
+/// Escape backslash and quote in string
+/// Inputs: string
+/// Returns: escaped string
+pub fn escape_perl(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    ret(escape_perl_rs(&arg(&a, 0)))
+}
+
+fn escape_perl_rs(v: &Value) -> Value {
+    let mut str = v.clone();
+    re(r"\\", "").subst(&mut str, true, |_| br"\\".to_vec());
+    re(r"'", "").subst(&mut str, true, |_| br"\'".to_vec());
+    str
+}
+
+//------------------------------------------------------------------------------
+/// Generate Lang modules from input tag info XML database
+/// Inputs: 0) XML filename, 1) update flags:
+///       0x01 = preserve version numbers
+///       0x02 = update all modules, even if they didn't change
+///       0x04 = update from scratch, ignoring existing definitions
+///       0x08 = override existing different descriptions and values
+/// Returns: Count of updated Lang modules, or -1 on error
+/// Notes: Must be run from the directory containing 'lib'
+pub fn build_lang_modules(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    // local ($_, *XFILE);
+    pl::local_topic(it, |it| build_lang_modules_body(it, a))
+}
+
+fn build_lang_modules_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
+    let (file, mut update_flag) = (arg(&a, 0), arg(&a, 1));
+    let (mut table, mut table_name, mut id, mut index, mut val_index, mut name, mut key, mut def_desc) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef, Value::Undef, Value::Undef, Value::Undef, Value::Undef);
+    let lang_info = Value::new_hash();
+    let different = Value::new_hash();
+    let changed = Value::new_hash();
+    let mut override_different = false;
+
+    pl::call(it, "Image::ExifTool::LoadAllTables", vec![])?; // first load all our tables
+    // generate our flattened tags
+    let all_tables = pl::pkg_hash(it, "Image::ExifTool::allTables");
+    for tn in sorted_keys(&all_tables) {
+        let t = pl::call(it, "Image::ExifTool::GetTagTable", vec![tn])?;
+        if !(t.get("GROUPS").truthy() && pl::str_eq(&t.get("GROUPS").get("0"), "XMP")) {
+            continue;
+        }
+        pl::call_list(it, "Image::ExifTool::XMP::AddFlattenedTags", vec![t])?;
+    }
+    load_lang_modules_rs(it, &lang_info, Value::Undef)?; // load all existing Lang modules
+    if !update_flag.truthy() {
+        update_flag = n(0);
+    }
+    let uf = update_flag.to_i64();
+    if uf & 0x04 != 0 {
+        if let Value::HashRef(h) = &lang_info {
+            h.borrow_mut().clear();
+        }
+    }
+    if uf & 0x08 != 0 {
+        override_different = true;
+    }
+    let translate_lang = my_hash(it, "translateLang");
+    let make_missing_name = "Image::ExifTool::TagInfoXML::makeMissing";
+
+    if !file.is_undef() {
+        if !snippet(it, "open(XFILE, $f) ? 1 : 0", &file, &Value::Undef)?.truthy() {
+            return ret(n(-1));
+        }
+        loop {
+            let line = snippet(it, "my $l = <XFILE>; $l", &Value::Undef, &Value::Undef)?;
+            if line.is_undef() {
+                break;
+            }
+            let Some(c) = re(r"^\s*<(\/?)(\w+)", "").m(&line) else { continue };
+            let tok = cap(&c, 2);
+            if cap(&c, 1).truthy() {
+                // close appropriate entities
+                if pl::str_eq(&tok, "tag") {
+                    id = Value::Undef;
+                    index = Value::Undef;
+                    name = Value::Undef;
+                    def_desc = Value::Undef;
+                } else if pl::str_eq(&tok, "values") {
+                    key = Value::Undef;
+                    val_index = Value::Undef;
+                } else if pl::str_eq(&tok, "table") {
+                    table = Value::Undef;
+                    id = Value::Undef;
+                }
+                continue;
+            }
+            if pl::str_eq(&tok, "table") {
+                let Some(c) = re(r"^\s*<table name='([^']+)'[ >]", "").m(&line) else {
+                    pl::warn(it, "Bad table")?;
+                    continue;
+                };
+                table_name = cat(&[&s("Image::ExifTool::"), &cap(&c, 1)]);
+                // ignore userdefined tables
+                if re(r"^Image::ExifTool::UserDefined", "").is_match(&table_name) {
+                    continue;
+                }
+                table = pl::call(it, "Image::ExifTool::GetTagTable", vec![table_name.clone()])?;
+                if !table.truthy() {
+                    pl::warn(it, &format!("Unknown tag table {}\n", table_name.to_text()))?;
+                }
+                continue;
+            }
+            if table.is_undef() {
+                continue;
+            }
+            if pl::str_eq(&tok, "tag") {
+                let Some(c) = re(r"^\s*<tag id='([^']*)' name='([^']+)'( index='(\d+)')?[ >]", "").m(&line) else {
+                    pl::warn(it, "Bad tag")?;
+                    continue;
+                };
+                id = xmp(it, "FullUnescapeXML", &cap(&c, 1))?;
+                name = cap(&c, 2);
+                index = cap(&c, 4);
+                // convert hex ID's unless ID_FMT is something other than 'hex'
+                // (for string ID's that look like hex)
+                if re(r"^0x[\da-fA-F]+$", "").is_match(&id) && (table.get("VARS").is_undef() || table.get("VARS").get("ID_FMT").is_undef() || pl::str_eq(&table.get("VARS").get("ID_FMT"), "hex")) {
+                    id = hex(&id);
+                }
+                continue;
+            }
+            if pl::str_eq(&tok, "values") {
+                let Some(c) = re(r"^\s*<values index='([^']*)'>", "").m(&line) else { continue };
+                val_index = cap(&c, 1);
+            } else if pl::str_eq(&tok, "key") {
+                if id.is_undef() {
+                    pl::warn(it, "No ID")?;
+                    continue;
+                }
+                let Some(c) = re(r"^\s*<key id='([^']*)'>", "").m(&line) else {
+                    pl::warn(it, "Bad key")?;
+                    continue;
+                };
+                key = xmp(it, "FullUnescapeXML", &cap(&c, 1))?;
+                if re(r"^0x[\da-fA-F]+$", "").is_match(&key) {
+                    key = hex(&key); // convert hex keys
+                }
+            } else if pl::str_eq(&tok, "val") || pl::str_eq(&tok, "desc") {
+                let mut pat = br"^\s*<".to_vec();
+                pat.extend_from_slice(&tok.to_bytes());
+                pat.extend_from_slice(br"( lang='([-\w]+?)')?>(.*)<\/");
+                pat.extend_from_slice(&tok.to_bytes());
+                pat.push(b'>');
+                let Some(c) = pl::re_dyn(&pat, "")?.m(&line) else {
+                    pl::warn(it, &format!("Bad {}", tok.to_text()))?;
+                    continue;
+                };
+                if pl::str_eq(&tok, "desc") && !key.is_undef() {
+                    pl::warn(it, "Out of order \"desc\"")?;
+                    continue;
+                }
+                let mut lang = cap(&c, 2);
+                if !lang.truthy() {
+                    continue; // looking only for alternate languages
+                }
+                pl::tr(&mut lang, "-A-Z", "_a-z", "");
+                // use standard ISO 639-1 language codes
+                if translate_lang.get(lang.to_bytes()).truthy() {
+                    lang = translate_lang.get(lang.to_bytes());
+                }
+                let tval = xmp(it, "UnescapeXML", &cap(&c, 3))?;
+                let mut val = pl::ucfirst(&tval);
+                if re(r"^(cRAW|iTun)", "").is_match(&tval) {
+                    val = tval.clone(); // special-case non-capitalized values
+                }
+                let mut cap_ = !eq(&tval, &val);
+                let make_missing = it.get_scalar(make_missing_name);
+                if make_missing.truthy() {
+                    if pl::str_eq(&lang, "en") {
+                        lang = make_missing.clone();
+                        val = s("MISSING");
+                        cap_ = false;
+                    }
+                } else if pl::str_eq(&val, "MISSING") {
+                    continue; // ignore "MISSING" entries
+                }
+                let is_default = eq(&lang, &it.get_scalar("Image::ExifTool::defaultLang"));
+                if !(lang_info.get(lang.to_bytes()).truthy() || is_default) {
+                    pl::print_to(it, None, &[cat(&[&s("Creating new language "), &lang, &s("\n")])])?;
+                    lang_info.set(lang.to_bytes(), Value::new_hash());
+                }
+                if name.is_undef() {
+                    name = s("<unknown>");
+                }
+                if id.is_undef() {
+                    if is_default {
+                        continue;
+                    }
+                    // this is a table description
+                    let li = lang_info.get_or_new_hash(lang.to_bytes());
+                    if li.get(table_name.to_bytes()).truthy() && eq(&li.get(table_name.to_bytes()), &val) {
+                        continue;
+                    }
+                    li.set(table_name.to_bytes(), val.clone());
+                    changed.set(lang.to_bytes(), n(1));
+                    if cap_ {
+                        pl::warn(it, &format!("Capitalized '{}' val for {}: {}\n", lang.to_text(), name.to_text(), val.to_text()))?;
+                    }
+                    continue;
+                }
+                let info_array = pl::call_list(it, "Image::ExifTool::GetTagInfoList", vec![table.clone(), id.clone()])?;
+
+                // this will fail for UserDefined tags and tags without ID's
+                if info_array.is_empty() {
+                    pl::warn(it, &format!("Error loading tag for {} ID='{}'\n", table_name.to_text(), id.to_text()))?;
+                    continue;
+                }
+                let tag_info;
+                let lang_rec;
+                if !index.is_undef() {
+                    tag_info = info_array.get(index.to_i64() as usize).cloned().unwrap_or_default();
+                    if !tag_info.truthy() {
+                        pl::warn(it, "Invalid index")?;
+                        continue;
+                    }
+                } else {
+                    if info_array.len() > 1 {
+                        pl::warn(it, "Missing index")?;
+                        continue;
+                    }
+                    tag_info = info_array[0].clone();
+                }
+                let tag_name = tag_info.get("Name");
+                if is_default {
+                    if !tag_info.get("Description").truthy() {
+                        let d = pl::call(it, "Image::ExifTool::MakeDescription", vec![tag_name.clone()])?;
+                        tag_info.set("Description", d);
+                    }
+                    def_desc = tag_info.get("Description");
+                    lang_rec = tag_info.clone();
+                } else {
+                    let li = lang_info.get_or_new_hash(lang.to_bytes());
+                    let cur = li.get(tag_name.to_bytes());
+                    if cur.is_undef() {
+                        let h = Value::new_hash();
+                        li.set(tag_name.to_bytes(), h.clone());
+                        lang_rec = h;
+                    } else if !cur.is_ref() {
+                        let h = Value::new_hash();
+                        h.set("Description", cur);
+                        li.set(tag_name.to_bytes(), h.clone());
+                        lang_rec = h;
+                    } else {
+                        lang_rec = cur;
+                    }
+                }
+                // save new value in langInfo record
+                if pl::str_eq(&tok, "desc") {
+                    let old_val = lang_rec.get("Description");
+                    if !old_val.is_undef() && eq(&old_val, &val) {
+                        continue;
+                    }
+                    if make_missing.truthy() {
+                        if !old_val.is_undef() && pl::str_eq(&val, "MISSING") {
+                            continue;
+                        }
+                    } else if !old_val.is_undef() {
+                        let t = cat(&[&lang, &s(" "), &tag_name]);
+                        let dt = different.get(t.to_bytes());
+                        if !(!dt.is_undef() && eq(&dt, &val)) {
+                            let a_ = if !dt.is_undef() { "ANOTHER " } else { "" };
+                            pl::warn(it, &format!("{a_}Different '{}' desc for {}: {} (was {})\n", lang.to_text(), tag_name.to_text(), val.to_text(), lang_rec.get("Description").to_text()))?;
+                            if !dt.is_undef() {
+                                continue; // don't change back again
+                            }
+                            different.set(t.to_bytes(), val.clone());
+                        }
+                        if !override_different {
+                            continue;
+                        }
+                    }
+                    if is_default {
+                        continue;
+                    }
+                    if !def_desc.is_undef() && eq(&def_desc, &val) {
+                        lang_rec.delete("Description"); // delete if same as default language
+                    } else {
+                        lang_rec.set("Description", val.clone());
+                    }
+                } else {
+                    if key.is_undef() {
+                        pl::warn(it, &format!("No key for {}", tag_info.get("Name").to_text()))?;
+                        continue;
+                    }
+                    let mut print_conv = tag_info.get("PrintConv");
+                    if pl::ref_of(&print_conv) == "ARRAY" {
+                        if val_index.is_undef() {
+                            pl::warn(it, "No value index")?;
+                            continue;
+                        }
+                        print_conv = print_conv.at(val_index.to_i64());
+                    }
+                    if pl::ref_of(&print_conv) != "HASH" {
+                        pl::warn(it, "No PrintConv")?;
+                        continue;
+                    }
+                    let mut conv_val = print_conv.get(key.to_bytes());
+                    if conv_val.is_undef() {
+                        if print_conv.get("BITMASK").truthy() && re(r"^\d+$", "").is_match(&key) {
+                            for i in 0..64i64 {
+                                let mask = n(1i64.wrapping_shl(i as u32));
+                                if !mask.truthy() {
+                                    break;
+                                }
+                                if !pl::num_eq(&key, &mask) {
+                                    continue;
+                                }
+                                conv_val = print_conv.get("BITMASK").get(i.to_string());
+                            }
+                        }
+                        if conv_val.is_undef() {
+                            pl::warn(it, &format!("Missing PrintConv entry for {} {} {}\n", table_name.to_text(), tag_info.get("Name").to_text(), key.to_text()))?;
+                            continue;
+                        }
+                    }
+                    if cap_ && re(r"^[a-z]", "").is_match(&conv_val) {
+                        val = pl::lcfirst(&val); // change back to lower case
+                        cap_ = false;
+                    }
+                    let mut lc = lang_rec.get("PrintConv");
+                    if !lc.truthy() {
+                        lc = Value::new_hash();
+                        lang_rec.set("PrintConv", lc.clone());
+                    }
+                    if pl::ref_of(&lc) == "ARRAY" {
+                        lc = print_conv.clone(); //(default lang only)
+                    }
+                    let old_val = lc.get(conv_val.to_bytes());
+                    if !old_val.is_undef() && eq(&old_val, &val) {
+                        continue;
+                    }
+                    if make_missing.truthy() {
+                        if !old_val.is_undef() && pl::str_eq(&val, "MISSING") {
+                            continue;
+                        }
+                    } else if !old_val.is_undef() && (!is_default || !re(r"^\d+$", "").is_match(&val)) {
+                        let t = cat(&[&lang, &s(" "), &tag_name, &s(" "), &conv_val]);
+                        let dt = different.get(t.to_bytes());
+                        if !(!dt.is_undef() && eq(&dt, &val)) {
+                            let a_ = if !dt.is_undef() { "ANOTHER " } else { "" };
+                            pl::warn(it, &format!("{a_}Different '{}' val for {} '{}': {} (was {})\n", lang.to_text(), tag_name.to_text(), conv_val.to_text(), val.to_text(), old_val.to_text()))?;
+                            if !dt.is_undef() {
+                                continue; // don't change back again
+                            }
+                            different.set(t.to_bytes(), val.clone());
+                        }
+                        if !override_different {
+                            continue;
+                        }
+                    }
+                    if is_default {
+                        continue;
+                    }
+                    if cap_ {
+                        pl::warn(it, &format!("Capitalized '{}' val for {}: {}\n", lang.to_text(), tag_name.to_text(), tval.to_text()))?;
+                    }
+                    lc.set(conv_val.to_bytes(), val.clone());
+                }
+                changed.set(lang.to_bytes(), n(1));
+            }
+        }
+        snippet(it, "close XFILE", &Value::Undef, &Value::Undef)?;
+    }
+    // rewrite all changed Lang modules
+    let mut rtn_val = 0i64;
+    let list = if uf & 0x02 != 0 { pl::pkg_array(it, "Image::ExifTool::langs").items() } else { sorted_keys(&changed) };
+    let default_lang = it.get_scalar("Image::ExifTool::defaultLang");
+    for lang in list {
+        if eq(&lang, &default_lang) {
+            continue;
+        }
+        rtn_val += 1;
+        // write this module (only increment version number if not forced)
+        let inc = if uf & 0x01 == 0 { n(1) } else { s("") };
+        if !write_lang_module_rs(it, &lang, &lang_info.get(lang.to_bytes()), &inc)? {
+            rtn_val = -1;
+            break;
+        }
+    }
+    ret(n(rtn_val))
+}
+
+/// `hex($v)` for a "0x..." string.
+fn hex(v: &Value) -> Value {
+    let b = v.to_bytes();
+    let t = String::from_utf8_lossy(&b);
+    let t = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")).unwrap_or(&t);
+    match u64::from_str_radix(t, 16) {
+        Ok(u) => ops::from_uv(u),
+        Err(_) => Value::Num(t.chars().fold(0f64, |f, c| f * 16.0 + c.to_digit(16).unwrap_or(0) as f64)),
+    }
+}
+
+//------------------------------------------------------------------------------
+/// Write Lang module
+/// Inputs: 0) language string, 1) langInfo lookup reference, 2) flag to increment version
+/// Returns: true on success
+pub fn write_lang_module(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let ok = pl::local_topic(it, |it| write_lang_module_rs(it, &arg(&a, 0), &arg(&a, 1), &arg(&a, 2)))?;
+    ret(n(ok as i64))
+}
+
+fn write_lang_module_rs(it: &mut Interp, lang: &Value, lang_tags: &Value, new_version: &Value) -> ER<bool> {
+    // local ($_, *XOUT);
+    let mut err = false;
+    if !snippet(it, r#"-e "lib/Image/ExifTool""#, &Value::Undef, &Value::Undef)?.truthy() {
+        return crate::interp::eval::die("Must run from directory containing 'lib'\n");
+    }
+    let out = cat(&[&s("lib/Image/ExifTool/Lang/"), lang, &s(".pm")]);
+    let tmp = cat(&[&out, &s(".tmp")]);
+    if !snippet(it, r#"open(XOUT, ">$f") ? 1 : 0"#, &tmp, &Value::Undef)?.truthy() {
+        return crate::interp::eval::die(format!("Error creating {}\n", tmp.to_text()));
+    }
+    let ver_name = format!("Image::ExifTool::Lang::{}::VERSION", lang.to_text());
+    let cur = it.get_scalar(&ver_name);
+    let mut ver;
+    if cur.truthy() {
+        ver = cur;
+        if new_version.truthy() {
+            ver = pl::div(&pl::int(&pl::add(&pl::mul(&ver, &n(100)), &Value::Num(1.5))), &n(100))?;
+        }
+    } else {
+        ver = Value::Num(1.0);
+    }
+    ver = pl::sprintf("%.2f", &[ver]);
+    let lang_name_v = pl::pkg_hash(it, "Image::ExifTool::langName").get(lang.to_bytes());
+    let mut lang_name = if lang_name_v.truthy() { lang_name_v } else { lang.clone() };
+    re(r"\s*\(.*", "").subst(&mut lang_name, false, |_| Vec::new());
+    let l = lang.to_text();
+    let ln = lang_name.to_text();
+    let v = ver.to_text();
+    let header = format!(
+        "#------------------------------------------------------------------------------\n\
+# File:         {l}.pm\n\
+#\n\
+# Description:  ExifTool {ln} language translations\n\
+#\n\
+# Notes:        This file generated automatically by Image::ExifTool::TagInfoXML\n\
+#------------------------------------------------------------------------------\n\
+\n\
+package Image::ExifTool::Lang::{l};\n\
+\n\
+use strict;\n\
+use vars qw($VERSION);\n\
+\n\
+$VERSION = '{v}';\n\
+\n"
+    );
+    xout(it, s(&header))?;
+    xout(it, s(&format!("%Image::ExifTool::Lang::{l}::Translate = (\n")))?;
+    // loop through all tag and table names
+    for tag in sorted_keys(lang_tags) {
+        let mut desc = lang_tags.get(tag.to_bytes());
+        let mut conv = Value::Undef;
+        if desc.is_ref() {
+            conv = desc.get("PrintConv");
+            desc = desc.get("Description");
+            // remove description if not necessary
+            // (not strictly correct -- should test against tag description, not name)
+            if desc.truthy() && eq(&desc, &tag) {
+                desc = Value::Undef;
+            }
+            // remove unnecessary value translations
+            if conv.truthy() {
+                for k in keys(&conv) {
+                    if eq(&k, &conv.get(k.to_bytes())) {
+                        conv.delete(k.to_bytes());
+                    }
+                }
+                if conv.keys().is_empty() {
+                    conv = Value::Undef;
+                }
+            }
+        }
+        if !desc.is_undef() {
+            desc = escape_perl_rs(&desc);
+        } else if !conv.truthy() {
+            continue;
+        }
+        xout(it, cat(&[&s("   '"), &tag, &s("' => ")]))?;
+        if !conv.truthy() {
+            xout(it, cat(&[&s("'"), &desc, &s("',\n")]))?;
+            continue;
+        }
+        xout(it, s("{\n"))?;
+        if !desc.is_undef() {
+            xout(it, cat(&[&s("      Description => '"), &desc, &s("',\n")]))?;
+        }
+        if conv.truthy() {
+            xout(it, s("      PrintConv => {\n"))?;
+            for k in sorted_keys(&conv) {
+                let str = escape_perl_rs(&k);
+                let val = escape_perl_rs(&conv.get(k.to_bytes()));
+                xout(it, cat(&[&s("        '"), &str, &s("' => '"), &val, &s("',\n")]))?;
+            }
+            xout(it, s("      },\n"))?;
+        }
+        xout(it, s("    },\n"))?;
+    }
+    // generate acknowledgements for this language
+    let credits = my_hash(it, "credits");
+    let ack = if credits.get(lang.to_bytes()).truthy() {
+        let mut ack = cat(&[&s("Thanks to "), &credits.get(lang.to_bytes()), &s(" for providing this translation.")]);
+        re(r"(.{1,76})( +|$)", "s").subst(&mut ack, true, |c| [&cap(c, 1).to_bytes()[..], b"\n"].concat()); // wrap text to 76 columns
+        cat(&[&s("~head1 ACKNOWLEDGEMENTS\n\n"), &ack, &s("\n")])
+    } else {
+        s("")
+    };
+    let a = ack.to_bytes().to_vec();
+    let mut footer = Value::bytes(
+        [
+            format!(
+                ");\n\n1;  # end\n\n__END__\n\n~head1 NAME\n\nImage::ExifTool::Lang::{l}.pm - ExifTool {ln} language translations\n\n~head1 DESCRIPTION\n\nThis file is used by Image::ExifTool to generate localized tag descriptions\nand values.\n\n~head1 AUTHOR\n\nCopyright 2003-2026, Phil Harvey (philharvey66 at gmail.com)\n\nThis library is free software; you can redistribute it and/or modify it\nunder the same terms as Perl itself.\n\n"
+            )
+            .into_bytes(),
+            a,
+            b"~head1 SEE ALSO\n\nL<Image::ExifTool(3pm)|Image::ExifTool>,\nL<Image::ExifTool::TagInfoXML(3pm)|Image::ExifTool::TagInfoXML>\n\n~cut\n".to_vec(),
+        ]
+        .concat(),
+    );
+    re(r"^~", "m").subst(&mut footer, true, |_| b"=".to_vec()); // un-do pod obfuscation
+    if !xout(it, footer)? {
+        err = true;
+    }
+    if !snippet(it, "close XOUT", &Value::Undef, &Value::Undef)?.truthy() {
+        err = true;
+    }
+    if err || !snippet(it, "rename($f, $g)", &tmp, &out)?.truthy() {
+        pl::warn(it, &format!("Error writing {}\n", out.to_text()))?;
+        snippet(it, "unlink $f", &tmp, &Value::Undef)?;
+        err = true;
+    }
+    Ok(!err)
+}
+
+/// `print XOUT $v`
+fn xout(it: &mut Interp, v: Value) -> ER<bool> {
+    Ok(snippet(it, "print XOUT $f", &v, &Value::Undef)?.truthy())
+}
+
+//------------------------------------------------------------------------------
+/// load all lang modules into hash
+/// Inputs: 0) Hash reference, 1) specific language to load (undef for all)
+pub fn load_lang_modules(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    load_lang_modules_rs(it, &arg(&a, 0), arg(&a, 1))?;
+    pl::ret_nothing(want)
+}
+
+fn load_lang_modules_rs(it: &mut Interp, lang_hash: &Value, lang: Value) -> ER<()> {
+    runtime::require(it, "Image::ExifTool")?;
+    let langs = if lang.truthy() { vec![lang] } else { pl::pkg_array(it, "Image::ExifTool::langs").items() };
+    let default_lang = it.get_scalar("Image::ExifTool::defaultLang");
+    for lang in langs {
+        if eq(&lang, &default_lang) {
+            continue;
+        }
+        let code = cat(&[&s("require Image::ExifTool::Lang::"), &lang]);
+        let (r, _) = pl::eval_site(it, &code, MODULE, &[], Want::Scalar);
+        if !r.truthy() {
+            pl::warn(it, &format!("Can't load Lang::{}\n", lang.to_text()))?;
+            continue;
+        }
+        let xlat = format!("Image::ExifTool::Lang::{}::Translate", lang.to_text());
+        // no strict 'refs';
+        let h = pl::pkg_hash(it, &xlat);
+        if h.keys().is_empty() {
+            pl::warn(it, &format!("Missing Info for {}\n", lang.to_text()))?;
+            continue;
+        }
+        lang_hash.set(lang.to_bytes(), h);
+    }
+    Ok(())
+}
+
+//------------------------------------------------------------------------------
+/// sort numbers first numerically, then strings alphabetically (case insensitive)
+pub fn numbers_first(it: &mut Interp, _a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    // ($a and $b of this package, as the Perl sub sees them)
+    let (x, y) = (it.get_scalar("Image::ExifTool::TagInfoXML::a"), it.get_scalar("Image::ExifTool::TagInfoXML::b"));
+    let nf = my_scalar(it, "numbersFirst");
+    let ci = my_scalar(it, "caseInsensitive").truthy();
+    ret(numbers_first_rs(&x, &y, &nf, ci))
+}
+
+fn numbers_first_rs(a: &Value, b: &Value, numbers_first: &Value, case_insensitive: bool) -> Value {
+    let num_re = re(r"^(-?[0-9]+)(\.(\d*))?$", "");
+    let mut rtn_val;
+    let (mut b_num, mut b_dec) = (Value::Undef, Value::Undef);
+    if let Some(c) = num_re.m(b) {
+        b_num = cap(&c, 1);
+        b_dec = cap(&c, 3);
+    }
+    if let Some(c) = num_re.m(a) {
+        if !b_num.is_undef() {
+            if pl::num_eq(numbers_first, &n(2)) && pl::lt(&b_num, &n(0)) {
+                b_num = pl::add(&b_num, &Value::Num(1e9));
+            }
+            let mut a_int = cap(&c, 1);
+            if pl::num_eq(numbers_first, &n(2)) && pl::lt(&a_int, &n(0)) {
+                a_int = pl::add(&a_int, &Value::Num(1e9));
+            }
+            // compare integer part as a number
+            rtn_val = spaceship(&a_int, &b_num);
+            if !rtn_val.truthy() {
+                let a_dec = if cap(&c, 3).truthy() { cap(&c, 3) } else { n(0) };
+                if !b_dec.truthy() {
+                    b_dec = n(0);
+                }
+                // compare decimal part as an integer too
+                // (so that "1.10" comes after "1.9")
+                rtn_val = spaceship(&a_dec, &b_dec);
+            }
+        } else {
+            rtn_val = pl::neg(numbers_first);
+        }
+    } else if !b_num.is_undef() {
+        rtn_val = numbers_first.clone();
+    } else {
+        let (mut a2, mut b2) = (a.clone(), b.clone());
+        // expand numbers to 3 digits (with restrictions to avoid messing up ascii-hex tags)
+        let exp_re = re(r"^(APP|DMC-\w+ )?[.0-9 ]*$", "");
+        if exp_re.is_match(&a2) && pl::length(&a2).to_i64() < 16 {
+            re(r"(\d+)", "").subst(&mut a2, true, |c| pl::sprintf("%.3d", &[cap(c, 1)]).to_bytes().to_vec());
+        }
+        if exp_re.is_match(&b2) && pl::length(&b2).to_i64() < 16 {
+            re(r"(\d+)", "").subst(&mut b2, true, |c| pl::sprintf("%.3d", &[cap(c, 1)]).to_bytes().to_vec());
+        }
+        rtn_val = Value::Undef;
+        if case_insensitive {
+            rtn_val = cmp_val(ops::str_cmp(&pl::lc(&a2), &pl::lc(&b2)));
+        }
+        if !rtn_val.truthy() {
+            rtn_val = cmp_val(ops::str_cmp(&a2, &b2));
+        }
+    }
+    rtn_val
+}
+
+/// `$x <=> $y` (undef for NaN)
+fn spaceship(x: &Value, y: &Value) -> Value {
+    match ops::num_cmp(x, y) {
+        Some(o) => cmp_val(o),
+        None => Value::Undef,
+    }
+}
+
+fn cmp_val(o: Ordering) -> Value {
+    n(match o {
+        Ordering::Less => -1,
+        Ordering::Equal => 0,
+        Ordering::Greater => 1,
+    })
+}
+
+pub fn register(it: &mut Interp) {
+    it.define_native("Image::ExifTool::TagInfoXML::Write", write);
+    it.define_native("Image::ExifTool::TagInfoXML::EscapePerl", escape_perl);
+    it.define_native("Image::ExifTool::TagInfoXML::BuildLangModules", build_lang_modules);
+    it.define_native("Image::ExifTool::TagInfoXML::WriteLangModule", write_lang_module);
+    it.define_native("Image::ExifTool::TagInfoXML::LoadLangModules", load_lang_modules);
+    it.define_native("Image::ExifTool::TagInfoXML::NumbersFirst", numbers_first);
+}
