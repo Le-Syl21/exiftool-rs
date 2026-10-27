@@ -1374,7 +1374,7 @@ fn find_fix_v(it: &mut Interp, et: &Value, key: &Value, times: &Value, points: &
 /// Notes: Uses track data stored in ExifTool NEW_VALUE for Geotag tag
 pub fn set_geo_values(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, mut val, write_group) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let geotag = pl::method(it, &et, "GetNewValue", vec![s("Geotag")])?;
+    let mut geotag = pl::method(it, &et, "GetNewValue", vec![s("Geotag")])?;
     let verbose = opt(it, &et, "Verbose")?;
     let (mut fix, mut time, mut fsec, mut no_date, mut second_try, mut i_ext, mut i_dir) = (Value::Undef, Value::Undef, Value::Undef, false, false, Value::Undef, Value::Undef);
     let sec_per_day = runtime::lex_scalar(it, MODULE, "secPerDay").borrow().clone();
@@ -1407,6 +1407,10 @@ pub fn set_geo_values(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         geo_max_ext_secs = n(1800);
     }
 
+    // ($$geotag{Times} autovivifies $geotag into a hash when it is undefined)
+    if geotag.is_undef() {
+        geotag = Value::new_hash();
+    }
     let mut times = geotag.get("Times");
     let points = geotag.get("Points");
     let has = geotag.get("Has");
