@@ -67,6 +67,126 @@ pub fn set_html_charset(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     pl::ret(val)
 }
 
+/// `\xNN` for each byte (perl's malformed-UTF-8 messages).
+fn hex_bytes(s: &[u8]) -> String {
+    s.iter().map(|c| format!("\\x{c:02x}")).collect()
+}
+
+/// `unpack('C0U', $bytes)` (first value) as perl 5.10+ does it: the first
+/// UTF-8 character of a byte string, perl's extended forms included; a
+/// malformed sequence warns and gives 0; an empty string dies, as perl's
+/// unpack does on it ("U0 mode on a byte string").
+fn unpack_c0u(it: &mut Interp, b: &[u8]) -> ER<Value> {
+    let Some(&lead) = b.first() else {
+        return crate::interp::eval::die("U0 mode on a byte string");
+    };
+    if lead < 0x80 {
+        return Ok(n(lead as i64));
+    }
+    let need = match lead {
+        0x80..=0xbf => {
+            let m = format!("Malformed UTF-8 character: {} (unexpected continuation byte 0x{lead:02x}, with no preceding start byte) in unpack", hex_bytes(&b[..1]));
+            pl::warn(it, &m)?;
+            return Ok(n(0));
+        }
+        0xc0..=0xdf => 2,
+        0xe0..=0xef => 3,
+        0xf0..=0xf7 => 4,
+        0xf8..=0xfb => 5,
+        0xfc..=0xfd => 6,
+        0xfe => 7,
+        _ => 13,
+    };
+    let avail = 1 + b[1..]
+        .iter()
+        .take(need - 1)
+        .take_while(|c| (0x80..0xc0).contains(*c))
+        .count();
+    if avail < need {
+        let got = &b[..avail];
+        if b.len() > avail {
+            let m = format!(
+                "Malformed UTF-8 character: {} (unexpected non-continuation byte 0x{:02x}, immediately after start byte 0x{lead:02x}; need {need} bytes, got {avail}) in unpack",
+                hex_bytes(&b[..need.min(b.len())]),
+                b[avail]
+            );
+            pl::warn(it, &m)?;
+        } else {
+            let s = if avail == 1 { "" } else { "s" };
+            let m = format!("Malformed UTF-8 character: {} (too short; {avail} byte{s} available, need {need}) in unpack", hex_bytes(got));
+            pl::warn(it, &m)?;
+        }
+        // a start that can only be an overlong sequence
+        let second = b.get(1).copied().filter(|_| avail > 1);
+        let overlong_start = lead == 0xc0
+            || lead == 0xc1
+            || second.is_some_and(|c| {
+                (lead == 0xe0 && c < 0xa0)
+                    || (lead == 0xf0 && c < 0x90)
+                    || (lead == 0xf8 && c < 0x88)
+                    || (lead == 0xfc && c < 0x84)
+                    || (lead == 0xfe && c < 0x82)
+            });
+        if overlong_start {
+            let m = format!(
+                "Malformed UTF-8 character: {} (any UTF-8 sequence that starts with \"{}\" is overlong which can and should be represented with a different, shorter sequence) in unpack",
+                hex_bytes(got),
+                hex_bytes(got)
+            );
+            pl::warn(it, &m)?;
+        }
+        return Ok(n(0));
+    }
+    let mut v = if need >= 7 {
+        0
+    } else {
+        (lead as u64) & (0x7f >> need)
+    };
+    for c in &b[1..need] {
+        v = (v << 6) | (*c as u64 & 0x3f);
+    }
+    let min: u64 = match need {
+        2 => 0x80,
+        3 => 0x800,
+        4 => 0x10000,
+        5 => 0x200000,
+        6 => 0x4000000,
+        _ => 0x80000000,
+    };
+    if v < min {
+        let mut digits = format!("{v:X}");
+        while digits.len() < 2 || digits.len() % 2 == 1 {
+            digits.insert(0, '0');
+        }
+        let m = format!("Malformed UTF-8 character: {} (overlong; instead use {} to represent U+{digits}) in unpack", hex_bytes(&b[..need]), hex_bytes(&encode_utf8_ext(v)));
+        pl::warn(it, &m)?;
+        return Ok(n(0));
+    }
+    Ok(crate::perl::ops::from_uv(v))
+}
+
+/// The (perl-extended) UTF-8 encoding of a code point.
+fn encode_utf8_ext(v: u64) -> Vec<u8> {
+    if v < 0x80 {
+        return vec![v as u8];
+    }
+    let len = match v {
+        0..=0x7ff => 2,
+        0x800..=0xffff => 3,
+        0x10000..=0x1fffff => 4,
+        0x200000..=0x3ffffff => 5,
+        _ => 6,
+    };
+    let mut out = vec![0u8; len];
+    let mut x = v;
+    for i in (1..len).rev() {
+        out[i] = 0x80 | (x & 0x3f) as u8;
+        x >>= 6;
+    }
+    out[0] = ((0xff00u16 >> len) as u8) | x as u8;
+    out
+}
+
 /// Convert single UTF-8 character to HTML character reference
 /// Inputs: 0) UTF-8 character sequence
 /// Returns: HTML character reference (eg. "&quot;");
@@ -74,10 +194,7 @@ pub fn set_html_charset(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 pub fn escape_char(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let ch = arg(&a, 0);
     // (perl 5.10 or later: the meaning of "U0" is reversed as of Perl 5.10.0!)
-    let val = pl::unpack("C0U", &ch)?
-        .into_iter()
-        .next()
-        .unwrap_or_default();
+    let val = unpack_c0u(it, &ch.to_bytes())?;
     if val.is_undef() {
         return pl::ret(pl::s("?"));
     }
