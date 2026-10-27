@@ -153,8 +153,126 @@ fn big_endian(item: &Item) -> bool {
 pub fn unpack(template: &[u8], data: &[u8]) -> Result<Vec<Value>, String> {
     let items = parse_template(template)?;
     let mut out = Vec::new();
+    WARNINGS.with(|w| w.borrow_mut().clear());
+    // a template that starts with U works on characters (U0 mode)
+    U0.with(|u| u.set(items.first().is_some_and(|i| i.letter == b'U')));
     unpack_items(&items, data, 0, &mut out)?;
     Ok(out)
+}
+
+thread_local! {
+    /// The warnings of the last unpack (malformed UTF-8), for the caller to
+    /// issue through $SIG{__WARN__}.
+    static WARNINGS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    /// U0 mode: U reads characters (the bytes of a byte string), not UTF-8.
+    static U0: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// The warnings the last unpack gave.
+pub fn take_warnings() -> Vec<String> {
+    WARNINGS.with(|w| std::mem::take(&mut *w.borrow_mut()))
+}
+
+/// `\xNN` for each byte (perl's malformed-UTF-8 messages).
+fn hex_bytes(s: &[u8]) -> String {
+    s.iter().map(|c| format!("\\x{c:02x}")).collect()
+}
+
+/// The (perl-extended) UTF-8 encoding of a code point.
+fn encode_utf8_ext(v: u64) -> Vec<u8> {
+    if v < 0x80 {
+        return vec![v as u8];
+    }
+    let len = match v {
+        0..=0x7ff => 2,
+        0x800..=0xffff => 3,
+        0x10000..=0x1fffff => 4,
+        0x200000..=0x3ffffff => 5,
+        _ => 6,
+    };
+    let mut out = vec![0u8; len];
+    let mut x = v;
+    for i in (1..len).rev() {
+        out[i] = 0x80 | (x & 0x3f) as u8;
+        x >>= 6;
+    }
+    out[0] = ((0xff00u16 >> len) as u8) | x as u8;
+    out
+}
+
+/// One UTF-8 character of a byte string, as unpack's C0 mode reads it:
+/// (code point, bytes taken, warnings). A malformed sequence gives 0 and
+/// perl's "Malformed UTF-8 character" messages, and takes its start byte and
+/// the continuation bytes that follow it.
+fn c0u_char(b: &[u8]) -> (u64, usize, Vec<String>) {
+    let lead = b[0];
+    if lead < 0x80 {
+        return (lead as u64, 1, Vec::new());
+    }
+    let need = match lead {
+        0x80..=0xbf => {
+            return (0, 1, vec![format!("Malformed UTF-8 character: {} (unexpected continuation byte 0x{lead:02x}, with no preceding start byte) in unpack", hex_bytes(&b[..1]))]);
+        }
+        0xc0..=0xdf => 2,
+        0xe0..=0xef => 3,
+        0xf0..=0xf7 => 4,
+        0xf8..=0xfb => 5,
+        0xfc..=0xfd => 6,
+        0xfe => 7,
+        _ => 13,
+    };
+    let avail = 1 + b[1..].iter().take(need - 1).take_while(|c| (0x80..0xc0).contains(*c)).count();
+    if avail < need {
+        let mut w = Vec::new();
+        let got = &b[..avail];
+        // perl reports a sequence cut by the end of the string, then a
+        // non-continuation byte inside it
+        if b.len() < need && b.len() > avail {
+            w.push(format!("Malformed UTF-8 character: {} (too short; {} bytes available, need {need}) in unpack", hex_bytes(b), b.len()));
+        }
+        if b.len() > avail {
+            w.push(format!(
+                "Malformed UTF-8 character: {} (unexpected non-continuation byte 0x{:02x}, immediately after start byte 0x{lead:02x}; need {need} bytes, got {avail}) in unpack",
+                hex_bytes(&b[..need.min(b.len())]),
+                b[avail]
+            ));
+        } else {
+            let s = if avail == 1 { "" } else { "s" };
+            w.push(format!("Malformed UTF-8 character: {} (too short; {avail} byte{s} available, need {need}) in unpack", hex_bytes(got)));
+        }
+        let second = b.get(1).copied().filter(|_| avail > 1);
+        let overlong_start = lead == 0xc0
+            || lead == 0xc1
+            || second.is_some_and(|c| (lead == 0xe0 && c < 0xa0) || (lead == 0xf0 && c < 0x90) || (lead == 0xf8 && c < 0x88) || (lead == 0xfc && c < 0x84) || (lead == 0xfe && c < 0x82));
+        if overlong_start {
+            w.push(format!(
+                "Malformed UTF-8 character: {} (any UTF-8 sequence that starts with \"{}\" is overlong which can and should be represented with a different, shorter sequence) in unpack",
+                hex_bytes(got),
+                hex_bytes(got)
+            ));
+        }
+        return (0, avail, w);
+    }
+    let mut v = if need >= 7 { 0 } else { (lead as u64) & (0x7f >> need) };
+    for c in &b[1..need] {
+        v = (v << 6) | (*c as u64 & 0x3f);
+    }
+    let min: u64 = match need {
+        2 => 0x80,
+        3 => 0x800,
+        4 => 0x10000,
+        5 => 0x200000,
+        6 => 0x4000000,
+        _ => 0x80000000,
+    };
+    if v < min {
+        let mut digits = format!("{v:X}");
+        while digits.len() < 2 || digits.len() % 2 == 1 {
+            digits.insert(0, '0');
+        }
+        return (0, need, vec![format!("Malformed UTF-8 character: {} (overlong; instead use {} to represent U+{digits}) in unpack", hex_bytes(&b[..need]), hex_bytes(&encode_utf8_ext(v)))]);
+    }
+    (v, need, Vec::new())
 }
 
 fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>) -> Result<usize, String> {
@@ -308,16 +426,30 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
                     pos += size;
                 }
             }
+            b'U' if count == Count::N(0) => U0.with(|u| u.set(true)),
+            b'C' if count == Count::N(0) => U0.with(|u| u.set(false)),
             b'U' => {
-                // On a byte string, U reads UTF-8 characters.
-                let text = String::from_utf8_lossy(&data[pos..]).into_owned();
-                let n = repeat(count, text.chars().count());
-                let mut consumed = 0;
-                for ch in text.chars().take(n) {
-                    out.push(Value::Int(ch as i64));
-                    consumed += ch.len_utf8();
+                if U0.with(|u| u.get()) {
+                    // U0 mode: the characters of a byte string are its bytes
+                    let n = repeat(count, remaining);
+                    for &c in &data[pos..pos + n] {
+                        out.push(Value::Int(c as i64));
+                    }
+                    pos += n;
+                } else {
+                    // C0 mode: U reads UTF-8 characters from the bytes
+                    if count == Count::One && pos >= data.len() {
+                        return Err("U0 mode on a byte string".into());
+                    }
+                    let mut k = 0;
+                    while pos < data.len() && (count == Count::Star || k < repeat(count, usize::MAX)) {
+                        let (v, used, w) = c0u_char(&data[pos..]);
+                        WARNINGS.with(|x| x.borrow_mut().extend(w));
+                        out.push(crate::perl::ops::from_uv(v));
+                        pos += used;
+                        k += 1;
+                    }
                 }
-                pos += consumed;
             }
             b'u' => {
                 // uudecode the rest: lines of a length char then 4-char groups.

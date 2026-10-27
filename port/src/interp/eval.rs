@@ -305,7 +305,9 @@ pub struct Interp {
     /// `pos()` of scalars, by cell address.
     /// pos() of scalars by cell address, with the string it applies to
     /// (a new value of the variable resets it, as in perl).
-    pos: HashMap<usize, (usize, usize)>,
+    pos: HashMap<usize, (usize, PosTag)>,
+    /// Inserts into `pos` since its dead entries were last dropped.
+    pos_inserts: usize,
     saved: Vec<Saved>,
     want_stack: Vec<Want>,
     /// Asked for package variables not defined yet (the runtime's tables).
@@ -377,6 +379,7 @@ impl Interp {
             package: Rc::from("main"),
             last_match: None,
             pos: HashMap::new(),
+            pos_inserts: 0,
             saved: Vec::new(),
             want_stack: Vec::new(),
             global_hook: None,
@@ -1593,8 +1596,19 @@ impl Interp {
 
     /// pos() by key (see pos_key), checked against the current value.
     pub(crate) fn pos_at(&self, key: usize, lv: &Lv) -> Option<usize> {
-        let (p, tag) = *self.pos.get(&key)?;
-        (tag == value_tag(&lv.get())).then_some(p)
+        let (p, tag) = self.pos.get(&key)?;
+        tag.matches(&lv.get()).then_some(*p)
+    }
+
+    /// Set a pos() (dropping now and then the entries whose string is gone,
+    /// as their weak handles keep its memory).
+    fn pos_set(&mut self, key: usize, p: usize, tag: PosTag) {
+        self.pos.insert(key, (p, tag));
+        self.pos_inserts += 1;
+        if self.pos_inserts >= 4096 {
+            self.pos_inserts = 0;
+            self.pos.retain(|_, (_, t)| t.alive());
+        }
     }
 
     /// Under `strict refs`, a string used as a reference is fatal.
@@ -1966,7 +1980,7 @@ impl Interp {
                             p += len;
                         }
                         let p = p.clamp(0, len);
-                        self.pos.insert(key, (p as usize, value_tag(&cur)));
+                        self.pos_set(key, p as usize, value_tag(&cur));
                         // The assignment's value is the position set
                         // (`$pos = pos($$b) = 0` gives 0).
                         return Ok(Lv::Scalar(Rc::new(RefCell::new(Value::Int(p)))));
@@ -2381,7 +2395,7 @@ impl Interp {
                 if let Some((k, lv)) = &cell {
                     let (_, e) = spans[0].unwrap();
                     let tag = value_tag(&lv.get());
-                    self.pos.insert(*k, (e, tag));
+                    self.pos_set(*k, e, tag);
                 }
             }
             self.last_match = Some(LastMatch { subject: subject.clone(), spans: spans.clone() });
@@ -2841,11 +2855,38 @@ fn pos_key(lv: &Lv) -> Option<usize> {
     }
 }
 
-/// Identifies a variable's current value, so a stale pos() is detected.
-fn value_tag(v: &Value) -> usize {
+/// Identifies the value a pos() was set on, so a stale pos() is detected:
+/// a weak handle on the string itself, as an address could be reused by a
+/// new string put in the same variable (from Rust code, which does not
+/// clear pos()).
+#[derive(Clone)]
+pub(crate) enum PosTag {
+    Str(std::rc::Weak<[u8]>),
+    Other,
+}
+
+fn value_tag(v: &Value) -> PosTag {
     match v {
-        Value::Str(s) => s.as_ptr() as usize ^ s.len(),
-        _ => 1,
+        Value::Str(s) => PosTag::Str(Rc::downgrade(s)),
+        _ => PosTag::Other,
+    }
+}
+
+impl PosTag {
+    fn matches(&self, v: &Value) -> bool {
+        match (self, v) {
+            (PosTag::Str(w), Value::Str(s)) => w.upgrade().is_some_and(|x| Rc::ptr_eq(&x, s)),
+            (PosTag::Other, Value::Str(_)) => false,
+            (PosTag::Str(_), _) => false,
+            (PosTag::Other, _) => true,
+        }
+    }
+
+    fn alive(&self) -> bool {
+        match self {
+            PosTag::Str(w) => w.strong_count() > 0,
+            PosTag::Other => true,
+        }
     }
 }
 

@@ -144,7 +144,7 @@ fn decompose_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
             uni = pl::local_sig_warn(it, handler, |it| {
                 // (somehow the meaning of "U0" was reversed in Perl 5.10.0!)
                 let t = if pl::lt(&it.get_scalar("main::]"), &Value::Num(5.010000)) { "U0U*" } else { "C0U*" };
-                let uni = pl::unpack(t, &val)?;
+                let uni = pl::unpack_warn(it, t, &val)?;
                 // issue warning if we had errors
                 if it.get_scalar("Image::ExifTool::evalWarning").truthy() && et.truthy() && !et.get("WarnBadUTF8").truthy() {
                     pl::method(it, &et, "Warn", vec![pl::s("Malformed UTF-8 character(s)")])?;

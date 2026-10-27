@@ -2471,6 +2471,10 @@ pub fn do_process_tiff(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                 return ret(n(0));
             }
             if base.truthy() {
+                // $raf->Read($$dataPt, ...) autovivifies an undefined $dataPt
+                if data_pt.is_undef() {
+                    data_pt = pl::sref(Value::Undef);
+                }
                 let (r, b) = raf_read(it, &raf, data_pt.deref(), &base)?;
                 set_deref(&data_pt, b)?;
                 if !pl::num_eq(&r, &base) {

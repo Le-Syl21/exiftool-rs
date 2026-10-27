@@ -224,7 +224,11 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 Some(a) => it.scalar(a, scope)?.to_bytes(),
                 None => it.read_scalar("_", scope).to_bytes(),
             };
-            match pack::unpack(&t, &d) {
+            let r = pack::unpack(&t, &d);
+            for w in pack::take_warnings() {
+                crate::pl::warn(it, &w)?;
+            }
+            match r {
                 // In scalar context, unpack returns the first value.
                 Ok(v) if want != Want::List => one(v.into_iter().next().unwrap_or_default()),
                 Ok(v) => Ok(v),

@@ -409,6 +409,16 @@ pub fn unpack(t: &str, data: &Value) -> ER<Vec<Value>> {
     }
 }
 
+/// `unpack(TEMPLATE, DATA)` with its warnings (malformed UTF-8 in C0 mode)
+/// issued through $SIG{__WARN__}, as perl does.
+pub fn unpack_warn(it: &mut Interp, t: &str, data: &Value) -> ER<Vec<Value>> {
+    let v = unpack(t, data)?;
+    for w in crate::perl::pack::take_warnings() {
+        warn(it, &w)?;
+    }
+    Ok(v)
+}
+
 /// `unpack` in scalar context: the first value.
 pub fn unpack1(t: &str, data: &Value) -> ER<Value> {
     Ok(unpack(t, data)?.into_iter().next().unwrap_or_default())

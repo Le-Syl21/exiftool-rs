@@ -183,6 +183,44 @@ pub fn register(it: &mut Interp) {
             ret(Value::bytes(b))
         }
     });
+    // Encode: the port's strings are bytes with no UTF-8 flag, so a string
+    // is never flagged, and encode/decode work on characters 0..255 as
+    // perl does for an unflagged string
+    it.define_native("Encode::is_utf8", |_, _, _| ret(Value::from(false)));
+    fn latin1_to_utf8(b: &[u8]) -> Vec<u8> {
+        b.iter().map(|&c| c as char).collect::<String>().into_bytes()
+    }
+    fn utf8_to_latin1(b: &[u8]) -> Vec<u8> {
+        match std::str::from_utf8(b) {
+            Ok(s) if s.chars().all(|c| (c as u32) < 256) => s.chars().map(|c| c as u8).collect(),
+            _ => b.to_vec(),
+        }
+    }
+    let is_utf8_name = |e: &Value| matches!(e.to_text().to_ascii_lowercase().replace('-', "").as_str(), "utf8");
+    it.define_native("Encode::encode", move |_, a, _| {
+        let v = arg(&a, 1);
+        if v.is_undef() {
+            return ret(Value::Undef);
+        }
+        let b = v.to_bytes();
+        ret(Value::bytes(if is_utf8_name(&arg(&a, 0)) { latin1_to_utf8(&b) } else { b.to_vec() }))
+    });
+    it.define_native("Encode::encode_utf8", |_, a, _| {
+        let v = arg(&a, 0);
+        ret(if v.is_undef() { Value::Undef } else { Value::bytes(latin1_to_utf8(&v.to_bytes())) })
+    });
+    it.define_native("Encode::decode", move |_, a, _| {
+        let v = arg(&a, 1);
+        if v.is_undef() {
+            return ret(Value::Undef);
+        }
+        let b = v.to_bytes();
+        ret(Value::bytes(if is_utf8_name(&arg(&a, 0)) { utf8_to_latin1(&b) } else { b.to_vec() }))
+    });
+    it.define_native("Encode::decode_utf8", |_, a, _| {
+        let v = arg(&a, 0);
+        ret(if v.is_undef() { Value::Undef } else { Value::bytes(utf8_to_latin1(&v.to_bytes())) })
+    });
     it.define_native("File::Glob::bsd_glob", |_, a, _| Ok(crate::interp::eval::glob::bsd_glob(&arg(&a, 0).to_bytes()).into_iter().map(Value::bytes).collect()));
     it.define_native("File::Glob::csh_glob", |_, a, _| Ok(crate::interp::eval::glob::csh_glob(&arg(&a, 0).to_bytes()).into_iter().map(Value::bytes).collect()));
     it.define_native("Cwd::getcwd", |_, _, _| ret(Value::str(&std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default())));
