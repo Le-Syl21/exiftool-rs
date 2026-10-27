@@ -84,6 +84,11 @@ pub(crate) fn calculate_crc_v(it: &mut Interp, data_pt: &Value, mut crc: Value, 
         let e = (p + len.to_i64() as usize).min(bytes.len());
         bytes[p..e].iter().map(|&b| b as u64).collect()
     } else {
+        // (perl's unpack dies on an 'x' past the end before it looks at the
+        // count; the shared unpack does not, so the check is made here)
+        if pl::gt(&pos, &n(bytes.len() as i64)) {
+            return crate::interp::eval::die("'x' outside of string in unpack");
+        }
         let t = cat!("x", pos, "C", len);
         pl::unpack(&t.to_text(), &data)?.iter().map(ops::to_uv).collect()
     };
