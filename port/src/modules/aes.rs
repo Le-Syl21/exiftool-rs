@@ -121,6 +121,7 @@ fn key_expansion_st(s: &mut St, key: &Value) -> ER<()> {
             temp[j as usize] = at(&s.round_key, (i - 1) * 4 + j);
         }
         // ($i % $nk)
+        pl::at(115);
         let m = pl::modulo(&n(i), &n(nk))?.to_i64();
         if m == 0 {
             // rotate the 4 bytes in a word to the left once
@@ -421,7 +422,8 @@ pub fn crypt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if !(key_len == 16 || key_len == 24 || key_len == 32) {
         return ret(Value::from(format!("Invalid AES key length ({key_len})")));
     }
-    let mut data = data_pt.deref().to_bytes().to_vec();
+    pl::at(348);
+    let mut data = pl::sderef(&data_pt)?.to_bytes().to_vec();
     let part_len = data.len() % 16;
     let mut pos: usize;
     if encrypt.truthy() {

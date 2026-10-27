@@ -338,7 +338,8 @@ pub fn handle_iloc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 fn handle_iloc_v(it: &mut Interp, et: &Value, dir_info: &Value, data_pt: &Value, outfile: &Value) -> ER<i64> {
     let off = dir_info.get("ChunkOffset");
-    let len = dlen(data_pt);
+    pl::at(208);
+    let len = len_of(&pl::sderef(data_pt)?);
     if pl::lt(&len, &n(8)) {
         return Ok(0);
     }
@@ -529,8 +530,17 @@ fn format_qt_value_v(it: &mut Interp, et: &Value, val_pt: &Value, tag_info: &Val
         format = tag_info.get("Format");
     }
     let qt_format = lex_h(it, "qtFormat");
-    let v = val_pt.deref();
+    let mut val_pt = val_pt.clone();
+    let v;
     if (format.truthy() && !pl::str_eq(&format, "string")) || (!format.truthy() && writable.truthy() && !pl::str_eq(&writable, "string")) {
+        // ($$valPt as a sub argument and an assignment target autovivifies
+        // the lexical $valPt; a string dies under strict refs)
+        pl::at(335);
+        if val_pt.is_undef() {
+            val_pt = pl::sref(Value::Undef);
+        }
+        v = pl::sderef(&val_pt)?;
+        let val_pt = &val_pt;
         let f = if format.truthy() { format.clone() } else { writable.clone() };
         let w = etc(it, "WriteValue", vec![v, f, count])?;
         pl::set_deref(val_pt, w)?;
@@ -541,7 +551,11 @@ fn format_qt_value_v(it: &mut Interp, et: &Value, val_pt: &Value, tag_info: &Val
             let f = qt_format.get(k.to_bytes());
             flags = if f.truthy() { f } else { n(0) };
         }
-    } else if re(r"^\xff\xd8\xff", "").is_match(&v) {
+    } else if {
+        pl::at(341);
+        v = pl::sderef(&val_pt)?;
+        re(r"^\xff\xd8\xff", "").is_match(&v)
+    } {
         flags = n(0x0d); // JPG
     } else if re(r"^(\x89P|\x8aM|\x8bJ)NG\r\n\x1a\n", "").is_match(&v) {
         flags = n(0x0e); // PNG
@@ -550,7 +564,7 @@ fn format_qt_value_v(it: &mut Interp, et: &Value, val_pt: &Value, tag_info: &Val
     } else {
         flags = n(0x01); // UTF8
         let e = m(it, et, "Encode", vec![v, s("UTF8")])?;
-        pl::set_deref(val_pt, e)?;
+        pl::set_deref(&val_pt, e)?;
     }
     if val_pt.deref().is_undef() {
         warn(it, et, cat!("Error converting value for ", tag_info.get("Name")))?;
@@ -586,7 +600,8 @@ pub fn write_nextbase(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
         inc_changed(&et);
         return ret(s(""));
     }
-    ret(dir_info.get("DataPt").deref())
+    pl::at(379);
+    ret(pl::sderef(&dir_info.get("DataPt"))?)
 }
 
 /// Write Meta Keys to add/delete entries as necessary ('mdta' handler) (ref PH)
@@ -601,7 +616,8 @@ pub fn write_keys(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         return ret(n(1)); // allow dummy access to autoload this package
     }
     let data_pt = dir_info.get("DataPt");
-    let mut dir_len = dlen(&data_pt);
+    pl::at(394);
+    let mut dir_len = len_of(&pl::sderef(&data_pt)?);
     let done = Value::new_hash();
     let remap = Value::new_hash();
     let info = Value::new_hash();

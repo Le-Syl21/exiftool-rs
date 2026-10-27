@@ -45,6 +45,17 @@ fn read_line(it: &mut Interp, raf: &Value, buff: &Cell) -> ER<Value> {
     Ok(r.into_iter().next().unwrap_or_default())
 }
 
+/// `$$r` where perl autovivifies a lexical `$r` (a sub argument, an
+/// assignment target): undef becomes a new scalar reference, a string or
+/// another kind of reference dies as under strict refs.
+fn autoviv_sref(r: &Value) -> ER<Value> {
+    if r.is_undef() {
+        return Ok(pl::sref(Value::Undef));
+    }
+    pl::sderef(r)?;
+    Ok(r.clone())
+}
+
 fn seek(it: &mut Interp, raf: &Value, pos: Value, whence: i64) -> ER<bool> {
     Ok(pl::method(it, raf, "Seek", vec![pos, n(whence)])?.truthy())
 }
@@ -81,6 +92,7 @@ fn process_ttc_impl(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<Value> 
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
 
+    pl::at(403);
     if !pl::num_eq(&read(it, &raf, &buff, n(12))?, &n(12)) {
         return Ok(n(0));
     }
@@ -132,7 +144,8 @@ pub fn process_ttc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 fn process_table_entry_impl(it: &mut Interp, et: &Value, idx: &Value, tag: &Value, data_pt: &Value, offset: &Value, transformed: &Value) -> ER<Value> {
     let mut tag = tag.clone();
     let verbose = pl::method(it, et, "Options", vec![pl::s("Verbose")])?;
-    let size = pl::length(&data_pt.deref());
+    pl::at(435);
+    let size = pl::length(&pl::sderef(data_pt)?);
     let process_tag = runtime::lex_hash(it, MODULE, "processTag");
 
     let offset = if offset.truthy() { offset.clone() } else { n(0) };
@@ -291,6 +304,7 @@ fn process_otf_impl(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<Value> 
     let b = dir_info.get("Base");
     let base = if b.truthy() { b } else { n(0) };
 
+    pl::at(553);
     if !pl::num_eq(&read(it, &raf, &buff, n(12))?, &n(12)) {
         return Ok(n(0));
     }
@@ -423,6 +437,7 @@ pub fn process_afm(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 fn read255_uint16_impl(it: &mut Interp, raf: &Value) -> ER<Value> {
     let buff = cell(Value::Undef);
+    pl::at(635);
     if !read(it, raf, &buff, n(1))?.truthy() {
         return Ok(Value::Undef);
     }
@@ -456,6 +471,7 @@ pub fn read255_uint16(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 fn read_uint_base128_impl(it: &mut Interp, raf: &Value) -> ER<Value> {
     let buff = cell(Value::Undef);
     let mut v: u64 = 0;
+    pl::at(660);
     for k in 0..=4 {
         if !read(it, raf, &buff, n(1))?.truthy() {
             return Ok(Value::Undef);
@@ -490,6 +506,10 @@ fn uncompress_impl(it: &mut Interp, et: &Value, data_pt: &Value) -> ER<Value> {
     }
     let inflate = pl::call(it, "Compress::Zlib::inflateInit", vec![])?;
     if inflate.truthy() {
+        // ($$dataPt as a sub argument and as an assignment target
+        // autovivifies the lexical $dataPt; a string dies under strict refs)
+        pl::at(683);
+        let data_pt = &autoviv_sref(data_pt)?;
         // (inflate() may consume its input, so $$dataPt is passed as an alias)
         let mut args = [data_pt.deref()];
         let r = pl::method_mut(it, &inflate, "inflate", &mut args, Want::List)?;
@@ -517,6 +537,9 @@ fn unbrotli_impl(it: &mut Interp, et: &Value, data_pt: &Value) -> ER<Value> {
         return Ok(n(0));
     }
     pl::eval_block(it, |it| {
+        // ($$dataPt as a sub argument autovivifies the lexical $dataPt)
+        pl::at(702);
+        let data_pt = &autoviv_sref(data_pt)?;
         let v = pl::call(it, "IO::Uncompress::Brotli::unbro", vec![data_pt.deref(), n(100000000)])?;
         pl::set_deref(data_pt, v)
     })?;
@@ -538,6 +561,7 @@ pub fn unbrotli(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 fn process_woff_impl(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<Value> {
     let raf = dir_info.get("RAF");
     let (buff, tbl) = (cell(Value::Undef), cell(Value::Undef));
+    pl::at(720);
     if !(seek(it, &raf, n(0), 0)? && pl::num_eq(&read(it, &raf, &buff, n(48))?, &n(48))) {
         return Ok(n(0));
     }
@@ -761,6 +785,7 @@ pub fn process_font(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let raf = dir_info.get("RAF");
     let (buff, buf2) = (cell(Value::Undef), cell(Value::Undef));
     let rtn_val;
+    pl::at(833);
     if !(read(it, &raf, &buff, n(24))?.truthy() && seek(it, &raf, n(0), 0)?) {
         return ret(n(0));
     }

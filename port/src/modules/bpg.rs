@@ -43,7 +43,8 @@ pub fn get_ue7(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
             n(0)
         }
     };
-    let size = pl::length(&data_pt.deref());
+    pl::at(126);
+    let size = pl::length(&pl::sderef(&data_pt)?);
     let mut val = n(0);
     let mut i = n(0);
     loop {
@@ -77,6 +78,7 @@ pub fn process_bpg(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         let (size, mut nn, mut len, mut pos);
 
         // verify this is a valid BPG file
+        pl::at(155);
         if !read_eq(it, &raf, &buff, &n(21))? {
             return ret(n(0)); // (21 bytes is maximum header length)
         }
@@ -100,7 +102,13 @@ pub fn process_bpg(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
         // add varSize from last entry in VarFormatData to determine
         // the current read position in the file
-        let mut data_pos = pl::add(&n(9), &dir_info2.get("VarFormatData").at(-1).at(1));
+        // (a negative subscript of an empty array cannot be autovivified)
+        let var_format_data = dir_info2.get("VarFormatData");
+        if var_format_data.is_empty() {
+            pl::at(172);
+            return crate::interp::eval::die("Modification of non-creatable array value attempted, subscript -1");
+        }
+        let mut data_pos = pl::add(&n(9), &var_format_data.at(-1).at(1));
         // read extension length
         if !(seek(it, &raf, data_pos.clone(), 0)? && read_eq(it, &raf, &buff, &n(5))?) {
             pl::method(it, &et, "Warn", vec![pl::s("Missing BPG extension data")])?;

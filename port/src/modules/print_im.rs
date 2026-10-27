@@ -28,7 +28,8 @@ pub fn process_print_im(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         pl::method(it, &et, "Warn", vec![pl::s("Bad PrintIM data")])?;
         return ret(n(0));
     }
-    if !substr(it, &data_pt.deref(), &offset, Some(&n(7)))?.eq_str("PrintIM") {
+    pl::at(59);
+    if !substr(it, &pl::sderef(&data_pt)?, &offset, Some(&n(7)))?.eq_str("PrintIM") {
         pl::method(it, &et, "Warn", vec![pl::s("Invalid PrintIM header")])?;
         return ret(n(0));
     }
@@ -46,7 +47,8 @@ pub fn process_print_im(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     if verbose.truthy() {
         pl::method(it, &et, "VerboseDir", vec![pl::s("PrintIM"), num.clone()])?;
     }
-    let version = substr(it, &data_pt.deref(), &pl::add(&offset, &n(8)), Some(&n(4)))?;
+    pl::at(75);
+    let version = substr(it, &pl::sderef(&data_pt)?, &pl::add(&offset, &n(8)), Some(&n(4)))?;
     pl::method(
         it,
         &et,

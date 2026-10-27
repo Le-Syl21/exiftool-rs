@@ -14,10 +14,11 @@ use crate::runtime;
 /// Inputs: 0) ExifTool ref, 1) data ref
 pub fn process_hdrp_maker_note(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (et, data_pt) = (arg(&a, 0), arg(&a, 1));
-    let data = data_pt.deref();
     let mut tag = Value::Undef;
     let mut pos = Value::Undef;
     let tag_tbl = get_tag_table(it, "Image::ExifTool::Google::HDRPMakerNote")?;
+    pl::at(637);
+    let data = pl::sderef(&data_pt)?;
     let mut p = 0usize; // pos($$dataPt)
     let mut c1 = Value::Undef;
     loop {
@@ -90,10 +91,12 @@ pub fn process_hdrp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     }
 
     if dir_info.get("DirStart").truthy() {
-        let dat = pl::substr(&data_pt.deref(), dir_info.get("DirStart").to_i64(), Some(dir_info.get("DirLen").to_i64()));
+        pl::at(683);
+        let dat = pl::substr(&pl::sderef(&data_pt)?, dir_info.get("DirStart").to_i64(), Some(dir_info.get("DirLen").to_i64()));
         data_pt = pl::sref(dat);
     }
-    if re(r"^HDRP[\x02\x03]", "").is_match(&data_pt.deref()) {
+    pl::at(686);
+    if re(r"^HDRP[\x02\x03]", "").is_match(&pl::sderef(&data_pt)?) {
         val_pt = data_pt.clone();
     } else {
         m(it, &et, "VerboseDir", vec![tag_name.clone(), Value::Undef, n(len_of(&data_pt.deref()))])?;

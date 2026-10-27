@@ -57,7 +57,8 @@ pub fn process_ricoh_rdt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
         warn_n(it, &et, "Use ExtractEmbedded option to read Ricoh real-time metadata", 3)?;
         return ret(n(1));
     }
-    let endian = substr(it, &data_pt.deref(), &n(8), Some(&n(2)))?;
+    pl::at(1014);
+    let endian = substr(it, &pl::sderef(&data_pt)?, &n(8), Some(&n(2)))?;
     call(it, "SetByteOrder", vec![pl::s(if pl::str_eq(&endian, "\x23\x01") { "II" } else { "MM" })])?;
     let mut count = call(it, "Get32u", vec![data_pt.clone(), n(0)])?;
     let len = call(it, "Get16u", vec![data_pt.clone(), n(6)])?;
@@ -73,6 +74,7 @@ pub fn process_ricoh_rdt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     }
     if pl::gt(&pl::add(&pl::mul(&count, &len), &n(16)), &dir_len) {
         warn(it, &et, pl::concat(&pl::concat(&pl::s("Truncated "), &dir_name), &pl::s(" data")))?;
+        pl::at(1028);
         count = pl::int(&pl::div(&pl::sub(&dir_len, &n(16)), &len)?);
     }
     pl::method(it, &et, "VerboseDir", vec![dir_name.clone()])?;
@@ -110,7 +112,8 @@ pub fn process_ricoh_text(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     let dir_len = or(dir_info.get("DirLen"), || pl::sub(&data_len, &dir_start));
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
 
-    let data = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+    pl::at(1058);
+    let data = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?;
     if re(r"^\0", "").is_match(&data) {
         return ret(n(1)); // blank Ricoh maker notes
     }
@@ -149,7 +152,8 @@ pub fn process_ricoh_rmeta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let dir_start = dir_info.get("DirStart");
-    let data_len = pl::length(&data_pt.deref());
+    pl::at(1100);
+    let data_len = pl::length(&pl::sderef(&data_pt)?);
     let dir_len = pl::sub(&data_len, &dir_start);
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
 
@@ -217,7 +221,9 @@ pub fn process_ricoh_rmeta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         if pl::ge(&audio_len, &n(4)) && pl::str_eq(&substr(it, &buff, &n(0), Some(&n(4)))?, "RIFF") {
             pl::method(it, &et, "HandleTag", vec![tag_table_ptr.clone(), pl::s("_audio"), pl::sref(buff)])?;
         } else if sound_file.truthy() {
-            pl::set_deref(&sound_file, pl::concat(&sound_file.deref(), &buff))?;
+            pl::at(1140);
+            let sound = pl::sderef(&sound_file)?;
+            pl::set_deref(&sound_file, pl::concat(&sound, &buff))?;
         } else {
             warn_n(it, &et, "Unknown Ricoh RMETA type", 1)?;
             return ret(n(0));

@@ -349,7 +349,8 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
                     let pad = pl::sub(&n(4), &and(&len, 0x03));
                     if pl::le(&pl::add(&pl::add(val_pos, &pad), &size), dir_end) {
                         // skip padding if all zeros
-                        let d = substr(it, &data_pt.deref(), val_pos, Some(&pad))?;
+                        pl::at(1332);
+                        let d = substr(it, &pl::sderef(&data_pt)?, val_pos, Some(&pad))?;
                         let zeros = Value::bytes(vec![0u8; pad.to_i64().max(0) as usize]);
                         if d.to_bytes() == zeros.to_bytes() {
                             *val_pos = pl::add(val_pos, &pad);
@@ -380,7 +381,8 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
                         let sec100yr = pl::mul(&pl::mul(&n(100), &n(365)), &sec_day);
                         if pl::lt(&val, &n(0)) || pl::gt(&val, &sec100yr) {
                             // some software writes the wrong byte order (but the proper word order)
-                            let w = pl::unpack(&format!("x{}NN", val_pos.to_text()), &data_pt.deref())?;
+                            pl::at(1356);
+                            let w = pl::unpack(&format!("x{}NN", val_pos.to_text()), &pl::sderef(&data_pt)?)?;
                             let v2 = pl::sub(&pl::mul(&pl::add(&arg(&w, 0), &pl::mul(&arg(&w, 1), &n(4294967296))), &Value::Num(1e-7)), &unix_time_zero);
                             if pl::gt(&v2, &n(0)) && pl::lt(&v2, &sec100yr) {
                                 val = v2;
@@ -407,7 +409,8 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
                         warn(it, et, cat(&[s("Truncated "), format.clone(), s(" value")]))?;
                         break;
                     }
-                    val = substr(it, &data_pt.deref(), &add(val_pos, 4), Some(&len))?;
+                    pl::at(1379);
+                    val = substr(it, &pl::sderef(&data_pt)?, &add(val_pos, 4), Some(&len))?;
                     if format.eq_str("VT_LPWSTR") {
                         // convert wide string from Unicode
                         val = pl::method(it, et, "Decode", vec![val, s("UTF16")])?;
@@ -431,12 +434,16 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
                         warn(it, et, cat(&[s("Truncated "), format.clone(), s(" value")]))?;
                         break;
                     }
-                    val = substr(it, &data_pt.deref(), &add(val_pos, 4), Some(&len))?;
+                    pl::at(1402);
+                    val = substr(it, &pl::sderef(&data_pt)?, &add(val_pos, 4), Some(&len))?;
                     // update position for data length plus padding
                     // (does this padding disappear in arrays too?)
                     *val_pos = pl::add(val_pos, &and(&add(&len, 3), 0xfffffffc));
                 } else if format.eq_str("VT_CLSID") {
-                    let d = substr(it, &data_pt.deref(), val_pos, Some(&size))?;
+                    // (a sub argument: $$dataPt autovivifies the lexical $dataPt)
+                    pl::at(1407);
+                    let dv = if data_pt.is_undef() { Value::Undef } else { pl::sderef(data_pt)? };
+                    let d = substr(it, &dv, val_pos, Some(&size))?;
                     val = pl::call(it, "Image::ExifTool::ASF::GetGUID", vec![d])?;
                 }
                 *val_pos = pl::add(val_pos, &size); // update value pointer to end of value
@@ -471,7 +478,8 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
 pub fn process_contents(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(1446);
+    let data = pl::sderef(&data_pt)?;
     let b = data.to_bytes();
     let mut is_fla = false;
     // pos($$dataPt), kept here and written back to the scalar
@@ -564,7 +572,8 @@ pub fn process_word_document(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
     if !data_pt.truthy() {
         return ret(n(0));
     }
-    let dir_len = pl::length(&data_pt.deref());
+    pl::at(1506);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?);
     // validate the FIB signature
     if !(pl::gt(&dir_len, &n(2)) && pl::num_eq(&get16u(it, &data_pt, n(0))?, &n(0xa5ec))) {
         pl::method(it, &et, "Warn", vec![s("Invalid FIB signature"), n(1)])?;
@@ -680,7 +689,8 @@ pub fn process_document_table(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<
             et.set("DOC_NUM", doc); // use same document number
             let tag_table_ptr = et_call(it, "GetTagTable", vec![s("Image::ExifTool::FlashPix::DocTable")])?;
             for tag in ["DOP", "CommentByBlock", "LastSavedByBlock"] {
-                if offsets.is_empty() {
+                pl::at(1596);
+                if pl::aderef(&offsets)?.is_empty() {
                     break;
                 }
                 let off = shift_array(&offsets);
@@ -725,7 +735,8 @@ pub fn process_comment_by(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
         if pl::gt(&pl::add(&pos, &pl::mul(&len, &n(2))), &end) {
             break;
         }
-        let d = substr(it, &data_pt.deref(), &pos, Some(&pl::mul(&len, &n(2))))?;
+        pl::at(1633);
+        let d = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&pl::mul(&len, &n(2))))?;
         let author = pl::method(it, &et, "Decode", vec![d, s("UTF16")])?;
         pos = pl::add(&pos, &pl::mul(&len, &n(2)));
         pl::method(it, &et, "HandleTag", vec![tag_table_ptr.clone(), s("CommentBy"), author])?;
@@ -756,7 +767,8 @@ pub fn process_last_saved_by(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
         if pl::gt(&pl::add(&pos, &pl::mul(&len, &n(2))), &end) {
             break;
         }
-        let d = substr(it, &data_pt.deref(), &pos, Some(&pl::mul(&len, &n(2))))?;
+        pl::at(1659);
+        let d = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&pl::mul(&len, &n(2))))?;
         let author = pl::method(it, &et, "Decode", vec![d, s("UTF16")])?;
         pos = pl::add(&pos, &pl::mul(&len, &n(2)));
         if pl::gt(&add(&pos, 2), &end) {
@@ -767,7 +779,8 @@ pub fn process_last_saved_by(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
         if pl::gt(&pl::add(&pos, &pl::mul(&len, &n(2))), &end) {
             break;
         }
-        let d = substr(it, &data_pt.deref(), &pos, Some(&pl::mul(&len, &n(2))))?;
+        pl::at(1665);
+        let d = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&pl::mul(&len, &n(2))))?;
         let path = pl::method(it, &et, "Decode", vec![d, s("UTF16")])?;
         pos = pl::add(&pos, &pl::mul(&len, &n(2)));
         pl::method(it, &et, "HandleTag", vec![tag_table_ptr.clone(), s("LastSavedBy"), cat(&[author, s(" ("), path, s(")")])])?;
@@ -803,7 +816,11 @@ pub fn process_properties(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let mut pos = or(dir_info.get("DirStart"), n(0));
-    let dir_len = or(dir_info.get("DirLen"), pl::sub(&pl::length(&data_pt.deref()), &pos));
+    let mut dir_len = dir_info.get("DirLen");
+    if !dir_len.truthy() {
+        pl::at(1696);
+        dir_len = pl::sub(&pl::length(&pl::sderef(&data_pt)?), &pos);
+    }
     let dir_end = pl::add(&pos, &dir_len);
     let verbose = options(it, &et, "Verbose")?;
     let ole_format = runtime::lex_hash(it, MODULE, "oleFormat");
@@ -869,7 +886,8 @@ pub fn process_properties(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
                             if pl::gt(&val_pos, &dir_end) {
                                 break 'dictloop; // last
                             }
-                            let mut name = substr(it, &data_pt.deref(), &pl::sub(&val_pos, &len), Some(&len))?;
+                            pl::at(1747);
+                            let mut name = substr(it, &pl::sderef(&data_pt)?, &pl::sub(&val_pos, &len), Some(&len))?;
                             trunc_null(&mut name);
                             if !pl::length(&name).truthy() {
                                 break 'dict;
@@ -1009,7 +1027,8 @@ fn load_chain_impl(it: &mut Interp, raf: &Value, mut sect: Value, fat_pt: &Value
         }
         chain.extend_from_slice(&buff.borrow().to_bytes());
         // step to next sector in chain
-        if pl::gt(&pl::mul(&sect, &n(4)), &pl::sub(&pl::length(&fat_pt.deref()), &n(4))) {
+        pl::at(1836);
+        if pl::gt(&pl::mul(&sect, &n(4)), &pl::sub(&pl::length(&pl::sderef(&fat_pt)?), &n(4))) {
             return Ok(Value::Undef);
         }
         sect = get32u(it, fat_pt, pl::mul(&sect, &n(4)))?;
@@ -1031,7 +1050,8 @@ pub fn process_fpxr(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         warn(it, &et, s("FPXR segment too small"))?;
         return ret(n(0));
     }
-    let data = data_pt.deref();
+    pl::at(1860);
+    let data = pl::sderef(&data_pt)?;
 
     // get version and segment type (version is 0 in all my samples)
     let vt = pl::unpack("x5C2", &data)?;

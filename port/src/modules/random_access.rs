@@ -115,11 +115,21 @@ pub(crate) fn print(it: &mut Interp, s: Value) -> ER<()> {
     Ok(())
 }
 
+/// `$obj->METHOD(...)` on an undefined `$obj` dies at the caller's
+/// location, as perl does (not at the location of the eval below).
+fn invocant_check(obj: &Value, name: &str) -> ER<()> {
+    if obj.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{name}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// `$obj->Read($buff, $len)` through the method call, so the buffer is
 /// written as an alias whatever implementation runs: returns the number
 /// of bytes read and updates `buff`.
 #[allow(dead_code)]
 pub(crate) fn raf_read(it: &mut Interp, raf: &Value, buff: &mut Value, len: Value) -> ER<Value> {
+    invocant_check(raf, "Read")?;
     let (r, b, l) = (cell(raf.clone()), cell(buff.clone()), cell(len));
     let v = perl_eval1(it, "$raf->Read($buff, $len)", "File::RandomAccess", &[("raf", &r), ("buff", &b), ("len", &l)])?;
     *buff = b.borrow().clone();
@@ -129,6 +139,7 @@ pub(crate) fn raf_read(it: &mut Interp, raf: &Value, buff: &mut Value, len: Valu
 /// `$obj->Read($buff, $len)` with `$buff` a `my` variable others may hold
 /// a reference to (`\$buff`): the cell is read into in place.
 pub(crate) fn raf_read_cell(it: &mut Interp, raf: &Value, buff: &Cell, len: Value) -> ER<Value> {
+    invocant_check(raf, "Read")?;
     let (r, l) = (cell(raf.clone()), cell(len));
     perl_eval1(it, "$raf->Read($buff, $len)", "File::RandomAccess", &[("raf", &r), ("buff", buff), ("len", &l)])
 }
@@ -136,6 +147,7 @@ pub(crate) fn raf_read_cell(it: &mut Interp, raf: &Value, buff: &Cell, len: Valu
 /// `$obj->ReadLine($buff)`, as `raf_read`.
 #[allow(dead_code)]
 pub(crate) fn raf_read_line(it: &mut Interp, raf: &Value, buff: &mut Value) -> ER<Value> {
+    invocant_check(raf, "ReadLine")?;
     let (r, b) = (cell(raf.clone()), cell(buff.clone()));
     let v = perl_eval1(it, "$raf->ReadLine($buff)", "File::RandomAccess", &[("raf", &r), ("buff", &b)])?;
     *buff = b.borrow().clone();
@@ -148,6 +160,28 @@ fn perl_read(it: &mut Interp, fp: &Value, buff: &mut Value, num: &Value) -> ER<V
     let v = perl_eval1(it, "read($fp, $buff, $num)", "File::RandomAccess", &[("fp", &f), ("buff", &b), ("num", &l)])?;
     *buff = b.borrow().clone();
     Ok(v)
+}
+
+/// The filehandle operand of perl's seek/tell/read: undef dies as in perl
+/// ("Can't use an undefined value as a symbol reference").
+fn fh_check(fp: &Value) -> ER<()> {
+    if fp.is_undef() {
+        return crate::interp::eval::die("Can't use an undefined value as a symbol reference");
+    }
+    Ok(())
+}
+
+/// `${$self->{BUFF_PT}}` as an lvalue (`.=`, `=`): an undefined member is
+/// autovivified, a string or another kind of reference dies under strict refs.
+fn buff_pt_lv(self_: &Value) -> ER<Value> {
+    let bp = self_.get("BUFF_PT");
+    if bp.is_undef() {
+        let r = pl::sref(Value::Undef);
+        self_.set("BUFF_PT", r.clone());
+        return Ok(r);
+    }
+    pl::sderef(&bp)?;
+    Ok(bp)
 }
 
 fn errno(it: &mut Interp) -> Value {
@@ -206,6 +240,8 @@ pub fn debug(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 fn seek_test_impl(it: &mut Interp, self_: &Value) -> ER<Value> {
     if !self_.get("TESTED").truthy() {
         let fp = cell(self_.get("FILE_PT"));
+        pl::at(111);
+        fh_check(&fp.borrow())?;
         if perl_eval1(it, "seek($fp, 1, 1) and seek($fp, -1, 1)", "File::RandomAccess", &[("fp", &fp)])?.truthy() {
             self_.set("TESTED", n(1)); // test passed
         } else {
@@ -229,6 +265,8 @@ fn tell_impl(it: &mut Interp, self_: &Value) -> ER<Value> {
         rtn_val = pl::add(&self_.get("POS"), &self_.get("BASE"));
     } else {
         let fp = cell(self_.get("FILE_PT"));
+        pl::at(131);
+        fh_check(&fp.borrow())?;
         rtn_val = perl_eval1(it, "tell($fp)", "File::RandomAccess", &[("fp", &fp)])?;
     }
     Ok(rtn_val)
@@ -265,6 +303,8 @@ fn seek_impl(it: &mut Interp, self_: &Value, num: &Value, whence: &Value) -> ER<
         }
     } else {
         let (fp, nm, wh) = (cell(self_.get("FILE_PT")), cell(num.clone()), cell(whence));
+        pl::at(169);
+        fh_check(&fp.borrow())?;
         rtn_val = perl_eval1(it, "seek($fp, $num, $whence)", "File::RandomAccess", &[("fp", &fp), ("num", &nm), ("whence", &wh)])?;
     }
     Ok(rtn_val)
@@ -336,7 +376,8 @@ fn read_impl(it: &mut Interp, self_: &Value, buf: &mut Value, set: &mut bool, le
             num = pl::add(&ops::bit_or(&pl::sub(&num, &n(1)), &n(CHUNK_SIZE - 1)), &n(1));
             num = perl_read(it, &self_.get("FILE_PT"), &mut buff, &num)?;
             if num.truthy() {
-                let bp = self_.get("BUFF_PT");
+                pl::at(219);
+                let bp = buff_pt_lv(self_)?;
                 set_deref(&bp, pl::concat(&bp.deref(), &buff))?;
                 self_.set("LEN", pl::add(&self_.get("LEN"), &num));
             } else if num.is_undef() {
@@ -356,7 +397,8 @@ fn read_impl(it: &mut Interp, self_: &Value, buf: &mut Value, set: &mut bool, le
             rtn_val = num;
         }
         // return data from our buffer
-        *buf = substr(it, &self_.get("BUFF_PT").deref(), &self_.get("POS"), Some(&rtn_val))?;
+        pl::at(236);
+        *buf = substr(it, &pl::sderef(&self_.get("BUFF_PT"))?, &self_.get("POS"), Some(&rtn_val))?;
         *set = true;
         self_.set("POS", pl::add(&self_.get("POS"), &rtn_val));
     } else {
@@ -365,6 +407,8 @@ fn read_impl(it: &mut Interp, self_: &Value, buf: &mut Value, set: &mut bool, le
             *buf = pl::s("");
             *set = true;
         }
+        pl::at(241);
+        fh_check(&self_.get("FILE_PT"))?;
         rtn_val = perl_read(it, &self_.get("FILE_PT"), buf, &len)?;
         *set = true;
         if rtn_val.is_undef() {
@@ -375,7 +419,8 @@ fn read_impl(it: &mut Interp, self_: &Value, buf: &mut Value, set: &mut bool, le
     }
     if self_.get("DEBUG").truthy() {
         let pos = pl::sub(&tell_impl(it, self_)?, &rtn_val);
-        let dbg = self_.get("DEBUG");
+        pl::at(249);
+        let dbg = pl::hderef(&self_.get("DEBUG"))?;
         let cur = dbg.get(pos.to_bytes());
         if !(cur.truthy() && pl::gt(&cur, &rtn_val)) {
             dbg.set(pos.to_bytes(), rtn_val.clone());
@@ -421,13 +466,15 @@ fn read_line_impl(it: &mut Interp, self_: &Value, buf: &mut Value, set: &mut boo
                     }
                     return Ok(n(0));
                 }
-                let bp = self_.get("BUFF_PT");
+                pl::at(278);
+                let bp = buff_pt_lv(self_)?;
                 set_deref(&bp, pl::concat(&bp.deref(), &buff))?;
                 self_.set("LEN", pl::add(&self_.get("LEN"), &num));
             }
             // scan and read until we find the EOL (or hit EOF)
             loop {
-                pos = index(&self_.get("BUFF_PT").deref(), &eol, Some(&pos));
+                pl::at(283);
+                pos = index(&pl::sderef(&self_.get("BUFF_PT"))?, &eol, Some(&pos));
                 if pl::ge(&pos, &n(0)) {
                     pos = pl::add(&pos, &pl::length(&eol));
                     break;
@@ -442,13 +489,15 @@ fn read_line_impl(it: &mut Interp, self_: &Value, buf: &mut Value, set: &mut boo
                     }
                     break;
                 }
-                let bp = self_.get("BUFF_PT");
+                pl::at(294);
+                let bp = buff_pt_lv(self_)?;
                 set_deref(&bp, pl::concat(&bp.deref(), &buff))?;
                 self_.set("LEN", pl::add(&self_.get("LEN"), &num));
             }
         } else {
             // string i/o
-            pos = index(&self_.get("BUFF_PT").deref(), &eol, Some(&pos));
+            pl::at(299);
+            pos = index(&pl::sderef(&self_.get("BUFF_PT"))?, &eol, Some(&pos));
             if pl::lt(&pos, &n(0)) {
                 pos = self_.get("LEN");
                 if pl::gt(&self_.get("POS"), &pos) {
@@ -460,7 +509,8 @@ fn read_line_impl(it: &mut Interp, self_: &Value, buf: &mut Value, set: &mut boo
         }
         // read the line from our buffer
         rtn_val = pl::sub(&pos, &self_.get("POS"));
-        *buf = substr(it, &self_.get("BUFF_PT").deref(), &self_.get("POS"), Some(&rtn_val))?;
+        pl::at(309);
+        *buf = substr(it, &pl::sderef(&self_.get("BUFF_PT"))?, &self_.get("POS"), Some(&rtn_val))?;
         *set = true;
         self_.set("POS", pos);
     } else {
@@ -475,7 +525,8 @@ fn read_line_impl(it: &mut Interp, self_: &Value, buf: &mut Value, set: &mut boo
     }
     if self_.get("DEBUG").truthy() {
         let pos = pl::sub(&tell_impl(it, self_)?, &rtn_val);
-        let dbg = self_.get("DEBUG");
+        pl::at(321);
+        let dbg = pl::hderef(&self_.get("DEBUG"))?;
         let cur = dbg.get(pos.to_bytes());
         if !(cur.truthy() && pl::gt(&cur, &rtn_val)) {
             dbg.set(pos.to_bytes(), rtn_val.clone());
@@ -514,7 +565,8 @@ fn slurp_impl(it: &mut Interp, self_: &Value) -> ER<()> {
             }
             break;
         }
-        let bp = self_.get("BUFF_PT");
+        pl::at(343);
+        let bp = buff_pt_lv(self_)?;
         set_deref(&bp, pl::concat(&bp.deref(), &buff))?;
         self_.set("LEN", pl::add(&self_.get("LEN"), &num));
     }
@@ -543,7 +595,8 @@ fn purge_impl(it: &mut Interp, self_: &Value) -> ER<Value> {
             while pl::gt(&self_.get("POS"), &self_.get("LEN")) {
                 self_.set("BASE", pl::add(&self_.get("BASE"), &self_.get("LEN")));
                 self_.set("POS", pl::sub(&self_.get("POS"), &self_.get("LEN")));
-                let bp = self_.get("BUFF_PT");
+                pl::at(365);
+                let bp = buff_pt_lv(self_)?;
                 set_deref(&bp, pl::s(""))?;
                 let mut b = bp.deref();
                 let len = perl_read(it, &self_.get("FILE_PT"), &mut b, &n(SKIP_SIZE))?;
@@ -559,8 +612,9 @@ fn purge_impl(it: &mut Interp, self_: &Value) -> ER<Value> {
                 }
             }
         } else if pl::gt(&purge, &n(0)) {
+            pl::at(374);
             let bp = self_.get("BUFF_PT");
-            let rest = substr(it, &bp.deref(), &purge, None)?;
+            let rest = substr(it, &pl::sderef(&bp)?, &purge, None)?;
             set_deref(&bp, rest)?;
             self_.set("BASE", pl::add(&self_.get("BASE"), &purge));
             self_.set("POS", pl::sub(&self_.get("POS"), &purge));
@@ -623,7 +677,8 @@ pub fn close(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 fn close_debug(it: &mut Interp, self_: &Value) -> ER<()> {
     if seek_impl(it, self_, &n(0), &n(2))?.truthy() {
         let t = tell_impl(it, self_)?;
-        self_.get("DEBUG").set(t.to_bytes(), n(0)); // set EOF marker
+        pl::at(402);
+        pl::hderef(&self_.get("DEBUG"))?.set(t.to_bytes(), n(0)); // set EOF marker
         let mut last = Value::Undef;
         let mut tot = n(0);
         let mut bad = n(0);

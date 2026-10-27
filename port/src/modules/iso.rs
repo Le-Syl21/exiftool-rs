@@ -25,6 +25,7 @@ pub fn process_iso(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut tag_table_ptr = Value::Undef;
 
     // verify this is a valid ISO file
+    pl::at(143);
     if !pl::method(it, &raf, "Seek", vec![n(32768), n(0)])?.truthy() {
         return ret(n(0));
     }

@@ -32,7 +32,8 @@ pub fn process_geo_tiff(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
     let ascii_data = pl::method(it, &et, "GetValue", vec![pl::s("GeoTiffAsciiParams"), pl::s("ValueConv")])?;
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
 
-    let dir_len = pl::length(&dir_data.deref());
+    pl::at(2146);
+    let dir_len = pl::length(&pl::sderef(&dir_data)?);
     let ok = pl::ge(&dir_len, &n(8)) && {
         let ne = g16u(it, &dir_data, n(6))?;
         pl::ge(&dir_len, &pl::mul(&n(8), &pl::add(&ne, &n(1))))
@@ -90,7 +91,8 @@ pub fn process_geo_tiff(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
                     }
                 }
                 let size = pl::call(it, "Image::ExifTool::FormatSize", vec![format.clone()])?;
-                if !data_pt.truthy() || pl::lt(&pl::length(&data_pt.deref()), &pl::mul(&size, &pl::add(&offset, &count))) {
+                pl::at(2188);
+                if !data_pt.truthy() || pl::lt(&pl::length(&pl::sderef(&data_pt)?), &pl::mul(&size, &pl::add(&offset, &count))) {
                     let msg = pl::concat(&pl::concat(&pl::s("Missing "), &format), &pl::concat(&pl::s(" data for "), &tag_info.get("Name")));
                     pl::method(it, &et, "Warn", vec![msg])?;
                     break 'entry;

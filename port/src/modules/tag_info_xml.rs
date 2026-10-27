@@ -555,6 +555,7 @@ fn build_lang_modules_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
             }
             if pl::str_eq(&tok, "table") {
                 let Some(c) = re(r"^\s*<table name='([^']+)'[ >]", "").m(&line) else {
+                    pl::at(368);
                     pl::warn(it, "Bad table")?;
                     continue;
                 };
@@ -574,6 +575,7 @@ fn build_lang_modules_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
             }
             if pl::str_eq(&tok, "tag") {
                 let Some(c) = re(r"^\s*<tag id='([^']*)' name='([^']+)'( index='(\d+)')?[ >]", "").m(&line) else {
+                    pl::at(378);
                     pl::warn(it, "Bad tag")?;
                     continue;
                 };
@@ -592,10 +594,12 @@ fn build_lang_modules_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 val_index = cap(&c, 1);
             } else if pl::str_eq(&tok, "key") {
                 if id.is_undef() {
+                    pl::at(395);
                     pl::warn(it, "No ID")?;
                     continue;
                 }
                 let Some(c) = re(r"^\s*<key id='([^']*)'>", "").m(&line) else {
+                    pl::at(396);
                     pl::warn(it, "Bad key")?;
                     continue;
                 };
@@ -610,10 +614,12 @@ fn build_lang_modules_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 pat.extend_from_slice(&tok.to_bytes());
                 pat.push(b'>');
                 let Some(c) = pl::re_dyn(&pat, "")?.m(&line) else {
+                    pl::at(400);
                     pl::warn(it, &format!("Bad {}", tok.to_text()))?;
                     continue;
                 };
                 if pl::str_eq(&tok, "desc") && !key.is_undef() {
+                    pl::at(401);
                     pl::warn(it, "Out of order \"desc\"")?;
                     continue;
                 }
@@ -678,11 +684,13 @@ fn build_lang_modules_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 if !index.is_undef() {
                     tag_info = info_array.get(index.to_i64() as usize).cloned().unwrap_or_default();
                     if !tag_info.truthy() {
+                        pl::at(442);
                         pl::warn(it, "Invalid index")?;
                         continue;
                     }
                 } else {
                     if info_array.len() > 1 {
+                        pl::at(444);
                         pl::warn(it, "Missing index")?;
                         continue;
                     }
@@ -747,18 +755,21 @@ fn build_lang_modules_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                     }
                 } else {
                     if key.is_undef() {
+                        pl::at(485);
                         pl::warn(it, &format!("No key for {}", tag_info.get("Name").to_text()))?;
                         continue;
                     }
                     let mut print_conv = tag_info.get("PrintConv");
                     if pl::ref_of(&print_conv) == "ARRAY" {
                         if val_index.is_undef() {
+                            pl::at(488);
                             pl::warn(it, "No value index")?;
                             continue;
                         }
                         print_conv = print_conv.at(val_index.to_i64());
                     }
                     if pl::ref_of(&print_conv) != "HASH" {
+                        pl::at(491);
                         pl::warn(it, "No PrintConv")?;
                         continue;
                     }
