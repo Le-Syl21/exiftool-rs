@@ -255,6 +255,12 @@ pub fn validate_xmp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 }
 
 fn validate_xmp_v(it: &mut Interp, xmp_pt: &Value, mut mode: Value) -> ER<Value> {
+    // (`$$xmpPt =~ s///` autovivifies an undefined $xmpPt, but dies on a
+    // string or another kind of reference)
+    pl::at(80);
+    if !xmp_pt.is_undef() {
+        pl::sderef(xmp_pt)?;
+    }
     let mut x = xmp_pt.deref();
     if re(r"^\s*<!--.*?-->\s*", "s").subst(&mut x, false, |_| Vec::new()) > 0 {
         pl::set_deref(xmp_pt, x.clone())?; // remove leading comment if it exists
@@ -293,7 +299,12 @@ fn validate_xmp_v(it: &mut Interp, xmp_pt: &Value, mut mode: Value) -> ER<Value>
 /// - issues warnings if problems detected
 pub fn validate_property(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (et, prop_list, attr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let pl_ = prop_list.items();
+    let pl_ = if et.get("XmpValidate").truthy() {
+        pl::at(102);
+        pl::aderef(&prop_list)?
+    } else {
+        Vec::new()
+    };
     let np = pl_.len() as i64;
     if et.get("XmpValidate").truthy() && np > 2 {
         if re(r"^x:x[ma]pmeta$", "").is_match(&pl_[0]) && pl::str_eq(&pl_[1], "rdf:RDF") && re(r"rdf:Description( |$)", "").is_match(&pl_[2]) {
@@ -404,7 +415,8 @@ fn check_xmp_v(it: &mut Interp, et: &Value, tag_info: &Value, val_ptr: &Value, c
         crate::modules::xmp::require(it, "Image/ExifTool/XMPStruct.pl")?;
         let mut err = Value::Undef;
         let mut warn = Value::Undef;
-        if !val_ptr.deref().is_ref() {
+        pl::at(189);
+        if !pl::sderef(val_ptr)?.is_ref() {
             let r = pl::call_list(it, "Image::ExifTool::XMP::InflateStruct", vec![et.clone(), val_ptr.clone()])?;
             pl::set_deref(val_ptr, arg(&r, 0))?;
             warn = arg(&r, 1);
@@ -569,7 +581,10 @@ fn set_property_path_v(it: &mut Interp, tag_table_ptr: &Value, tag_id: &Value, p
             if flat_info.get("PropertyPath").truthy() {
                 return Ok(());
             }
-        } else if prop_list.len() > 50 {
+        } else if {
+            pl::at(312);
+            pl::aderef(prop_list)?.len() > 50
+        } {
             return Ok(()); // avoid deep recursion
         } else {
             // flattened tag doesn't exist, so create it now
@@ -691,7 +706,10 @@ pub fn capture_xmp(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>>
 }
 
 fn capture_xmp_v(it: &mut Interp, et: &Value, prop_list: &Value, val: &Value, attrs: &Value) -> ER<()> {
-    if !(!val.is_undef() && prop_list.len() > 2) {
+    if val.is_undef() || {
+        pl::at(392);
+        pl::aderef(prop_list)?.len() <= 2
+    } {
         return Ok(());
     }
     let rdf_desc = lex_s(it, "rdfDesc");
@@ -737,18 +755,21 @@ fn capture_xmp_v(it: &mut Interp, et: &Value, prop_list: &Value, val: &Value, at
 pub fn save_blank_info(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (blank_info, prop_list_pt, val, attrs) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
 
-    let prop_path = pl::join("/", &prop_list_pt.items());
+    pl::at(437);
+    let prop_path = pl::join("/", &pl::aderef(&prop_list_pt)?);
     let ids = re(r" #([^ /]*)", "").all(&prop_path);
     let rdf_desc = lex_s(it, "rdfDesc");
     // split the property path at each nodeID
     for id in ids {
         let p = pb(&[br"^(.*?)/([^/]*) #", &id.to_bytes(), br"((/.*)?)$"]);
+        pl::at(442);
         let c = md(&p, "", &prop_path)?;
         let (mut pre, prop, mut post) = match &c {
             Some(c) => (cap(c, 1), cap(c, 2), cap(c, 3)),
             None => (Value::Undef, Value::Undef, Value::Undef),
         };
         if pre.is_undef() {
+            pl::at(443);
             pl::warn(it, "internal error parsing nodeID's")?;
             continue;
         }
@@ -929,7 +950,15 @@ pub fn process_g_spherical(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     // extract SphericalVideoXML as a block if requested
     if hh(&et, "REQ_TAG_LOOKUP").get("sphericalvideoxml").truthy() {
-        let d = pl::substr(&dir_info.get("DataPt").deref(), 16, None);
+        // (`substr(${$$dirInfo{DataPt}}, 16)` as a sub argument is an
+        // lvalue: it autovivifies an undefined DataPt, but dies on a string)
+        let mut dp = dir_info.get("DataPt");
+        if dp.is_undef() {
+            dp = pl::sref(Value::Undef);
+            dir_info.set("DataPt", dp.clone());
+        }
+        pl::at(583);
+        let d = pl::substr(&pl::sderef(&dp)?, 16, None);
         meth(it, &et, "FoundTag", vec![pl::s("SphericalVideoXML"), d])?;
     }
     it.call_named("Image::ExifTool::XMP::ProcessXMP", vec![et, dir_info, tag_table_ptr], want)
@@ -1046,7 +1075,8 @@ pub fn limit_xmp_size(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 
 fn limit_xmp_size_v(it: &mut Interp, et: &Value, data_pt: &Value, max_len: &Value, about: &Value, start_pt: &Value, ext_start: &Value) -> ER<Vec<Value>> {
     // return straight away if it isn't too big
-    if pl::lt(&pl::length(&data_pt.deref()), max_len) {
+    pl::at(674);
+    if pl::lt(&pl::length(&pl::sderef(data_pt)?), max_len) {
         return pl::ret_undef();
     }
 

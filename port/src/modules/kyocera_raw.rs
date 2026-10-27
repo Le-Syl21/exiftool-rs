@@ -4,6 +4,7 @@
 
 use crate::interp::eval::ER;
 use crate::interp::{Interp, Want};
+use crate::modules::exiftool::part2;
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, ret};
@@ -29,6 +30,8 @@ pub fn process_raw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let size = n(156); // size of header
     let buff = cell(Value::Undef);
 
+    pl::at(119);
+    part2::check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, size.clone())?, &size) {
         return ret(n(0));
     }

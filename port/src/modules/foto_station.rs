@@ -59,6 +59,7 @@ pub fn process_foto_station(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     let mut rtn_val = n(0);
 
     dir_info.set("DirLen", n(0)); // initialize returned trailer length
+    pl::at(134);
     seek(it, &raf, pl::neg(&offset), 2)?; // seek to specified offset from end of file
 
     // loop through FotoStation records

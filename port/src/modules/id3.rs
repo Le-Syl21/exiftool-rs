@@ -159,7 +159,9 @@ pub fn process_syn_text(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
 
-    m(it, &et, "VerboseDir", vec![pl::s("SynLyrics"), n(0), pl::length(&data_pt.deref())])?;
+    pl::at(939);
+    let data = pl::sderef(&data_pt)?;
+    m(it, &et, "VerboseDir", vec![pl::s("SynLyrics"), n(0), pl::length(&data)])?;
     if !pl::gt(&pl::length(&data_pt.deref()), &n(6)) {
         return pl::ret_nothing(want);
     }
@@ -235,7 +237,9 @@ pub fn process_private(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let (mut tag, start);
-    m(it, &et, "VerboseDir", vec![pl::s("PRIV"), n(0), pl::length(&data_pt.deref())])?;
+    pl::at(991);
+    let data = pl::sderef(&data_pt)?;
+    m(it, &et, "VerboseDir", vec![pl::s("PRIV"), n(0), pl::length(&data)])?;
     if let Some(c) = re(r"^(.*?)\0", "s").m(&data_pt.deref()) {
         tag = cap(&c, 1);
         start = pl::add(&pl::length(&tag), &n(1));
@@ -413,6 +417,8 @@ pub fn process_id3v2(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
             if pl::gt(&pl::add(&offset, &n(6)), &size) {
                 break;
             }
+            pl::at(1130);
+            pl::sderef(&data_pt)?;
             let u = pl::unpack(&format!("x{}a3Cn", offset.to_text()), &data)?;
             id = arg(&u, 0);
             let hi = arg(&u, 1);
@@ -427,6 +433,8 @@ pub fn process_id3v2(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
             if pl::gt(&pl::add(&offset, &n(10)), &size) {
                 break;
             }
+            pl::at(1137);
+            pl::sderef(&data_pt)?;
             let u = pl::unpack(&format!("x{}a4Nn", offset.to_text()), &data)?;
             id = arg(&u, 0);
             len = arg(&u, 1);
@@ -1175,7 +1183,9 @@ pub fn process_id3(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// Inputs: 0) ExifTool object reference, 1) dirInfo reference, 2) dummy tag table ref
 pub fn process_id3_dir(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));
-    m(it, &et, "VerboseDir", vec![pl::s("ID3"), Value::Undef, pl::length(&dir_info.get("DataPt").deref())])?;
+    pl::at(1640);
+    let len = pl::length(&pl::sderef(&dir_info.get("DataPt"))?);
+    m(it, &et, "VerboseDir", vec![pl::s("ID3"), Value::Undef, len])?;
     process_id3(it, vec![et, dir_info], want)
 }
 
@@ -1184,7 +1194,9 @@ pub fn process_id3_dir(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
 /// Returns: 1 on success
 pub fn process_geob(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    m(it, &et, "VerboseDir", vec![pl::s("GEOB"), Value::Undef, pl::length(&dir_info.get("DataPt").deref())])?;
+    pl::at(1651);
+    let len = pl::length(&pl::sderef(&dir_info.get("DataPt"))?);
+    m(it, &et, "VerboseDir", vec![pl::s("GEOB"), Value::Undef, len])?;
     let data_pt = dir_info.get("DataPt");
     let len = pl::length(&data_pt.deref());
     if !pl::ge(&len, &n(4)) {
@@ -1251,6 +1263,7 @@ pub fn process_mp3(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         // scan further into a file that should be an MP3
         let fe = et.get("FILE_EXT");
         let scan_len = if fe.truthy() && fe.eq_str("MP3") { 8192 } else { 256 };
+        pl::at(1705);
         if read(it, &raf, &mut buff, n(scan_len))?.truthy() {
             crate::runtime::require(it, "Image::ExifTool::MPEG")?;
             if re(r"\0\0\x01(\xb3|\xc0)", "").is_match(&buff) {

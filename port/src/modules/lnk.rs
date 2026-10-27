@@ -7,6 +7,7 @@
 
 use crate::interp::eval::{Cell, ER};
 use crate::interp::{Interp, Want};
+use crate::modules::exiftool::part2;
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::regex as pre;
 use crate::perl::Value;
@@ -107,6 +108,8 @@ fn get_string_impl(data_pt: &Value, pos: &Value, unicode: &Value) -> Value {
 /// Inputs: 0) buffer ref, 1) start position, 2) flag for unicode string
 /// Return: string or undef if start position is outside bounds
 pub fn get_string(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    pl::at(1439);
+    pl::sderef(&arg(&a, 0))?;
     ret(get_string_impl(&arg(&a, 0), &arg(&a, 1), &arg(&a, 2)))
 }
 
@@ -117,7 +120,8 @@ pub fn process_item_id(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
     let data_pt = dir_info.get("DataPt");
-    let data_len = pl::length(&data_pt.deref());
+    pl::at(1454);
+    let data_len = pl::length(&pl::sderef(&data_pt)?);
     let mut pos = n(0);
     let opts = [("DataPt", data_pt.clone()), ("DataPos", dir_info.get("DataPos"))];
     pl::method(it, &et, "VerboseDir", vec![pl::s("ItemID"), Value::Undef, data_len.clone()])?;
@@ -310,7 +314,8 @@ pub fn process_uri(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 pub fn process_link_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data_len = pl::length(&data_pt.deref());
+    pl::at(1593);
+    let data_len = pl::length(&pl::sderef(&data_pt)?);
     if pl::lt(&data_len, &n(0x24)) {
         return ret(n(0));
     }
@@ -448,6 +453,7 @@ fn process_ini_impl(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<Value> 
     pl::local_global(it, b'$', "main::/", |it| {
         it.set_scalar("main::/", Value::bytes(b"\x0d\x0a"));
         let tag_table_ptr = call(it, "GetTagTable", vec![pl::s("Image::ExifTool::LNK::INI")])?;
+        pl::at(1707);
         while read_line(it, &raf, &buff)?.truthy() {
             let b = val(&buff);
             if let Some(m) = re(r"^\[(.*?)\]", "").m(&b) {
@@ -479,6 +485,8 @@ pub fn process_lnk(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     is_unicode = false;
 
     // read LNK file header
+    pl::at(1728);
+    part2::check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&read(it, &raf, &buff, n(0x4c))?, &n(0x4c)) {
         return ret(n(0));
     }

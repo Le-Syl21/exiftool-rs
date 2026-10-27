@@ -145,8 +145,9 @@ fn parse_ant_core(data: &[u8], pos: &mut Option<usize>) -> Value {
 
 pub fn parse_ant(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let data_pt = arg(&a, 0);
+    pl::at(210);
+    let data = pl::sderef(&data_pt)?.to_bytes();
     let mut pos = get_pos(it, &data_pt)?;
-    let data = data_pt.deref().to_bytes();
     let r = parse_ant_core(&data, &mut pos);
     set_pos(it, &data_pt, pos)?;
     ret(r)
@@ -161,7 +162,8 @@ pub fn process_ant(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let data_pt = dir_info.get("DataPt");
 
     // quick pre-scan to check for metadata or XMP
-    if !re(r#"\(\s*(metadata|xmp)[\s("]"#, "s").is_match(&data_pt.deref()) {
+    pl::at(258);
+    if !re(r#"\(\s*(metadata|xmp)[\s("]"#, "s").is_match(&pl::sderef(&data_pt)?) {
         return ret(n(1));
     }
 
@@ -219,7 +221,8 @@ fn shift_array(a: &Value) -> Value {
 pub fn process_meta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let list = data_pt.deref();
+    pl::at(290);
+    let list = pl::sderef(&data_pt)?;
     if pl::ref_of(&list) != "ARRAY" {
         return ret(n(0));
     }

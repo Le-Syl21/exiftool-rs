@@ -57,11 +57,62 @@ fn substr(s: &Value, off: i64, len: Option<i64>) -> Value {
 
 /// `$$ref` of a SCALAR reference, dying as perl does under strict refs.
 fn deref_scalar(r: &Value) -> ER<Value> {
-    match r {
-        Value::ScalarRef(_) | Value::LvRef(_) => Ok(r.deref()),
-        Value::Undef => die("Can't use an undefined value as a SCALAR reference"),
-        _ => die(format!("Can't use string (\"{}\") as a SCALAR ref while \"strict refs\" in use", r.to_text())),
+    pl::sderef(r)
+}
+
+/// perl's " at FILE line LINE." for ExifTool.pm's LINE (with the ", <FH>
+/// line N" part of the current location, if any), whichever native runs:
+/// the subs here are also called directly by other natives, whose own file
+/// is then the current location, and `pl::at` would also move their line.
+fn et_suffix(it: &mut Interp, line: u32) -> String {
+    let file = match it.global(b'%', "main::INC") {
+        Binding::Hash(h) => h.borrow().get(b"Image/ExifTool.pm".as_slice()).map(|v| v.to_text()),
+        _ => None,
     }
+    .unwrap_or_else(|| "Image/ExifTool.pm".to_string());
+    let cur = crate::interp::eval::location_suffix();
+    let rest = match cur.find(", <") {
+        Some(i) => cur[i..].to_string(),
+        None => ".\n".to_string(),
+    };
+    format!(" at {file} line {line}{rest}")
+}
+
+/// Runs `f`; a die of its own (a message that ends with the current
+/// location) is reported at ExifTool.pm line LINE, as perl reports it from
+/// the statement of this sub (see et_suffix).
+fn located<T>(it: &mut Interp, line: u32, f: impl FnOnce(&mut Interp) -> ER<T>) -> ER<T> {
+    match f(it) {
+        Err(Flow::Die(v)) if !v.is_ref() => {
+            let cur = crate::interp::eval::location_suffix();
+            let b = v.to_bytes();
+            if b.ends_with(cur.as_bytes()) {
+                let mut m = b[..b.len() - cur.len()].to_vec();
+                m.extend_from_slice(et_suffix(it, line).as_bytes());
+                return Err(Flow::Die(Value::bytes(m)));
+            }
+            Err(Flow::Die(v))
+        }
+        r => r,
+    }
+}
+
+/// Dies as `$obj->METHOD(...)` does in perl when `$obj` is undefined or an
+/// unblessed reference ("Can't call method ... on an undefined value").
+/// For natives that make the call through a string eval (the RandomAccess
+/// Read helpers), which would otherwise report the eval's location: call
+/// it after `pl::at(LINE)`. (A local helper: pl.rs has none.)
+pub(crate) fn check_invocant(it: &mut Interp, obj: &Value, method: &str) -> ER<()> {
+    let unblessed = match obj {
+        Value::Undef => true,
+        Value::HashRef(h) => h.borrow().blessed.is_none(),
+        Value::ScalarRef(_) | Value::ArrayRef(_) | Value::Code(_) | Value::LvRef(_) => true,
+        _ => false,
+    };
+    if unblessed {
+        pl::method(it, obj, method, vec![])?;
+    }
+    Ok(())
 }
 
 /// `$$ref = VALUE` on a SCALAR reference.
@@ -622,22 +673,20 @@ fn skip_template(pos: &Value, fmt: &Value) -> Vec<u8> {
 ///   templates for which you can specify the byte ordering.
 pub fn do_unpack_std(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let fmt = unpack_std(it, &arg(&a, 0));
-    let data = deref_scalar(&arg(&a, 1))?;
     if arg(&a, 2).truthy() {
-        return unpack_ctx(&skip_template(&arg(&a, 2), &fmt), &data.to_bytes(), want);
+        return located(it, 6021, |_| unpack_ctx(&skip_template(&arg(&a, 2), &fmt), &deref_scalar(&arg(&a, 1))?.to_bytes(), want));
     }
-    unpack_ctx(&fmt.to_bytes(), &data.to_bytes(), want)
+    located(it, 6022, |_| unpack_ctx(&fmt.to_bytes(), &deref_scalar(&arg(&a, 1))?.to_bytes(), want))
 }
 
 /// same, but with reversed byte order
 pub fn do_unpack_rev(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let std = unpack_std(it, &arg(&a, 0));
     let fmt = my_hash(it, "unpackRev").get(std.to_bytes());
-    let data = deref_scalar(&arg(&a, 1))?;
     if arg(&a, 2).truthy() {
-        return unpack_ctx(&skip_template(&arg(&a, 2), &fmt), &data.to_bytes(), want);
+        return located(it, 6028, |_| unpack_ctx(&skip_template(&arg(&a, 2), &fmt), &deref_scalar(&arg(&a, 1))?.to_bytes(), want));
     }
-    unpack_ctx(&fmt.to_bytes(), &data.to_bytes(), want)
+    located(it, 6029, |_| unpack_ctx(&fmt.to_bytes(), &deref_scalar(&arg(&a, 1))?.to_bytes(), want))
 }
 
 /// Pack value
@@ -671,7 +720,7 @@ pub fn do_unpack(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (mut bytes, template, data_pt, pos) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
     let val;
     if pkg_scalar(it, "swapBytes").borrow().truthy() {
-        let data = deref_scalar(&data_pt)?;
+        let data = located(it, 6058, |_| deref_scalar(&data_pt))?;
         let mut v = Vec::new();
         loop {
             let old = bytes.clone();
@@ -683,7 +732,7 @@ pub fn do_unpack(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
         }
         val = Value::bytes(v);
     } else {
-        val = substr(&deref_scalar(&data_pt)?, pos.to_i64(), Some(bytes.to_i64()));
+        val = substr(&located(it, 6060, |_| deref_scalar(&data_pt))?, pos.to_i64(), Some(bytes.to_i64()));
     }
     if val.is_undef() {
         return pl::ret_undef();
@@ -696,7 +745,7 @@ pub fn do_unpack(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 /// Returns: unpacked number
 pub fn do_unpack_dbl(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (template, data_pt, pos) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let val = substr(&deref_scalar(&data_pt)?, pos.to_i64(), Some(8));
+    let val = substr(&located(it, 6072, |_| deref_scalar(&data_pt))?, pos.to_i64(), Some(8));
     if val.is_undef() {
         return pl::ret_undef();
     }
@@ -908,11 +957,12 @@ pub fn read_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
 
     let mut len = my_hash(it, "formatSize").get(format.to_bytes());
     if !len.truthy() {
-        pl::warn(it, &format!("Unknown format {}", format.to_text()))?;
+        let m = format!("Unknown format {}{}", format.to_text(), et_suffix(it, 6292));
+        pl::warn(it, &m)?;
         len = n(1);
     }
     if size.is_undef() {
-        size = pl::sub(&n(deref_scalar(&data_pt)?.to_bytes().len() as i64), &offset);
+        size = pl::sub(&n(located(it, 6295, |_| deref_scalar(&data_pt))?.to_bytes().len() as i64), &offset);
     }
     if !count.truthy() {
         if !count.is_undef() || pl::lt(&size, &len) {
@@ -938,7 +988,7 @@ pub fn read_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
     };
     if !proc_.truthy() {
         // handle undef/binary/string (also unsupported unicode/complex)
-        let mut v = substr(&deref_scalar(&data_pt)?, offset.to_i64(), Some(pl::mul(&count, &len).to_i64()));
+        let mut v = substr(&located(it, 6309, |_| deref_scalar(&data_pt))?, offset.to_i64(), Some(pl::mul(&count, &len).to_i64()));
         // truncate string at null terminator if necessary
         if pl::str_eq(&format, "string") {
             re(r"\0.*", "s").subst(&mut v, false, |_| Vec::new());
@@ -1071,7 +1121,7 @@ pub fn decode_bits(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 /// Note: should be called from RawConv, not ValueConv
 pub fn validate_image(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (slf, image_pt, tag) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let mut image = deref_scalar(&image_pt)?;
+    let mut image = located(it, 6417, |_| deref_scalar(&image_pt))?;
     if pl::str_eq(&image, "none") {
         return pl::ret_undef();
     }
@@ -1199,7 +1249,8 @@ fn elem_ref(lv: crate::interp::eval::Lv) -> Value {
 }
 
 fn filter_v(it: &mut Interp, slf: &Value, filter: &Value, val_pt: &Value) -> ER<Value> {
-    if filter.is_undef() || deref_scalar(val_pt)?.is_undef() {
+    // (`defined $$valPt` autovivifies an undefined $valPt; a string dies)
+    if filter.is_undef() || val_pt.is_undef() || located(it, 6510, |_| deref_scalar(val_pt))?.is_undef() {
         return Ok(n(1));
     }
     let mut rtn_val = Value::Undef;
@@ -1941,7 +1992,7 @@ fn cat(parts: &[&Value]) -> Value {
 }
 
 fn expand_shortcuts_v(it: &mut Interp, tag_list: &Value, remove_suffix: bool) -> ER<()> {
-    if !tag_list.truthy() || tag_list.is_empty() {
+    if !tag_list.truthy() || located(it, 5671, |_| pl::aderef(tag_list))?.is_empty() {
         return Ok(());
     }
 
@@ -2590,7 +2641,7 @@ pub fn set_found_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
                     // allow wildcards in tag names
                     re(r"\*", "").subst(&mut tag, true, |_| br"[-\w]*".to_vec());
                     re(r"\?", "").subst(&mut tag, true, |_| br"[-\w]".to_vec());
-                    matches = grep_re(&re_full("^", &tag, "( |$)", "i")?, &rtn_tags.items());
+                    matches = grep_re(&located(it, 5474, |_| re_full("^", &tag, "( |$)", "i"))?, &rtn_tags.items());
                 }
                 if group.truthy() && !matches.is_empty() {
                     matches = group_matches_v(it, &slf, &group, &Value::new_array(matches), Want::List)?;
@@ -3138,7 +3189,12 @@ fn is_utf8_v(s: &[u8], trunc: bool) -> (i64, Option<usize>) {
 /// (see http://www.fileformat.info/info/unicode/utf8.htm for help understanding this)
 pub fn is_utf8(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (str_pt, trunc) = (arg(&a, 0), arg(&a, 1));
-    let s = deref_scalar(&str_pt)?;
+    // (`pos($$strPt) = 0` autovivifies an undefined $strPt: no high
+    // characters then; a string dies)
+    if str_pt.is_undef() {
+        return ret(n(0));
+    }
+    let s = located(it, 4676, |_| deref_scalar(&str_pt))?;
     let (r, pos) = is_utf8_v(&s.to_bytes(), trunc.truthy());
     // (a failed //g match resets the position)
     let p = pos.map(|p| n(p as i64)).unwrap_or_default();
@@ -3708,7 +3764,7 @@ pub fn convert_date_time(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
             if t.truthy() {
                 // determine initial shift from specified tag
                 let keys: Vec<Value> = slf.get("VALUE").keys().into_iter().map(Value::Str).collect();
-                matches = grep_re(&re_full("^", &t, r"( \(|$)", "i")?, &keys);
+                matches = if keys.is_empty() { Vec::new() } else { grep_re(&located(it, 6592, |_| re_full("^", &t, r"( \(|$)", "i"))?, &keys) };
                 matches.sort_by(ops::str_cmp);
                 if g.truthy() && !matches.is_empty() {
                     re(":$", "").subst(&mut g, false, |_| Vec::new());
@@ -3721,7 +3777,7 @@ pub fn convert_date_time(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                 while !req_date.is_empty() {
                     t = req_date.remove(0);
                     let keys: Vec<Value> = slf.get("VALUE").keys().into_iter().map(Value::Str).collect();
-                    matches = grep_re(&re_full("^", &t, r"( \(|$)", "i")?, &keys);
+                    matches = if keys.is_empty() { Vec::new() } else { grep_re(&located(it, 6603, |_| re_full("^", &t, r"( \(|$)", "i"))?, &keys) };
                     matches.sort_by(ops::str_cmp);
                     let ti = slf.get("TAG_INFO");
                     while !matches.is_empty() {

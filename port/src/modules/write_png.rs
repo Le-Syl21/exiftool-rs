@@ -57,9 +57,9 @@ pub(crate) fn calculate_crc_v(it: &mut Interp, data_pt: &Value, mut crc: Value, 
     if pos.is_undef() {
         pos = n(0);
     }
-    let data = data_pt.deref();
     if len.is_undef() {
-        len = pl::sub(&pl::length(&data), &pos);
+        pl::at(25);
+        len = pl::sub(&pl::length(&pl::sderef(data_pt)?), &pos);
     }
     let mut c = ops::to_uv(&crc) ^ 0xffffffff; // undo 1's complement
     // build lookup table unless done already
@@ -75,6 +75,8 @@ pub(crate) fn calculate_crc_v(it: &mut Interp, data_pt: &Value, mut crc: Value, 
     }
     let table: Vec<u64> = tbl.items().iter().map(ops::to_uv).collect();
     // calculate the CRC
+    pl::at(38);
+    let data = pl::sderef(data_pt)?;
     let bytes = data.to_bytes();
     // foreach (unpack("x${pos}C$len", $$dataPt)): the bytes directly when the
     // template is plain, else perl's unpack (and its errors)
@@ -106,7 +108,8 @@ pub fn hex_encode(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 }
 
 fn hex_encode_v(data_pt: &Value) -> ER<Value> {
-    let data = data_pt.deref();
+    pl::at(51);
+    let data = pl::sderef(data_pt)?;
     let len = pl::length(&data).to_i64();
     let mut hex = Vec::new();
     let mut pos = 0;
@@ -148,12 +151,19 @@ fn write_profile_v(it: &mut Interp, outfile: &Value, raw_type: &Value, mut data_
         } else {
             chunk = raw_type.clone();
             if raw_type.to_bytes() == std_case(it, "zxif").to_bytes() {
-                prefix = cat!(b"\0"[..], pl::pack("N", &[pl::length(&data_pt.deref())])?); // (proposed compressed EXIF)
+                pl::at(83);
+                prefix = cat!(b"\0"[..], pl::pack("N", &[pl::length(&pl::sderef(&data_pt)?)])?); // (proposed compressed EXIF)
             } else {
                 prefix = pl::s(""); // standard EXIF
             }
         }
         if deflate.truthy() {
+            // (a method argument `$$dataPt` autovivifies an undefined
+            // $dataPt, but dies on a string)
+            pl::at(89);
+            if !data_pt.is_undef() {
+                pl::sderef(&data_pt)?;
+            }
             buff = pl::method(it, &deflate, "deflate", vec![data_pt.deref()])?;
             if buff.is_undef() {
                 return Ok(n(0));
@@ -165,7 +175,8 @@ fn write_profile_v(it: &mut Interp, outfile: &Value, raw_type: &Value, mut data_
     } else {
         // write as ASCII-hex encoded profile in tEXt or zTXt chunk
         let fmt = cat!("\n", profile, " profile\n%8d\n");
-        let txt_hdr = pl::sprintf_v(&fmt, &[pl::length(&data_pt.deref())]);
+        pl::at(96);
+        let txt_hdr = pl::sprintf_v(&fmt, &[pl::length(&pl::sderef(&data_pt)?)]);
         buff = pl::concat(&txt_hdr, &hex_encode_v(&data_pt)?);
         let mut ch = pl::s("tEXt"); // write as tEXt if deflate not available
         let mut pre = cat!("Raw profile type ", raw_type, b"\0"[..]);
@@ -183,7 +194,8 @@ fn write_profile_v(it: &mut Interp, outfile: &Value, raw_type: &Value, mut data_
         chunk = ch;
         prefix = pre;
     }
-    let data = data_pt.deref();
+    pl::at(112);
+    let data = pl::sderef(&data_pt)?;
     let hdr = pl::concat(&pl::pack("Na4", &[pl::add(&pl::length(&prefix), &pl::length(&data)), chunk])?, &prefix);
     let crc = calculate_crc_v(it, &pl::sref(hdr.clone()), Value::Undef, n(4), Value::Undef)?;
     let crc = calculate_crc_v(it, &data_pt, crc, Value::Undef, Value::Undef)?;

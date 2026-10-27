@@ -4,6 +4,7 @@
 
 use crate::interp::eval::{Cell, ER};
 use crate::interp::{Interp, Want};
+use crate::modules::exiftool::part2;
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
@@ -38,7 +39,8 @@ pub fn process_comment(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
     if !pl::gt(&dir_len, &n(2)) {
         return ret(n(0));
     }
-    let num_comments = pl::unpack1("n", &data_pt.deref())?;
+    pl::at(162);
+    let num_comments = pl::unpack1("n", &pl::sderef(&data_pt)?)?;
     let mut pos = n(2);
     if verbose.truthy() {
         pl::method(it, &et, "VerboseDir", vec![pl::s("Comment"), num_comments.clone()])?;
@@ -84,6 +86,8 @@ pub fn process_aiff(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     page = Value::Undef;
 
     // verify this is a valid AIFF file
+    pl::at(191);
+    part2::check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&read(it, &raf, &buff, &n(12))?, &n(12)) {
         return ret(n(0));
     }

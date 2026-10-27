@@ -4,6 +4,7 @@
 
 use crate::interp::eval::ER;
 use crate::interp::{Interp, Want};
+use crate::modules::exiftool::part2;
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
@@ -188,7 +189,12 @@ pub fn process_primer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     }
     pl::method(it, &et, "VerboseDir", vec![pl::s("MXF Primer"), count.clone()])?;
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
-    let primer = et.get_or_new_hash("MXFInfo").get_or_new_hash("Primer");
+    // (`$$et{MXFInfo}{Primer}` read vivifies MXFInfo; `$$primer{$local} = ...`
+    // vivifies only the lexical)
+    let mut primer = et.get_or_new_hash("MXFInfo").get("Primer");
+    if primer.is_undef() {
+        primer = Value::new_hash();
+    }
     let mut pos = n(8);
     let mut i = n(0);
     while pl::lt(&i, &count) {
@@ -446,7 +452,11 @@ fn set_groups_impl(mxf_info: &Value, instance: &Value, path_info: &Value, track_
     if path_info.truthy() {
         let nc = path_info.get("NameCount");
         name_count = if nc.truthy() { nc } else { Value::new_hash() };
-        path = path_info.get_or_new_array("Path");
+        // (`push @$path` vivifies the lexical $path, not $$pathInfo{Path})
+        path = path_info.get("Path");
+        if path.is_undef() {
+            path = Value::new_array(Vec::new());
+        }
         let c = name_count.get(name.to_bytes());
         name_count.set(name.to_bytes(), pl::add(&if c.truthy() { c } else { n(0) }, &n(1)));
         path.push(pl::concat(&name, &name_count.get(name.to_bytes())));
@@ -503,7 +513,8 @@ fn convert_durations_impl(et: &Value, mxf_info: &Value) -> ER<()> {
     let info_hash = et.get("TAG_INFO");
     let tag_extra = et.get("TAG_EXTRA");
     let edit_hash = mxf_info.get("EditRate");
-    for tag in mxf_info.get("FixDuration").keys() {
+    // (`keys %{$$mxfInfo{FixDuration}}` vivifies it)
+    for tag in mxf_info.get_or_new_hash("FixDuration").keys() {
         let tag = Value::bytes(&tag[..]);
         // loop through all instances of this tag name
         let mut i = 0;
@@ -519,6 +530,7 @@ fn convert_durations_impl(et: &Value, mxf_info: &Value) -> ER<()> {
                 if g1.truthy() {
                     let edit_rate = edit_hash.get(g1.to_bytes());
                     if edit_rate.truthy() {
+                        pl::at(2798);
                         let v = pl::div(&value_hash.get(key.to_bytes()), &edit_rate)?;
                         value_hash.set(key.to_bytes(), v);
                     }
@@ -551,6 +563,8 @@ pub fn process_mxf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (mut header_end, mut footer_pos) = (Value::Undef, Value::Undef);
 
     // read enough to allow skipping over run-in if it exists
+    pl::at(2816);
+    part2::check_invocant(it, &raf, "Read")?;
     if !raf_read_cell(it, &raf, &buff, n(65547))?.truthy() {
         return ret(n(0));
     }

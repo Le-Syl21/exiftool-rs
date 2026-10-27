@@ -194,6 +194,7 @@ fn encode_utf8_ext(v: u64) -> Vec<u8> {
 pub fn escape_char(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let ch = arg(&a, 0);
     // (perl 5.10 or later: the meaning of "U0" is reversed as of Perl 5.10.0!)
+    pl::at(357);
     let val = unpack_c0u(it, &ch.to_bytes())?;
     if val.is_undef() {
         return pl::ret(pl::s("?"));
@@ -311,6 +312,7 @@ pub fn process_html(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let mut buff = Value::Undef;
 
     // validate HTML or XHTML file
+    pl::at(418);
     {
         let mut args = [buff.clone(), n(256)];
         let r = pl::method_mut(it, &raf, "Read", &mut args, Want::Scalar)?;

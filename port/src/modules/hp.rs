@@ -45,7 +45,8 @@ pub fn process_tdhd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     pl::method(it, &et, "VerboseDir", vec![pl::s("TDHD"), Value::Undef, dir_info.get("DirLen")])?;
     call(it, "SetByteOrder", vec![pl::s("II")])?;
     while pl::lt(&pl::add(&pos, &n(12)), &dir_end) {
-        let tag = substr(it, &data_pt.deref(), &pos, Some(&n(4)))?;
+        pl::at(154);
+        let tag = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&n(4)))?;
         let type_ = call(it, "Get32u", vec![data_pt.clone(), pl::add(&pos, &n(4))])?;
         let size = call(it, "Get32u", vec![data_pt.clone(), pl::add(&pos, &n(8))])?;
         pos = pl::add(&pos, &n(12));
@@ -97,8 +98,10 @@ pub fn process_hp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let dir_len = or(dir_info.get("DirLen"), || pl::sub(&data_len, &dir_start));
 
     // look for known text-type tags
-    if dir_start.truthy() || !pl::num_eq(&dir_len, &pl::length(&data_pt.deref())) {
-        let buff = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+    pl::at(213);
+    if dir_start.truthy() || !pl::num_eq(&dir_len, &pl::length(&pl::sderef(&data_pt)?)) {
+        pl::at(214);
+        let buff = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?;
         data_pt = pl::sref(buff);
     }
     // brute-force scan for PreviewImage

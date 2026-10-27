@@ -649,6 +649,7 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     }
     let city_list = la(it, "cityList");
     if city_list.is_empty() {
+        pl::at(479);
         pl::warn(it, "No Geolocation database")?;
         return pl::ret_nothing(want);
     }
@@ -713,6 +714,7 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     for a_ in &args {
         // allow regular expressions optionally prefixed by "ci", "cc", "co", "re" or "sr"
         if let Some(c) = re(r"^(-)?(\w{2})?/(.*)/(i?)$", "").m(a_) {
+            pl::at(505);
             let rx = pl::re_dyn(&cap(&c, 3).to_bytes(), if cap(&c, 4).truthy() { "im" } else { "m" })?;
             let Some(mut idx) = ri(&cap(&c, 2).to_bytes()) else { continue };
             cargs.push(a_.clone());
@@ -828,6 +830,7 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
                     let mut p = b"^".to_vec();
                     p.extend_from_slice(&city_s);
                     p.push(b'$');
+                    pl::at(562);
                     alt_re = Some(pl::re_dyn(&p, "im")?);
                 }
                 if !alt_re.as_ref().unwrap().is_match(&alt) {
