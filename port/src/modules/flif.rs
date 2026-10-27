@@ -66,6 +66,7 @@ pub fn get_var_int(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut buff = Value::Undef;
     let mut val = n(0);
     loop {
+        pl::at(119);
         if !read(it, &raf, &mut buff, n(1))?.truthy() {
             return pl::ret_undef();
         }
@@ -123,6 +124,7 @@ pub fn read_flif_header(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
     let mut vals: Vec<Value> = Vec::new();
 
     // verify this is a valid FLIF file
+    pl::at(156);
     if !read_eq(it, &raf, &mut buff, &n(6))? {
         return pl::ret_nothing(want);
     }
@@ -147,7 +149,9 @@ pub fn read_flif_header(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
     }
 
     // return the binary header block
+    pl::at(167);
     let hdr_len = pl::method(it, &raf, "Tell", vec![])?;
+    pl::at(168);
     if !(pl::method(it, &raf, "Seek", vec![n(0), n(0)])?.truthy()
         && read_eq(it, &raf, &mut buff, &hdr_len)?)
     {

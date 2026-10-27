@@ -11,6 +11,18 @@ use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
 use crate::runtime;
 
+/// `$raf->Read(...)` runs as a perl statement (random_access::perl_eval),
+/// whose errors would name "(eval N)": an invocant that is not an object
+/// gives perl's error here instead, at the native's location.
+fn need_obj(v: &Value, method: &str) -> ER<()> {
+    match v {
+        Value::Undef => crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value")),
+        Value::HashRef(h) if h.borrow().blessed.is_none() => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        Value::ArrayRef(_) | Value::ScalarRef(_) | Value::Code(_) => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        _ => Ok(()),
+    }
+}
+
 const MODULE: &str = "Image::ExifTool::TNEF";
 
 fn s(x: &str) -> Value {
@@ -106,13 +118,15 @@ pub fn process_props(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("DataPos");
-    let dir_len = pl::length(&data_pt.deref());
+    pl::at(285);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?);
     if !pl::gt(&dir_len, &n(4)) {
         return ret(n(0));
     }
     let prop_type = runtime::lex_hash(it, MODULE, "propType");
     let fmt_size = runtime::lex_hash(it, MODULE, "fmtSize");
-    let entries = pl::unpack1("V", &data_pt.deref())?;
+    pl::at(287);
+    let entries = pl::unpack1("V", &pl::sderef(&data_pt)?)?;
     pl::method(it, &et, "VerboseDir", vec![s("TNEF Properties"), entries.clone()])?;
     let mut pos = n(4);
     let mut i: i64 = 0;
@@ -191,7 +205,8 @@ pub fn process_props(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
                     if pl::gt(&pl::add(&pos, &size), &dir_len) {
                         break;
                     }
-                    val = pl::substr(&data_pt.deref(), pos.to_i64(), Some(size.to_i64()));
+                    pl::at(344);
+                    val = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(size.to_i64()));
                 }
             }
             if val.is_undef() {
@@ -288,6 +303,8 @@ pub fn process_tnef(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let buff = cell(Value::Undef);
 
     // verify this is a valid TNEF file (read TNEFHeader and TNEFVersion)
+    pl::at(407);
+    need_obj(&raf, "Read")?;
     if !(pl::num_eq(&raf_read_cell(it, &raf, &buff, n(0x15))?, &n(0x15)) && pl::method(it, &raf, "Seek", vec![n(6), n(0)])?.truthy()) {
         return ret(n(0));
     }

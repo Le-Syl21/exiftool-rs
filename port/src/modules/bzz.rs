@@ -183,7 +183,7 @@ pub fn new(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 //------------------------------------------------------------------------------
 // Initialize BZZ object
 // Inputs: 0) BZZ object ref, 1) data ref, 2) true for DjVu compatibility
-fn init_obj(it: &mut Interp, self_: &Value, data_pt: &Value, djvucompat: &Value) {
+fn init_obj(it: &mut Interp, self_: &Value, data_pt: &Value, djvucompat: &Value) -> ER<()> {
     // Create machine independent ffz table
     let mut ffzt: Vec<i64> = Vec::new();
     for i in 0..256i64 {
@@ -222,7 +222,8 @@ fn init_obj(it: &mut Interp, self_: &Value, data_pt: &Value, djvucompat: &Value)
     self_.set("ctx", arr(&[0; 300]));
     self_.set("DataPt", data_pt.clone());
     self_.set("Pos", n(0));
-    let data = data_pt.deref().to_bytes();
+    pl::at(162);
+    let data = pl::sderef(data_pt)?.to_bytes();
     self_.set("DataLen", n(data.len() as i64));
     self_.set("a", n(0));
     self_.set("buffer", n(0));
@@ -246,10 +247,11 @@ fn init_obj(it: &mut Interp, self_: &Value, data_pt: &Value, djvucompat: &Value)
     self_.set("scount", n(0));
     // Compute initial fence
     self_.set("fence", n(if code >= 0x8000 { 0x7fff } else { code }));
+    Ok(())
 }
 
 pub fn init(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
-    init_obj(it, &arg(&a, 0), &arg(&a, 1), &arg(&a, 2));
+    init_obj(it, &arg(&a, 0), &arg(&a, 1), &arg(&a, 2))?;
     // (returns the value of the last statement: the fence)
     let _ = want;
     ret(arg(&a, 0).get("fence"))
@@ -276,7 +278,7 @@ pub fn decode(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         data_pt = first;
     }
     if data_pt.truthy() {
-        init_obj(it, &self_, &data_pt, &n(1));
+        init_obj(it, &self_, &data_pt, &n(1))?;
     } else {
         data_pt = self_.get("DataPt");
         if !data_pt.truthy() {

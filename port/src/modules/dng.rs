@@ -5,7 +5,24 @@
 use crate::interp::eval::ER;
 use crate::interp::{Interp, Want};
 use crate::modules::random_access::cell;
-use crate::modules::write_exif::{etf, g16u, g32u, get, inc, len, put, read_value, s16u, s32u, set_byte_order, write_value};
+use crate::modules::write_exif::{self, etf, get, inc, len, put, read_value, s16u, s32u, set_byte_order, write_value};
+
+/// `Get16u($dataPt, $pos)`: read directly from a data reference; anything
+/// else goes through the call, so its error names ExifTool.pm, as perl's.
+fn g16u(it: &mut Interp, pt: &Value, pos: Value) -> ER<Value> {
+    if !matches!(pt, Value::ScalarRef(_) | Value::LvRef(_)) {
+        return pl::call(it, "Image::ExifTool::Get16u", vec![pt.clone(), pos]);
+    }
+    write_exif::g16u(it, pt, pos)
+}
+
+/// `Get32u($dataPt, $pos)` (see g16u).
+fn g32u(it: &mut Interp, pt: &Value, pos: Value) -> ER<Value> {
+    if !matches!(pt, Value::ScalarRef(_) | Value::LvRef(_)) {
+        return pl::call(it, "Image::ExifTool::Get32u", vec![pt.clone(), pos]);
+    }
+    write_exif::g32u(it, pt, pos)
+}
 use crate::perl::{ops, Value};
 use crate::pl::{self, arg, ret};
 
@@ -166,7 +183,8 @@ pub fn process_adobe_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     let verbose = opt(it, &et, "Verbose")?;
     let html_dump = opt(it, &et, "HtmlDump")?;
 
-    if !pl::re(r"^Adobe\0", "").is_match(&data_pt.deref()) {
+    pl::at(251);
+    if !pl::re(r"^Adobe\0", "").is_match(&pl::sderef(&data_pt)?) {
         return ret(n(0));
     }
     if !outfile.truthy() {
@@ -183,7 +201,8 @@ pub fn process_adobe_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     set_byte_order(it, s("MM"))?; // always big endian
     pos = pl::add(&pos, &n(6));
     while pl::le(&pl::add(&pos, &n(8)), &end) {
-        let u = pl::unpack(&format!("x{}a4N", pos.to_text()), &data_pt.deref())?;
+        pl::at(262);
+        let u = pl::unpack(&format!("x{}a4N", pos.to_text()), &pl::sderef(&data_pt)?)?;
         let (tag, size) = (arg(&u, 0), arg(&u, 1));
         pos = pl::add(&pos, &n(8));
         if pl::gt(&pl::add(&pos, &size), &end) {
@@ -295,7 +314,8 @@ pub fn process_adobe_crw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     if pl::lt(&dir_info.get("DirLen"), &n(4)) {
         return ret(n(0));
     }
-    let byte_order = pl::substr(&data_pt.deref(), start.to_i64(), Some(2));
+    pl::at(359);
+    let byte_order = pl::substr(&pl::sderef(&data_pt)?, start.to_i64(), Some(2));
     if !pl::re(r"^(II|MM)$", "").is_match(&byte_order) {
         return ret(n(0));
     }
@@ -353,6 +373,7 @@ pub fn process_adobe_crw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
             // set count according to format and size
             let fnum = format_number.get(format.to_bytes());
             let fsiz = format_size.at(fnum.to_i64());
+            pl::at(401);
             count = pl::int(&pl::div(&size, &fsiz)?);
         }
         if !format.truthy() {
@@ -501,7 +522,8 @@ pub fn process_adobe_mrw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     // construct fake MRW file
     let mut buff = pl::concat(&s("\0MRM"), &pl::pack("N", &[pl::sub(&dir_len, &n(4))])?);
     // ignore leading byte order and directory count words
-    buff = pl::concat(&buff, &pl::substr(&data_pt.deref(), pl::add(&dir_start, &n(4)).to_i64(), Some(pl::sub(&dir_len, &n(4)).to_i64())));
+    pl::at(518);
+    buff = pl::concat(&buff, &pl::substr(&pl::sderef(&data_pt)?, pl::add(&dir_start, &n(4)).to_i64(), Some(pl::sub(&dir_len, &n(4)).to_i64())));
     let raf = pl::method(it, &s("File::RandomAccess"), "new", vec![pl::sref(buff)])?;
     let d = Value::new_hash();
     d.set("RAF", raf);
@@ -634,7 +656,8 @@ pub fn process_adobe_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     if pl::lt(&dir_info.get("DirLen"), &n(4)) {
         return ret(n(0));
     }
-    let data_order = pl::substr(&data_pt.deref(), pos.to_i64(), Some(2));
+    pl::at(633);
+    let data_order = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(2));
     if !set_byte_order(it, data_order.clone())?.truthy() {
         return ret(n(0)); // validate byte order of data
     }

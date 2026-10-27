@@ -9,6 +9,18 @@ use crate::perl::regex as pre;
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret, Caps};
 
+/// `$raf->Read(...)` runs as a perl statement (random_access::perl_eval),
+/// whose errors would name "(eval N)": an invocant that is not an object
+/// gives perl's error here instead, at the native's location.
+fn need_obj(v: &Value, method: &str) -> ER<()> {
+    match v {
+        Value::Undef => crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value")),
+        Value::HashRef(h) if h.borrow().blessed.is_none() => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        Value::ArrayRef(_) | Value::ScalarRef(_) | Value::Code(_) => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        _ => Ok(()),
+    }
+}
+
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
@@ -70,8 +82,12 @@ pub fn process_ppm(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             }
             let b = pl::concat(&val(&buff), &val(&tmp));
             *buff.borrow_mut() = b;
-        } else if !read(it, &raf, &buff, &n(1024))?.truthy() {
-            return ret(n(0));
+        } else {
+            pl::at(43);
+            need_obj(&raf, "Read")?;
+            if !read(it, &raf, &buff, &n(1024))?.truthy() {
+                return ret(n(0));
+            }
         }
         pos = None;
         let b = val(&buff);

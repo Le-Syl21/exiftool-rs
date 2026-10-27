@@ -95,7 +95,16 @@ fn translate_coded_string_impl(it: &mut Interp, et: &Value, val: &mut Value, xla
 /// Updates value on return
 pub fn translate_coded_string(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
     let (et, val_ptr, xlat_ptr, read) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
-    let (mut val, mut xlat) = (val_ptr.deref(), xlat_ptr.deref());
+    pl::at(1019);
+    let mut xlat = pl::sderef(&xlat_ptr)?;
+    // ($$valPtr is a method argument where it is not read for the match:
+    // autovivified there, not an error)
+    let mut val = if !xlat.eq_str("bad") && read.truthy() {
+        pl::at(1024);
+        pl::sderef(&val_ptr)?
+    } else {
+        val_ptr.deref()
+    };
     let (val0, xlat0) = (val.clone(), xlat.clone());
     translate_coded_string_impl(it, &et, &mut val, &mut xlat, &read)?;
     if !same_value(&xlat, &xlat0) {
@@ -164,7 +173,9 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             if is_std.truthy() {
                 let md5;
                 if crate::runtime::require(it, "Digest::MD5").is_ok() {
-                    if pos.truthy() || !pl::num_eq(&dir_len, &pl::length(&data_pt.deref())) {
+                    pl::at(1074);
+                    if pos.truthy() || !pl::num_eq(&dir_len, &pl::length(&pl::sderef(&data_pt)?)) {
+                        // (substr($$dataPt...) as a sub argument autovivifies)
                         let s = substr(it, &data_pt.deref(), &pos, Some(&dir_len))?;
                         md5 = pl::call(it, "Digest::MD5::md5", vec![s])?;
                     } else {
@@ -202,9 +213,11 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     }
 
     // quick check for improperly byte-swapped IPTC
-    if pl::ge(&dir_len, &n(4)) && !substr(it, &data_pt.deref(), &pos, Some(&n(1)))?.eq_str("\x1c") && substr(it, &data_pt.deref(), &pl::add(&pos, &n(3)), Some(&n(1)))?.eq_str("\x1c") {
+    pl::at(1109);
+    if pl::ge(&dir_len, &n(4)) && !substr(it, &pl::sderef(&data_pt)?, &pos, Some(&n(1)))?.eq_str("\x1c") && substr(it, &pl::sderef(&data_pt)?, &pl::add(&pos, &n(3)), Some(&n(1)))?.eq_str("\x1c") {
         pl::method(it, &et, "Warn", vec![pl::s("IPTC data was improperly byte-swapped")])?;
-        let s = substr(it, &data_pt.deref(), &pos, Some(&dir_len))?;
+        pl::at(1113);
+        let s = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&dir_len))?;
         let words = match crate::perl::pack::unpack(b"V*", &pl::concat(&s, &pl::s("\0\0\0")).to_bytes()) {
             Ok(v) => v,
             Err(e) => return die(e),
@@ -213,14 +226,16 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             Ok(b) => b,
             Err(e) => return die(e),
         };
-        data_pt = Value::binary(new_data);
+        data_pt = pl::sref(Value::binary(new_data));
         pos = n(0);
         dir_end = pl::add(&pos, &dir_len);
         // NOTE: MUST NOT access $dirInfo DataPt, DirStart or DataLen after this!
     }
     // extract IPTC as a block if specified
     if et.path(&["REQ_TAG_LOOKUP", "iptc"]).truthy() || (et.get("TAGS_FROM_FILE").truthy() && !et.path(&["EXCL_TAG_LOOKUP", "iptc"]).truthy()) {
-        if pos.truthy() || !pl::num_eq(&dir_len, &pl::length(&data_pt.deref())) {
+        pl::at(1123);
+        if pos.truthy() || !pl::num_eq(&dir_len, &pl::length(&pl::sderef(&data_pt)?)) {
+            // (method arguments: $$dataPt autovivifies there)
             let s = substr(it, &data_pt.deref(), &pos, Some(&dir_len))?;
             pl::method(it, &et, "FoundTag", vec![pl::s("IPTC"), s])?;
         } else {
@@ -228,7 +243,8 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         }
     }
     while pl::le(&pl::add(&pos, &n(5)), &dir_end) {
-        let buff = substr(it, &data_pt.deref(), &pos, Some(&n(5)))?;
+        pl::at(1130);
+        let buff = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&n(5)))?;
         let fields = match crate::perl::pack::unpack(b"CCCn", &buff.to_bytes()) {
             Ok(v) => v,
             Err(e) => return die(e),
@@ -238,7 +254,8 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             if !id.truthy() {
                 // scan the rest of the data an give warning unless all zeros
                 // (iMatch pads the IPTC block with nulls for some reason)
-                let remaining = substr(it, &data_pt.deref(), &pos, Some(&pl::sub(&dir_end, &pos)))?;
+                pl::at(1136);
+                let remaining = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&pl::sub(&dir_end, &pos)))?;
                 if !re(r"[^\0]", "").is_match(&remaining) {
                     break;
                 }
@@ -259,7 +276,8 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             // determine length (a big-endian, variable sized int)
             len = n(0);
             while nn.truthy() {
-                let o = ord_at(it, &data_pt.deref(), &pos)?;
+                pl::at(1153);
+                let o = ord_at(it, &pl::sderef(&data_pt)?, &pos)?;
                 len = pl::add(&pl::mul(&len, &n(256)), &o);
                 pos = pl::add(&pos, &n(1));
                 nn = pl::sub(&nn, &n(1));
@@ -292,7 +310,8 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             pl::method(it, &et, "VPrint", vec![n(0), et.get("INDENT"), msg])?;
             last_rec = rec.clone();
         }
-        let mut val = substr(it, &data_pt.deref(), &pos, Some(&len))?;
+        pl::at(1181);
+        let mut val = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&len))?;
 
         // add tagInfo for all unknown tags:
         if !record_ptr.get(tag.to_bytes()).truthy() {
@@ -363,7 +382,8 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                     val = n(0);
                     let mut i = n(0);
                     while pl::lt(&i, &len) {
-                        let o = ord_at(it, &data_pt.deref(), &pl::add(&pos, &i))?;
+                        pl::at(1225);
+                        let o = ord_at(it, &pl::sderef(&data_pt)?, &pl::add(&pos, &i))?;
                         val = pl::add(&pl::mul(&val, &n(256)), &o);
                         i = pl::add(&i, &n(1));
                     }
@@ -390,6 +410,7 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                     pl::method(it, &et, "Warn", vec![msg, n(1)])?;
                 }
             } else if !re(r"^undef", "").is_match(&format) {
+                pl::at(1246);
                 pl::warn(it, &format!("Invalid IPTC format: {}", format.to_text()))?; // (this would be a programming error)
             }
         }

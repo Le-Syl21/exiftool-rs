@@ -23,11 +23,23 @@ fn first(v: ER<Vec<Value>>) -> ER<Value> {
     Ok(v?.pop().unwrap_or_default())
 }
 
+/// A data reference Get16u/Get32u can read directly; anything else is
+/// passed through the call, so its error names ExifTool.pm, as perl's.
+fn is_sref(v: &Value) -> bool {
+    matches!(v, Value::ScalarRef(_) | Value::LvRef(_))
+}
+
 fn g16u(it: &mut Interp, data_pt: &Value, pos: Value) -> ER<Value> {
+    if !is_sref(data_pt) {
+        return pl::call(it, "Image::ExifTool::Get16u", vec![data_pt.clone(), pos]);
+    }
     first(part2::get16u(it, vec![data_pt.clone(), pos], Want::Scalar))
 }
 
 fn g32u(it: &mut Interp, data_pt: &Value, pos: Value) -> ER<Value> {
+    if !is_sref(data_pt) {
+        return pl::call(it, "Image::ExifTool::Get32u", vec![data_pt.clone(), pos]);
+    }
     first(part2::get32u(it, vec![data_pt.clone(), pos], Want::Scalar))
 }
 
@@ -71,10 +83,18 @@ fn substr_assign(s: &Value, off: &Value, len: &Value, repl: &Value) -> ER<Value>
 
 /// `$$ref` under strict refs.
 fn deref_strict(v: &Value) -> ER<Value> {
+    pl::sderef(v)
+}
+
+/// `$raf->Read(...)` runs as a perl statement (random_access::perl_eval),
+/// whose errors would name "(eval N)": an invocant that is not an object
+/// gives perl's error here instead, at the native's location.
+fn need_obj(v: &Value, method: &str) -> ER<()> {
     match v {
-        Value::ScalarRef(_) | Value::LvRef(_) => Ok(v.deref()),
-        Value::Undef => die("Can't use an undefined value as a SCALAR reference"),
-        _ => die("Not a SCALAR reference"),
+        Value::Undef => die(format!("Can't call method \"{method}\" on an undefined value")),
+        Value::HashRef(h) if h.borrow().blessed.is_none() => die(format!("Can't call method \"{method}\" on unblessed reference")),
+        Value::ArrayRef(_) | Value::ScalarRef(_) | Value::Code(_) => die(format!("Can't call method \"{method}\" on unblessed reference")),
+        _ => Ok(()),
     }
 }
 
@@ -123,6 +143,7 @@ pub fn read_hidden_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let raf = et.get("RAF");
     let buff = cell(Value::Undef);
     let mut pos = Value::Undef;
+    pl::at(11044);
     let ok = pl::method(it, &raf, "Seek", vec![hd_off, n(0)])?.truthy()
         && pl::num_eq(&raf_read_cell(it, &raf, &buff, hd_len.clone())?, &hd_len)
         && re(r"^\x55\x26\x11\x05\0", "").is_match(&val(&buff));
@@ -169,8 +190,17 @@ pub fn process_sony_pic(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let start = or(dir_info.get("DirStart"), n(0));
-    let len = or(dir_info.get("DirLen"), pl::sub(&pl::length(&data_pt.deref()), &start));
-    let data = substr(it, &data_pt.deref(), &start, Some(&len))?;
+    let len = {
+        let d = dir_info.get("DirLen");
+        if d.truthy() {
+            d
+        } else {
+            pl::at(11071);
+            pl::sub(&pl::length(&deref_strict(&data_pt)?), &start)
+        }
+    };
+    pl::at(11072);
+    let data = substr(it, &deref_strict(&data_pt)?, &start, Some(&len))?;
 
     // H200 panorama images have an IFD at offset 12 (non-panoramas have 0's here)
     // - assume other images could too, but do a bit of validation to check
@@ -406,7 +436,15 @@ pub fn process_more_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     }
     let data_pt = dir_info.get("DataPt");
     let start = or(dir_info.get("DirStart"), n(0));
-    let dir_len = or(dir_info.get("DirLen"), pl::length(&data_pt.deref()));
+    let dir_len = {
+        let d = dir_info.get("DirLen");
+        if d.truthy() {
+            d
+        } else {
+            pl::at(11253);
+            pl::length(&deref_strict(&data_pt)?)
+        }
+    };
     let is_writing = dir_info.get("IsWriting");
     let rtn_val0 = if is_writing.truthy() { Value::Undef } else { n(0) };
     if pl::lt(&dir_len, &n(4)) {
@@ -470,7 +508,12 @@ pub fn process_more_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
         }
     }
     // initialize successful return value
-    let rtn_val = cell(if is_writing.truthy() { substr(it, &data_pt.deref(), &start, Some(&dir_len))? } else { n(1) });
+    let rtn_val = cell(if is_writing.truthy() {
+        pl::at(11305);
+        substr(it, &deref_strict(&data_pt)?, &start, Some(&dir_len))?
+    } else {
+        n(1)
+    });
     // now process each block
     let unknown = et.get("OPTIONS").get("Unknown");
     for i in 0..num_i as usize {
@@ -560,6 +603,8 @@ pub fn process_pmp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
+    pl::at(11371);
+    need_obj(&raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(128))?, &n(128)) {
         return ret(n(0));
     }
@@ -596,6 +641,7 @@ pub fn set_arw(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     pl::method(it, &et, "OverrideFileType", vec![pl::s("ARW")])?;
 
     // this should always be a SubIFD for models other than the A100
+    pl::at(11401);
     if !(pl::str_eq(&et.get("Model"), "DSLR-A100") && pl::length(&deref_strict(&val_pt)?).to_i64() == 4) {
         return ret(n(1));
     }
@@ -621,6 +667,7 @@ pub fn finish_arw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, data_pt, image_data) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
 
     // pre-scan IFD0 to get IFD entry offsets for each tag
+    pl::at(11426);
     let data_len = pl::length(&deref_strict(&data_pt)?);
     if pl::lt(&data_len, &n(2)) {
         return ret(pl::s("Truncated IFD0"));
@@ -738,6 +785,7 @@ fn decrypt_rs(data_pt: &Value, start: &Value, len: &Value, key: &Value) -> ER<()
         pad[i] = ((pad[i - 4] ^ pad[i - 2]) << 1 | (pad[i - 3] ^ pad[i - 1]) >> 31) & 0xffffffff;
     }
     let tmpl = pl::concat(&pl::concat(&pl::concat(&pl::s("x"), start), &pl::s(" N")), &words);
+    pl::at(11507);
     let mut data: Vec<u64> = match crate::perl::pack::unpack(&tmpl.to_bytes(), &deref_strict(data_pt)?.to_bytes()) {
         Ok(v) => v.iter().map(ops::to_uv).collect(),
         Err(e) => return die(e),
@@ -754,6 +802,7 @@ fn decrypt_rs(data_pt: &Value, start: &Value, len: &Value, key: &Value) -> ER<()
     }
     let packed: Vec<Value> = data.iter().map(|&x| ops::from_uv(x)).collect();
     let packed = pl::pack("N*", &packed)?;
+    pl::at(11511);
     let nv = substr_assign(&data_pt.deref(), start, &pl::mul(&words, &n(4)), &packed)?;
     pl::set_deref(data_pt, nv)
 }
@@ -781,7 +830,9 @@ fn cipher_table(encipher: bool) -> ([u8; 256], [bool; 256]) {
 /// `$$dataPt =~ tr/.../.../`: returns the count, as tr.
 fn decipher_rs(data_pt: &Value, encipher: bool) -> ER<Value> {
     thread_local!(static TABLES: [([u8; 256], [bool; 256]); 2] = [cipher_table(false), cipher_table(true)]);
-    let v = deref_strict(data_pt)?;
+    pl::at(if encipher { 11525 } else { 11527 });
+    // ($$dataPt =~ tr/// autovivifies an undefined $dataPt: no error)
+    let v = if data_pt.is_undef() { Value::Undef } else { deref_strict(data_pt)? };
     if v.is_undef() {
         return Ok(n(0)); // (tr leaves an undefined value as it is)
     }
@@ -825,8 +876,17 @@ pub fn process_enciphered(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let dir_start = or(dir_info.get("DirStart"), n(0));
-    let dir_len = or(dir_info.get("DirLen"), pl::sub(&pl::length(&data_pt.deref()), &dir_start));
-    let data = cell(substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?);
+    let dir_len = {
+        let d = dir_info.get("DirLen");
+        if d.truthy() {
+            d
+        } else {
+            pl::at(11544);
+            pl::sub(&pl::length(&deref_strict(&data_pt)?), &dir_start)
+        }
+    };
+    pl::at(11545);
+    let data = cell(substr(it, &deref_strict(&data_pt)?, &dir_start, Some(&dir_len))?);
     let new_dir_info = dir_info.hash_copy();
     new_dir_info.set("DataPt", rf(&data));
     new_dir_info.set("DataPos", pl::add(&dir_info.get("DataPos"), &dir_start));
@@ -862,8 +922,17 @@ pub fn write_enciphered(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     }
     let data_pt = dir_info.get("DataPt");
     let dir_start = or(dir_info.get("DirStart"), n(0));
-    let dir_len = or(dir_info.get("DirLen"), pl::sub(&pl::length(&data_pt.deref()), &dir_start));
-    let data = cell(substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?);
+    let dir_len = {
+        let d = dir_info.get("DirLen");
+        if d.truthy() {
+            d
+        } else {
+            pl::at(11579);
+            pl::sub(&pl::length(&deref_strict(&data_pt)?), &dir_start)
+        }
+    };
+    pl::at(11580);
+    let data = cell(substr(it, &deref_strict(&data_pt)?, &dir_start, Some(&dir_len))?);
     let changed = et.get("CHANGED");
     decipher_rs(&rf(&data), false)?;
     // fix double-enciphered data (due to bug in ExifTool 9.04-9.10)
@@ -880,7 +949,8 @@ pub fn write_enciphered(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     *data.borrow_mut() = w;
     if pl::num_eq(&changed, &et.get("CHANGED")) {
         // nothing changed, so recover original data
-        let orig = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+        pl::at(11598);
+        let orig = substr(it, &deref_strict(&data_pt)?, &dir_start, Some(&dir_len))?;
         *data.borrow_mut() = orig;
     } else if !val(&data).is_undef() {
         decipher_rs(&rf(&data), true)?; // re-encipher
@@ -896,7 +966,8 @@ pub fn process_rtmd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let data_pos = pl::add(&or(dir_info.get("DataPos"), n(0)), &or(dir_info.get("Base"), n(0)));
-    let end = pl::length(&data_pt.deref());
+    pl::at(11614);
+    let end = pl::length(&deref_strict(&data_pt)?);
     if pl::lt(&end, &n(2)) {
         return ret(n(0));
     }
@@ -967,7 +1038,8 @@ pub fn process_srf(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>>
         //
         let count = g16u(it, &data_pt, dir_info.get("DirStart"))?;
         let dir_end = pl::add(&pl::add(&dir_info.get("DirStart"), &n(2)), &pl::mul(&count, &n(12)));
-        if pl::gt(&pl::add(&dir_end, &n(4)), &pl::length(&data_pt.deref())) {
+        pl::at(11675);
+        if pl::gt(&pl::add(&dir_end, &n(4)), &pl::length(&deref_strict(&data_pt)?)) {
             break;
         }
         let mut next_ifd = g32u(it, &data_pt, dir_end)?;
@@ -984,20 +1056,24 @@ pub fn process_srf(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>>
         if pl::num_eq(&ifd, &n(1)) {
             // get the key to decrypt IFD1
             let cp = pl::add(&start, &n(0x8ddc)); // why?
-            if pl::gt(&pl::add(&cp, &n(1)), &pl::length(&data_pt.deref())) {
+            pl::at(11688);
+            if pl::gt(&pl::add(&cp, &n(1)), &pl::length(&deref_strict(&data_pt)?)) {
                 break;
             }
             let t = pl::concat(&pl::concat(&pl::s("x"), &cp), &pl::s(" C"));
-            let c = match crate::perl::pack::unpack(&t.to_bytes(), &data_pt.deref().to_bytes()) {
+            pl::at(11689);
+            let c = match crate::perl::pack::unpack(&t.to_bytes(), &deref_strict(&data_pt)?.to_bytes()) {
                 Ok(v) => v.into_iter().next().unwrap_or_default(),
                 Err(e) => return die(e),
             };
             let ip = pl::add(&cp, &pl::mul(&n(4), &c));
-            if pl::gt(&pl::add(&ip, &n(4)), &pl::length(&data_pt.deref())) {
+            pl::at(11690);
+            if pl::gt(&pl::add(&ip, &n(4)), &pl::length(&deref_strict(&data_pt)?)) {
                 break;
             }
             let t = pl::concat(&pl::concat(&pl::s("x"), &ip), &pl::s(" N"));
-            key = match crate::perl::pack::unpack(&t.to_bytes(), &data_pt.deref().to_bytes()) {
+            pl::at(11691);
+            key = match crate::perl::pack::unpack(&t.to_bytes(), &deref_strict(&data_pt)?.to_bytes()) {
                 Ok(v) => v.into_iter().next().unwrap_or_default(),
                 Err(e) => return die(e),
             };
@@ -1005,7 +1081,8 @@ pub fn process_srf(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>>
         } else if pl::num_eq(&ifd, &n(2)) {
             // get the key to decrypt IFD2
             key = et.get("SRF2Key");
-            len = pl::sub(&pl::length(&data_pt.deref()), &next_ifd); // decrypt rest of maker notes
+            pl::at(11696);
+            len = pl::sub(&pl::length(&deref_strict(&data_pt)?), &next_ifd); // decrypt rest of maker notes
         } else {
             continue; // no decryption needed
         }
@@ -1048,7 +1125,15 @@ pub fn process_sr2(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let mut data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("DataPos");
-    let data_len = or(dir_info.get("DataLen"), pl::length(&data_pt.deref()));
+    let data_len = {
+        let d = dir_info.get("DataLen");
+        if d.truthy() {
+            d
+        } else {
+            pl::at(11736);
+            pl::length(&deref_strict(&data_pt)?)
+        }
+    };
     let base = or(dir_info.get("Base"), n(0));
     let outfile = dir_info.get("OutFile");
 
@@ -1150,6 +1235,7 @@ pub fn process_sr2(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         if !got {
             let rel = pl::sub(&offset, &data_pos);
             if pl::ge(&rel, &n(0)) && pl::lt(&pl::add(&rel, &length), &data_len) {
+                pl::at(11818);
                 let s = substr(it, &deref_strict(&data_pt)?, &rel, Some(&length))?;
                 *buff.borrow_mut() = s;
                 got = val(&buff).truthy();

@@ -8,6 +8,18 @@ use crate::modules::random_access::{raf_read, raf_read_line};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
 
+/// `$raf->Read(...)` runs as a perl statement (random_access::perl_eval),
+/// whose errors would name "(eval N)": an invocant that is not an object
+/// gives perl's error here instead, at the native's location.
+fn need_obj(v: &Value, method: &str) -> ER<()> {
+    match v {
+        Value::Undef => crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value")),
+        Value::HashRef(h) if h.borrow().blessed.is_none() => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        Value::ArrayRef(_) | Value::ScalarRef(_) | Value::Code(_) => crate::interp::eval::die(format!("Can't call method \"{method}\" on unblessed reference")),
+        _ => Ok(()),
+    }
+}
+
 fn s(x: &str) -> Value {
     pl::s(x)
 }
@@ -48,13 +60,17 @@ pub fn process_txt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (mut is_bom, mut is_utf8) = (Value::Undef, Value::Undef);
     let mut nl = s("");
 
-    if !pl::length(&data_pt.deref()).truthy() {
+    pl::at(64);
+    if !pl::length(&pl::sderef(&data_pt)?).truthy() {
         return ret(n(0)); // can't call it a text file if it has no text
     }
 
     // read more from the file if necessary
     let test_len = it.get_scalar("Image::ExifTool::testLen");
-    if pl::lt(&fast, &n(3)) && pl::num_eq(&pl::length(&data_pt.deref()), &test_len) {
+    pl::at(67);
+    if pl::lt(&fast, &n(3)) && pl::num_eq(&pl::length(&pl::sderef(&data_pt)?), &test_len) {
+        pl::at(68);
+        need_obj(&raf, "Read")?;
         if !raf_read(it, &raf, &mut buff, n(65536))?.truthy() {
             return ret(n(0));
         }
