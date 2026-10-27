@@ -195,6 +195,40 @@ pub(crate) fn chr(v: &Value) -> Value {
     }
 }
 
+/// `hex($s)` as the interpreter's builtin.
+pub(crate) fn hex(v: &Value) -> Value {
+    let b = v.to_bytes();
+    let mut s: &[u8] = &b;
+    if s.starts_with(b"0x") || s.starts_with(b"0X") {
+        s = &s[2..];
+    } else if s.starts_with(b"x") || s.starts_with(b"X") {
+        s = &s[1..];
+    }
+    let (mut u, mut f, mut overflow) = (0u64, 0f64, false);
+    for &c in s {
+        if c == b'_' {
+            continue;
+        }
+        let Some(d) = (c as char).to_digit(16) else { break };
+        if !overflow {
+            match u.checked_mul(16).and_then(|x| x.checked_add(d as u64)) {
+                Some(x) => u = x,
+                None => {
+                    overflow = true;
+                    f = u as f64 * 16.0 + d as f64;
+                }
+            }
+        } else {
+            f = f * 16.0 + d as f64;
+        }
+    }
+    if overflow {
+        Value::Num(f)
+    } else {
+        ops::from_uv(u)
+    }
+}
+
 /// `ord($s)`
 pub(crate) fn ord(v: &Value) -> Value {
     n(v.to_bytes().first().copied().unwrap_or(0) as i64)

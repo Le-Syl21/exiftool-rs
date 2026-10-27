@@ -6,7 +6,7 @@
 
 use crate::interp::eval::{Cell, ER};
 use crate::interp::{Interp, Want};
-use crate::modules::write_exif::{cat, cell, etf, get, keys, len, put, read, seek, seq, sort_num, sort_str, substr, substr_repl, tell, wlex_hash, wlex_scalar, write};
+use crate::modules::write_exif::{cat, hex, cell, etf, get, keys, len, put, read, seek, seq, sort_num, sort_str, substr, substr_repl, tell, wlex_hash, wlex_scalar, write};
 use crate::perl::{ops, Value};
 use crate::pl::{self, arg, cap, re, ret};
 
@@ -28,22 +28,6 @@ fn pdf_ver(it: &mut Interp) -> Cell {
 /// `$/`
 fn irs(it: &mut Interp) -> Value {
     it.get_scalar("main::/")
-}
-
-/// `hex($s)`
-fn hex(v: &Value) -> Value {
-    let mut r: u64 = 0;
-    for &c in v.to_bytes().iter() {
-        let d = match c {
-            b'0'..=b'9' => c - b'0',
-            b'a'..=b'f' => c - b'a' + 10,
-            b'A'..=b'F' => c - b'A' + 10,
-            b'_' => continue,
-            _ => break,
-        };
-        r = r.wrapping_mul(16).wrapping_add(d as u64);
-    }
-    ops::from_uv(r)
 }
 
 /// `%$h = ()`
