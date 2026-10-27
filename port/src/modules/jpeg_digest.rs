@@ -167,8 +167,9 @@ pub fn calculate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     // bulk up the documentation and slow down loading unnecessarily
     let extra = pl::pkg_hash(it, "Image::ExifTool::Extra");
     extra.get_or_new_hash("JPEGDigest").set("PrintConv", print_conv);
-    pl::method(it, &et, "FoundTag", vec![s("JPEGDigest"), md5])?;
-    pl::ret_nothing(want)
+    // (the sub returns the value of its last statement)
+    let key = pl::method(it, &et, "FoundTag", vec![s("JPEGDigest"), md5])?;
+    ret(key)
 }
 
 pub fn register(it: &mut Interp) {
