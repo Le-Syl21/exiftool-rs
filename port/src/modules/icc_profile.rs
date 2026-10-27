@@ -28,6 +28,15 @@ fn kv(pairs: Vec<(&str, Value)>) -> Vec<Value> {
     pairs.into_iter().flat_map(|(k, v)| [pl::s(k), v]).collect()
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// Print ICC Profile ID in hex
 /// Inputs: 1) string of numbers
 /// Returns: string of hex digits
@@ -60,7 +69,8 @@ pub fn format_icc_tag(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
 
     let type_ = if pl::ge(&size, &n(8)) {
         // get data type from start of tag data
-        substr(it, &data_pt.deref(), &offset, Some(&n(4)))?
+        pl::at(1010);
+        substr(it, &pl::sderef(&data_pt)?, &offset, Some(&n(4)))?
     } else {
         pl::s("err")
     };
@@ -70,7 +80,8 @@ pub fn format_icc_tag(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
         if pl::ge(&size, &pl::add(&num, &n(12))) {
             let pos = pl::add(&offset, &n(12));
             let tmpl = format!("x{} c{}", pos.to_text(), num.to_text());
-            let vals = match crate::perl::pack::unpack(tmpl.as_bytes(), &data_pt.deref().to_bytes()) {
+            pl::at(1019);
+            let vals = match crate::perl::pack::unpack(tmpl.as_bytes(), &pl::sderef(&data_pt)?.to_bytes()) {
                 Ok(v) => v,
                 Err(e) => return die(e),
             };
@@ -83,7 +94,8 @@ pub fn format_icc_tag(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
         let form = get32u(it, &data_pt, pl::add(&offset, &n(8)))?;
         // format 0 is UTF-8 data
         if pl::num_eq(&form, &n(0)) {
-            return ret(substr(it, &data_pt.deref(), &pl::add(&offset, &n(12)), Some(&pl::sub(&size, &n(12))))?);
+            pl::at(1026);
+            return ret(substr(it, &pl::sderef(&data_pt)?, &pl::add(&offset, &n(12)), Some(&pl::sub(&size, &n(12))))?);
         }
         // binary data and other data types treat as binary (ie. don't format)
     }
@@ -102,17 +114,20 @@ pub fn format_icc_tag(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
     }
     // signatureType
     if type_.eq_str("sig ") && pl::ge(&size, &n(12)) {
-        return ret(substr(it, &data_pt.deref(), &pl::add(&offset, &n(8)), Some(&n(4)))?);
+        pl::at(1042);
+        return ret(substr(it, &pl::sderef(&data_pt)?, &pl::add(&offset, &n(8)), Some(&n(4)))?);
     }
     // textType
     if type_.eq_str("text") {
-        return ret(substr(it, &data_pt.deref(), &pl::add(&offset, &n(8)), Some(&pl::sub(&size, &n(8))))?);
+        pl::at(1045);
+        return ret(substr(it, &pl::sderef(&data_pt)?, &pl::add(&offset, &n(8)), Some(&pl::sub(&size, &n(8))))?);
     }
     // textDescriptionType (ref 2, replaced by multiLocalizedUnicodeType)
     if type_.eq_str("desc") && pl::ge(&size, &n(12)) {
         let len = get32u(it, &data_pt, pl::add(&offset, &n(8)))?;
         if pl::ge(&size, &pl::add(&len, &n(12))) {
-            let mut str_ = substr(it, &data_pt.deref(), &pl::add(&offset, &n(12)), Some(&len))?;
+            pl::at(1050);
+            let mut str_ = substr(it, &pl::sderef(&data_pt)?, &pl::add(&offset, &n(12)), Some(&len))?;
             re(r"\0.*", "s").subst(&mut str_, false, |_| Vec::new()); // truncate at null terminator
             return ret(str_);
         }
@@ -163,7 +178,8 @@ pub fn process_metadata(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let dir_len = dir_info.get("DirLen");
     let dir_end = pl::add(&dir_start, &dir_len);
 
-    if pl::lt(&dir_len, &n(16)) || !substr(it, &data_pt.deref(), &dir_start, Some(&n(4)))?.eq_str("dict") {
+    pl::at(1096);
+    if pl::lt(&dir_len, &n(16)) || !substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&n(4)))?.eq_str("dict") {
         pl::method(it, &et, "Warn", vec![pl::s("Invalid ICC meta dictionary")])?;
         return ret(n(0));
     }
@@ -197,8 +213,9 @@ pub fn process_metadata(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             pl::method(it, &et, "Warn", vec![pl::s("Corrupted ICC meta dictionary")])?;
             break;
         }
-        let mut tag = substr(it, &data_pt.deref(), &pl::add(&dir_start, &name_ptr), Some(&name_len))?;
-        let mut val = substr(it, &data_pt.deref(), &pl::add(&dir_start, &value_ptr), Some(&value_len))?;
+        pl::at(1125);
+        let mut tag = substr(it, &pl::sderef(&data_pt)?, &pl::add(&dir_start, &name_ptr), Some(&name_len))?;
+        let mut val = substr(it, &pl::sderef(&data_pt)?, &pl::add(&dir_start, &value_ptr), Some(&value_len))?;
         tag = pl::method(it, &et, "Decode", vec![tag, pl::s("UTF16"), pl::s("MM"), pl::s("UTF8")])?;
         val = pl::method(it, &et, "Decode", vec![val, pl::s("UTF16"), pl::s("MM")])?;
         // generate tagInfo if it doesn't exist
@@ -238,6 +255,8 @@ pub fn write_icc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     // first make sure this is a valid ICC file (or no file at all)
     let raf = dir_info.get("RAF");
     let mut buff = Value::Undef;
+    pl::at(1154);
+    raf_defined(&raf, "Read")?;
     if raf_read(it, &raf, &mut buff, n(24))?.truthy() && validate_icc_impl(it, &Value::binary(buff.to_bytes()))?.truthy() {
         return ret(n(0));
     }
@@ -290,7 +309,8 @@ pub fn write_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
 
 fn validate_icc_impl(it: &mut Interp, val_ptr: &Value) -> ER<Value> {
     let mut err = Value::Undef;
-    let v = val_ptr.deref();
+    pl::at(1194);
+    let v = pl::sderef(&val_ptr)?;
     if pl::lt(&pl::length(&v), &n(24)) {
         return Ok(pl::s("Invalid ICC profile"));
     }
@@ -325,6 +345,8 @@ pub fn process_icc(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>>
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));
     let raf = dir_info.get("RAF");
     let mut buff = Value::Undef;
+    pl::at(1213);
+    raf_defined(&raf, "Read")?;
     if !pl::num_eq(&raf_read(it, &raf, &mut buff, n(24))?, &n(24)) {
         return ret(n(0));
     }
@@ -362,7 +384,7 @@ pub fn process_icc(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>>
 /// Returns: 1 on success
 pub fn process_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let data_pt = dir_info.get("DataPt");
+    let mut data_pt = dir_info.get("DataPt");
     let ds = dir_info.get("DirStart");
     let dir_start = if ds.truthy() { ds } else { n(0) };
     let dir_len = dir_info.get("DirLen");
@@ -377,7 +399,11 @@ pub fn process_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         // (don't extract from AsShotICCProfile or CurrentICCProfile)
         && (!dir_info.get("Name").truthy() || dir_info.get("Name").eq_str("ICC_Profile"))
     {
-        let v = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+        pl::at(1259);
+        if data_pt.is_undef() {
+            data_pt = pl::sref(Value::Undef); // (substr($$dataPt...) as a method argument autovivifies)
+        }
+        let v = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?;
         pl::method(it, &et, "FoundTag", vec![pl::s("ICC_Profile"), v])?;
     }
 
@@ -431,7 +457,7 @@ pub fn process_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         let cur_index = index.clone();
         index = pl::add(&index, &n(1));
         let index = cur_index;
-        let tag_id = substr(it, &data_pt.deref(), &pos, Some(&n(4)))?;
+        let tag_id = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&n(4)))?;
         let offset = get32u(it, &data_pt, pl::add(&pos, &n(4)))?;
         let size = get32u(it, &data_pt, pl::add(&pos, &n(8)))?;
         pos = pl::add(&pos, &n(12));
@@ -458,7 +484,7 @@ pub fn process_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         let mut value = Value::Undef;
         let fmt;
         if pl::gt(&size, &n(4)) {
-            fmt = substr(it, &data_pt.deref(), &value_ptr, Some(&n(4)))?;
+            fmt = substr(it, &pl::sderef(&data_pt)?, &value_ptr, Some(&n(4)))?;
             // handle multiLocalizedUnicodeType
             if fmt.eq_str("mluc") && !subdir.truthy() {
                 if pl::lt(&size, &n(28)) {
@@ -475,7 +501,7 @@ pub fn process_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
                     if pl::gt(&pl::add(&rec_pos, &rec_len), &pl::add(&value_ptr, &size)) {
                         break;
                     }
-                    let mut lang = substr(it, &data_pt.deref(), &rec_pos, Some(&n(4)))?;
+                    let mut lang = substr(it, &pl::sderef(&data_pt)?, &rec_pos, Some(&n(4)))?;
                     let mut lang_info = Value::Undef;
                     // validate language code and change to standard case (just in case)
                     let changed = re(r"^([a-z]{2})([A-Z]{2})$", "i").subst(&mut lang, false, |c| {
@@ -492,7 +518,7 @@ pub fn process_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
                     if pl::gt(&pl::add(&str_pos, &str_len), &size) {
                         break;
                     }
-                    let mut str_ = substr(it, &data_pt.deref(), &pl::add(&value_ptr, &str_pos), Some(&str_len))?;
+                    let mut str_ = substr(it, &pl::sderef(&data_pt)?, &pl::add(&value_ptr, &str_pos), Some(&str_len))?;
                     str_ = pl::method(it, &et, "Decode", vec![str_, pl::s("UTF16")])?;
                     let ti = if lang_info.truthy() { lang_info } else { tag_info.clone() };
                     let mut args = vec![tag_table_ptr.clone(), tag_id.clone(), str_.clone()];
@@ -581,7 +607,7 @@ pub fn process_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         } else if !value.is_undef() {
             pl::method(it, &et, "FoundTag", vec![tag_info.clone(), value])?;
         } else {
-            value = substr(it, &data_pt.deref(), &value_ptr, Some(&size))?;
+            value = substr(it, &pl::sderef(&data_pt)?, &value_ptr, Some(&size))?;
             // treat unsupported formats as binary data
             if tag_info.get("ValueConv").is_undef() {
                 tag_info.set("ValueConv", pl::s(r"\$val"));

@@ -27,6 +27,15 @@ fn ord(s: &Value) -> Value {
     n(s.to_bytes().first().copied().unwrap_or(0) as i64)
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// Print record type
 /// Inputs: 0) record type and count, 1) inverse flag, 2) PrintConv hash ref
 /// Returns: converted record name
@@ -50,6 +59,8 @@ pub fn print_record(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
 pub fn read_var_int(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = arg(&a, 0);
     let buff = cell(Value::Undef);
+    pl::at(158);
+    raf_defined(&raf, "Read")?;
     if !read(it, &raf, &buff, &n(1))?.truthy() {
         return ret(n(0));
     }
@@ -84,6 +95,8 @@ pub fn process_wpg(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (mut last_type, mut count) = (Value::Undef, Value::Undef);
 
     // verify this is a valid WPG file
+    pl::at(182);
+    raf_defined(&raf, "Read")?;
     if !pl::num_eq(&read(it, &raf, &buff, &n(16))?, &n(16)) {
         return ret(n(0));
     }

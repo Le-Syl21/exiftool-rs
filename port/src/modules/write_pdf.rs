@@ -50,23 +50,28 @@ pub fn check_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         // (encode later because list-type string tags need to be encoded as a unit)
     } else if format.eq_str("date") {
         // be flexible about this for now
-        if !re(r"^\d{4}", "").is_match(&val_ptr.deref()) {
+        pl::at(53);
+        if !re(r"^\d{4}", "").is_match(&pl::sderef(&val_ptr)?) {
             return ret(pl::s("Bad date format"));
         }
     } else if format.eq_str("integer") {
-        if !pl::call(it, "Image::ExifTool::IsInt", vec![val_ptr.deref()])?.truthy() {
+        pl::at(55);
+        if !pl::call(it, "Image::ExifTool::IsInt", vec![pl::sderef(&val_ptr)?])?.truthy() {
             return ret(pl::s("Not an integer"));
         }
     } else if format.eq_str("real") {
-        if !re(r"^[+-]?(?=\d|\.\d)\d*(\.\d*)?$", "").is_match(&val_ptr.deref()) {
+        pl::at(57);
+        if !re(r"^[+-]?(?=\d|\.\d)\d*(\.\d*)?$", "").is_match(&pl::sderef(&val_ptr)?) {
             return ret(pl::s("Not a real number"));
         }
     } else if format.eq_str("boolean") {
-        let v = val_ptr.deref();
+        pl::at(59);
+        let v = pl::sderef(&val_ptr)?;
         let t = v.truthy() && !re(r"^f", "i").is_match(&v);
         pl::set_deref(&val_ptr, pl::s(if t { "true" } else { "false" }))?;
     } else if format.eq_str("name") {
-        if re(r"\0", "").is_match(&val_ptr.deref()) {
+        pl::at(61);
+        if re(r"\0", "").is_match(&pl::sderef(&val_ptr)?) {
             return ret(pl::s("Invalid PDF name"));
         }
     } else {
@@ -126,7 +131,8 @@ fn write_pdf_value_v(it: &mut Interp, et: &Value, mut val: Value, format: &Value
 
 /// Encode PDF string (the string held by a reference, updated in place).
 fn encode_string_ref(it: &mut Interp, str_pt: &Value) -> ER<()> {
-    let s = str_pt.deref();
+    pl::at(112);
+    let s = pl::sderef(&str_pt)?;
     if s.is_array() {
         let items = s.items();
         for (i, item) in items.into_iter().enumerate() {
@@ -139,10 +145,10 @@ fn encode_string_ref(it: &mut Interp, str_pt: &Value) -> ER<()> {
     let ke = get(&key_ext(it));
     pl::call(it, "Image::ExifTool::PDF::Crypt", vec![str_pt.clone(), ke, n(1)])?; // encrypt if necessary
     // encode as hex if we have any control characters (except tab)
-    if re(r"[\x00-\x08\x0a-\x1f\x7f\xff]", "").is_match(&str_pt.deref()) {
+    if re(r"[\x00-\x08\x0a-\x1f\x7f\xff]", "").is_match(&pl::sderef(&str_pt)?) {
         // encode as hex
         let mut st = pl::s("");
-        let l = len(&str_pt.deref());
+        let l = len(&pl::sderef(&str_pt)?);
         let mut i = n(0);
         loop {
             let mut nn = pl::sub(&l, &i);
@@ -155,13 +161,13 @@ fn encode_string_ref(it: &mut Interp, str_pt: &Value) -> ER<()> {
             if i.truthy() {
                 st = pl::concat(&st, &irs(it));
             }
-            let part = substr(it, &str_pt.deref(), &i, Some(&nn))?;
+            let part = substr(it, &pl::sderef(&str_pt)?, &i, Some(&nn))?;
             st = pl::concat(&st, &pl::unpack1("H*", &part)?);
             i = pl::add(&i, &nn);
         }
         pl::set_deref(str_pt, cat(&[pl::s("<"), st, pl::s(">")]))?;
     } else {
-        let mut v = str_pt.deref();
+        let mut v = pl::sderef(&str_pt)?;
         re(r"([()\\])", "").subst(&mut v, true, |c| [b"\\", &cap(c, 1).to_bytes()[..]].concat()); // must escape round brackets and backslashes
         pl::set_deref(str_pt, cat(&[pl::s("("), v, pl::s(")")]))?;
     }
@@ -257,7 +263,8 @@ fn get_free_entries_v(it: &mut Interp, dict: &Value) -> ER<Value> {
         let index = dict.get("Index");
         let l = len(&dict.get("_stream"));
         // scan the table for free objects
-        let num = pl::div(&n(index.len() as i64), &n(2))?;
+        pl::at(204);
+        let num = pl::div(&n(pl::aderef(&index)?.len() as i64), &n(2))?;
         let mut pos = n(0);
         let mut i = n(0);
         while pl::lt(&i, &num) {
@@ -407,6 +414,7 @@ pub fn write_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (mut out, mut id, mut gen) = (Value::Undef, Value::Undef, Value::Undef);
 
     // make sure this is a PDF file
+    pl::at(300);
     let pos = tell(it, &raf)?;
     if !pl::ge(&read(it, &raf, &buff, n(1024))?, &n(8)) {
         return ret(n(0));
@@ -525,7 +533,8 @@ pub fn write_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         next_object = capture.get("Prev").get("Size");
         // don't re-use Meta reference if object was added in a previous update
         if meta_ref.truthy() {
-            if let Some(c) = re(r"^(\d+)", "").m(&meta_ref.deref()) {
+            pl::at(387);
+            if let Some(c) = re(r"^(\d+)", "").m(&pl::sderef(&meta_ref)?) {
                 if pl::ge(&cap(&c, 1), &next_object) {
                     meta_ref = Value::Undef;
                 }
@@ -723,7 +732,7 @@ pub fn write_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         let old_changed = et.get("CHANGED");
         let mut new_xmp = pl::method(it, &et, "WriteDirectory", vec![xmp_info, xmp_table])?;
         if new_xmp.is_undef() {
-            new_xmp = if info.get("XMP").truthy() { info.get("XMP").deref() } else { pl::s("") };
+            new_xmp = if info.get("XMP").truthy() { pl::sderef(&info.get("XMP"))? } else { pl::s("") };
         }
 
         // WriteDirectory() will increment CHANGED erroneously if non-existent
@@ -738,7 +747,8 @@ pub fn write_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             meta_changed = true;
         } else if prev_update.truthy() && capture.get("Root").get("Metadata").truthy() {
             // must still write Metadata dictionary if it was previously updated
-            let old_pos = pl::call(it, "Image::ExifTool::PDF::LocateObject", vec![xref.clone(), capture.get("Root").get("Metadata").deref()])?;
+            pl::at(545);
+            let old_pos = pl::call(it, "Image::ExifTool::PDF::LocateObject", vec![xref.clone(), pl::sderef(&capture.get("Root").get("Metadata"))?])?;
             if old_pos.truthy() && pl::gt(&old_pos, &prev_update) {
                 meta_changed = true;
             }
@@ -760,10 +770,12 @@ pub fn write_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                 d.set("_tags", Value::new_array(vec![pl::s("Type"), pl::s("Subtype")]));
                 d.set("_stream", new_xmp.clone());
                 d.set("_decrypted", n(1)); // (this will be ignored if EncryptMetadata is false)
-                new_obj.set(meta_ref.deref().to_bytes(), d);
+                pl::at(558);
+                new_obj.set(pl::sderef(&meta_ref)?.to_bytes(), d);
             } else if capture.get("Root").get("Metadata").truthy() {
                 // free existing metadata object
-                new_obj.set(capture.get("Root").get("Metadata").deref().to_bytes(), pl::s(""));
+                pl::at(568);
+                new_obj.set(pl::sderef(&capture.get("Root").get("Metadata"))?.to_bytes(), pl::s(""));
                 capture.get("Root").delete("Metadata");
                 root_changed = true; // set flag to replace Root dictionary
             }
@@ -776,13 +788,15 @@ pub fn write_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         }
         if !root_changed && prev_update.truthy() {
             // must still write Root dictionary if it was previously updated
-            let old_pos = pl::call(it, "Image::ExifTool::PDF::LocateObject", vec![xref.clone(), root_ref.deref()])?;
+            pl::at(581);
+            let old_pos = pl::call(it, "Image::ExifTool::PDF::LocateObject", vec![xref.clone(), pl::sderef(&root_ref)?])?;
             if old_pos.truthy() && pl::gt(&old_pos, &prev_update) {
                 root_changed = true;
             }
         }
         if root_changed {
-            new_obj.set(root_ref.deref().to_bytes(), capture.get("Root"));
+            pl::at(584);
+            new_obj.set(pl::sderef(&root_ref)?.to_bytes(), capture.get("Root"));
         }
         //
         // write incremental update if anything was changed

@@ -18,6 +18,15 @@ fn chomp_lf(v: &mut Value) {
     }
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// Extract information from a Radiance HDR file
 /// Inputs: 0) ExifTool object reference, 1) DirInfo reference
 /// Returns: 1 on success, 0 if this wasn't a valid RGBE image
@@ -35,6 +44,8 @@ fn process_hdr_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
     let mut buff = Value::Undef;
 
     // verify this is a valid RIFF file
+    pl::at(71);
+    raf_defined(&raf, "ReadLine")?;
     if !(raf_read_line(it, &raf, &mut buff)?.truthy() && re(r"^#\?(RADIANCE|RGBE)\x0a", "s").is_match(&buff)) {
         return ret(n(0));
     }

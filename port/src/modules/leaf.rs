@@ -55,7 +55,8 @@ pub fn process_leaf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         if pl::gt(&pl::add(&pos, &hdr_len), &dir_end) {
             break;
         }
-        let header = substr(it, &data_pt.deref(), &pos, Some(&hdr_len))?;
+        pl::at(412);
+        let header = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&hdr_len))?;
         if !pl::str_eq(&substr(it, &header, &n(0), Some(&n(4)))?, "PKTS") {
             break;
         }
@@ -76,7 +77,8 @@ pub fn process_leaf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         let mut val = if tag_info.truthy() && tag_info.get("Format").truthy() {
             call(it, "ReadValue", vec![data_pt.clone(), pos.clone(), tag_info.get("Format"), Value::Undef, size.clone()])?
         } else {
-            substr(it, &data_pt.deref(), &pos, Some(&size))?
+            pl::at(430);
+            substr(it, &pl::sderef(&data_pt)?, &pos, Some(&size))?
         };
         if !tag_info.truthy() {
             let mut name = pl::ucfirst(&tag);

@@ -76,6 +76,15 @@ fn hash(pairs: &[(&str, Value)]) -> Value {
     h
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// Extract information from a CHM file
 /// Inputs: 0) ExifTool object reference, 1) dirInfo reference
 /// Returns: 1 on success, 0 if this wasn't a valid CHM file
@@ -84,6 +93,8 @@ pub fn process_chm(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
 
+    pl::at(918);
+    raf_defined(&raf, "Read")?;
     if !(pl::num_eq(&read(it, &raf, &buff, n(56))?, &n(56))
         && re(r"^ITSF.{20}\x10\xfd\x01\x7c\xaa\x7b\xd0\x11\x9e\x0c\0\xa0\xc9\x22\xe6\xec", "s").is_match(&val(&buff)))
     {
@@ -97,7 +108,8 @@ pub fn process_chm(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 }
 
 fn read_unicode_str_impl(it: &mut Interp, data_pt: &Value, mut pos: Value, mut end: Value, et: &Value) -> ER<(Value, Value)> {
-    let data = data_pt.deref();
+    pl::at(935);
+    let data = pl::sderef(data_pt)?;
     if pl::gt(&end, &pl::length(&data)) {
         end = pl::length(&data); // (be safe)
     }
@@ -266,6 +278,8 @@ fn process_pe_resources_impl(it: &mut Interp, et: &Value, dir_info: &Value) -> E
         return Ok(n(0)); // protect against deep recursion
     }
     // read the resource header
+    pl::at(1061);
+    raf_defined(&raf, "Seek")?;
     if !(seek(it, &raf, dir_start, 0)? && pl::num_eq(&read(it, &raf, &buff, n(16))?, &n(16))) {
         return Ok(n(0));
     }
@@ -347,7 +361,8 @@ pub fn process_pe_resources(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
 fn process_pe_dict_impl(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<Value> {
     let raf = dir_info.get("RAF");
     let data_pt = dir_info.get("DataPt");
-    let dir_len = pl::length(&data_pt.deref());
+    pl::at(1123);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?);
     let sections = Value::new_array(Vec::new());
     let mut dir_info2: Option<Value> = None;
     let mut rsrc_found = false;
@@ -419,7 +434,8 @@ pub fn mach_override(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
 fn extract_mach_tags_impl(it: &mut Interp, et: &Value, data_pt: &Value, do_obj: &Value) -> ER<Value> {
     // get information about mach header based on the magic number (first 4 bytes)
     let mach_type = runtime::lex_hash(it, MODULE, "machType");
-    let key = pl::substr(&data_pt.deref(), 0, Some(4));
+    pl::at(1186);
+    let key = pl::substr(&pl::sderef(data_pt)?, 0, Some(4));
     let info = mach_type.get(key.to_bytes());
     if info.truthy() {
         // Mach header structure:
@@ -470,6 +486,8 @@ pub fn process_exe(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (buff, buf2) = (cell(Value::Undef), cell(Value::Undef));
     let (mut type_, mut mime, mut ext, mut tag_table_ptr) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef);
 
+    pl::at(1229);
+    raf_defined(&raf, "Read")?;
     let mut size = read(it, &raf, &buff, n(0x40))?;
     if !size.truthy() {
         return ret(n(0));

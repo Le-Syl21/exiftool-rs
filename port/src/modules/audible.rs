@@ -25,6 +25,15 @@ fn name_hash(name: Value) -> Value {
     h
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// Process Audible 'meta' tags from M4B files (ref PH)
 /// Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
 /// Returns: 1 on success
@@ -32,7 +41,8 @@ pub fn process_audible_meta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("DataPos");
-    let data = data_pt.deref();
+    pl::at(123);
+    let data = pl::sderef(&data_pt)?;
     let dir_len = pl::length(&data);
     if pl::lt(&dir_len, &n(4)) {
         return ret(n(0));
@@ -90,7 +100,8 @@ pub fn process_audible_cvrx(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("DataPos");
-    let dir_len = pl::length(&data_pt.deref());
+    pl::at(168);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?);
     if pl::gt(&n(0x0a), &dir_len) {
         return ret(n(0));
     }
@@ -129,6 +140,8 @@ pub fn process_aa(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let toc_ref = Value::ScalarRef(toc.clone());
 
     // check magic number
+    pl::at(201);
+    raf_defined(&raf, "Read")?;
     if !(pl::num_eq(&raf_read_cell(it, &raf, &buff, n(16))?, &n(16)) && re(r"^.{4}\x57\x90\x75\x36", "s").is_match(&buff.borrow().clone())) {
         return ret(n(0));
     }

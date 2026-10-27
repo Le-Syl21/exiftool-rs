@@ -12,6 +12,15 @@ fn s(x: &str) -> Value {
     pl::s(x)
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 //------------------------------------------------------------------------------
 // Extract information from a PCX image
 // Inputs: 0) ExifTool object reference, 1) dirInfo reference
@@ -20,6 +29,8 @@ pub fn process_pcx(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
+    pl::at(89);
+    raf_defined(&raf, "Read")?;
     if !(pl::num_eq(&raf_read_cell(it, &raf, &buff, n(0x50))?, &n(0x50)) && re(r"^\x0a[\0-\x05]\x01[\x01\x02\x04\x08].{64}[\0-\x02]", "s").is_match(&buff.borrow())) {
         return ret(n(0));
     }

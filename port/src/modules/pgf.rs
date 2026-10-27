@@ -15,6 +15,15 @@ fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// Extract information from a PGF image
 /// Inputs: 0) ExifTool object reference, 1) dirInfo reference
 /// Returns: 1 on success, 0 if this wasn't a valid PGF file
@@ -24,6 +33,8 @@ pub fn process_pgf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let buff = cell(Value::Undef);
 
     // read header and check magic number
+    pl::at(76);
+    raf_defined(&raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(24))?, &n(24)) {
         return ret(n(0));
     }

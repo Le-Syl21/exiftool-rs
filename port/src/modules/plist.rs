@@ -89,7 +89,8 @@ fn last_plist_tag(et: &Value, tag_info: &Value) {
 /// Returns: 1 if valid tag was found
 pub fn found_tag(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, tag_table_ptr, props, mut val) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
-    if props.is_empty() {
+    pl::at(158);
+    if pl::aderef(&props)?.is_empty() {
         return pl::ret(n(0));
     }
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
@@ -266,9 +267,10 @@ pub fn found_tag(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// Returns: integer value
 pub fn get24u(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (data_pt, off) = (arg(&a, 0), arg(&a, 1));
+    pl::at(253);
     let s = pl::concat(
         &Value::bytes(b"\0"),
-        &pl::substr(&data_pt.deref(), off.to_i64(), Some(3)),
+        &pl::substr(&pl::sderef(&data_pt)?, off.to_i64(), Some(3)),
     );
     pl::ret(pl::unpack1("N", &s)?)
 }
@@ -554,11 +556,13 @@ pub fn process_binary_plist(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     if data_pt.truthy() {
         let start = dir_info.get("DirStart");
         let dir_len = dir_info.get("DirLen");
+        pl::at(409);
         if start.truthy()
-            || (dir_len.truthy() && !pl::num_eq(&dir_len, &pl::length(&data_pt.deref())))
+            || (dir_len.truthy() && !pl::num_eq(&dir_len, &pl::length(&pl::sderef(&data_pt)?)))
         {
             let off = if start.truthy() { start.to_i64() } else { 0 };
-            let buf2 = pl::substr(&data_pt.deref(), off, Some(dir_len.to_i64()));
+            pl::at(410);
+            let buf2 = pl::substr(&pl::sderef(&data_pt)?, off, Some(dir_len.to_i64()));
             let r = pl::call(
                 it,
                 "File::RandomAccess::new",
@@ -637,6 +641,7 @@ pub fn process_binary_plist(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
 /// `pos($$dataPt) = $start; $$dataPt =~ /\GPAT/` (with /g when `g`): the
 /// match, leaving pos() on the scalar as perl does.
 fn match_at_start(it: &mut Interp, data_pt: &Value, start: &Value, pat: &str, g: bool) -> ER<bool> {
+    pl::sderef(data_pt)?; // (pos($$dataPt) dies unless a SCALAR ref)
     let d = cell(data_pt.clone());
     let s = cell(start.clone());
     let code = format!(
@@ -663,6 +668,7 @@ pub fn process_plist(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     let mut result = Value::Undef;
     let mut not_xml = false;
 
+    pl::at(461);
     if data_pt.truthy() && !match_at_start(it, &data_pt, &start, "<", true)? {
         not_xml = true;
     }
@@ -692,6 +698,7 @@ pub fn process_plist(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     } else if !data_pt.truthy() {
         return pl::ret(n(0));
     }
+    pl::at(479);
     if match_at_start(it, &data_pt, &start, "bplist0", false)? {
         // binary PLIST
         // binary PLIST file
@@ -725,7 +732,7 @@ pub fn process_plist(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
         }
         et.delete("SET_GROUP1");
         result = n(1);
-    } else if re(r#"^\{""#, "").is_match(&data_pt.deref()) {
+    } else if re(r#"^\{""#, "").is_match(&pl::sderef(&data_pt)?) {
         // JSON PLIST
         if raf.truthy() {
             pl::method(it, &raf, "Seek", vec![n(0)])?;
@@ -738,7 +745,7 @@ pub fn process_plist(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
         )?;
     } else if et.get("FILE_EXT").truthy()
         && pl::str_eq(&et.get("FILE_EXT"), "PLIST")
-        && re(r"^\xfe\xff\x00", "").is_match(&data_pt.deref())
+        && re(r"^\xfe\xff\x00", "").is_match(&pl::sderef(&data_pt)?)
     {
         // (have seen very old PLIST files encoded as UCS-2BE with leading BOM)
         pl::method(
