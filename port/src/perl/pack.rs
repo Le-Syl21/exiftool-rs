@@ -57,6 +57,21 @@ fn parse_items(t: &[u8], pos: &mut usize) -> Result<Vec<Item>, String> {
         if c == b')' {
             break;
         }
+        // `%<bits>`: the checksum of the next item (unpack only).
+        if c == b'%' {
+            i += 1;
+            let mut bits = 0usize;
+            let d0 = i;
+            while i < t.len() && t[i].is_ascii_digit() {
+                bits = bits * 10 + (t[i] - b'0') as usize;
+                i += 1;
+            }
+            if i == d0 {
+                bits = 16;
+            }
+            items.push(Item { letter: b'%', endian: None, bang: false, count: Count::N(bits), slash: false, group: None });
+            continue;
+        }
         let mut group = None;
         if c == b'(' {
             i += 1;
@@ -145,7 +160,20 @@ pub fn unpack(template: &[u8], data: &[u8]) -> Result<Vec<Value>, String> {
 fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>) -> Result<usize, String> {
     let mut pos = start;
     let mut pending_count: Option<usize> = None;
+    let mut checksum: Option<(usize, usize)> = None; // (bits, values before the item)
     for item in items {
+        if item.letter == b'%' {
+            if let Count::N(bits) = item.count {
+                checksum = Some((bits, out.len()));
+            }
+            continue;
+        }
+        if let Some((bits, from)) = checksum.take() {
+            pos = unpack_items(std::slice::from_ref(item), data, pos, out)?;
+            let vals: Vec<Value> = out.drain(from..).collect();
+            out.push(checksum_of(&vals, bits));
+            continue;
+        }
         let count = match pending_count.take() {
             Some(n) => Count::N(n),
             None => item.count,
@@ -669,4 +697,20 @@ mod tests {
         assert_eq!(pack(b"C*", &[Value::Int(1), Value::Int(300)]).unwrap(), [1, 44]);
         assert_eq!(pack(b"U*", &[Value::Int(0xe9)]).unwrap(), "é".as_bytes());
     }
+}
+
+/// The `%<bits>` checksum of unpacked values: their sum modulo 2**bits, as
+/// perl computes it (integer sum, or a floating one when a value is not an
+/// integer or bits is 64 or more).
+fn checksum_of(vals: &[Value], bits: usize) -> Value {
+    let all_int = vals.iter().all(|v| matches!(v, Value::Int(_)));
+    if all_int && bits < 64 {
+        let sum = vals.iter().fold(0u64, |a, v| a.wrapping_add(if let Value::Int(i) = v { *i as u64 } else { 0 }));
+        let mask = if bits == 0 { 0 } else { (1u64 << bits) - 1 };
+        return Value::Int((sum & mask) as i64);
+    }
+    let sum: f64 = vals.iter().map(|v| v.to_f64()).sum();
+    let m = 2f64.powi(bits.min(1023) as i32);
+    let r = sum - (sum / m).floor() * m;
+    Value::Num(r)
 }

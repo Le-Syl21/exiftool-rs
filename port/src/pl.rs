@@ -286,8 +286,11 @@ fn alias_cells(args: &[Value]) -> (Vec<crate::interp::eval::Cell>, Vec<Option<cr
 /// the slice gets the new values back, as perl's aliasing gives them.
 pub fn call_mut(it: &mut Interp, name: &str, args: &mut [Value], want: Want) -> ER<Vec<Value>> {
     let (cells, al) = alias_cells(args);
-    let code = it.sub_ref(name);
-    let r = it.call_with_aliases(&code, args.to_vec(), al, want);
+    // Straight to the named sub: the late-bound reference of sub_ref is a
+    // trampoline whose own frame would take the aliases.
+    it.set_pending_aliases(al);
+    let r = it.call_named(name, args.to_vec(), want);
+    it.set_pending_aliases_none();
     for (a, c) in args.iter_mut().zip(cells) {
         *a = c.borrow().clone();
     }

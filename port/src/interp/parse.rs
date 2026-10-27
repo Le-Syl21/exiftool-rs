@@ -2275,6 +2275,9 @@ fn interp_var_end(raw: &[u8], i: usize, regex: bool) -> Option<usize> {
             return Some(k);
         }
         b'&' | b'@' if !regex && raw[i] == b'$' => return Some(k + 1),
+        // Punctuation variables a string interpolates ("line$/"); in a
+        // pattern `$/` is an anchor followed by a slash.
+        b'/' | b',' | b';' | b'!' if !regex && raw[i] == b'$' && k == i + 1 => return Some(k + 1),
         _ => return None,
     }
     // Subscripts.
