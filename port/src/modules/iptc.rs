@@ -302,7 +302,14 @@ pub fn process_iptc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             ti.set("Unknown", n(1));
             pl::call(it, "Image::ExifTool::AddTagToTable", vec![record_ptr.clone(), tag.clone(), ti])?;
         }
-        let tag_info = pl::method(it, &et, "GetTagInfo", vec![record_ptr.clone(), tag.clone()])?;
+        let mut tag_info = pl::method(it, &et, "GetTagInfo", vec![record_ptr.clone(), tag.clone()])?;
+        if validate.truthy() {
+            // $$tagInfo{List} autovivifies an undefined $tagInfo (an unknown
+            // tag without the Unknown option): a new empty hash each time
+            if tag_info.is_undef() {
+                tag_info = Value::new_hash();
+            }
+        }
         if validate.truthy() && !tag_info.get("List").truthy() && !tag_info.get("Unknown").truthy() {
             if seen.get(tag_info.to_bytes()).truthy() {
                 let msg = pl::concat(&pl::concat(&pl::s("Multiple IPTC "), &tag_info.get("Name")), &pl::s(" tags"));
