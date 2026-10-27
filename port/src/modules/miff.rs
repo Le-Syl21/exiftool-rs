@@ -25,6 +25,15 @@ fn cat(parts: &[Value]) -> Value {
     Value::bytes(v)
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 //------------------------------------------------------------------------------
 // Extract meta information from a MIFF image
 // Inputs: 0) ExifTool object reference, 1) dirInfo reference
@@ -37,6 +46,8 @@ pub fn process_miff(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 
     // validate the MIFF file (note: MIFF files _may_ begin with other
     // characters, but this starting sequence is strongly suggested.)
+    pl::at(113);
+    raf_defined(&raf, "Read")?;
     if !pl::num_eq(&raf_read(it, &raf, &mut hdr, n(14))?, &n(14)) {
         return ret(n(0));
     }

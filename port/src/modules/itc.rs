@@ -25,6 +25,15 @@ fn seek(it: &mut Interp, raf: &Value, pos: Value, whence: i64) -> ER<bool> {
     Ok(pl::method(it, raf, "Seek", vec![pos, n(whence)])?.truthy())
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// Process an iTunes Cover Flow (ITC) file
 /// Inputs: 0) ExifTool object reference, 1) Directory information reference
 /// Returns: 1 on success, 0 if this wasn't a valid ITC file
@@ -39,6 +48,8 @@ pub fn process_itc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     // loop through all blocks in this image
     loop {
         // read the block header
+        pl::at(94);
+        raf_defined(&raf, "Read")?;
         let nr = raf_read_cell(it, &raf, &buff, n(8))?;
         if !pl::num_eq(&nr, &n(8)) {
             // no error if we reached the EOF normally

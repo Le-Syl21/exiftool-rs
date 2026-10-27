@@ -96,12 +96,14 @@ fn read_more_core(
     pos: &mut Option<usize>,
 ) -> ER<Value> {
     let mut buf2 = Value::Undef;
+    pl::at(94);
     let nb = read(it, raf, &mut buf2, n(65536))?;
     if !pl::num_eq(&nb, &n(65536)) {
         raf.set("BencodeEOF", n(1));
     }
     if nb.truthy() {
-        let rest = pl::substr(&data_pt.deref(), pos.unwrap_or(0) as i64, None);
+        pl::at(96);
+        let rest = pl::substr(&pl::sderef(&data_pt)?, pos.unwrap_or(0) as i64, None);
         assign(data_pt, pl::concat(&rest, &buf2), pos)?;
     }
     Ok(nb)

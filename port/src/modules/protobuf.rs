@@ -42,12 +42,13 @@ pub fn get_bytes(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (dir_info, nb) = (arg(&a, 0), arg(&a, 1));
     let data_pt = dir_info.get("DataPt");
     let pos = dir_info.get("Pos");
-    if pl::gt(&pl::add(&pos, &nb), &pl::length(&data_pt.deref())) {
+    pl::at(43);
+    if pl::gt(&pl::add(&pos, &nb), &pl::length(&pl::sderef(&data_pt)?)) {
         return pl::ret_undef();
     }
     dir_info.set("Pos", pl::add(&dir_info.get("Pos"), &nb));
     pl::ret(pl::substr(
-        &data_pt.deref(),
+        &pl::sderef(&data_pt)?,
         pos.to_i64(),
         Some(nb.to_i64()),
     ))
@@ -162,7 +163,7 @@ pub fn is_protobuf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         if r.is_undef() {
             return pl::ret(n(0));
         }
-        if pl::num_eq(&dir_info.get("Pos"), &pl::length(&pt.deref())) {
+        if pl::num_eq(&dir_info.get("Pos"), &pl::length(&pl::sderef(&pt)?)) {
             return pl::ret(n(1));
         }
     }
@@ -208,7 +209,8 @@ pub fn process_protobuf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         if v.truthy() {
             v
         } else {
-            pl::sub(&pl::length(&data_pt.deref()), &dir_start)
+            pl::at(136);
+            pl::sub(&pl::length(&pl::sderef(&data_pt)?), &dir_start)
         }
     };
     let dir_end = pl::add(&dir_start, &dir_len);

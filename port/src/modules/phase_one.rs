@@ -79,6 +79,7 @@ pub fn html_dump(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         if tag_info.get("Format").truthy() {
             format_str = tag_info.get("Format");
             let fs = pl::call(it, "Image::ExifTool::FormatSize", vec![format_str.clone()])?;
+            pl::at(416);
             count = pl::div(&size, &fs)?;
         }
     } else {
@@ -145,7 +146,8 @@ pub fn write_phase_one(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     }
     let entry_size = tag_table_ptr.get("VARS").get("ENTRY_SIZE");
     let ifd_type = or(tag_table_ptr.get("TAG_PREFIX"), || pl::s("PhaseOne"));
-    let hdr = substr(it, &data_pt.deref(), &dir_start, Some(&n(12)))?;
+    pl::at(474);
+    let hdr = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&n(12)))?;
     if pl::num_eq(&entry_size, &n(16)) {
         if !re(r"^(IIII.waR|MMMMRaw.)", "s").is_match(&hdr) {
             return pl::ret_undef();
@@ -163,7 +165,7 @@ pub fn write_phase_one(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
         return pl::ret_undef();
     }
     // initialize output directory buffer with (fixed) number of entries plus 4-byte padding
-    let dir_buff = cell(substr(it, &data_pt.deref(), &pl::add(&dir_start, &ifd_start), Some(&n(8)))?);
+    let dir_buff = cell(substr(it, &pl::sderef(&data_pt)?, &pl::add(&dir_start, &ifd_start), Some(&n(8)))?);
     // get number of entries in PhaseOne directory
     let num_entries = call(it, "Get32u", vec![rf(&dir_buff), n(0)])?;
     let ifd_end = pl::add(&pl::add(&ifd_start, &n(8)), &pl::mul(&entry_size, &num_entries));
@@ -210,7 +212,7 @@ pub fn write_phase_one(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                 }
                 value_ptr = pl::add(&value_ptr, &dir_start);
             }
-            let mut value = substr(it, &data_pt.deref(), &value_ptr, Some(&size))?;
+            let mut value = substr(it, &pl::sderef(&data_pt)?, &value_ptr, Some(&size))?;
             let mut tag_info = or(new_tags.get(tag_id.to_bytes()), || tag_table_ptr.get(tag_id.to_bytes()));
             if tag_info.truthy() && pl::ref_of(&tag_info) != "HASH" {
                 tag_info = pl::method(it, &et, "GetTagInfo", vec![tag_table_ptr.clone(), tag_id.clone()])?;
@@ -220,6 +222,7 @@ pub fn write_phase_one(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                     format_str = tag_info.get("Format");
                 }
                 let fs = pl::call(it, "Image::ExifTool::FormatSize", vec![format_str.clone()])?;
+                pl::at(530);
                 let mut count = pl::int(&pl::div(&size, &fs)?);
                 let v = call(it, "ReadValue", vec![pl::sref(value.clone()), n(0), format_str.clone(), count.clone(), size.clone()])?;
                 let nv_hash = pl::method(it, &et, "GetNewValueHash", vec![tag_info.clone()])?;
@@ -254,7 +257,7 @@ pub fn write_phase_one(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                 break 'entry; // drop this tag
             }
             // add the tagID, possibly format size, and size to this directory entry
-            let e = substr(it, &data_pt.deref(), &entry, Some(&pl::sub(&entry_size, &n(8))))?;
+            let e = substr(it, &pl::sderef(&data_pt)?, &entry, Some(&pl::sub(&entry_size, &n(8))))?;
             let s32 = call(it, "Set32u", vec![size.clone()])?;
             append(&dir_buff, &pl::concat(&e, &s32));
 
@@ -319,7 +322,8 @@ pub fn process_phase_one(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     let entry_size = tag_table_ptr.get("VARS").get("ENTRY_SIZE");
     let ifd_type = or(tag_table_ptr.get("TAG_PREFIX"), || pl::s("PhaseOne"));
 
-    let hdr = substr(it, &data_pt.deref(), &dir_start, Some(&n(12)))?;
+    pl::at(616);
+    let hdr = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&n(12)))?;
     if pl::num_eq(&entry_size, &n(16)) {
         if !re(r"^(IIII.waR|MMMMRaw.)", "s").is_match(&hdr) {
             return ret(n(0));
@@ -401,6 +405,7 @@ pub fn process_phase_one(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                 break 'entry;
             }
             let fs = pl::call(it, "Image::ExifTool::FormatSize", vec![format_str.clone()])?;
+            pl::at(680);
             let count = pl::int(&pl::div(&size, &fs)?);
             if pl::gt(&count, &n(100000)) && !binary.truthy() {
                 value = pl::sref(cat(&[pl::s("Binary data "), size.clone(), pl::s(" bytes")]));
@@ -424,7 +429,7 @@ pub fn process_phase_one(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                 let (mut pos, mut len) = (value_ptr.clone(), size.clone());
                 while len.truthy() {
                     let nn = if pl::gt(&len, &n(65536)) { n(65536) } else { len.clone() };
-                    let tmp = substr(it, &data_pt.deref(), &pos, Some(&nn))?;
+                    let tmp = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&nn))?;
                     pl::method(it, &hash_obj, "add", vec![tmp])?;
                     len = pl::sub(&len, &nn);
                     pos = pl::add(&pos, &nn);

@@ -46,6 +46,15 @@ fn first(r: Vec<Value>) -> Value {
     r.into_iter().last().unwrap_or_default()
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// Process information in an MPEG audio or video frame header
 /// Inputs: 0) ExifTool object ref, 1) tag table ref, 2-N) list of 32-bit data words
 pub fn process_frame_header(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
@@ -86,6 +95,8 @@ pub fn parse_mpeg_audio(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         if e.truthy() { e } else { pl::s("") }
     };
 
+    pl::at(472);
+    pl::sderef(&buff_pt)?; // ($$buffPt =~ m{}g dies unless a SCALAR ref)
     loop {
         // find frame sync
         let r = on_buff(it, r"$$buffPt =~ m{(\xff.{3})}sg ? ($1) : ()", &buff_pt)?;
@@ -129,7 +140,7 @@ pub fn parse_mpeg_audio(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let (v, mm) = (et.get("MPEG_Vers"), et.get("MPEG_Mode"));
     #[allow(clippy::never_loop)]
     while !v.is_undef() && !mm.is_undef() {
-        let data = buff_pt.deref();
+        let data = pl::sderef(&buff_pt)?;
         let len = pl::length(&data);
         let inc = if pl::num_eq(&v, &n(3)) {
             if pl::num_eq(&mm, &n(3)) { 17 } else { 32 }
@@ -241,7 +252,7 @@ pub fn parse_mpeg_audio(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             let dir_info = Value::new_hash();
             dir_info.set("DataPt", buff_pt.clone());
             dir_info.set("DirStart", pos.clone());
-            dir_info.set("DirLen", pl::sub(&pl::length(&buff_pt.deref()), &pos));
+            dir_info.set("DirLen", pl::sub(&pl::length(&pl::sderef(&buff_pt)?), &pos));
             let sub_table_ptr = call(it, "GetTagTable", vec![pl::s("Image::ExifTool::MPEG::Lame")])?;
             m(it, &et, "ProcessDirectory", vec![dir_info, sub_table_ptr])?;
         } else {
@@ -259,10 +270,11 @@ pub fn parse_mpeg_audio(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 pub fn process_mpeg_video(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, buff_pt) = (arg(&a, 0), arg(&a, 1));
 
-    if !pl::ge(&pl::length(&buff_pt.deref()), &n(4)) {
+    pl::at(591);
+    if !pl::ge(&pl::length(&pl::sderef(&buff_pt)?), &n(4)) {
         return ret(n(0));
     }
-    let u = pl::unpack("N2", &buff_pt.deref())?;
+    let u = pl::unpack("N2", &pl::sderef(&buff_pt)?)?;
     let (w1, w2) = (arg(&u, 0), arg(&u, 1));
     let w = w1.to_i64();
     // validate as much as possible
@@ -308,6 +320,8 @@ pub fn parse_mpeg_audio_video(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
     et.delete("AudioBitrate");
     et.delete("VideoBitrate");
 
+    pl::at(637);
+    pl::sderef(&buff_pt)?; // ($$buffPt =~ //g dies unless a SCALAR ref)
     loop {
         let r = on_buff(it, r"$$buffPt =~ /\0\0\x01(\xb3|\xc0)/g ? ($1, pos($$buffPt)) : ()", &buff_pt)?;
         if r.is_empty() {
@@ -319,7 +333,7 @@ pub fn parse_mpeg_audio_video(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
             // make sure we didn't miss an audio frame sync before this (eg. MP3 file)
             // (the last byte of the 4-byte MP3 audio frame header word may be zero,
             // but the 2nd last must be non-zero, so we need only check to pos-3)
-            let buff = pl::substr(&buff_pt.deref(), 0, Some(pl::sub(&p, &n(3)).to_i64()));
+            let buff = pl::substr(&pl::sderef(&buff_pt)?, 0, Some(pl::sub(&p, &n(3)).to_i64()));
             if first(parse_mpeg_audio(it, vec![et.clone(), pl::sref(buff)], Want::Scalar)?).truthy() {
                 found_audio = true;
             }
@@ -328,14 +342,14 @@ pub fn parse_mpeg_audio_video(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
         if (video && found_video) || (!video && found_audio) {
             continue;
         }
-        let mut len = pl::sub(&pl::length(&buff_pt.deref()), &p);
+        let mut len = pl::sub(&pl::length(&pl::sderef(&buff_pt)?), &p);
         if pl::lt(&len, &n(4)) {
             break;
         }
         if pl::gt(&len, &n(256)) {
             len = n(256);
         }
-        let dat = pl::substr(&buff_pt.deref(), p.to_i64(), Some(len.to_i64()));
+        let dat = pl::substr(&pl::sderef(&buff_pt)?, p.to_i64(), Some(len.to_i64()));
         // process MPEG audio or video
         let args = vec![et.clone(), pl::sref(dat)];
         let ok = if video { process_mpeg_video(it, args, Want::Scalar)? } else { parse_mpeg_audio(it, args, Want::Scalar)? };
@@ -363,6 +377,8 @@ pub fn process_mpeg(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
 
+    pl::at(673);
+    raf_defined(&raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(4))?, &n(4)) {
         return ret(n(0));
     }

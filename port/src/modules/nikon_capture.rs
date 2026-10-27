@@ -59,7 +59,7 @@ pub fn write_nikon_capture(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     }
     // determine if there is any data after this block
     if pl::gt(&pad, &n(0)) {
-        pad = pl::substr(&data_pt.deref(), pl::add(&pl::add(&dir_start, &n(18)), &size).to_i64(), Some(pad.to_i64()));
+        pad = pl::substr(&pl::sderef(&data_pt)?, pl::add(&pl::add(&dir_start, &n(18)), &size).to_i64(), Some(pad.to_i64()));
         dir_len = pl::add(&size, &n(18));
     } else {
         pad = s("");
@@ -122,7 +122,7 @@ pub fn write_nikon_capture(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
                 keep_existing = false;
                 if pl::length(&new_val).truthy() {
                     // write the new value
-                    out_buff = pl::concat(&out_buff, &pl::substr(&data_pt.deref(), pos.to_i64(), Some(18)));
+                    out_buff = pl::concat(&out_buff, &pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(18)));
                     let l = set32u(it, pl::add(&pl::length(&new_val), &n(4)))?;
                     out_buff = pl::concat(&out_buff, &l);
                     out_buff = pl::concat(&out_buff, &new_val);
@@ -132,7 +132,7 @@ pub fn write_nikon_capture(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         }
         if keep_existing {
             // rewrite the existing information
-            out_buff = pl::concat(&out_buff, &pl::substr(&data_pt.deref(), pos.to_i64(), Some(pl::add(&n(22), &size).to_i64())));
+            out_buff = pl::concat(&out_buff, &pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(pl::add(&n(22), &size).to_i64())));
         }
         pos = pl::add(&pos, &pl::add(&n(22), &size));
     }
@@ -140,14 +140,14 @@ pub fn write_nikon_capture(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         if pl::num_eq(&pos, &pl::sub(&dir_end, &n(4))) {
             // it seems that sometimes (NX2) the main block size is wrong by 4 bytes
             // (did they forget to include the size word?)
-            out_buff = pl::concat(&out_buff, &pl::substr(&data_pt.deref(), pos.to_i64(), Some(4)));
+            out_buff = pl::concat(&out_buff, &pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(4)));
         } else {
             pl::method(it, &et, "Warn", vec![s("Nikon Capture Data improperly terminated"), n(1)])?;
             return pl::ret_undef();
         }
     }
     // add the header and return the new directory
-    let head = pl::substr(&data_pt.deref(), dir_start.to_i64(), Some(18));
+    let head = pl::substr(&pl::sderef(&data_pt)?, dir_start.to_i64(), Some(18));
     let l = set32u(it, pl::add(&pl::length(&out_buff), &n(4)))?;
     ret(pl::concat(&pl::concat(&pl::concat(&head, &l), &out_buff), &pad))
 }
@@ -246,7 +246,7 @@ pub fn process_nikon_capture(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
                 }
                 value = pl::call(it, "Image::ExifTool::ReadValue", vec![data_pt.clone(), pos.clone(), format, count, size.clone()])?;
             } else if pl::num_eq(&size, &n(1)) {
-                value = pl::substr(&data_pt.deref(), pos.to_i64(), Some(size.to_i64()));
+                value = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(size.to_i64()));
             }
             let r = pl::method(
                 it,

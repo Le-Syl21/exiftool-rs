@@ -124,7 +124,8 @@ pub fn process_jumd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         m(it, &et, "Warn", vec![pl::s("Truncated JUMD directory")])?;
         return ret(n(0));
     }
-    let data = data_pt.deref();
+    pl::at(812);
+    let data = pl::sderef(&data_pt)?;
     let _type = pl::substr(&data, pos.to_i64(), Some(4));
     m(it, &et, "HandleTag", vec![tag_table_ptr.clone(), pl::s("type"), pl::substr(&data, pos.to_i64(), Some(16))])?;
     pos = pl::add(&pos, &n(16));
@@ -134,7 +135,7 @@ pub fn process_jumd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     if flags.to_i64() & 0x02 != 0 {
         // label exists?
         // pos($$dataPt) = $pos; $$dataPt =~ /\0/g
-        let b = data_pt.deref().to_bytes();
+        let b = pl::sderef(&data_pt)?.to_bytes();
         let p = pos.to_i64().max(0) as usize;
         let found = if p <= b.len() { b[p..].iter().position(|&c| c == 0).map(|i| p + i + 1) } else { None };
         let Some(end_pos) = found else {
@@ -142,7 +143,7 @@ pub fn process_jumd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             return ret(n(0));
         };
         let len = n(end_pos as i64 - pos.to_i64());
-        let mut name = pl::substr(&data_pt.deref(), pos.to_i64(), Some(len.to_i64()));
+        let mut name = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(len.to_i64()));
         m(it, &et, "HandleTag", vec![tag_table_ptr.clone(), pl::s("label"), name.clone()])?;
         pos = pl::add(&pos, &len);
         if len.truthy() {
@@ -173,7 +174,7 @@ pub fn process_jumd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             m(it, &et, "Warn", vec![pl::s("Missing JUMD signature")])?;
             return ret(n(0));
         }
-        let sig = pl::substr(&data_pt.deref(), pos.to_i64(), Some(32));
+        let sig = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(32));
         m(it, &et, "HandleTag", vec![tag_table_ptr.clone(), pl::s("sig"), sig])?;
         pos = pl::add(&pos, &n(32));
     }
@@ -408,8 +409,9 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     if data_pt.truthy() {
         // save C2PA JUMBF as a block if requested
         if dir_name.eq_str("JUMBF") && et.get("REQ_TAG_LOOKUP").get("jumbf").truthy() && !dir_info.get("NoBlockSave").truthy() {
-            if dir_start.truthy() || _dir_len.to_bytes() != pl::length(&data_pt.deref()).to_bytes() {
-                let dat = pl::substr(&data_pt.deref(), dir_start.to_i64(), Some(_dir_len.to_i64()));
+            pl::at(1033);
+            if dir_start.truthy() || _dir_len.to_bytes() != pl::length(&pl::sderef(&data_pt)?).to_bytes() {
+                let dat = pl::substr(&pl::sderef(&data_pt)?, dir_start.to_i64(), Some(_dir_len.to_i64()));
                 m(it, &et, "FoundTag", vec![pl::s("JUMBF"), pl::sref(dat)])?;
             } else {
                 m(it, &et, "FoundTag", vec![pl::s("JUMBF"), data_pt.clone()])?;
@@ -482,8 +484,9 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
             }
             break;
         }
-        box_len = pl::unpack1(&format!("x{} N", pos.to_i64()), &data_pt.deref())?; // (length includes header and data)
-        box_id = pl::substr(&data_pt.deref(), pl::add(&pos, &n(4)).to_i64(), Some(4));
+        pl::at(1083);
+        box_len = pl::unpack1(&format!("x{} N", pos.to_i64()), &pl::sderef(&data_pt)?)?; // (length includes header and data)
+        box_id = pl::substr(&pl::sderef(&data_pt)?, pl::add(&pos, &n(4)).to_i64(), Some(4));
         // (ftbl box contains flst boxes with absolute file offsets, not currently handled)
         if outfile.truthy() && box_id.eq_str("ftbl") {
             m(it, &et, "Error", vec![pl::s("Can't yet handle fragmented JPX files")])?;
@@ -518,7 +521,8 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
                 err = pl::s("");
                 break;
             }
-            let hl = pl::unpack(&format!("x{} N2", pos.to_i64()), &data_pt.deref())?;
+            pl::at(1113);
+            let hl = pl::unpack(&format!("x{} N2", pos.to_i64()), &pl::sderef(&data_pt)?)?;
             let (hi, lo) = (arg(&hl, 0), arg(&hl, 1));
             if hi.truthy() {
                 err = pl::s("Can't currently handle JPEG 2000 boxes > 4 GB");
@@ -533,7 +537,7 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
                         err = n(1);
                     }
                     // copy over the rest of the file
-                    if !write(it, &outfile, &[data_pt.deref()])? {
+                    if !write(it, &outfile, &[pl::sderef(&data_pt)?])? {
                         err = n(1);
                     }
                     let mut b = buff.borrow().clone();
@@ -567,7 +571,7 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
             // no need to process this box
             if raf.truthy() {
                 if outfile.truthy() {
-                    if !write(it, &outfile, &[data_pt.deref()])? {
+                    if !write(it, &outfile, &[pl::sderef(&data_pt)?])? {
                         err = n(1);
                     }
                     let mut b = buff.borrow().clone();
@@ -587,7 +591,7 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
                     break;
                 }
             } else if outfile.truthy() {
-                let s = pl::substr(&data_pt.deref(), pl::sub(&pos, &hdr_len).to_i64(), Some(pl::add(&box_len, &hdr_len).to_i64()));
+                let s = pl::substr(&pl::sderef(&data_pt)?, pl::sub(&pos, &hdr_len).to_i64(), Some(pl::add(&box_len, &hdr_len).to_i64()));
                 if !write(it, &outfile, &[s])? {
                     err = pl::s("");
                     break;
@@ -621,7 +625,7 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
         if !tag_info.is_undef() && !tag_info.truthy() {
             // GetTagInfo() required the value for a Condition
             let l = if pl::lt(&box_len, &n(128)) { box_len.clone() } else { n(128) };
-            let tmp_val = pl::substr(&data_pt.deref(), value_ptr.to_i64(), Some(l.to_i64()));
+            let tmp_val = pl::substr(&pl::sderef(&data_pt)?, value_ptr.to_i64(), Some(l.to_i64()));
             tag_info = m(it, &et, "GetTagInfo", vec![tag_table_ptr.clone(), box_id.clone(), pl::sref(tmp_val)])?;
         }
         // delete all UUID boxes and any writable box if deleting all information
@@ -639,7 +643,7 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
                     is_overwriting = m(it, &et, "IsOverwriting", vec![nv_hash])?;
                 }
                 if is_overwriting.truthy() {
-                    let val = pl::substr(&data_pt.deref(), value_ptr.to_i64(), Some(box_len.to_i64()));
+                    let val = pl::substr(&pl::sderef(&data_pt)?, value_ptr.to_i64(), Some(box_len.to_i64()));
                     m(it, &et, "VerboseValue", vec![cat(&[&pl::s("- Jpeg2000:"), &tag_info.get("Name")]), val])?;
                     inc_changed(&et);
                     continue;
@@ -724,10 +728,10 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
                 let mut fake_id = box_id.clone();
                 if box_id.eq_str("brob") {
                     // I have seen 'brob' ID's with funny cases, so standardize these
-                    if re(r"^xml ", "i").is_match(&data_pt.deref()) {
+                    if re(r"^xml ", "i").is_match(&pl::sderef(&data_pt)?) {
                         fake_id = pl::s("xml ");
                     }
-                    if re(r"^Exif", "i").is_match(&data_pt.deref()) {
+                    if re(r"^Exif", "i").is_match(&pl::sderef(&data_pt)?) {
                         fake_id = pl::s("Exif");
                     }
                 }
@@ -795,12 +799,12 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
                 }
                 // use old box data if not changed
                 if newdir.is_undef() {
-                    newdir = pl::substr(&data_pt.deref(), subdir_start.to_i64(), Some(subdir_len.to_i64()));
+                    newdir = pl::substr(&pl::sderef(&data_pt)?, subdir_start.to_i64(), Some(subdir_len.to_i64()));
                 }
                 let prefix_len = pl::sub(&subdir_start, &value_ptr);
                 let mut boxhdr = pl::concat(&pl::pack("N", &[pl::add(&pl::add(&pl::length(&newdir), &n(8)), &prefix_len)])?, &box_id);
                 if prefix_len.truthy() {
-                    boxhdr = pl::concat(&boxhdr, &pl::substr(&data_pt.deref(), value_ptr.to_i64(), Some(prefix_len.to_i64())));
+                    boxhdr = pl::concat(&boxhdr, &pl::substr(&pl::sderef(&data_pt)?, value_ptr.to_i64(), Some(prefix_len.to_i64())));
                 }
                 if !write(it, &outfile, &[boxhdr, newdir])? {
                     err = n(1);
@@ -840,7 +844,7 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
             }
         } else if outfile.truthy() {
             let boxhdr = pl::concat(&pl::pack("N", &[pl::add(&box_len, &n(8))])?, &box_id);
-            let s = pl::substr(&data_pt.deref(), value_ptr.to_i64(), Some(box_len.to_i64()));
+            let s = pl::substr(&pl::sderef(&data_pt)?, value_ptr.to_i64(), Some(box_len.to_i64()));
             if !write(it, &outfile, &[boxhdr, s])? {
                 err = n(1);
             }
@@ -874,6 +878,8 @@ pub fn get_bits(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     while nb != 0 {
         nb -= 1;
         let mut i = 0;
+        pl::at(1372);
+        pl::aderef(&arr)?; // ($i<@$a dies unless $a is an ARRAY ref)
         while i < arr.len() {
             // consume bits LSB first
             let x = arr.at(i as i64).to_i64();
@@ -908,12 +914,13 @@ pub fn process_brotli(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
 
-    if !pl::gt(&pl::length(&data_pt.deref()), &n(4)) {
+    pl::at(1397);
+    if !pl::gt(&pl::length(&pl::sderef(&data_pt)?), &n(4)) {
         return ret(n(0));
     }
 
     let is_writing = dir_info.get("IsWriting");
-    let mut type_ = pl::substr(&data_pt.deref(), 0, Some(4));
+    let mut type_ = pl::substr(&pl::sderef(&data_pt)?, 0, Some(4));
     if !is_writing.truthy() {
         m(it, &et, "VerboseDir", vec![cat(&[&pl::s("Decrypted Brotli '"), &type_, &pl::s("'")])])?;
     }
@@ -939,7 +946,7 @@ pub fn process_brotli(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         }
         let compress = m(it, &et, "Options", vec![pl::s("Compress")])?;
         let verbose = if is_writing.truthy() { n(0) } else { m(it, &et, "Options", vec![pl::s("Verbose")])? };
-        let dat = cell(pl::substr(&data_pt.deref(), 4, None));
+        let dat = cell(pl::substr(&pl::sderef(&data_pt)?, 4, None));
         let d0 = dat.borrow().clone();
         if let Some(d) = eval_call(it, "IO::Uncompress::Brotli::unbro", vec![d0, n(100000000)])? {
             *dat.borrow_mut() = d;
@@ -1021,7 +1028,8 @@ pub fn process_brotli(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 /// Returns: 1 on success
 pub fn process_jxl_codestream(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, data_pt) = (arg(&a, 0), arg(&a, 1));
-    let data = data_pt.deref();
+    pl::at(1473);
+    let data = pl::sderef(&data_pt)?;
 
     if !re(r"^(\0\0\0\0)?\xff\x0a", "").is_match(&data) {
         return ret(n(0)); // validate codestream
@@ -1078,6 +1086,7 @@ pub fn process_jumbf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     let mut hdr = Value::Undef;
 
     // check to be sure this is a valid JPG2000 file
+    pl::at(1523);
     if !(read_eq(it, &raf, &mut hdr, &n(20))? && seek(it, &raf, n(0), 0)?) {
         return ret(n(0));
     }
@@ -1103,6 +1112,7 @@ pub fn process_jp2(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         let mut hdr = Value::Undef;
 
         // check to be sure this is a valid JPG2000 file
+        pl::at(1547);
         if !read_eq(it, &raf, &mut hdr, &n(12))? {
             return ret(n(0));
         }
@@ -1194,6 +1204,7 @@ pub fn process_jxl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let outfile = dir_info.get("OutFile");
     let (mut hdr, mut buff) = (Value::Undef, Value::Undef);
 
+    pl::at(1610);
     if !read_eq(it, &raf, &mut hdr, &n(12))? {
         return ret(n(0));
     }

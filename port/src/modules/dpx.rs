@@ -16,6 +16,15 @@ fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 //------------------------------------------------------------------------------
 // Extract EXIF information from a DPX image
 // Inputs: 0) ExifTool object reference, 1) dirInfo reference
@@ -27,6 +36,8 @@ pub fn process_dpx(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let buff_pt = Value::ScalarRef(buff.clone());
 
     // verify this is a valid DPX file
+    pl::at(192);
+    raf_defined(&raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(2080))?, &n(2080)) {
         return ret(n(0));
     }

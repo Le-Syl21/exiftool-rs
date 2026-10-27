@@ -65,19 +65,14 @@ fn pkg_scalar(it: &mut Interp, name: &str) -> Value {
 
 /// `$$ref` of a SCALAR reference, dying as perl does under strict refs.
 fn deref(r: &Value) -> ER<Value> {
-    match r {
-        Value::ScalarRef(_) | Value::LvRef(_) => Ok(r.deref()),
-        Value::Undef => die("Can't use an undefined value as a SCALAR reference"),
-        _ => die(format!("Can't use string (\"{}\") as a SCALAR ref while \"strict refs\" in use", r.to_text())),
-    }
+    pl::sderef(r)
 }
 
 /// `$$ref = VALUE`
 fn set_deref(r: &Value, v: Value) -> ER<()> {
     match r {
         Value::ScalarRef(_) | Value::LvRef(_) => pl::set_deref(r, v),
-        Value::Undef => die("Can't use an undefined value as a SCALAR reference"),
-        _ => die(format!("Can't use string (\"{}\") as a SCALAR ref while \"strict refs\" in use", r.to_text())),
+        _ => pl::sderef(r).map(|_| ()),
     }
 }
 
@@ -287,6 +282,7 @@ pub fn hex_dump(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         _ => snippet1(it, "\\*STDOUT", &[])?,
     };
     let mut max_len = opts.get("MaxLen");
+    pl::at(4532);
     let dat_len = pl::sub(&pl::length(&deref(&data_pt)?), &start);
     let mut more = Value::Undef;
     if !opts.get("Len").is_undef() {
@@ -301,6 +297,7 @@ pub fn hex_dump(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     }
     if max_len.truthy() && pl::gt(&len, &max_len) {
         // print one line less to allow for $more line below
+        pl::at(4540);
         max_len = pl::mul(&pl::int(&pl::div(&pl::sub(&max_len, &n(1)), &wid)?), &wid);
         more = pl::sub(&len, &max_len);
         len = max_len.clone();
@@ -396,6 +393,7 @@ pub fn verbose_info(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
     let data_pt = parms.get("DataPt");
     let mut size = parms.get("Size");
     if !(!size.is_undef() || !data_pt.truthy()) {
+        pl::at(4620);
         size = pl::length(&deref(&data_pt)?);
     }
     let mut indent = self_.get("INDENT");
@@ -424,6 +422,7 @@ pub fn verbose_info(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
             line = cat(&[&line, &s(" = "), &p]);
         } else if data_pt.truthy() {
             let start = or(parms.get("Start"), n(0));
+            pl::at(4642);
             let sub = substr(&deref(&data_pt)?, &start, Some(&size));
             let p = meth(it, &self_, "Printable", vec![sub, max_len])?;
             line = cat(&[&line, &s(" = "), &p]);
@@ -1313,6 +1312,7 @@ pub fn set64u(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let lo = set32u(it, vec![pl::sub(&val, &pl::mul(&hi, &two32))])?; // NOTE: subject to round-off errors!
     let hi = set32u(it, vec![hi])?;
     let val = if pl::str_eq(&get_byte_order(it)?, "MM") { cat(&[&hi, &lo]) } else { cat(&[&lo, &hi]) };
+    pl::at(5273);
     store(&a, &val)?;
     ret(val)
 }
@@ -1327,7 +1327,7 @@ pub fn set64s(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
     set64u(it, args, w)
 }
 
-fn set_rational(it: &mut Interp, a: &[Value], max: Option<i64>, num_fn: fn(&mut Interp, Vec<Value>, Want) -> ER<Vec<Value>>, den_fn: fn(&mut Interp, Vec<Value>, Want) -> ER<Vec<Value>>) -> ER<Vec<Value>> {
+fn set_rational(it: &mut Interp, line: u32, a: &[Value], max: Option<i64>, num_fn: fn(&mut Interp, Vec<Value>, Want) -> ER<Vec<Value>>, den_fn: fn(&mut Interp, Vec<Value>, Want) -> ER<Vec<Value>>) -> ER<Vec<Value>> {
     let mut args = vec![arg(a, 0)];
     if let Some(m) = max {
         args.push(n(m));
@@ -1335,24 +1335,25 @@ fn set_rational(it: &mut Interp, a: &[Value], max: Option<i64>, num_fn: fn(&mut 
     let r = rationalize(it, args, Want::List)?;
     let (numer, denom) = (arg(&r, 0), arg(&r, 1));
     let val = cat(&[&c1(it, num_fn, vec![numer])?, &c1(it, den_fn, vec![denom])?]);
+    pl::at(line);
     store(a, &val)?;
     ret(val)
 }
 
 pub fn set_rational64u(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    set_rational(it, &a, Some(0xffffffff), part2::set32u, part2::set32u)
+    set_rational(it, 5285, &a, Some(0xffffffff), part2::set32u, part2::set32u)
 }
 
 pub fn set_rational64s(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    set_rational(it, &a, None, set32s, part2::set32u)
+    set_rational(it, 5291, &a, None, set32s, part2::set32u)
 }
 
 pub fn set_rational32u(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    set_rational(it, &a, Some(0xffff), part2::set16u, part2::set16u)
+    set_rational(it, 5297, &a, Some(0xffff), part2::set16u, part2::set16u)
 }
 
 pub fn set_rational32s(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    set_rational(it, &a, Some(0x7fff), set16s, part2::set16u)
+    set_rational(it, 5303, &a, Some(0x7fff), set16s, part2::set16u)
 }
 
 pub fn set_fixed16u(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
@@ -1391,6 +1392,7 @@ pub fn set_fixed32s(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
 pub fn set_float(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let packed = pl::pack("f", &[arg(&a, 0)])?;
     let val = c1(it, part2::swap_bytes, vec![packed, n(4)])?;
+    pl::at(5324);
     store(&a, &val)?;
     ret(val)
 }
@@ -1400,6 +1402,7 @@ pub fn set_double(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let packed = pl::pack("d", &[arg(&a, 0)])?;
     let words = c1(it, part2::swap_words, vec![packed])?;
     let val = c1(it, part2::swap_bytes, vec![words, n(8)])?;
+    pl::at(5330);
     store(&a, &val)?;
     ret(val)
 }
@@ -1500,6 +1503,7 @@ pub fn write_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             count = pl::length(&val);
         }
         if data_pt.truthy() {
+            pl::at(5436);
             substr_assign(&data_pt, &offset, &count, &val)?;
         }
         return ret(val);
@@ -1508,6 +1512,7 @@ pub fn write_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         return pl::ret_undef();
     }
     if data_pt.truthy() {
+        pl::at(5442);
         substr_assign(&data_pt, &offset, &pl::length(&packed), &packed)?;
     }
     ret(packed)
@@ -1580,6 +1585,7 @@ pub fn tell(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if is_glob(&outfile) {
         return ret(snippet1(it, "tell($outfile)", &[("outfile", outfile)])?);
     }
+    pl::at(5498);
     ret(pl::length(&deref(&outfile)?))
 }
 
@@ -1636,7 +1642,9 @@ pub fn write_trailer_buffer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
             meth(it, &self_, "Error", vec![s("Can't get file position for trailer offset fixup"), n(1)])?;
         }
     }
-    let d = deref(&trail_pt)?;
+    pl::at(5542);
+    // ($$trailPt as a sub argument autovivifies an undefined $trailPt)
+    let d = if trail_pt.is_undef() { Value::Undef } else { deref(&trail_pt)? };
     ret(Value::from(write_v(it, &outfile, &[d])?))
 }
 
@@ -1685,6 +1693,7 @@ pub fn add_new_trailers(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         let verb = if trail_pt.truthy() { "Writing" } else { "Adding" };
         meth(it, &self_, "VPrint", vec![n(0), s(&format!("  {verb} {} as a block\n", type_.to_text()))])?;
         if trail_pt.truthy() {
+            pl::at(5575);
             let cur = deref(&trail_pt)?;
             set_deref(&trail_pt, cat(&[&cur, &val]))?;
         } else {
@@ -1706,6 +1715,7 @@ pub fn write_multi_segment(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     if !type_.truthy() {
         type_ = s("");
     }
+    pl::at(5595);
     let data = deref(&data_pt)?;
     let len = pl::length(&data);
     let hdr = Value::bytes([0xffu8, marker.to_i64() as u8]);
@@ -1715,6 +1725,7 @@ pub fn write_multi_segment(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     if pl::str_eq(&type_, "ICC") {
         max_len = pl::sub(&max_len, &n(2)); // leave room for segment counters
     }
+    pl::at(5600);
     let num = pl::int(&pl::div(&pl::sub(&pl::add(&len, &max_len), &n(1)), &max_len)?); // number of segments to write
     let mut nn = n(0);
     // write data, splitting into multiple segments if necessary
@@ -1761,6 +1772,7 @@ pub fn write_multi_xmp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let max_xmp_len = wlex_scalar(it, "maxXMPLen").borrow().clone();
 
     // write main XMP segment
+    pl::at(5640);
     let data = deref(&data_pt)?;
     let mut size = pl::add(&pl::length(&data), &pl::length(&xmp_app1hdr));
     if pl::gt(&size, &max_xmp_len) {
@@ -1773,6 +1785,7 @@ pub fn write_multi_xmp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     }
     // write extended XMP segment(s) if necessary
     if !guid.is_undef() {
+        pl::at(5649);
         let ext = deref(&ext_pt)?;
         size = pl::length(&ext);
         let max_len = pl::sub(&max_xmp_len, &n(75)); // maximum size without 75-byte header
@@ -1800,6 +1813,7 @@ pub fn write_multi_xmp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
 /// Returns: error string or undef on success
 pub fn check_image(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (self_, val_ptr) = (arg(&a, 0), arg(&a, 1));
+    pl::at(6848);
     let v = deref(&val_ptr)?;
     if pl::length(&v).to_i64() != 0 && !re(r"^\xff\xd8", "").is_match(&v) && !meth(it, &self_, "Options", vec![s("IgnoreMinorErrors")])?.truthy() {
         return ret(s("[Minor] Not a valid image"));
@@ -1820,6 +1834,7 @@ pub fn check_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         if !(count.truthy() && pl::gt(&count, &n(0))) {
             return pl::ret_undef();
         }
+        pl::at(6869);
         let len = pl::length(&deref(&val_ptr)?);
         if pl::str_eq(&format, "string") {
             if pl::ge(&len, &count) {
@@ -1836,6 +1851,7 @@ pub fn check_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         return pl::ret_undef();
     }
     if count.truthy() && !pl::num_eq(&count, &n(1)) {
+        pl::at(6881);
         vals = pl::split_ws(&deref(&val_ptr)?);
         if pl::lt(&count, &n(0)) {
             count = n(vals.len() as i64);
@@ -1845,6 +1861,7 @@ pub fn check_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         }
     } else {
         count = n(1);
+        pl::at(6885);
         vals = vec![deref(&val_ptr)?];
     }
     if !pl::num_eq(&n(vals.len() as i64), &count) {
@@ -2162,6 +2179,7 @@ pub fn image_data_hash(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
             nn = if pl::gt(&size, &n(65536)) { n(65536) } else { size.clone() };
             size = pl::sub(&size, &nn);
         }
+        pl::at(7122);
         if !raf_read(it, &raf, &mut buff, nn.clone())?.truthy() {
             if type_.truthy() && !size.is_undef() {
                 meth(it, &self_, "Warn", vec![s(&format!("Error reading {} data", type_.to_text()))])?;
@@ -2189,6 +2207,7 @@ pub fn copy_block(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             break;
         }
         let nn = if pl::gt(&size, &n(65536)) { n(65536) } else { size.clone() };
+        pl::at(7146);
         if !pl::num_eq(&raf_read(it, &raf, &mut buff, nn.clone())?, &nn) {
             return ret(n(0));
         }
@@ -2213,12 +2232,16 @@ pub fn copy_image_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let (self_, image_data_blocks, outfile) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let raf = self_.get("RAF");
     let mut err: Option<&str> = None;
-    let num = image_data_blocks.len();
+    pl::at(7164);
+    let num = pl::aderef(&image_data_blocks)?.len();
     if num > 0 {
         meth(it, &self_, "VPrint", vec![n(0), s(&format!("  Copying {num} image data blocks\n"))])?;
     }
     for data_block in image_data_blocks.items() {
+        pl::at(7167);
+        pl::aderef(&data_block)?; // (my ($pos, $size, $pad) = @$dataBlock)
         let (pos, size, pad) = (data_block.at(0), data_block.at(1), data_block.at(2));
+        pl::at(7168);
         if !raf_seek(it, &raf, pos, 0)? {
             err = Some("read");
             break;
@@ -3885,6 +3908,7 @@ pub fn write_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     if !data_pt.truthy() {
         return pl::ret_undef();
     }
+    pl::at(7193);
     let data_len = pl::length(&deref(&data_pt)?);
     let default_format = or(tag_table_ptr.get("FORMAT"), s("int8u"));
     let increment = c1(it, part2::format_size, vec![default_format.clone()])?;
@@ -3947,6 +3971,7 @@ pub fn write_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                 count = v;
                 let at = it.get_scalar("main::@");
                 if at.truthy() {
+                    pl::at(7241);
                     pl::warn(it, &at.to_text())?;
                     continue;
                 }
@@ -3985,6 +4010,7 @@ pub fn write_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
         // set the size
         if tag_info.get("DataTag").truthy() && !tag_info.get("IsOffset").truthy() {
             if !pl::num_eq(&new_val, &n(0xfeedfeed)) {
+                pl::at(7264);
                 pl::warn(it, "Internal error")?;
             }
             let data = meth(it, &self_, "GetNewValue", vec![tag_info.get("DataTag")])?;

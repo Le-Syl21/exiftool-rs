@@ -16,6 +16,15 @@ fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
 }
 
+/// `$raf->METHOD(...)` dies as perl does on an undefined `$raf` (the read
+/// itself runs as a Perl snippet, whose messages name the snippet).
+fn raf_defined(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 //------------------------------------------------------------------------------
 // Shorten obscenely long CZI tag names
 // Inputs: Tag name
@@ -146,6 +155,8 @@ pub fn process_czi(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let buff_pt = Value::ScalarRef(buff.clone());
 
     // verify this is a valid CZI file
+    pl::at(172);
+    raf_defined(&raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(100))?, &n(100)) {
         return ret(n(0));
     }

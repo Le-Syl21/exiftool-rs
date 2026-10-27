@@ -115,39 +115,16 @@ fn sp(subject: &[u8], spans: &Spans, i: usize) -> Value {
 
 /// `$$ref` under `use strict`: dies as perl does on a non-reference.
 fn sderef(v: &Value) -> ER<Value> {
-    if v.is_scalar_ref() {
-        return Ok(v.deref());
-    }
-    if v.is_undef() {
-        return die("Can't use an undefined value as a SCALAR reference");
-    }
-    if v.is_ref() {
-        return die("Not a SCALAR reference");
-    }
-    die(format!("Can't use string (\"{}\") as a SCALAR ref while \"strict refs\" in use", trunc32(v)))
+    pl::sderef(v)
 }
 
-/// `@$ref` under `use strict`.
+/// `@$ref` where perl autovivifies (foreach, push, sub arguments...): an
+/// undefined value is an empty list, anything else is read under strict.
 fn aderef(v: &Value) -> ER<Vec<Value>> {
-    if v.is_array() {
-        return Ok(v.items());
-    }
     if v.is_undef() {
         return Ok(Vec::new());
     }
-    if v.is_ref() {
-        return die("Not an ARRAY reference");
-    }
-    die(format!("Can't use string (\"{}\") as an ARRAY ref while \"strict refs\" in use", trunc32(v)))
-}
-
-fn trunc32(v: &Value) -> String {
-    let t = v.to_text();
-    if t.chars().count() > 32 {
-        format!("{}\"...", t.chars().take(32).collect::<String>()).trim_end_matches('"').to_string()
-    } else {
-        t
-    }
+    pl::aderef(v)
 }
 
 /// `$raf->ReadLine($buff)`
@@ -246,13 +223,20 @@ pub fn locate_any_object(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
         if pl::ge(&obj_num, &dict.get("Size")) {
             continue;
         }
-        let index = dict.get("Index");
+        let mut index = dict.get("Index");
+        pl::at(684);
+        if index.is_undef() {
+            index = Value::new_array(Vec::new()); // ($$index[0] autovivifies the copy)
+        } else {
+            pl::aderef(&index)?; // (... and dies unless an ARRAY ref)
+        }
         if pl::lt(&obj_num, &index.at(0)) {
             continue;
         }
         // scan the tables for the specified object
         let size = dict.get("_entry_size");
-        let num = pl::div(&n(aderef(&index)?.len() as i64), &n(2))?;
+        pl::at(687);
+        let num = pl::div(&n(pl::aderef(&index)?.len() as i64), &n(2))?;
         let mut tot = n(0);
         let mut i = 0i64;
         while pl::lt(&n(i), &num) {
@@ -620,6 +604,7 @@ pub fn extract_object(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let delim: Value;
 
     loop {
+        pl::at(943);
         let mut d = sderef(&data_pt)?;
         if let Some(m) = re(r"^\s*(<{1,2}|\[|\()", "s").m(&d) {
             delim = cap(&m, 1);
@@ -763,6 +748,7 @@ pub fn extract_object(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         return ret(dict);
     }
     if length.is_ref() {
+        pl::at(1042);
         length = sderef(&length)?;
         let oldpos = pl::method(it, &raf, "Tell", vec![])?;
         // get the location of the object specifying the length
@@ -833,6 +819,9 @@ pub fn read_to_nested(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let (data_pt, raf) = (arg(&a, 0), arg(&a, 1));
     let closing_delim = lexh(it, "closingDelim");
     let mut delim: Vec<Value> = vec![s("")]; // closing delimiter list, most deeply nested first
+    // (pos($$dataPt) = 0 autovivifies an undefined $dataPt, a copy here)
+    let data_pt = if data_pt.is_undef() { pl::sref(Value::Undef) } else { data_pt };
+    pl::at(1103);
     let mut d = sderef(&data_pt)?.to_bytes().to_vec();
     let mut pos = 0usize; // begin at start of data
     let tok = rx(r"(\\*)(\(|\)|<{1,2}|>{1,2}|\[|\]|%)", "");
@@ -902,6 +891,7 @@ pub fn read_to_nested(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 /// Returns: true on success and data is decoded, or false and data is untouched
 pub fn decode_lzw(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let data_pt = arg(&a, 0);
+    pl::at(1157);
     let data = sderef(&data_pt)?.to_bytes();
     if data.len() < 4 {
         return ret(n(0));
@@ -1212,6 +1202,7 @@ pub fn rc4_init(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     while i < 256 {
         let st = state[i];
         if key.is_empty() {
+            pl::at(1393);
             return die("Illegal modulus zero");
         }
         j = (j + st + key[i % key.len()] as i64) & 0xff;
@@ -1237,12 +1228,15 @@ pub fn rc4_crypt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     }
     let state = key.get("State");
     let xy = key.get("XY");
+    pl::at(1411);
+    pl::aderef(&xy)?; // (my ($x, $y) = @{$$key{XY}})
     let (mut x, mut y) = (xy.at(0).to_i64(), xy.at(1).to_i64());
     let mut st: Vec<i64> = state.items().iter().map(|v| v.to_i64()).collect();
     if st.len() < 256 {
         st.resize(256, 0);
     }
 
+    pl::at(1413);
     let mut data: Vec<i64> = sderef(&data_pt)?.to_bytes().iter().map(|&b| b as i64).collect();
     for d in data.iter_mut() {
         x = (x + 1) & 0xff;
@@ -1757,7 +1751,8 @@ pub fn process_af(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
 /// Return: string
 pub fn expand_array(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let val = arg(&a, 0);
-    let mut list = aderef(&val)?;
+    pl::at(1816);
+    let mut list = pl::aderef(&val)?;
     for x in list.iter_mut() {
         if pl::ref_of(x) == "SCALAR" {
             *x = cat(&[s("ref("), x.deref(), s(")")]);
@@ -1785,7 +1780,8 @@ pub fn process_dict(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
     let verbose = pl::method(it, &et, "Options", vec![s("Verbose")])?;
     let unknown = tag_table_ptr.get("EXTRACT_UNKNOWN");
     let embedded = !unknown.is_undef() && !unknown.truthy() && pl::method(it, &et, "Options", vec![s("ExtractEmbedded")])?.truthy();
-    let mut tags: Vec<Value> = aderef(&dict.get("_tags"))?;
+    pl::at(1837);
+    let mut tags: Vec<Value> = pl::aderef(&dict.get("_tags"))?;
     tags.reverse(); // (shifted from the end)
     let mut next = Value::Undef;
     let mut join: BTreeMap<Vec<u8>, Vec<Value>> = BTreeMap::new();
@@ -1839,6 +1835,7 @@ pub fn process_dict(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
                 if tag_table_ptr.get(name.to_bytes()).truthy() && (pl::ref_of(&val) != "SCALAR" || !fetched.get(sderef(&val)?.to_bytes()).truthy()) {
                     tag_info = pl::method(it, &et, "GetTagInfo", vec![tag_table_ptr.clone(), name.clone()])?;
                     if pl::ref_of(&tag_info) == "HASH" && tag_info.get("JoinStreams").truthy() {
+                        pl::at(1883);
                         let vr = sderef(&val)?;
                         fetched.set(vr.to_bytes(), n(1));
                         let obj = fetch(it, &et, &vr, &xref, &tag)?;
@@ -2052,7 +2049,8 @@ pub fn process_dict(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
                     index = 0;
                     tag_table_ptr = sub_table_ptr;
                     dict = sub_dict.clone();
-                    tags = aderef(&sub_dict.get("_tags"))?;
+                    pl::at(2046);
+                    tags = pl::aderef(&sub_dict.get("_tags"))?;
                     let nt = tags.len();
                     tags.reverse(); // (shifted from the end)
                     pl::method(it, &et, "VerboseDir", vec![tag.clone(), n(nt as i64)])?;
@@ -2061,7 +2059,8 @@ pub fn process_dict(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
                     let old_dir = et.get("DIR_NAME");
                     et.set("INDENT", pl::concat(&old_indent, &s("| ")));
                     et.set("DIR_NAME", tag.clone());
-                    let nt = aderef(&sub_dict.get("_tags"))?.len();
+                    pl::at(2053);
+                    let nt = pl::aderef(&sub_dict.get("_tags"))?.len();
                     pl::method(it, &et, "VerboseDir", vec![tag.clone(), n(nt as i64)])?;
                     let proc_ = sub_table_ptr.get("PROCESS_PROC");
                     let args = vec![et.clone(), sub_table_ptr.clone(), sub_dict.clone(), xref.clone(), nesting.clone()];
@@ -2284,6 +2283,7 @@ pub fn read_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     // validate PDF file
     //
     // (linearization dictionary must be in the first 1024 bytes of the file)
+    pl::at(2227);
     if !pl::ge(&raf_read(it, &raf, &mut buff, n(1024))?, &n(8)) {
         return ret(n(0));
     }
@@ -2512,6 +2512,7 @@ fn read_pdf_xref(it: &mut Interp, et: &Value, raf: &Value, verbose: &Value, tag_
             // object from an xref table was replaced by a newer object in an
             // xref stream.  But doing so isn't a good idea (if allowed at all)
             // because a PDF 1.4 consumer would also make this same mistake.
+            pl::at(2374);
             if pl::str_eq(&main_dict.get("Type"), "/XRef") && main_dict.get("W").truthy() && aderef(&main_dict.get("W"))?.len() > 2 && main_dict.get("Size").truthy() && decode(it, et, &main_dict)? {
                 // create Index entry if it doesn't exist
                 if !main_dict.get("Index").truthy() {
@@ -2595,7 +2596,8 @@ fn read_pdf_xref(it: &mut Interp, et: &Value, raf: &Value, verbose: &Value, tag_
         let typ = main_dicts.pop().unwrap_or_default();
         if verbose.truthy() {
             i += 1;
-            let nn = aderef(&dict.get("_tags"))?.len() as i64;
+            pl::at(2434);
+            let nn = pl::aderef(&dict.get("_tags"))?.len() as i64;
             pl::method(it, et, "VPrint", vec![n(0), cat(&[s("PDF dictionary ("), n(i), s(" of "), num.clone(), s(") with "), n(nn), s(" entries:\n")])])?;
         }
         process_dict(it, vec![et.clone(), tag_table_ptr.clone(), dict, xref.clone(), n(0), typ], Want::Scalar)?;
