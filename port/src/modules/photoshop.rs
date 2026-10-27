@@ -29,6 +29,15 @@ fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
 
 /// `$raf->Read($buff, $len) == $len`
 fn read_eq(it: &mut Interp, raf: &Value, buff: &Cell, len: &Value) -> ER<bool> {
+    // (die here, as perl does, on an undefined or unblessed invocant: the
+    //  read helper runs the call as interpreted code, with its own location)
+    match raf {
+        Value::Str(_) => {}
+        Value::HashRef(h) if h.borrow().blessed.is_some() => {}
+        _ => {
+            pl::method(it, raf, "Read", vec![])?;
+        }
+    }
     let r = raf_read_cell(it, raf, buff, len.clone())?;
     Ok(pl::num_eq(&r, len))
 }
@@ -121,6 +130,7 @@ pub fn process_layers_and_mask(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<V
 
         // read the layer information header
         let nn = pl::add(&pl::mul(&psiz, &n(2)), &n(2));
+        pl::at(761);
         if !read_eq(it, &raf, &data, &nn)? {
             return ret(n(0));
         }
@@ -215,6 +225,7 @@ fn process_layers_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
     let verbose = et.path(&["OPTIONS", "Verbose"]);
     let dinfo = Value::new_hash();
     dinfo.set("DataPt", rf(&buff));
+    pl::at(832);
     let base = tell(it, &raf)?;
     dinfo.set("Base", base);
     let mut pos = n(0);
@@ -421,7 +432,8 @@ pub fn process_document_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
         }
         if dir_len.is_undef() {
             // (length $$dataPt - $start: perl parses it as length($$dataPt - $start))
-            dir_len = pl::length(&pl::sub(&data_pt.deref(), &start));
+            pl::at(958);
+            dir_len = pl::length(&pl::sub(&pl::sderef(&data_pt)?, &start));
         }
         pl::method(it, &et, "VerboseDump", vec![data_pt, pl::s("Start"), start, pl::s("Len"), dir_len.clone(), pl::s("Base"), dir_info.get("Base")])?;
     }
@@ -560,7 +572,8 @@ pub fn process_photoshop(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     //         3) Size, 4 bytes - N
     //         4) Data, N bytes
     while pl::lt(&pl::add(&pos, &n(8)), &dir_end) {
-        let mut type_ = substr(it, &data_pt.deref(), &pos, Some(&n(4)))?;
+        pl::at(1055);
+        let mut type_ = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&n(4)))?;
         let tt_ptr;
         let (mut extra, mut val, name);
         extra = Value::Undef;
@@ -663,9 +676,11 @@ pub fn process_psd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut err = Value::Undef;
     let mut tag_table_ptr;
 
+    pl::at(1131);
     if !read_eq(it, &raf, &data, &n(30))? {
         return ret(n(0));
     }
+
     let Some(m) = re(r"^8BPS\0([\x01\x02])", "").m(&val(&data)) else { return ret(n(0)) };
     call(it, "SetByteOrder", vec![pl::s("MM")])?;
     let ft = if cap(&m, 1).eq_str("\x01") { "PSD" } else { "PSB" };

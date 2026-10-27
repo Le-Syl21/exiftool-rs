@@ -165,10 +165,13 @@ pub fn calc_duration(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
         // (also see https://github.com/exiftool/exiftool/issues/371)
         let mut dur1 = Value::Undef;
         if v(&val, 0).truthy() {
+            pl::at(1659);
             dur1 = pl::div(&v(&val, 1), &v(&val, 0))?;
         }
         if v(&val, 2).truthy() && v(&val, 3).truthy() {
+            pl::at(1661);
             let dur2 = pl::div(&v(&val, 3), &v(&val, 2))?;
+            pl::at(1662);
             let rat = pl::div(&dur1, &dur2)?;
             if pl::gt(&rat, &Value::Num(1.9)) && pl::lt(&rat, &Value::Num(3.1)) {
                 dur1 = dur2;
@@ -238,7 +241,8 @@ pub fn process_stream_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     if opt(it, &et, "Verbose")?.truthy() {
         m(it, &et, "VerboseDir", vec![dir_info.get("DirName"), n(0), size.clone()])?;
     }
-    let tag = pl::substr(&data_pt.deref(), start.to_i64(), Some(4));
+    pl::at(1709);
+    let tag = pl::substr(&pl::sderef(&data_pt)?, start.to_i64(), Some(4));
     let mut tag_info = m(it, &et, "GetTagInfo", vec![tag_tbl.clone(), tag.clone()])?;
     if !tag_info.truthy() {
         tag_info = m(it, &et, "GetTagInfo", vec![tag_tbl.clone(), pl::s("unknown")])?;
@@ -335,7 +339,8 @@ pub fn process_chunks(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     }
 
     while pl::lt(&pl::add(&start, &n(8)), &end) {
-        let data = data_pt.deref();
+        pl::at(1795);
+        let data = pl::sderef(&data_pt)?;
         let mut tag = pl::substr(&data, start.to_i64(), Some(4));
         let mut len = call(it, "Get32u", vec![data_pt.clone(), pl::add(&start, &n(4))])?;
         start = pl::add(&start, &n(8));
@@ -421,7 +426,8 @@ pub fn process_chunks(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 pub fn process_sglt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data_len = pl::length(&data_pt.deref()).to_i64();
+    pl::at(1857);
+    let data_len = pl::length(&pl::sderef(&data_pt)?).to_i64();
     let ee = opt(it, &et, "ExtractEmbedded")?;
     // example accelerometer record:
     // 0           1  2  3           4  5           6  7
@@ -462,7 +468,8 @@ pub fn process_sglt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 pub fn process_sllt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data_len = pl::length(&data_pt.deref()).to_i64();
+    pl::at(1891);
+    let data_len = pl::length(&pl::sderef(&data_pt)?).to_i64();
     let ee = opt(it, &et, "ExtractEmbedded")?;
     // example GPS record:
     // 0           1  2     3           4     5           6     7     8  9  10 11    12 13 14 15
@@ -508,7 +515,8 @@ pub fn process_sllt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 pub fn process_lucas(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data_len = pl::length(&data_pt.deref()).to_i64();
+    pl::at(1931);
+    let data_len = pl::length(&pl::sderef(&data_pt)?).to_i64();
 
     if !opt(it, &et, "ExtractEmbedded")?.truthy() {
         m(it, &et, "Warn", vec![pl::s("Use ExtractEmbedded option to extract timed GPS"), n(3)])?;
@@ -655,6 +663,7 @@ pub fn process_riff(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let type_;
 
     // verify this is a valid RIFF file
+    pl::at(2039);
     if !pl::num_eq(&read(it, &raf, &mut buff, n(12))?, &n(12)) {
         return ret(n(0));
     }

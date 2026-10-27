@@ -29,6 +29,7 @@ fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
 pub fn process_afcp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));
     let raf = dir_info.get("RAF");
+    pl::at(76);
     let cur_pos = pl::method(it, &raf, "Tell", vec![])?;
     let o = dir_info.get("Offset");
     let offset = if o.truthy() { o } else { n(0) }; // offset from end of file

@@ -8,17 +8,20 @@ use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
 
+/// `$raf->Read(...)`: die before the call, as perl does on an undefined or
+/// unblessed invocant (the read helper runs the call as interpreted code,
+/// which would name its own location in the message).
+fn check_invocant(it: &mut Interp, raf: &Value, name: &str) -> ER<()> {
+    match raf {
+        Value::Str(_) => Ok(()),
+        Value::HashRef(h) if h.borrow().blessed.is_some() => Ok(()),
+        _ => pl::method(it, raf, name, vec![]).map(|_| ()),
+    }
+}
+
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
-}
-
-/// `$$ref` under `use strict`: undef is fatal.
-fn deref(r: &Value) -> ER<Value> {
-    if r.is_undef() {
-        return crate::interp::eval::die("Can't use an undefined value as a SCALAR reference");
-    }
-    Ok(r.deref())
 }
 
 /// Process information in a bit stream
@@ -33,7 +36,8 @@ pub fn process_bit_stream(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     let ds = dir_info.get("DirStart");
     let dir_start = if ds.truthy() { ds } else { n(0) };
     let dl = dir_info.get("DirLen");
-    let dir_len = if dl.truthy() { dl } else { pl::sub(&pl::length(&deref(&data_pt)?), &dir_start) };
+    pl::at(164);
+    let dir_len = if dl.truthy() { dl } else { pl::sub(&pl::length(&pl::sderef(&data_pt)?), &dir_start) };
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
     let byte_order = call(it, "GetByteOrder", vec![])?;
 
@@ -164,6 +168,8 @@ pub fn process_flac(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let mut err = false;
 
     // check FLAC signature
+    pl::at(254);
+    check_invocant(it, &raf, "Read")?;
     if !(pl::num_eq(&raf_read_cell(it, &raf, &buff, n(4))?, &n(4)) && buff.borrow().eq_str("fLaC")) {
         return ret(n(0));
     }

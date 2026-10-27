@@ -452,11 +452,14 @@ pub fn rebuild_maker_notes(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     }
     let process_exif = Value::Code(it.sub_ref("Image::ExifTool::Exif::ProcessExif"));
     let pbd = Value::Code(it.sub_ref("Image::ExifTool::ProcessBinaryData"));
+    pl::at(164);
     if (!seq(&proc, &process_exif) && re(r"Text", "").is_match(&tag_info.get("Name")))
         || seq(&proc, &pbd)
-        || (tag_info.get("PossiblePreview").truthy() && pl::gt(&dir_len, &n(6)) && substr(it, &data_pt.deref(), &dir_start, Some(&n(3)))?.to_bytes()[..] == b"\xff\xd8\xff"[..])
+        || (tag_info.get("PossiblePreview").truthy() && pl::gt(&dir_len, &n(6)) && substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&n(3)))?.to_bytes()[..] == b"\xff\xd8\xff"[..])
     {
-        return ret(substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?);
+        pl::at(169);
+        return ret(substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?);
+
     }
     let save_order = byte_order(it)?;
     let loc = pl::call(it, "Image::ExifTool::MakerNotes::LocateIFD", vec![et.clone(), subdir_info.clone()])?;
@@ -703,8 +706,15 @@ pub fn update_tiff_end(_it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
 
 fn validate_image_data_v(it: &mut Interp, et: &Value, v_info: &Value, dir_name: &Value, err_flag: &Value) -> ER<()> {
     pl::local_topic(it, |it| {
+        // ($$vInfo{...} autovivifies an undefined $vInfo, but a string or
+        //  another kind of reference dies)
+        pl::at(371);
+        if !v_info.is_undef() {
+            pl::hderef(v_info)?;
+        }
         let vi = |k: i64| v_info.get(k.to_string());
         // determine the expected size of the image data for an uncompressed image
+
         // (0x102 BitsPerSample, 0x103 Compression and 0x115 SamplesPerPixel
         //  all default to a value of 1 if they don't exist)
         if (vi(0x103).is_undef() || vi(0x103).eq_str("1")) && vi(0x100).truthy() && vi(0x101).truthy() && (vi(0x117).truthy() || vi(0x145).truthy()) {
@@ -994,7 +1004,8 @@ fn write_exif_v(it: &mut Interp, et: &Value, dir_info0: &Value, tag_table_ptr: &
     let mut data_pos = or0(dir_info.get("DataPos"));
     let mut dir_start = or0(dir_info.get("DirStart"));
     let dl = dir_info.get("DataLen");
-    let mut data_len = if dl.truthy() { dl } else { len(&data_pt.deref()) };
+    pl::at(562);
+    let mut data_len = if dl.truthy() { dl } else { len(&pl::sderef(&data_pt)?) };
     let dl = dir_info.get("DirLen");
     let mut dir_len = if dl.truthy() { dl } else { pl::sub(&data_len, &dir_start) };
     let mut base = or0(dir_info.get("Base"));
@@ -2617,10 +2628,12 @@ fn write_exif_v(it: &mut Interp, et: &Value, dir_info0: &Value, tag_table_ptr: &
                                 // only support int32 pointers (for now)
                                 if !pl::num_eq(&fsz(&new_format), &n(4)) && new_info.get("IsOffset").truthy() {
                                     if is_new > 0 {
+                                        pl::at(1912);
                                         pl::warn(it, "Internal error (Offset not int32)")?;
                                         return Ok(Value::Undef);
                                     }
                                     if !pl::num_eq(&new_count, &read_count) {
+                                        pl::at(1913);
                                         pl::warn(it, "Wrong count!")?;
                                         return Ok(Value::Undef);
                                     }
@@ -3300,6 +3313,7 @@ fn write_exif_v(it: &mut Interp, et: &Value, dir_info0: &Value, tag_table_ptr: &
                         // set the size to the available data
                         size = pl::sub(&size, &diff);
                         if !write_value(it, vec![size.clone(), format_str.clone(), n(1), rf(&new_data), byte_count_pos.clone()])?.truthy() {
+                            pl::at(2507);
                             pl::warn(it, "Internal error writing thumbnail size")?;
                         }
                         // get the truncated image

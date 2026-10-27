@@ -242,6 +242,7 @@ pub fn calc_scale_factor35efl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
     let foc35 = shift(&mut q);
 
     if focal.truthy() && foc35.truthy() {
+        pl::at(5460);
         return ret(pl::div(&foc35, &focal)?);
     }
 
@@ -274,6 +275,7 @@ pub fn calc_scale_factor35efl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
             let ysize = shift(&mut q);
             if xsize.truthy() && ysize.truthy() {
                 // validate by checking aspect ratio because FocalPlaneX/YSize is not reliable
+                pl::at(5480);
                 let a = pl::div(&xsize, &ysize)?;
                 if pl::lt(&pl::abs(&pl::sub(&a, &Value::Num(1.3333))), &Value::Num(0.1)) || pl::lt(&pl::abs(&pl::sub(&a, &Value::Num(1.5))), &Value::Num(0.1)) {
                     diag = sqrt(&pl::add(&pl::mul(&xsize, &xsize), &pl::mul(&ysize, &ysize)))?;
@@ -339,13 +341,16 @@ pub fn calc_scale_factor35efl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
                 if !(w.truthy() && h.truthy()) {
                     continue;
                 }
+                pl::at(5500);
                 let a = pl::div(&w, &h)?;
                 if pl::gt(&a, &Value::Num(0.5)) && pl::lt(&a, &n(2)) {
                     break; // stop if we get a reasonable value
                 }
             }
             // calculate focal plane size in mm
+            pl::at(5504);
             w = pl::mul(&w, &pl::div(&units, &x_res)?);
+            pl::at(5505);
             h = pl::mul(&h, &pl::div(&units, &y_res)?);
             diag = sqrt(&pl::add(&pl::mul(&w, &w), &pl::mul(&h, &h)))?;
             // make sure size is reasonable
@@ -354,6 +359,7 @@ pub fn calc_scale_factor35efl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
             }
         }
     }
+    pl::at(5511);
     ret(pl::div(&pl::mul(&sqrt(&n(36 * 36 + 24 * 24))?, &digz), &diag)?)
 }
 
@@ -592,6 +598,7 @@ pub fn red_blue_balance(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     }
     let (x, y) = (arg(&a, rest), arg(&a, rest + 1));
     if val.is_undef() && (x.truthy() && y.truthy()) {
+        pl::at(5695);
         val = pl::div(&x, &y)?;
     }
     ret(val)
@@ -685,6 +692,7 @@ pub fn print_cfa_pattern(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
         if pl::ge(&pos, &end) {
             break;
         }
+        pl::at(5769);
         if modulo(&pl::sub(&pos, &n(2)), &av[1])?.truthy() {
             rtn_val = pl::concat(&rtn_val, &pl::s(","));
             continue;
@@ -702,7 +710,8 @@ pub fn print_opcode(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     if inv.truthy() {
         return pl::ret_undef(); // (can't do inverse conversion)
     }
-    let data = val.deref();
+    pl::at(5783);
+    let data = pl::sderef(&val)?;
     let len = pl::length(&data);
     if !pl::gt(&len, &n(4)) {
         return ret(pl::s(""));
@@ -820,7 +829,8 @@ pub fn match_lens_model(_it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<V
 }
 
 fn match_lens_model_impl(try_: &Value, lens_model: &Value) -> ER<()> {
-    if try_.len() > 1 && lens_model.truthy() {
+    pl::at(5850);
+    if pl::aderef(try_)?.len() > 1 && lens_model.truthy() {
         // filter by focal length
         if let Some(m) = re(r"((\d+-)?\d+mm)", "").m(lens_model) {
             let focal = cap(&m, 1);
@@ -1100,6 +1110,7 @@ pub fn print_lens_id(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
             } else {
                 // assume a log-log variation of max aperture with focal length
                 // (see http://regex.info/blog/2006-10-05/263)
+                pl::at(6024);
                 let t = pl::div(&pl::sub(&log(&la)?, &log(&sa)?), &pl::sub(&log(&lf)?, &log(&sf)?))?;
                 aa = exp(&pl::add(&log(&sa)?, &pl::mul(&t, &pl::sub(&log(&focal_length)?, &log(&sf)?))));
                 // a linear relationship between 1/FocalLength and 1/MaxAperture fits Sony better (ref 27)
@@ -1196,6 +1207,11 @@ pub fn generate_tiff(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
 fn generate_tiff_impl(it: &mut Interp, entries: &Value, data_pt: &Value) -> ER<Value> {
     let mut offset_pos = Value::Undef;
 
+    // (keys %$entries autovivifies an undefined $entries, but a string dies)
+    pl::at(6106);
+    if !entries.is_undef() {
+        pl::hderef(entries)?;
+    }
     let num = n(entries.len() as i64);
     let mut ifd_buff = get_byte_order(it)?;
     for x in [set16u(it, &n(42))?, set32u(it, &n(8))?, set16u(it, &num)?] {
@@ -1218,6 +1234,7 @@ fn generate_tiff_impl(it: &mut Interp, entries: &Value, data_pt: &Value) -> ER<V
             return Ok(Value::Undef);
         }
         let format = format_number.get(fmt.to_bytes());
+        pl::at(6117);
         let cnt = pl::div(&pl::length(&val), &format_size.at(format.to_i64()))?;
         for x in [set16u(it, &tag)?, set16u(it, &format)?, set32u(it, &cnt)?] {
             ifd_buff = pl::concat(&ifd_buff, &x);
@@ -1245,7 +1262,9 @@ fn generate_tiff_impl(it: &mut Interp, entries: &Value, data_pt: &Value) -> ER<V
     let r = sref(ifd_buff);
     let total = pl::add(&pl::length(&r.deref()), &pl::length(&val_buff));
     pl::call(it, "Image::ExifTool::Set32u", vec![total, r.clone(), offset_pos])?;
-    Ok(pl::concat(&pl::concat(&r.deref(), &val_buff), &data_pt.deref()))
+    pl::at(6130);
+    Ok(pl::concat(&pl::concat(&r.deref(), &val_buff), &pl::sderef(data_pt)?))
+
 }
 
 /// Rebuild TIFF thumbnail(s)/preview(s) into stand-alone files with current byte order
@@ -1665,7 +1684,8 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             num_entries = get16u(it, &data_pt, &dir_start)?;
         } else {
             et_warn(it, &et, Value::bytes([&b"Bad "[..], &dir_s(&dir), b" directory"].concat()), Some(Value::from(in_maker_notes)))?;
-            if !(in_maker_notes && pl::ge(&dir_len, &n(14)) && pl::ge(&dir_start, &n(0)) && pl::le(&pl::add(&dir_start, &dir_len), &pl::length(&data_pt.deref()))) {
+            pl::at(6384);
+            if !(in_maker_notes && pl::ge(&dir_len, &n(14)) && pl::ge(&dir_start, &n(0)) && pl::le(&pl::add(&dir_start, &dir_len), &pl::length(&pl::sderef(&data_pt)?))) {
                 return ret(n(0));
             }
             dir_size = dir_len.clone();
@@ -2413,6 +2433,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                 let t = pl::call(it, "Image::ExifTool::GetTagTable", vec![subdir.get("TagTable")])?;
                 if !t.truthy() {
                     let msg = [&b"Unknown tag table "[..], &subdir.get("TagTable").to_bytes()].concat();
+                    pl::at(6941);
                     pl::warn(it, &String::from_utf8_lossy(&msg))?;
                     continue 'entry;
                 }
@@ -2461,6 +2482,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                         new_byte_order = pl::s("MM");
                     } else if subdir.get("OffsetPt").truthy() {
                         new_byte_order = Value::Undef;
+                        pl::at(6980);
                         pl::warn(it, "Can't have variable byte ordering for SubDirectories using OffsetPt")?;
                         break;
                     } else if pl::le(&pl::add(&subdir_start, &n(2)), &subdir_data_len) {

@@ -231,6 +231,7 @@ pub fn validate_exif(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
                 p.extend_from_slice(&fmt.to_bytes());
                 p.push(b'$');
                 let int_format = pl::pkg_hash(it, "Image::ExifTool::Exif::intFormat");
+                pl::at(457);
                 if !pl::re_dyn(&p, "")?.is_match(&format_str) && (!tag_info.truthy() || !tag_info.get("IsOffset").truthy() || hget(&int_format, &format_str).truthy()) {
                     let m = pl::sprintf("Non-standard format (%s) for %s 0x%.4x %s", &[format_str.clone(), ifd.clone(), tag.clone(), ti.get("Name")]);
                     warn(it, m, None)?;
@@ -263,6 +264,7 @@ pub fn validate_exif(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
                 let format_size = pl::pkg_array(it, "Image::ExifTool::Exif::formatSize");
                 let s1 = format_size.at(hget(&format_number, &ti.get("Format")).to_i64());
                 let s2 = format_size.at(hget(&format_number, &ti.get("Writable")).to_i64());
+                pl::at(485);
                 ti_count = pl::int(&pl::div(&pl::mul(&ti_count, &s1), &s2)?);
             }
             if pl::gt(&ti_count, &n(0)) && !pl::num_eq(&count, &ti_count) {
@@ -316,7 +318,11 @@ fn validate_offset_info_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<V
         Ok(())
     };
     // loop through all offsets
-    while !offset_info.keys().is_empty() {
+    while {
+        pl::at(519);
+        !pl::hderef(&offset_info)?.is_empty()
+    } {
+
         let id1 = sorted_keys(&offset_info).into_iter().next().unwrap_or_default();
         let mut offsets = hget(&offset_info, &id1);
         offset_info.delete(&*id1.to_bytes());

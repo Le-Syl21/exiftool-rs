@@ -136,8 +136,15 @@ pub(crate) fn inflate_struct_v(it: &mut Interp, et: &Value, obj: &Value, mut del
     warn = Value::Undef;
     let sfmt = pl::method(it, et, "Options", vec![pl::s("StructFormat")])?;
 
+    // ($$obj =~ s/// autovivifies an undefined $obj, but a string or another
+    //  kind of reference dies)
+    pl::at(85);
+    if !obj.is_undef() {
+        pl::sderef(obj)?;
+    }
     if s_obj(obj, &rx(r"^\s*\{", ""))?.is_some() {
         let struct_ = Value::new_hash();
+
         loop {
             let c = if sfmt.truthy() { s_obj(obj, &rx(r#"^\s*"(.*?)"\s*:"#, "s"))? } else { s_obj(obj, &rx(r"^\s*([-\w:.]+#?)\s*=", "s"))? };
             let Some(c) = c else { break };
@@ -422,6 +429,7 @@ pub(crate) fn check_struct_v(it: &mut Interp, et: &Value, struct_: &Value, str_t
         // fix case of field name if necessary
         if !field_info.truthy() {
             // (sort in reverse to get lower case (not special) tags first)
+            pl::at(267);
             let fix = fix_case(str_table, &tag)?;
             if fix.truthy() && !special_struct.get(fix.to_bytes()).truthy() {
                 tag = fix;
@@ -508,6 +516,7 @@ pub(crate) fn check_struct_v(it: &mut Interp, et: &Value, struct_: &Value, str_t
                         field_info = str_table.get(tg.to_bytes());
                     }
                     if !field_info.truthy() {
+                        pl::at(321);
                         let fix = fix_case(str_table, &tg)?;
                         if fix.truthy() && !special_struct.get(fix.to_bytes()).truthy() {
                             tg = fix;
@@ -690,9 +699,11 @@ fn delete_struct_v(it: &mut Interp, et: &Value, capture: &Value, path_pt: &Value
     let (mut struct_paths, mut matching_paths, mut del_paths): (Vec<Value>, Vec<Value>, Vec<Value>) = (Vec::new(), Vec::new(), Vec::new());
 
     // find all existing elements belonging to this structure
-    let mut pp = path_pt.deref();
+    pl::at(418);
+    let mut pp = pl::sderef(path_pt)?;
     subst(&rx(r" \d+", ""), &mut pp, true, |_| Ok(br" \d+".to_vec()))?;
     {
+        pl::at(419);
         let re = rx_dyn(&cat!("^", pp, r"(\/|$)").to_bytes(), "")?;
         for k in sorted_keys(capture) {
             if m(&re, &k).is_some() {
@@ -706,7 +717,8 @@ fn delete_struct_v(it: &mut Interp, et: &Value, capture: &Value, path_pt: &Value
     let pp_re = rx_dyn(&cat!("^(", pp, ")").to_bytes(), "")?;
     // delete only structures with matching fields if necessary
     if nv_hash.get("DelValue").truthy() {
-        if !nv_hash.get("DelValue").is_empty() {
+        pl::at(423);
+        if !pl::aderef(&nv_hash.get("DelValue"))?.is_empty() {
             let str_table = hh(nv_hash, "TagInfo").get("Struct");
             // all fields must match corresponding elements in the same
             // root structure for it to be deleted
@@ -838,7 +850,13 @@ fn delete_struct_v(it: &mut Interp, et: &Value, capture: &Value, path_pt: &Value
 /// Inputs: 0) ExifTool ref, 1) TagInfo ref, 2) capture hash ref,
 ///         3) resource path, 4) value ref, 5) hash ref for last used index numbers
 pub fn add_new_tag(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
-    add_new_tag_v(it, &arg(&a, 0), &arg(&a, 1), &arg(&a, 2), arg(&a, 3), &arg(&a, 4).deref(), &arg(&a, 5))?;
+    // (a sub argument is an lvalue: $$valPtr autovivifies an undefined
+    //  $valPtr, but a string or another kind of reference dies)
+    pl::at(520);
+    let vp = arg(&a, 4);
+    let val = if vp.is_undef() { Value::Undef } else { pl::sderef(&vp)? };
+
+    add_new_tag_v(it, &arg(&a, 0), &arg(&a, 1), &arg(&a, 2), arg(&a, 3), &val, &arg(&a, 5))?;
     pl::ret_nothing(want)
 }
 
@@ -895,7 +913,8 @@ fn add_new_struct_v(it: &mut Interp, et: &Value, tag_info: &Value, capture: &Val
 
     // add dummy field to allow empty structures (name starts with '~' so it will come
     // after all valid structure fields, which is necessary when serializing the XMP later)
-    if struct_.is_empty() {
+    pl::at(566);
+    if pl::hderef(struct_)?.is_empty() {
         struct_.set("~dummy~", pl::s(""));
     }
 
@@ -1329,6 +1348,7 @@ fn restore_struct_v(it: &mut Interp, et: &Value, keep_flat: &Value) -> ER<()> {
             let mut p = b"^".to_vec();
             p.extend_from_slice(&key.to_bytes());
             p.extend_from_slice(br"( \(\d+\))?$");
+            pl::at(911);
             let re = rx_dyn(&p, "")?;
             let keys: Vec<Value> = value_hash.keys().into_iter().filter(|k| crate::modules::xmp::m_at(&re, k, 0).is_some()).map(Value::from).collect();
             for k in keys {

@@ -7,6 +7,17 @@ use crate::perl::ops::{bit_and as and, bit_or as or, shift_left as shl, shift_ri
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
 
+/// `$raf->Read(...)`: die before the call, as perl does on an undefined or
+/// unblessed invocant (the read helper runs the call as interpreted code,
+/// which would name its own location in the message).
+fn check_invocant(it: &mut Interp, raf: &Value, name: &str) -> ER<()> {
+    match raf {
+        Value::Str(_) => Ok(()),
+        Value::HashRef(h) if h.borrow().blessed.is_some() => Ok(()),
+        _ => pl::method(it, raf, name, vec![]).map(|_| ()),
+    }
+}
+
 /// `\$buff` of a `my` variable kept in a cell.
 fn rf(c: &Cell) -> Value {
     Value::ScalarRef(c.clone())
@@ -32,6 +43,8 @@ pub fn process_aac(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     //  p = private                  N = number of raw data blocks in frame
     //  C = channel configuration
 
+    pl::at(99);
+    check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(7))?, &n(7)) {
         return ret(n(0));
     }

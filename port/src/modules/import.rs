@@ -156,6 +156,8 @@ fn read_csv_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
             }
             // figure out the file name to use
             if file_info.get("SourceFile").truthy() {
+                pl::at(94);
+                elem_target(&database)?;
                 database.set(file_info.get("SourceFile").to_bytes(), file_info.clone());
                 found = true;
             }
@@ -229,7 +231,17 @@ fn match_g(it: &mut Interp, code: &str, b: &Cell) -> ER<Option<Value>> {
     Ok(r.into_iter().next())
 }
 
+/// `$$h{KEY} = ...` under strict refs: a string or another kind of
+/// reference dies (undef autovivifies the sub's own copy of the argument).
+fn elem_target(h: &Value) -> ER<()> {
+    if !h.is_undef() {
+        pl::hderef(h)?;
+    }
+    Ok(())
+}
+
 /// `$$buffPt` as a value.
+
 fn buff_of(b: &Cell) -> Value {
     b.borrow().deref()
 }
@@ -256,6 +268,8 @@ fn read_json_object_rs(it: &mut Interp, raf: &Value, mut buff_pt: Value) -> ER<V
     let mut did_bom = false;
     let b: Cell;
     if buff_pt.truthy() {
+        pl::at(144);
+        pl::sderef(&buff_pt)?;
         b = cell(buff_pt.clone());
         pos = pos_of(it, &b)?;
         if pos.is_undef() {
@@ -520,6 +534,8 @@ fn read_json_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 }
             }
         }
+        pl::at(301);
+        elem_target(&database)?;
         database.set(info.get("SourceFile").to_bytes(), info.clone());
         found = true;
     }
