@@ -80,6 +80,7 @@ pub fn new_interp() -> Interp {
     crate::modules::zlib::register(&mut it);
     crate::modules::archive_zip::register(&mut it);
     crate::modules::brotli::register(&mut it);
+    crate::modules::bunzip2::register(&mut it);
     it
 }
 
@@ -98,7 +99,7 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
         return require_file(it, what, &key);
     }
     // Pragmas and modules perl provides: nothing to load.
-    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname" | "Compress::Zlib" | "IO::Uncompress::RawInflate" | "IO::Uncompress::Gunzip" | "IO::Compress::RawDeflate" | "Archive::Zip" | "IO::Compress::Brotli" | "IO::Uncompress::Brotli") {
+    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname" | "Compress::Zlib" | "IO::Uncompress::RawInflate" | "IO::Uncompress::Gunzip" | "IO::Compress::RawDeflate" | "Archive::Zip" | "IO::Compress::Brotli" | "IO::Uncompress::Brotli" | "IO::Uncompress::Bunzip2") {
         inc.borrow_mut().insert(key.as_bytes(), Value::str(&key));
         return Ok(());
     }
@@ -244,44 +245,28 @@ fn install_core(it: &mut Interp) {
     // caller's package.
     it.define_native("Exporter::import", |it, args, _| {
         let Some(pkg) = args.first().map(|v| v.to_text()) else { return Ok(vec![]) };
-        let caller = it.package.to_string();
-        let mut names: Vec<String> = args[1..].iter().map(|v| v.to_text()).collect();
-        if names.is_empty() {
-            if let Binding::Array(a) = it.global(b'@', &format!("{pkg}::EXPORT")) {
-                names = a.borrow().iter().map(|v| v.to_text()).collect();
-            }
-        }
-        let mut expanded = Vec::new();
-        for n in names {
-            if let Some(tag) = n.strip_prefix(':') {
-                if let Binding::Hash(h) = it.global(b'%', &format!("{pkg}::EXPORT_TAGS")) {
-                    let list = h.borrow().get(tag.as_bytes()).cloned().unwrap_or_default();
-                    expanded.extend(list.items().iter().map(|v| v.to_text()));
-                }
-            } else {
-                expanded.push(n);
-            }
-        }
-        for n in expanded {
-            let (sigil, bare) = match n.as_bytes().first() {
-                Some(b'$') => (b'$', &n[1..]),
-                Some(b'@') => (b'@', &n[1..]),
-                Some(b'%') => (b'%', &n[1..]),
-                Some(b'&') => (b'&', &n[1..]),
-                _ => (b'&', n.as_str()),
-            };
-            if sigil == b'&' {
-                let code = pld::code_by_name(it, &format!("{pkg}::{bare}"));
-                if let Value::Code(c) = code {
-                    it.define_sub(&format!("{caller}::{bare}"), c);
-                }
-            } else {
-                let b = it.global(sigil, &format!("{pkg}::{bare}"));
-                it.set_global(sigil, &format!("{caller}::{bare}"), b);
-            }
-        }
+        let names: Vec<String> = args[1..].iter().map(|v| v.to_text()).collect();
+        export_symbols(it, &pkg, names);
         Ok(vec![])
     });
+    // The modules the port provides itself import as perl's do: what is
+    // asked for, or their default @EXPORT list.
+    for (pkg, defaults) in PROVIDED_EXPORTS {
+        let pkg = *pkg;
+        it.define_native(&format!("{pkg}::import"), move |it, args, _| {
+            let mut names: Vec<String> = args.iter().skip(1).map(|v| v.to_text()).collect();
+            if names.is_empty() {
+                names = if pkg == "POSIX" {
+                    // POSIX exports nearly all it has
+                    it.sub_names_with_prefix("POSIX::").into_iter().filter(|n| !n.ends_with("::import")).map(|n| n["POSIX::".len()..].to_string()).collect()
+                } else {
+                    defaults.split_whitespace().map(str::to_string).collect()
+                };
+            }
+            export_symbols(it, pkg, names);
+            Ok(vec![])
+        });
+    }
     it.define_native("Exporter::export_ok_tags", |it, args, _| {
         // Add the named tags' symbols to @EXPORT_OK of the current package.
         let pkg = it.package.to_string();
@@ -327,3 +312,68 @@ fn class_isa(it: &mut Interp, class: &str, target: &str) -> bool {
     };
     parents.iter().any(|p| class_isa(it, p, target))
 }
+
+/// Exporter::import's work: alias each name (or :tag) of `pkg` into the
+/// calling package; an empty list means the package's @EXPORT.
+fn export_symbols(it: &mut Interp, pkg: &str, mut names: Vec<String>) {
+    let caller = it.package.to_string();
+    if names.is_empty() {
+        if let Binding::Array(a) = it.global(b'@', &format!("{pkg}::EXPORT")) {
+            names = a.borrow().iter().map(|v| v.to_text()).collect();
+        }
+    }
+    let mut expanded = Vec::new();
+    for n in names {
+        if let Some(tag) = n.strip_prefix(':') {
+            if let Binding::Hash(h) = it.global(b'%', &format!("{pkg}::EXPORT_TAGS")) {
+                let list = h.borrow().get(tag.as_bytes()).cloned().unwrap_or_default();
+                expanded.extend(list.items().iter().map(|v| v.to_text()));
+            }
+        } else {
+            expanded.push(n);
+        }
+    }
+    for n in expanded {
+        let (sigil, bare) = match n.as_bytes().first() {
+            Some(b'$') => (b'$', &n[1..]),
+            Some(b'@') => (b'@', &n[1..]),
+            Some(b'%') => (b'%', &n[1..]),
+            Some(b'&') => (b'&', &n[1..]),
+            _ => (b'&', n.as_str()),
+        };
+        if sigil == b'&' {
+            let code = pld::code_by_name(it, &format!("{pkg}::{bare}"));
+            if let Value::Code(c) = code {
+                it.define_sub(&format!("{caller}::{bare}"), c);
+            }
+        } else {
+            let b = it.global(sigil, &format!("{pkg}::{bare}"));
+            it.set_global(sigil, &format!("{caller}::{bare}"), b);
+        }
+    }
+}
+
+/// The default @EXPORT of the modules the port provides (perl 5.38's).
+const PROVIDED_EXPORTS: &[(&str, &str)] = &[
+    ("Digest::MD5", ""),
+    ("Digest::SHA", ""),
+    ("Compress::Zlib", "deflateInit inflateInit compress uncompress gzopen $gzerrno ZLIB_VERSION ZLIB_VERNUM OS_CODE MAX_MEM_LEVEL MAX_WBITS Z_ASCII Z_BEST_COMPRESSION Z_BEST_SPEED Z_BINARY Z_BLOCK Z_BUF_ERROR Z_DATA_ERROR Z_DEFAULT_COMPRESSION Z_DEFAULT_STRATEGY Z_DEFLATED Z_ERRNO Z_FILTERED Z_FIXED Z_FINISH Z_FULL_FLUSH Z_HUFFMAN_ONLY Z_MEM_ERROR Z_NEED_DICT Z_NO_COMPRESSION Z_NO_FLUSH Z_NULL Z_OK Z_PARTIAL_FLUSH Z_RLE Z_STREAM_END Z_STREAM_ERROR Z_SYNC_FLUSH Z_TREES Z_UNKNOWN Z_VERSION_ERROR crc32 adler32 DEF_WBITS"),
+    ("POSIX", ""),
+    ("File::Basename", "fileparse fileparse_set_fstype basename dirname"),
+    ("Time::Local", "timegm timelocal"),
+    ("Scalar::Util", ""),
+    ("IO::Compress::RawDeflate", ""),
+    ("IO::Uncompress::RawInflate", ""),
+    ("IO::Uncompress::Gunzip", ""),
+    ("IO::Uncompress::Bunzip2", ""),
+    ("IO::Compress::Brotli", "bro"),
+    ("IO::Uncompress::Brotli", "unbro"),
+    ("Cwd", "cwd getcwd fastcwd fastgetcwd"),
+    ("File::Glob", ""),
+    ("Time::HiRes", ""),
+    ("Encode", "decode decode_utf8 encode encode_utf8 str2bytes bytes2str encodings find_encoding find_mime_encoding clone_encoding"),
+    ("Unicode::Normalize", "NFC NFD NFKC NFKD"),
+    ("Sys::Hostname", "hostname"),
+    ("Carp", "confess croak carp"),
+    ("File::Find", "find finddepth"),
+];

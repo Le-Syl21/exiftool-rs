@@ -25,7 +25,7 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
     Some(run(it, name, args, scope, want))
 }
 
-const BUILTINS: &[&str] = &["utime", "chmod", "readpipe", "getpwuid", "getgrgid", "defined", "ref", "scalar", "lc", "uc", "lcfirst", "ucfirst", "quotemeta", "fc", "length", "chr", "ord", "hex", "oct", "abs", "int", "sqrt", "log", "exp", "sin", "cos", "atan2", "rand", "srand", "time", "localtime", "gmtime", "join", "sprintf", "reverse", "split", "pack", "unpack", "substr", "index", "rindex", "keys", "values", "each", "exists", "delete", "shift", "pop", "push", "unshift", "splice", "chomp", "chop", "undef", "pos", "die", "warn", "bless", "require", "caller", "lock", "study", "exit", "sleep", "do", "open", "close", "binmode", "unlink", "mkdir", "rmdir", "opendir", "readdir", "closedir", "system", "exec", "select", "seek", "read", "sysread", "eof", "readline", "fileno", "chdir", "rename", "stat", "lstat"];
+const BUILTINS: &[&str] = &["utime", "chmod", "readpipe", "getpwuid", "getgrgid", "defined", "ref", "scalar", "lc", "uc", "lcfirst", "ucfirst", "quotemeta", "fc", "length", "chr", "ord", "hex", "oct", "abs", "int", "sqrt", "log", "exp", "sin", "cos", "atan2", "rand", "srand", "time", "localtime", "gmtime", "join", "sprintf", "reverse", "split", "pack", "unpack", "substr", "index", "rindex", "keys", "values", "each", "exists", "delete", "shift", "pop", "push", "unshift", "splice", "chomp", "chop", "undef", "pos", "die", "warn", "bless", "require", "caller", "lock", "study", "exit", "sleep", "do", "open", "close", "binmode", "unlink", "mkdir", "rmdir", "opendir", "readdir", "closedir", "system", "exec", "select", "seek", "read", "sysread", "eof", "readline", "fileno", "chdir", "rename", "stat", "lstat", "glob"];
 
 fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
     match name {
@@ -518,6 +518,11 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 let _ = std::fs::set_permissions(&p, std::fs::Permissions::from_mode(mode & !0o022));
             }
             one(Value::from(ok))
+        }
+        "glob" => {
+            let p = arg_or_topic(it, args, scope)?.to_bytes();
+            let list: Vec<Value> = super::glob::csh_glob(&p).into_iter().map(Value::bytes).collect();
+            Ok(list)
         }
         "rmdir" => {
             let p = arg_or_topic(it, args, scope)?.to_text();

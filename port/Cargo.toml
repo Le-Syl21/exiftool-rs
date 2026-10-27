@@ -30,6 +30,8 @@ flate2 = { version = "1", default-features = false, features = ["zlib"] }
 libz-sys = "1"
 # IO::(Un)Compress::Brotli: Google's brotli library itself, as the perl module
 brotlic = "0.8"
+# IO::Uncompress::Bunzip2 (Rawzor), on the bzip2 reference code
+bzip2 = "0.6"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

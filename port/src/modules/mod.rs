@@ -16,6 +16,7 @@ pub mod big_tiff;
 pub mod bmp;
 pub mod bpg;
 pub mod brotli;
+pub mod bunzip2;
 pub mod build_tag_lookup;
 pub mod bzz;
 pub mod canon;

@@ -15,6 +15,8 @@ use super::parse;
 
 #[path = "builtins.rs"]
 mod builtins;
+#[path = "glob.rs"]
+pub mod glob;
 #[path = "io.rs"]
 pub mod io;
 use crate::perl::ops;
@@ -439,6 +441,11 @@ impl Interp {
         let c = Rc::new(Code::Native(k.clone(), Rc::new(move |i: &mut Interp, args, want| i.call_named(&k2, args, want))));
         self.sub_refs.insert(k, c.clone());
         c
+    }
+
+    /// The names of the defined subs that start with `prefix`.
+    pub fn sub_names_with_prefix(&self, prefix: &str) -> Vec<String> {
+        self.subs.keys().filter(|k| k.starts_with(prefix)).map(|k| k.to_string()).collect()
     }
 
     pub fn sub(&self, name: &str) -> Option<Rc<Code>> {
@@ -1040,7 +1047,7 @@ impl Interp {
                     return Ok(vec![]);
                 }
                 match &**name {
-                    "strict" | "warnings" | "integer" | "utf8" | "bytes" | "lib" | "bignum" | "overload" | "Exporter" | "vars" | "POSIX" | "Encode" | "feature" => {
+                    "strict" | "warnings" | "integer" | "utf8" | "bytes" | "lib" | "bignum" | "overload" | "Exporter" | "vars" | "feature" => {
                         if &**name == "vars" {
                             // `use vars qw($x @y)`: the package variables exist.
                             if let Some(a) = args {

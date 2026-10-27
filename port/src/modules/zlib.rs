@@ -284,7 +284,7 @@ fn arg(a: &[Value], i: usize) -> Value {
 
 /// The data of an IO::(Un)Compress input: a scalar ref is the data, a
 /// plain string a file name.
-fn input_bytes(v: &Value) -> Option<Vec<u8>> {
+pub(crate) fn input_bytes(v: &Value) -> Option<Vec<u8>> {
     if v.is_scalar_ref() {
         return Some(v.deref().to_bytes().to_vec());
     }
@@ -292,7 +292,7 @@ fn input_bytes(v: &Value) -> Option<Vec<u8>> {
 }
 
 /// Store an IO::(Un)Compress output: into a scalar ref or a file.
-fn output(it: &mut Interp, target: &Value, data: Vec<u8>) -> bool {
+pub(crate) fn output(it: &mut Interp, target: &Value, data: Vec<u8>) -> bool {
     match target {
         Value::ScalarRef(c) => {
             *c.borrow_mut() = Value::bytes(data);
