@@ -121,10 +121,39 @@ fn call_code(it: &mut Interp, code: &Value, args: Vec<Value>, want: Want) -> ER<
             let c = c.clone();
             it.call(&c, args, want)
         }
+        Value::Undef => crate::interp::eval::die("Can't use an undefined value as a subroutine reference"),
         _ => {
-            let name = code.to_text();
+            // (a symbolic reference: a name without a package is in the
+            // current one, Image::ExifTool; "::name" is in main)
+            let mut name = code.to_text();
+            if let Some(rest) = name.strip_prefix("::") {
+                name = format!("main::{rest}");
+            } else if !name.contains("::") {
+                name = format!("Image::ExifTool::{name}");
+            }
             it.call_named(&name, args, want)
         }
+    }
+}
+
+/// `&$code(ARGS)` under strict refs: only a code reference is called, the
+/// others die with perl's messages.
+fn call_code_strict(it: &mut Interp, code: &Value, args: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+    match code {
+        Value::Code(_) => call_code(it, code, args, want),
+        Value::Undef => crate::interp::eval::die("Can't use an undefined value as a subroutine reference"),
+        v if !v.is_ref() => {
+            let b = v.to_bytes();
+            let mut m = String::from("Can't use string (\"");
+            m.push_str(&String::from_utf8_lossy(&b[..b.len().min(32)]));
+            m.push('"');
+            if b.len() > 32 {
+                m.push_str("...");
+            }
+            m.push_str(") as a subroutine ref while \"strict refs\" in use");
+            crate::interp::eval::die(m)
+        }
+        _ => crate::interp::eval::die("Not a CODE reference"),
     }
 }
 
@@ -376,7 +405,8 @@ fn tag_table_keys_list(it: &mut Interp, tag_table_ptr: &Value) -> Vec<Value> {
 /// Return: Metadata path string
 pub fn metadata_path(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let self_ = arg(&a, 0);
-    let parts: Vec<Vec<u8>> = self_.get("PATH").items().iter().map(|v| v.to_bytes().to_vec()).collect();
+    pl::at(9100);
+    let parts: Vec<Vec<u8>> = pl::aderef(&self_.get("PATH"))?.iter().map(|v| v.to_bytes().to_vec()).collect();
     ret(Value::bytes(parts.join(&b'-')))
 }
 
@@ -487,7 +517,8 @@ pub fn do_escape(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// the caller writes back where `$_[0]` aliases).
 fn do_escape_value(it: &mut Interp, v: &Value, proc_: &Value) -> ER<Option<Value>> {
     if !v.is_ref() {
-        return Ok(Some(scalar_of(call_code(it, proc_, vec![v.clone()], Want::Scalar)?)));
+        pl::at(9669);
+        return Ok(Some(scalar_of(call_code_strict(it, proc_, vec![v.clone()], Want::Scalar)?)));
     } else if ref_of(v) == "ARRAY" {
         let len = v.len();
         for i in 0..len {
@@ -859,6 +890,7 @@ pub fn process_directory(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     self_.get_or_new_hash("FOUND_DIR").set(dir_name.to_bytes(), n(1));
 
     // process the directory
+    pl::at(9084);
     let rtn_val = scalar_of(call_code(it, &proc_, vec![self_.clone(), dir_info.clone(), tag_table_ptr.clone()], Want::Scalar)?);
 
     if let Value::ArrayRef(p) = self_.get_or_new_array("PATH") {
@@ -970,7 +1002,8 @@ pub fn get_tag_table(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
         // use strict 'refs';
         let init = table.get("INIT_TABLE");
         if init.truthy() {
-            call_code(it, &init, vec![table.clone()], Want::Void)?;
+            pl::at(8976);
+            call_code_strict(it, &init, vec![table.clone()], Want::Void)?;
         }
         table.set("TABLE_NAME", table_name.clone()); // set table name
         let mut short = table_name.clone();
@@ -1211,7 +1244,8 @@ fn add_tag_to_table_impl(it: &mut Interp, tag_table_ptr: &Value, tag_id: &Value,
             tag_info.get_or_new_hash("Groups").set(&k, table_groups.get(&k));
         }
     } else {
-        tag_info.set("Groups", tag_table_ptr.get("GROUPS").hash_copy());
+        pl::at(9243);
+        tag_info.set("Groups", pl::hderef(&tag_table_ptr.get("GROUPS"))?.hash_copy());
     }
     if tag_info.get("Flags").truthy() {
         pl::call(it, "Image::ExifTool::ExpandFlags", vec![tag_info.clone()])?;
@@ -1892,7 +1926,8 @@ pub fn process_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     let ttp = g(&tag_table_ptr);
     let data_pt = cell(di.get("DataPt"));
     let dp = g(&data_pt);
-    let data_len = cell(len_of(&dp.deref()));
+    pl::at(9881);
+    let data_len = cell(len_of(&pl::sderef(&dp)?));
     let dir_start = cell(or(di.get("DirStart"), n(0)));
     let max_len = cell(pl::sub(&g(&data_len), &g(&dir_start)));
     let size = cell(di.get("DirLen"));
@@ -3062,7 +3097,9 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
     if !raf.truthy() {
         let class = pl::s("File::RandomAccess");
         raf = scalar_of(it.call_method(&class, "new", vec![class.clone(), dir_info.get("DataPt")], Want::Scalar)?);
-        verbose_dir(it, vec![self_.clone(), pl::s("JPEG"), Value::Undef, len_of(&dir_info.get("DataPt").deref())], Want::Void)?;
+        pl::at(7291);
+        let d = pl::sderef(&dir_info.get("DataPt"))?;
+        verbose_dir(it, vec![self_.clone(), pl::s("JPEG"), Value::Undef, len_of(&d)], Want::Void)?;
     }
     // get pointer to hash object if it exists and we are the top-level JPEG or JP2
     if re("^(JPEG|JP2)$", "").is_match(&self_.get("FILE_TYPE")) && !self_.get("DOC_NUM").truthy() {

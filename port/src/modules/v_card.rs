@@ -168,6 +168,7 @@ fn process_v_card_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
     let mut buff = Value::Undef;
 
     let mut m = None;
+    pl::at(266);
     if read_line_n(it, &raf, &mut buff, 24)?.truthy()
         && pl::method(it, &raf, "Seek", vec![n(0), n(0)])?.truthy()
     {

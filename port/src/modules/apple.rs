@@ -14,6 +14,7 @@ pub fn convert_plist(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     let dir_info = Value::new_hash();
     dir_info.set("DataPt", pl::sref(val));
     dir_info.set("NoVerboseDir", n(1));
+    pl::at(371);
     let old_order = pl::method(it, &et, "GetByteOrder", vec![])?;
     crate::runtime::require(it, "Image::ExifTool::PLIST")?;
     pl::call(it, "Image::ExifTool::PLIST::ProcessBinaryPLIST", vec![et.clone(), dir_info.clone()])?;
