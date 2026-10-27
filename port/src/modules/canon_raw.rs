@@ -5,6 +5,7 @@
 
 use crate::interp::eval::{Cell, ER};
 use crate::interp::{Interp, Want};
+use crate::modules::exiftool::part2;
 use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::{ops, Value};
 use crate::pl::{self, arg, n, ret};
@@ -220,6 +221,7 @@ fn process_entry(it: &mut Interp, et_: &Value, dir_info: &Value, raw_tag_table: 
         // set count according to format and size
         let fnum = pl::pkg_hash(it, "Image::ExifTool::Exif::formatNumber").get(format.to_bytes());
         let fsiz = pl::pkg_array(it, "Image::ExifTool::Exif::formatSize").at(fnum.to_i64());
+        pl::at(740);
         count = pl::int(&pl::div(&size, &fsiz)?);
     }
     if verbose.truthy() {
@@ -327,6 +329,8 @@ pub fn process_crw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let build_maker_notes = pl::method(it, &et_, "Options", vec![pl::s("MakerNotes")])?;
 
+    pl::at(819);
+    part2::check_invocant(it, &raf, "Read")?;
     if !read_eq(it, &raf, &buff, &n(2))? {
         return ret(n(0));
     }

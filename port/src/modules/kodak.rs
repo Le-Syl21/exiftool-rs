@@ -1,6 +1,6 @@
 //! Image::ExifTool::Kodak (Image/ExifTool/Kodak.pm), ported sub by sub (see docs/port/PORTING.md).
 
-use crate::interp::eval::{die, ER};
+use crate::interp::eval::ER;
 use crate::interp::{Interp, Want};
 use crate::modules::exiftool::part2;
 use crate::modules::random_access::{cell, substr};
@@ -30,7 +30,8 @@ fn three_rationals(it: &mut Interp, data_pt: &Value, pos: &Value) -> ER<Value> {
 pub fn process_pose(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let dir_len = pl::length(&data_pt.deref());
+    pl::at(3080);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?);
     let ee = pl::method(it, &et, "Options", vec![pl::s("ExtractEmbedded")])?;
     let (mut i, mut pos);
 
@@ -89,16 +90,6 @@ pub fn process_pose(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     ret(n(1))
 }
 
-/// `${$x}` under strict refs.
-fn deref_strict(v: &Value) -> ER<Value> {
-    match v {
-        Value::ScalarRef(_) | Value::LvRef(_) => Ok(v.deref()),
-        Value::Undef => die("Can't use an undefined value as a SCALAR reference"),
-        v if !v.is_ref() => die(format!("Can't use string (\"{}\") as a SCALAR ref while \"strict refs\" in use", String::from_utf8_lossy(&v.to_bytes()[..v.to_bytes().len().min(32)]))),
-        _ => die("Not a SCALAR reference"),
-    }
-}
-
 //------------------------------------------------------------------------------
 /// Calculate RGB levels from associated tags (ref 3)
 /// Inputs: 0) KodakIFD:WhiteBalance, 1-4) WB_RGBMul0-3, 5-8) WB_RGBCoeffs0-3
@@ -124,7 +115,8 @@ pub fn calculate_rgb_levels(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
     let m = idx(1).to_bytes();
     let lead = m.iter().take_while(|c| c.is_ascii_whitespace()).count();
     let mul = pl::split(&re(r"\s+", ""), &Value::bytes(&m[lead..]), 13);
-    let coefs = pl::split_ws(&deref_strict(&idx(5))?); // (extra de-reference for Binary data)
+    pl::at(3129);
+    let coefs = pl::split_ws(&pl::sderef(&idx(5))?); // (extra de-reference for Binary data)
     let t9 = arg(&a, 9);
     let wbtemp100 = pl::div(&if t9.truthy() { t9 } else { n(6500) }, &n(100))?;
     if !(mul.len() >= 3 && coefs.len() >= 12) {
@@ -138,6 +130,7 @@ pub fn calculate_rgb_levels(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
             num = pl::add(&num, &pl::mul(&coefs[nn], &ops::pow(&wbtemp100, &n(i))));
             nn += 1;
         }
+        pl::at(3137);
         cam_mul.push(pl::div(&n(2048), &pl::mul(&num, &mul[c]))?);
     }
     ret(pl::join(" ", &cam_mul))
@@ -153,8 +146,14 @@ pub fn process_kodak_text(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
     let ds = dir_info.get("DirStart");
     let dir_start = if ds.truthy() { ds } else { n(0) };
     let dl = dir_info.get("DirLen");
-    let dir_len = if dl.truthy() { dl } else { pl::sub(&pl::length(&data_pt.deref()), &dir_start) };
-    let mut data = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+    let dir_len = if dl.truthy() {
+        dl
+    } else {
+        pl::at(3151);
+        pl::sub(&pl::length(&pl::sderef(&data_pt)?), &dir_start)
+    };
+    pl::at(3152);
+    let mut data = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?;
     re(r"\0.*", "s").subst(&mut data, false, |_| Vec::new()); // truncate at null if it exists
     let lines = pl::split(&re(r"[\n\r]+", ""), &data, 0);
     let (mut success, mut other) = (Value::Undef, Vec::<Value>::new());
@@ -209,7 +208,8 @@ pub fn process_kodak_ifd(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<V
     if pl::le(&dir_start, &n(0)) || pl::gt(&pl::add(&dir_start, &n(2)), &dir_info.get("DataLen")) {
         return ret(n(1));
     }
-    let byte_order = substr(it, &dir_info.get("DataPt").deref(), &dir_start, Some(&n(2)))?;
+    pl::at(3199);
+    let byte_order = substr(it, &pl::sderef(&dir_info.get("DataPt"))?, &dir_start, Some(&n(2)))?;
     if !pl::call(it, "Image::ExifTool::SetByteOrder", vec![byte_order])?.truthy() {
         let msg = pl::concat(&pl::concat(&pl::s("Invalid Kodak "), &dir_info.get("Name")), &pl::s(" directory"));
         pl::method(it, &et, "Warn", vec![msg])?;
@@ -235,7 +235,8 @@ pub fn write_kodak_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     if pl::le(&dir_start, &n(0)) || pl::gt(&pl::add(&dir_start, &n(2)), &dir_info.get("DataLen")) {
         return ret(pl::s(""));
     }
-    let byte_order = substr(it, &dir_info.get("DataPt").deref(), &dir_start, Some(&n(2)))?;
+    pl::at(3222);
+    let byte_order = substr(it, &pl::sderef(&dir_info.get("DataPt"))?, &dir_start, Some(&n(2)))?;
     if !pl::call(it, "Image::ExifTool::SetByteOrder", vec![byte_order])?.truthy() {
         return ret(pl::s(""));
     }

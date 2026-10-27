@@ -171,6 +171,7 @@ pub fn add_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
                         }
                     // only add new tag ID if it didn't already exist
                     } else if {
+                        pl::at(13935);
                         let r = pl::re_dyn(&anchored(&tag_id), "")?;
                         ids.items().iter().any(|v| r.is_match(v))
                     } {
@@ -286,6 +287,7 @@ fn find_tag_info_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
         let mut pat = lc_tag.clone();
         re(r"\*", "").subst(&mut pat, true, |_| br"[-\w]*".to_vec());
         re(r"\?", "").subst(&mut pat, true, |_| br"[-\w]".to_vec());
+        pl::at(14000);
         let r = pl::re_dyn(&anchored(&pat), "")?;
         let mut tags: Vec<Value> = keys(&tag_lookup).into_iter().filter(|k| r.is_match(k)).collect();
         if !tags.is_empty() {

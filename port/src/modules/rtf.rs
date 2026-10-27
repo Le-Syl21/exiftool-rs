@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use crate::interp::eval::{Cell, ER};
 use crate::interp::{Interp, Want};
+use crate::modules::exiftool::part2;
 use crate::modules::random_access::{cell, perl_eval, raf_read};
 use crate::perl::regex::{self as pre, PerlRegex, Spans};
 use crate::perl::Value;
@@ -88,6 +89,11 @@ fn assign(it: &mut Interp, data_pt: &Value, val: Value) -> ER<()> {
 //        value is defined.
 pub fn read_to_nested(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (data_pt, raf) = (arg(&a, 0), arg(&a, 1));
+    // (`pos $$dataPt` autovivifies an undefined $dataPt, but dies on a string)
+    pl::at(119);
+    if !data_pt.is_undef() {
+        pl::sderef(&data_pt)?;
+    }
     let pos = pos_of(it, &data_pt)?.unwrap_or(0);
     let mut level = 1;
     let bracket = rx(br"(\\*)([{}])", "")?;
@@ -290,6 +296,8 @@ pub fn process_rtf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let cs;
 
     let mut first = Value::Undef;
+    pl::at(234);
+    part2::check_invocant(it, &raf, "Read")?;
     if !(raf_read(it, &raf, &mut first, n(64))?.truthy() && pl::method(it, &raf, "Seek", vec![n(0), n(0)])?.truthy()) {
         return ret(n(0));
     }

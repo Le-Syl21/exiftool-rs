@@ -138,8 +138,10 @@ pub fn process_json(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         if !raf.truthy() {
             data_pt = dir_info.get("DataPt");
             let dir_len = dir_info.get("DirLen");
-            if dir_info.get("DirStart").truthy() || (dir_len.truthy() && !dir_len.eq_str(&pl::length(&data_pt.deref()).to_text())) {
-                let buff = substr(it, &dir_info.get("DataPt").deref(), &dir_info.get("DirStart"), Some(&dir_len))?;
+            pl::at(128);
+            if dir_info.get("DirStart").truthy() || (dir_len.truthy() && !dir_len.eq_str(&pl::length(&pl::sderef(&data_pt)?).to_text())) {
+                pl::at(129);
+                let buff = substr(it, &pl::sderef(&dir_info.get("DataPt"))?, &dir_info.get("DirStart"), Some(&dir_len))?;
                 data_pt = pl::sref(buff);
             }
             raf = pl::call(it, "File::RandomAccess::new", vec![pl::s("File::RandomAccess"), data_pt.clone()])?;
@@ -147,7 +149,14 @@ pub fn process_json(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             let block_name = if dir_info.get("BlockInfo").truthy() { dir_info.get("BlockInfo").get("Name") } else { pl::s("") };
             let block_extract = pl::method(it, &et, "Options", vec![pl::s("BlockExtract")])?;
             if block_name.truthy() && (block_extract.truthy() || et.get("REQ_TAG_LOOKUP").get(pl::lc(&block_name).to_bytes()).truthy() || (et.get("TAGS_FROM_FILE").truthy() && !et.get("EXCL_TAG_LOOKUP").get(pl::lc(&block_name).to_bytes()).truthy())) {
-                pl::method(it, &et, "FoundTag", vec![dir_info.get("BlockInfo"), data_pt.deref()])?;
+                // (a method argument `$$dataPt` autovivifies an undefined
+                // $dataPt, but dies on a string)
+                pl::at(139);
+                if !data_pt.is_undef() {
+                    pl::sderef(&data_pt)?;
+                }
+                let data = data_pt.deref();
+                pl::method(it, &et, "FoundTag", vec![dir_info.get("BlockInfo"), data])?;
                 if block_extract.truthy() && pl::gt(&block_extract, &n(1)) {
                     return ret(n(1));
                 }

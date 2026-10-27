@@ -20,6 +20,7 @@ pub fn process_pcd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));
     let raf = dir_info.get("RAF");
     let buff = cell(Value::Undef);
+    pl::at(454);
     if !(pl::method(it, &raf, "Seek", vec![n(2048), n(0)])?.truthy()
         && pl::num_eq(&raf_read_cell(it, &raf, &buff, n(2048))?, &n(2048))
         && re(r"^PCD_IPI", "").is_match(&buff.borrow()))

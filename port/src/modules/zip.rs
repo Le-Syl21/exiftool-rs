@@ -125,6 +125,7 @@ fn read_uleb_raf(it: &mut Interp, raf: &Value) -> ER<Value> {
     let mut rtn_val = n(0);
     let mut i: i64 = 0;
     loop {
+        pl::at(287);
         if !read(it, raf, &mut buff, n(1))?.truthy() {
             break;
         }
@@ -152,6 +153,7 @@ pub fn process_rar(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut buff = Value::Undef;
     let mut doc_num: i64 = 0;
 
+    pl::at(306);
     if !(read(it, &raf, &mut buff, n(7))?.truthy() && re(r"Rar!\x1a\x07[\0\x01]", "").is_match(&buff)) {
         return ret(n(0));
     }
@@ -364,6 +366,7 @@ pub fn process_gzip(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let raf = dir_info.get("RAF");
     let mut buff = Value::Undef;
 
+    pl::at(449);
     if !(read(it, &raf, &mut buff, n(10))?.truthy() && re(r"^\x1f\x8b\x08", "").is_match(&buff)) {
         return ret(n(0));
     }
@@ -435,6 +438,7 @@ fn handle_member_rs(it: &mut Interp, et: &Value, member: &Value, tag_table_ptr: 
     if !tag_table_ptr.truthy() {
         tag_table_ptr = et_call(it, "GetTagTable", vec![s("Image::ExifTool::ZIP::Main")])?;
     }
+    pl::at(496);
     for (id, m) in [(2, "versionNeededToExtract"), (3, "bitFlag"), (4, "compressionMethod"), (5, "lastModFileDateTime"), (7, "crc32"), (9, "compressedSize"), (11, "uncompressedSize"), (15, "fileName")] {
         let v = pl::method(it, member, m, vec![])?;
         handle_tag(it, et, &tag_table_ptr, n(id), v)?;
@@ -456,6 +460,7 @@ pub fn handle_member(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
 // Inputs: 0) ExifTool ref, 1) Zip object ref, 2) file name
 // Returns: zip member or undef it it didn't exist
 fn extract_file_rs(it: &mut Interp, et: &Value, zip: &Value, file: &Value) -> ER<Value> {
+    pl::at(515);
     let result = pl::method(it, zip, "memberNamed", vec![file.clone()])?;
     let msg = cat(&[s("  (Extracting '"), file.clone(), s("' from zip archive)\n")]);
     pl::method(it, et, "VPrint", vec![n(1), msg])?;
@@ -756,6 +761,7 @@ pub fn process_zip(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let (mut buff, mut buf2, mut zip) = (Value::Undef, Value::Undef, Value::Undef);
 
+    pl::at(530);
     if !(read_eq(it, &raf, &mut buff, &n(30))? && re(r"^PK\x03\x04", "").is_match(&buff)) {
         return ret(n(0));
     }

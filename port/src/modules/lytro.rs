@@ -2,7 +2,7 @@
 
 use crate::interp::eval::{Cell, ER};
 use crate::interp::{Interp, Want};
-use crate::modules::exiftool::part2::get32u;
+use crate::modules::exiftool::part2::{check_invocant, get32u};
 use crate::modules::random_access::{cell, perl_eval, raf_read_cell};
 use crate::perl::{ops, Value};
 use crate::pl::{self, arg, cap, n, re, ret};
@@ -91,6 +91,8 @@ pub fn process_lfp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (buff, id) = (cell(Value::Undef), cell(Value::Undef));
 
     // validate the Lytro file header
+    pl::at(142);
+    check_invocant(it, &raf, "Read")?;
     if !(read_eq(it, &raf, &buff, &n(16))? && re(r"^\x89LFP\x0d\x0a\x1a\x0a", "").is_match(&val(&buff))) {
         return ret(n(0));
     }
