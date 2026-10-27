@@ -1,6 +1,6 @@
 //! Image::ExifTool::MWG (Image/ExifTool/MWG.pm), ported sub by sub (see docs/port/PORTING.md).
 
-use crate::interp::eval::{die, ER};
+use crate::interp::eval::ER;
 use crate::interp::{Interp, Want};
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
@@ -46,11 +46,14 @@ pub fn load(it: &mut Interp, _a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 // Returns: string of values (and may reformat list entries)
 pub fn list_to_string(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let vals = arg(&a, 0);
-    if !vals.is_undef() && !vals.is_array() {
-        // (@$vals under "strict refs")
-        return if vals.is_ref() { die("Not an ARRAY reference") } else { die(format!("Can't use string (\"{}\") as an ARRAY ref while \"strict refs\" in use", vals.to_text())) };
-    }
-    let mut items = vals.items();
+    // (foreach autovivifies an undefined $vals; anything else but an ARRAY
+    // reference dies under "strict refs")
+    let mut items = if vals.is_undef() {
+        Vec::new()
+    } else {
+        pl::at(582);
+        pl::aderef(&vals)?
+    };
     for v in items.iter_mut() {
         // double all quotes in value and quote the value if it begins
         // with a quote or contains a semicolon-space separator
@@ -131,9 +134,10 @@ pub fn overwrite_string_list(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
             let old = string_to_list(it, vec![val.clone(), et.clone()], Want::Scalar)?.pop().unwrap_or_default();
             let old: Vec<Value> = if pl::ref_of(&old) == "ARRAY" { old.items() } else { vec![old] };
             let del_value = nv_hash.get("DelValue");
-            if !del_value.items().is_empty() {
+            pl::at(645);
+            if !pl::aderef(&del_value)?.is_empty() {
                 let del = Value::new_hash();
-                for d in del_value.items() {
+                for d in pl::aderef(&del_value)? {
                     del.set(&*d.to_bytes(), n(1));
                 }
                 for o in old {
@@ -154,9 +158,11 @@ pub fn overwrite_string_list(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
         if value.truthy() {
             if !del_index.is_undef() {
                 let at = (del_index.to_i64().max(0) as usize).min(new.len());
-                new.splice(at..at, value.items());
+                pl::at(659);
+                new.splice(at..at, pl::aderef(&value)?);
             } else {
-                new.extend(value.items());
+                pl::at(661);
+                new.extend(pl::aderef(&value)?);
             }
         }
         if !new.is_empty() {
@@ -189,6 +195,15 @@ pub fn reconcile_iptc_digest(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
     ret(pl::s(""))
 }
 
+/// `$$r[i]` read under strict refs: an undefined `$r` would be autovivified
+/// (undef here), anything but an ARRAY reference dies.
+fn aelem(r: &Value, i: i64) -> ER<Value> {
+    if !r.is_undef() {
+        pl::aderef(r)?;
+    }
+    Ok(r.at(i))
+}
+
 //------------------------------------------------------------------------------
 // Recover strings which were truncated by IPTC dataset length limit
 // Inputs: 0) IPTC value, 1) XMP value, 2) length limit
@@ -204,14 +219,18 @@ pub fn recover_truncated_iptc(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec
             xmp = Value::new_array(vec![xmp]);
         }
         let mut vals = Vec::new();
-        let items = iptc.items();
+        pl::at(706);
+        let items = pl::aderef(&iptc)?;
         for (i, v) in items.iter().enumerate() {
-            vals.extend(recover_truncated_iptc(it, vec![v.clone(), xmp.at(i as i64), limit.clone()], w)?);
+            pl::at(706);
+            let x = aelem(&xmp, i as i64)?;
+            vals.extend(recover_truncated_iptc(it, vec![v.clone(), x, limit.clone()], w)?);
         }
         return ret(Value::new_array(vals));
     } else if !iptc.is_undef() && pl::num_eq(&pl::length(&iptc), &limit) {
         if xmp.is_ref() {
-            xmp = xmp.at(0); // take first element of list
+            pl::at(711);
+            xmp = aelem(&xmp, 0)?; // take first element of list
         }
         if pl::gt(&pl::length(&xmp), &limit) && iptc.to_bytes() == pl::substr(&xmp, 0, Some(limit.to_i64())).to_bytes() {
             return ret(xmp);

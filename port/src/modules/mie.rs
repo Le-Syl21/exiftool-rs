@@ -295,7 +295,8 @@ pub fn read_mie_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
         let m1 = cap(&c, 1);
         if m1.eq_str("utf8") || m1.eq_str("string") {
             // read the 8-bit string
-            val = pl::substr(&data_pt.deref(), offset.to_i64(), Some(size.to_i64()));
+            pl::at(856);
+            val = pl::substr(&pl::sderef(&data_pt)?, offset.to_i64(), Some(size.to_i64()));
             // (as of ExifTool 7.62, leave string values unconverted)
         } else {
             // convert to UTF8
@@ -306,7 +307,8 @@ pub fn read_mie_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
             } else {
                 "V"
             };
-            let unpk = pl::unpack(&format!("x{}{}{}", offset.to_text(), fmt, size.to_text()), &data_pt.deref())?;
+            pl::at(866);
+            let unpk = pl::unpack(&format!("x{}{}{}", offset.to_text(), fmt, size.to_text()), &pl::sderef(&data_pt)?)?;
             val = pl::pack("C0U*", &unpk)?;
         }
         // truncate at null unless this is a list
@@ -343,14 +345,21 @@ pub fn check_mie(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     }
     // handle units if supported by this tag
     let ulist = tag_info.get("Units");
-    let m = if ulist.truthy() { re(r"(.*)\((.*)\)$", "").m(&val_ptr.deref()) } else { None };
+    let m = if ulist.truthy() {
+        pl::at(896);
+        re(r"(.*)\((.*)\)$", "").m(&pl::sderef(&val_ptr)?)
+    } else {
+        None
+    };
     if let Some(c) = m {
         let (val, units) = (cap(&c, 1), cap(&c, 2));
         let pat = [&b"^"[..], &units.to_bytes(), b"$"].concat();
+        pl::at(898);
         let r = pl::re_dyn(&pat, "i")?;
-        let units = ulist.items().into_iter().find(|u| r.is_match(u));
+        let ulist_items = pl::aderef(&ulist)?;
+        let units = ulist_items.iter().find(|u| r.is_match(u)).cloned();
         let Some(units) = units else {
-            return ret(cat(&[&s("Allowed units: ("), &pl::join("|", &ulist.items()), &s(")")]));
+            return ret(cat(&[&s("Allowed units: ("), &pl::join("|", &ulist_items), &s(")")]));
         };
         let vc = cell(val);
         err = pl::call(it, "Image::ExifTool::CheckValue", vec![Value::ScalarRef(vc.clone()), format.clone(), tag_info.get("Count")])?;
@@ -358,10 +367,16 @@ pub fn check_mie(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         if !err.truthy() {
             pl::set_deref(&val_ptr, cat(&[&get(&vc), &s("("), &units, &s(")")]))?;
         }
-    } else if !re(r"^(utf|string|undef)", "").is_match(&format) && re(r"\)$", "").is_match(&val_ptr.deref()) {
+    } else if !re(r"^(utf|string|undef)", "").is_match(&format) && {
+        pl::at(903);
+        re(r"\)$", "").is_match(&pl::sderef(&val_ptr)?)
+    } {
         return ret(s("Units not supported"));
     } else {
-        if format.eq_str("string") && !et.get("OPTIONS").get("Charset").eq_str("UTF8") && re(r"[\x80-\xff]", "").is_match(&val_ptr.deref()) {
+        if format.eq_str("string") && !et.get("OPTIONS").get("Charset").eq_str("UTF8") && {
+            pl::at(906);
+            re(r"[\x80-\xff]", "").is_match(&pl::sderef(&val_ptr)?)
+        } {
             // convert from Charset to UTF-8
             let v = pl::method(it, &et, "Encode", vec![val_ptr.deref(), s("UTF8")])?;
             pl::set_deref(&val_ptr, v)?;

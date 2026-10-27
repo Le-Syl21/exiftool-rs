@@ -6,6 +6,16 @@ use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
 
+/// `$raf->METHOD(...)` on an undefined `$raf` dies as perl does, at the
+/// statement's location (the Read helpers run the call as an eval string,
+/// which has a location of its own).
+fn check_invocant(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 /// `\$buff` of a `my` variable kept in a cell.
 fn rf(c: &Cell) -> Value {
     Value::ScalarRef(c.clone())
@@ -25,6 +35,8 @@ pub fn process_mrc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut tag_table_ptr;
 
     // verify this is a valid MRC file
+    pl::at(255);
+    check_invocant(&raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(1024))?, &n(1024)) {
         return ret(n(0));
     }

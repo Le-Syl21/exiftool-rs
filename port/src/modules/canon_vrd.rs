@@ -8,6 +8,16 @@ use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::{ops, Value};
 use crate::pl::{self, arg, cap, n, re, ret};
 
+/// `$raf->METHOD(...)` on an undefined `$raf` dies as perl does, at the
+/// statement's location (the Read helpers run the call as an eval string,
+/// which has a location of its own).
+fn check_invocant(raf: &Value, method: &str) -> ER<()> {
+    if raf.is_undef() {
+        return crate::interp::eval::die(format!("Can't call method \"{method}\" on an undefined value"));
+    }
+    Ok(())
+}
+
 const MODULE: &str = "Image::ExifTool::CanonVRD";
 
 /// `Image::ExifTool::NAME(ARGS)` (the functions CanonVRD.pm imports).
@@ -209,7 +219,8 @@ pub fn process_edit_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
 
     if outfile.truthy() {
         // make a copy for editing in place
-        let buff = substr(it, &data_pt.deref(), &pos, Some(&dir_len))?;
+        pl::at(1547);
+        let buff = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&dir_len))?;
         data_pt = pl::sref(buff);
         dir_info.set("DataPt", data_pt.clone());
         data_pos = pl::add(&data_pos, &pos);
@@ -300,6 +311,7 @@ pub fn process_edit_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                         let new_val = pl::method(it, &et_, "WriteDirectory", vec![subdir_info.clone(), sub_table])?;
                         if new_val.truthy() {
                             let size_diff = pl::sub(&pl::length(&new_val), &sub_len);
+                            pl::at(1620);
                             substr_set(&data_pt, &pl::add(&pos, &sub_start), &sub_len, &new_val)?;
                             if size_diff.truthy() {
                                 sub_len = pl::length(&new_val);
@@ -357,7 +369,8 @@ pub fn process_ihl(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
     et(it, "SetByteOrder", vec![pl::s("II")])?; // (make up your mind, Canon!)
     while pl::le(&pl::add(&pos, &n(48)), &dir_end) {
-        let hdr = substr(it, &data_pt.deref(), &pos, Some(&n(48)))?;
+        pl::at(1671);
+        let hdr = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&n(48)))?;
         if !re(r"^IHL Created Optional Item Data\0\0", "").is_match(&hdr) {
             pl::method(it, &et_, "Warn", vec![pl::s("Possibly corrupted VRD IHL data")])?;
             break;
@@ -467,10 +480,17 @@ pub fn process_dr4(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         let ds = dir_info.get("DirStart");
         pos = if ds.truthy() { ds } else { n(0) };
         let dl = dir_info.get("DirLen");
-        dir_len = if dl.truthy() { dl } else { pl::sub(&pl::length(&data_pt.deref()), &pos) };
+        dir_len = if dl.truthy() {
+            dl
+        } else {
+            pl::at(1773);
+            pl::sub(&pl::length(&pl::sderef(&data_pt)?), &pos)
+        };
     } else {
         // load DR4 file into memory
         let buff = cell(Value::Undef);
+        pl::at(1777);
+        check_invocant(&raf, "Read")?;
         let ok = pl::num_eq(&raf_read_cell(it, &raf, &buff, n(8))?, &n(8)) && re(r"^IIII[\x04|\x05]\0\x04\0", "").is_match(&val(&buff));
         if !ok {
             return ret(n(0));
@@ -498,7 +518,8 @@ pub fn process_dr4(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
     if (et_.get("TAGS_FROM_FILE").truthy() && !et_.path(&["EXCL_TAG_LOOKUP", "canondr4"]).truthy()) || et_.path(&["REQ_TAG_LOOKUP", "canondr4"]).truthy() {
         // extract CanonDR4 block if copying tags, or if requested
-        let blk = substr(it, &data_pt.deref(), &pos, Some(&dir_len))?;
+        pl::at(1794);
+        let blk = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&dir_len))?;
         pl::method(it, &et_, "FoundTag", vec![pl::s("CanonDR4"), blk])?;
     }
 
@@ -506,7 +527,8 @@ pub fn process_dr4(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if pl::lt(&dir_len, &n(32)) {
         err = true;
     } else {
-        let bo = substr(it, &data_pt.deref(), &pos, Some(&n(2)))?;
+        pl::at(1801);
+        let bo = substr(it, &pl::sderef(&data_pt)?, &pos, Some(&n(2)))?;
         if !et(it, "SetByteOrder", vec![bo])?.truthy() {
             err = true;
         }
@@ -520,6 +542,7 @@ pub fn process_dr4(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         if outfile.truthy() {
             let hdr = pl::method(it, &et_, "WriteDirectory", vec![hdr_info, hdr_table])?;
             if hdr.truthy() && pl::num_eq(&pl::length(&hdr), &n(32)) {
+                pl::at(1812);
                 substr_set(&data_pt, &pos, &n(32), &hdr)?;
             }
         } else {
@@ -588,6 +611,7 @@ pub fn process_dr4(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                     let save_changed = et_.get("CHANGED");
                     let dat = pl::method(it, &et_, "WriteDirectory", vec![subdir_info, sub_table_ptr])?;
                     if !dat.is_undef() && pl::num_eq(&pl::length(&dat), &len) {
+                        pl::at(1865);
                         substr_set(&data_pt, &off, &len, &dat)?;
                     } else {
                         et_.set("CHANGED", save_changed); // didn't change anything after all
@@ -615,6 +639,7 @@ pub fn process_dr4(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                             let new_val = pl::method(it, &et_, "GetNewValue", vec![tag_info.clone(), rf(&nv_hash)])?;
                             if pl::method(it, &et_, "IsOverwriting", vec![val(&nv_hash), v.clone()])?.truthy() && !new_val.is_undef() {
                                 let fs = et(it, "FormatSize", vec![format.clone()])?;
+                                pl::at(1884);
                                 let count = pl::int(&pl::div(&len, &fs)?);
                                 let rtn_val = et(it, "WriteValue", vec![new_val.clone(), format.clone(), count, data_pt.clone(), off.clone()])?;
                                 if !rtn_val.is_undef() {
@@ -1066,9 +1091,11 @@ pub fn process_canon_vrd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                     if pl::length(&dat).to_i64() != 0 || !re(r"^(CRW|VRD)$", "").is_match(&et_.get("FILE_TYPE")) {
                         // replace with new block (updating the block length word)
                         let new = pl::concat(&et(it, "Set32u", vec![pl::length(&dat)])?, &dat);
+                        pl::at(2217);
                         substr_set(&data_pt, &pl::sub(&pos, &n(4)), &pl::add(&block_len, &n(4)), &new)?;
                     } else {
                         // remove block totally (CRW/VRD files only)
+                        pl::at(2220);
                         substr_set(&data_pt, &pl::sub(&pos, &n(8)), &pl::add(&block_len, &n(8)), &pl::s(""))?;
                     }
                     // make necessary adjustments if block changes length
@@ -1103,6 +1130,7 @@ pub fn process_canon_vrd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                 let a = et(it, "Set32u", vec![n(0xffff00f6)])?;
                 let b = et(it, "Set32u", vec![pl::length(&dat)])?;
                 let new = pl::concat(&pl::concat(&a, &b), &dat);
+                pl::at(2247);
                 substr_set(&data_pt, &n(-0x40), &n(0), &new)?;
                 dir_len = pl::length(&data_pt.deref());
                 // update the new VRD length in the header/footer

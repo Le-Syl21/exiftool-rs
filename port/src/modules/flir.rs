@@ -100,7 +100,8 @@ pub fn process_flir_text(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
 
     pl::method(it, &et_, "VerboseDir", vec![pl::s("FLIR Text")])?;
 
-    let mut dat = substr(it, &data_pt.deref(), &pl::add(&dir_start, &n(12)), Some(&pl::sub(&dir_len, &n(12))))?;
+    pl::at(1380);
+    let mut dat = substr(it, &pl::sderef(&data_pt)?, &pl::add(&dir_start, &n(12)), Some(&pl::sub(&dir_len, &n(12))))?;
     re(r"\0.*", "s").subst(&mut dat, false, |_| Vec::new()); // truncate at null
 
     // the parameter text contains an additional header entry...
@@ -408,6 +409,7 @@ pub fn process_fpf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let mut buff = Value::Undef;
 
+    pl::at(1605);
     if !(pl::num_eq(&raf_read(it, &raf, &mut buff, n(892))?, &n(892)) && re(r"^FPF Public Image Format\0", "").is_match(&buff)) {
         return ret(n(0));
     }

@@ -112,7 +112,8 @@ pub fn crypt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                 new_salt = pl::add(&new_salt, &arg(&av, 0));
             }
         }
-        let idx = pl::modulo(&pl::sub(&pl::add(&salt, &i), &start), &n(key.len() as i64))?;
+        pl::at(1596);
+        let idx = pl::modulo(&pl::sub(&pl::add(&salt, &i), &start), &n(pl::aderef(&key)?.len() as i64))?;
         let k = key.at(idx.to_i64());
         let ii = i.to_i64() as usize;
         av[ii] = pl::add(&av[ii], &pl::mul(&sign, &k));
@@ -141,7 +142,8 @@ pub fn process_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let end = pl::add(&pos, &len);
     pl::method(it, &et, "VerboseDir", vec![s("INFO"), Value::Undef, len.clone()])?;
     while pl::le(&pl::add(&pos, &n(8)), &end) {
-        let tag = pl::substr(&data_pt.deref(), pos.to_i64(), Some(4));
+        pl::at(1620);
+        let tag = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(4));
         let val = get32u(it, &data_pt, pl::add(&pos, &n(4)))?;
         if !tag_table_ptr.get(tag.to_bytes()).truthy() {
             let mut name = pl::concat(&s("Samsung_INFO_"), &tag);
@@ -171,7 +173,10 @@ pub fn process_samsung_meta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     let pos = || pos_cell.borrow().clone();
     let set_pos = |v: Value| *pos_cell.borrow_mut() = v;
     let end = pl::add(&dir_info.get("DirLen"), &pos());
-    if !(pl::le(&pl::add(&pos(), &n(8)), &end) && pl::str_eq(&pl::substr(&data_pt.deref(), pos().to_i64(), Some(4)), "DOFS")) {
+    if !(pl::le(&pl::add(&pos(), &n(8)), &end) && {
+        pl::at(1644);
+        pl::str_eq(&pl::substr(&pl::sderef(&data_pt)?, pos().to_i64(), Some(4)), "DOFS")
+    }) {
         let msg = pl::concat(&pl::concat(&s("Unrecognized "), &dir_name), &s(" data"));
         pl::method(it, &et, "Warn", vec![msg, n(1)])?;
         return ret(n(0));
@@ -235,7 +240,8 @@ pub fn process_samsung_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         return ret(n(0));
     }
     let data_pt = dir_info.get("DataPt");
-    let mut buff = pl::substr(&data_pt.deref(), pos.to_i64(), Some(4));
+    pl::at(1691);
+    let mut buff = pl::substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(4));
     // this is not an IFD for many models
     // (the string "Park Byeongchan" is often found here)
     let mut c1 = Value::Undef;
@@ -255,6 +261,7 @@ pub fn process_samsung_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         pl::method(it, &et, "HDump", vec![pt, n(4), s("MakerNotes entries"), msg])?;
         dir_info.set("NoDumpEntryCount", n(1));
     }
+    pl::at(1702);
     substr_assign(&data_pt, pos.to_i64(), 4, &buff)?; // insert bogus 2-byte entry count
     // offset base is at end of IFD
     let shift = pl::add(&pl::add(&pl::add(&dir_info.get("DirStart"), &n(4)), &pl::mul(&num_entries, &n(12))), &n(4));
@@ -264,6 +271,7 @@ pub fn process_samsung_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     dir_info.set("ZeroOffsetOK", n(1)); // disable check for zero offset
     et.delete("NO_UNKNOWN"); // (set for BinaryData, but not for EXIF IFD's)
     let rtn = pl::call(it, "Image::ExifTool::Exif::ProcessExif", vec![et.clone(), dir_info.clone(), tag_table_ptr])?;
+    pl::at(1711);
     substr_assign(&data_pt, pos.to_i64() + 2, 1, &s("\0"))?; // remove bogus count
     ret(rtn)
 }

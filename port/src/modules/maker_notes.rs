@@ -642,7 +642,8 @@ fn locate_ifd_rs(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<Value> {
 //
 // look for a standard TIFF header (Nikon uses it, others may as well),
 //
-            if pl::call(it, "Image::ExifTool::SetByteOrder", vec![substr(&data_pt.deref(), pos.to_i64(), Some(2))])?.truthy()
+            pl::at(1578);
+            if pl::call(it, "Image::ExifTool::SetByteOrder", vec![substr(&pl::sderef(&data_pt)?, pos.to_i64(), Some(2))])?.truthy()
                 && pl::num_eq(&get16u(it, &data_pt, pl::add(&pos, &n(2)))?, &n(0x2a))
             {
                 ifd_offset_pos = n(4);
@@ -796,7 +797,8 @@ pub fn process_canon(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
         let data_pos = dir_info.get("DataPos");
         let dir_start = or(dir_info.get("DirStart"), n(0));
         let footer_pos = pl::sub(&pl::add(&dir_start, &dir_info.get("DirLen")), &n(8));
-        let footer = substr(&dir_info.get("DataPt").deref(), footer_pos.to_i64(), Some(8));
+        pl::at(1706);
+        let footer = substr(&pl::sderef(&dir_info.get("DataPt"))?, footer_pos.to_i64(), Some(8));
         if re(r"^(II\x2a\0|MM\0\x2a)", "").is_match(&footer) && substr(&footer, 0, Some(2)).to_bytes() == get_byte_order(it)?.to_bytes() {
             let old_offset = get32u(it, &new_ref(footer.clone()), n(4))?;
             let new_offset = pl::add(&dir_start, &data_pos);
@@ -864,7 +866,10 @@ pub fn process_unknown_or_preview(it: &mut Interp, a: Vec<Value>, _w: Want) -> E
     let dir_start = dir_info.get("DirStart");
     let dir_len = dir_info.get("DirLen");
     // check to see if this is a preview image
-    if pl::gt(&dir_len, &n(6)) && substr(&data_pt.deref(), dir_start.to_i64(), Some(3)).to_bytes()[..] == b"\xff\xd8\xff"[..] {
+    if pl::gt(&dir_len, &n(6)) && {
+        pl::at(1769);
+        substr(&pl::sderef(&data_pt)?, dir_start.to_i64(), Some(3)).to_bytes()[..] == b"\xff\xd8\xff"[..]
+    } {
         pl::method(it, &et, "VerboseDir", vec![pl::s("PreviewImage")])?;
         if et.get("HTML_DUMP").truthy() {
             let pos = pl::add(&pl::add(&dir_info.get("DataPos"), &dir_info.get("Base")), &dir_start);
@@ -889,7 +894,10 @@ pub fn write_unknown_or_preview(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<
     let dir_len = dir_info.get("DirLen");
     let new_val;
     // check to see if this is a preview image
-    if pl::gt(&dir_len, &n(6)) && substr(&data_pt.deref(), dir_start.to_i64(), Some(3)).to_bytes()[..] == b"\xff\xd8\xff"[..] {
+    if pl::gt(&dir_len, &n(6)) && {
+        pl::at(1793);
+        substr(&pl::sderef(&data_pt)?, dir_start.to_i64(), Some(3)).to_bytes()[..] == b"\xff\xd8\xff"[..]
+    } {
         let extra = match it.global(b'%', "Image::ExifTool::Extra") {
             Binding::Hash(h) => Value::HashRef(h),
             _ => unreachable!(),

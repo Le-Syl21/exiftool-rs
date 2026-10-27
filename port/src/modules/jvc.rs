@@ -21,7 +21,8 @@ pub fn process_jvc_text(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let dir_len = if dir_len.truthy() { dir_len } else { pl::sub(&data_len, &dir_start) };
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
 
-    let data = substr(it, &data_pt.deref(), &dir_start, Some(&dir_len))?;
+    pl::at(73);
+    let data = substr(it, &pl::sderef(&data_pt)?, &dir_start, Some(&dir_len))?;
     // validate text maker notes
     if !re(r"^VER:", "").is_match(&data) {
         pl::method(it, &et, "Warn", vec![pl::s("Bad JVC text maker notes")])?;
