@@ -23,6 +23,17 @@ const MY: &str = "Image::ExifTool::<my:Writer.pl>::";
 
 // ---- local helpers (Perl operations the shared helpers do not cover) ----
 
+/// `ref $v` as perl gives it (the class of a blessed reference).
+trait RefOf {
+    fn rtype(&self) -> String;
+}
+
+impl RefOf for Value {
+    fn rtype(&self) -> String {
+        pl::ref_of(self)
+    }
+}
+
 fn n(i: i64) -> Value {
     Value::Int(i)
 }
@@ -687,7 +698,7 @@ pub fn sanitize(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (self_, val_pt) = (arg(&a, 0), arg(&a, 1));
     // de-reference SCALAR references
     let cur = val_pt.deref();
-    if cur.ref_type() == "SCALAR" {
+    if cur.rtype() == "SCALAR" {
         pl::set_deref(&val_pt, cur.deref())?;
     }
     // make sure the Perl UTF-8 flag is OFF for the value if perl 5.6 or greater
@@ -736,18 +747,18 @@ pub fn sanitize(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 pub fn push_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     pl::local_topic(it, |it| {
         let (self_, val, list, missing) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
-        if val.ref_type() == "ARRAY" && val.at(0).ref_type() != "HASH" {
+        if val.rtype() == "ARRAY" && val.at(0).rtype() != "HASH" {
             for v in val.items() {
                 push_value(it, vec![self_.clone(), v, list.clone(), missing.clone()], Want::Void)?;
             }
-        } else if val.ref_type() == "SCALAR" {
+        } else if val.rtype() == "SCALAR" {
             let d = val.deref();
             if opt(&self_, "Binary").truthy() || re(r"^Binary data", "").is_match(&d) {
                 list.push(d);
             } else {
                 list.push(s(&format!("Binary data {} bytes", length_of(&d))));
             }
-        } else if val.ref_type() == "HASH" || val.ref_type() == "ARRAY" {
+        } else if val.rtype() == "HASH" || val.rtype() == "ARRAY" {
             crate::runtime::require(it, "Image/ExifTool/XMPStruct.pl")?;
             let v = pl::call(it, "Image::ExifTool::XMP::SerializeStruct", vec![self_.clone(), val])?;
             list.push(v);
@@ -1170,7 +1181,7 @@ pub fn get_new_value_hash(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
             // make copy of Value and DelValue lists
             for key in keys(&copy) {
                 let v = copy.get(key.to_bytes());
-                if v.ref_type() != "ARRAY" {
+                if v.rtype() != "ARRAY" {
                     continue;
                 }
                 copy.set(key.to_bytes(), Value::new_array(v.items()));
@@ -1722,7 +1733,7 @@ pub fn get_new_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
         let self_ = arg(&a, 0);
         let tag = arg(&a, 1);
         let mut nv_hash = Value::Undef;
-        if (tag.ref_type() == "HASH" && tag.get("IsNVH").truthy()) || tag.is_undef() {
+        if (tag.rtype() == "HASH" && tag.get("IsNVH").truthy()) || tag.is_undef() {
             nv_hash = tag.clone();
         } else {
             let new_value_hash_pt = arg(&a, 2);
@@ -1838,7 +1849,7 @@ pub fn get_new_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
                         break;
                     }
                     // do inverse raw conversion
-                    if conv.ref_type() == "CODE" {
+                    if conv.rtype() == "CODE" {
                         val = pl::call_code(it, &conv, vec![val.clone(), self_.clone()], Want::Scalar)?.pop().unwrap_or_default();
                     } else {
                         //### eval RawConvInv ($self, $val, $tagInfo)
@@ -1913,7 +1924,7 @@ pub fn is_overwriting(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         let h = set_warning_ref(it);
         val = pl::local_sig_warn(it, h, |it| {
             it.set_scalar(EVAL_WARNING, Value::Undef);
-            if conv.ref_type() == "CODE" {
+            if conv.rtype() == "CODE" {
                 Ok(pl::call_code(it, &conv, vec![val.clone(), self_.clone()], Want::Scalar)?.pop().unwrap_or_default())
             } else {
                 let (mut priority, mut tag) = (Value::Undef, tag_info.get("Name"));
@@ -1954,7 +1965,7 @@ pub fn is_overwriting(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
                     let h = set_warning_ref(it);
                     let bad = pl::local_sig_warn(it, h, |it| {
                         it.set_scalar(EVAL_WARNING, Value::Undef);
-                        if conv.ref_type() == "CODE" {
+                        if conv.rtype() == "CODE" {
                             val = pl::call_code(it, &conv, vec![val.clone(), self_.clone()], Want::Scalar)?.pop().unwrap_or_default();
                         } else if !conv.is_ref() {
                             //### eval ValueConv ($val, $self)
@@ -2101,7 +2112,7 @@ pub fn conv_inv(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
                 let table = tag_info.get("Table");
                 if table.truthy() && table.get("CHECK_PROC").truthy() && !tag_info.get("RawConvInv").truthy() {
                     let check_proc = table.get("CHECK_PROC");
-                    if val.ref_type() == "ARRAY" {
+                    if val.rtype() == "ARRAY" {
                         // loop through array values
                         for i in 0..val.len() {
                             let vr = pl::sref(val.at(i as i64));
@@ -2141,20 +2152,20 @@ pub fn conv_inv(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
         let mut val_list: Vec<Value> = Vec::new();
         let mut index = 0usize;
         let (mut conv_list, mut conv_inv_list) = (Value::Undef, Value::Undef);
-        if val.ref_type() == "ARRAY" {
+        if val.rtype() == "ARRAY" {
             // handle ValueConv of ListSplit and AutoSplit values
             val_list = val.items();
             val = val_list.first().cloned().unwrap_or_default();
-        } else if conv.ref_type() == "ARRAY" || conv_inv_v.ref_type() == "ARRAY" {
+        } else if conv.rtype() == "ARRAY" || conv_inv_v.rtype() == "ARRAY" {
             // handle conversion lists
             let sep = my_hash(it, "listSep").get(&tk);
             val_list = pl::split(&pl::re_dyn(&sep.to_bytes(), "")?, &val, 0);
             val = val_list.first().cloned().unwrap_or_default();
-            if conv.ref_type() == "ARRAY" {
+            if conv.rtype() == "ARRAY" {
                 conv_list = conv.clone();
                 conv = conv.at(0);
             }
-            if conv_inv_v.ref_type() == "ARRAY" {
+            if conv_inv_v.rtype() == "ARRAY" {
                 conv_inv_list = conv_inv_v.clone();
                 conv_inv_v = conv_inv_v.at(0);
             }
@@ -2166,7 +2177,7 @@ pub fn conv_inv(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
                 let h = set_warning_ref(it);
                 let stop = pl::local_sig_warn(it, h, |it| {
                     it.set_scalar(EVAL_WARNING, Value::Undef);
-                    if conv_inv_v.ref_type() == "CODE" {
+                    if conv_inv_v.rtype() == "CODE" {
                         val = pl::call_code(it, &conv_inv_v, vec![val.clone(), self_.clone()], Want::Scalar)?.pop().unwrap_or_default();
                     } else {
                         //### eval PrintConvInv/ValueConvInv ($val, $self, $wantGroup)
@@ -2207,14 +2218,14 @@ pub fn conv_inv(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
                     break 'conv;
                 }
             } else if conv.truthy() {
-                if conv.ref_type() == "HASH" && (!tag_info.exists(&tik) || conv_inv_list.truthy()) {
+                if conv.rtype() == "HASH" && (!tag_info.exists(&tik) || conv_inv_list.truthy()) {
                     let mut multi = Value::Undef;
                     // insert alternate language print conversions if required
                     let cur_lang = self_.get("CUR_LANG");
                     let mut lc_;
                     if cur_lang.truthy() && pl::str_eq(&type_, "PrintConv") && {
                         lc_ = viv(&self_, "CUR_LANG").get(tag.to_bytes());
-                        lc_.ref_type() == "HASH"
+                        lc_.rtype() == "HASH"
                     } && {
                         lc_ = lc_.get("PrintConv");
                         lc_.truthy()
@@ -2332,7 +2343,7 @@ pub fn init_write_dirs(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
     self_.set("ADD_DIRS", add_dirs.clone());
     let mut file_dirs = my_hash(it, "dirMap").get(file_type.to_bytes());
     if !file_dirs.truthy() {
-        if file_type.ref_type() != "HASH" {
+        if file_type.rtype() != "HASH" {
             return pl::ret_nothing(want);
         }
         file_dirs = file_type.clone();
@@ -3558,7 +3569,7 @@ fn insert_tag_values_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                         it.set_scalar(EVAL_WARNING, e);
                     }
                     let t = it.get_scalar("main::_");
-                    new_val = if t.ref_type() == "ARRAY" { Value::bytes(t.items().iter().map(|x| x.to_bytes().to_vec()).collect::<Vec<_>>().join(&sep[..])) } else { t };
+                    new_val = if t.rtype() == "ARRAY" { Value::bytes(t.items().iter().map(|x| x.to_bytes().to_vec()).collect::<Vec<_>>().join(&sep[..])) } else { t };
                 }
                 if it.get_scalar(EVAL_WARNING).truthy() {
                     let g3 = if doc_grp.truthy() && !re(r"\b(main|doc\d+):", "i").is_match(&var) { pl::concat(&doc_grp, &s(":")) } else { s("") };
@@ -3598,7 +3609,7 @@ fn insert_tag_values_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 }
             }
         }
-        if opt_.ref_type() == "HASH" {
+        if opt_.rtype() == "HASH" {
             if type_.truthy() {
                 var = pl::concat(&var, &s("#"));
             }
@@ -3681,7 +3692,7 @@ fn set_new_values_from_file_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value
     // get initial SetNewValuesFromFile options
     let opts = Value::new_hash();
     opts.set("Replace", n(1)); // replace existing list items by default
-    while set_tags.first().is_some_and(|t| t.ref_type() == "HASH") {
+    while set_tags.first().is_some_and(|t| t.rtype() == "HASH") {
         let h = set_tags.remove(0);
         it.set_scalar("main::_", h.clone());
         for key in keys(&h) {
@@ -3868,7 +3879,7 @@ fn set_new_values_from_file_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value
     let alt_files = Value::new_hash();
     let mut assign = 0i64;
     for t in &set_tags {
-        if t.ref_type() == "HASH" {
+        if t.rtype() == "HASH" {
             // update current options
             for key in keys(t) {
                 opts.set(key.to_bytes(), t.get(key.to_bytes()));
@@ -4330,7 +4341,7 @@ fn set_new_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
     }
     // allow value to be scalar or list reference
     if value.is_ref() {
-        if value.ref_type() == "ARRAY" {
+        if value.rtype() == "ARRAY" {
             // value is an ARRAY so it may have more than one entry
             // - set values both separately and as a combined string if there are more than one
             if value.len() > 1 {
@@ -4364,11 +4375,11 @@ fn set_new_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
                 options.set("ListOnly", n(0));
             } else {
                 value = value.at(0);
-                if value.ref_type() == "SCALAR" {
+                if value.rtype() == "SCALAR" {
                     value = value.deref(); // (handle single scalar ref in a list)
                 }
             }
-        } else if value.ref_type() == "SCALAR" {
+        } else if value.rtype() == "SCALAR" {
             value = value.deref();
         }
     }
@@ -5185,7 +5196,7 @@ fn set_new_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
                     no_conv = true; // no conversions if shifting tag
                 } else if length_of(&val) == 0 && options.get("DelValue").truthy() {
                     no_conv = true; // no conversions for deleting empty value
-                } else if val.ref_type() == "HASH" && !tag_info.get("Struct").truthy() {
+                } else if val.rtype() == "HASH" && !tag_info.get("Struct").truthy() {
                     err = cat(&[&s("Can't write a structure to "), &wt]);
                     if gt(&verbose, 2) {
                         print_out(it, &out, pl::concat(&err, &s("\n")))?;
@@ -5342,7 +5353,7 @@ fn set_new_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
                             nv_hash.set("IsCreating", n(0));
                         }
                         // add delete value to list
-                        let vals = if val.ref_type() == "ARRAY" { val.items() } else { vec![val.clone()] };
+                        let vals = if val.rtype() == "ARRAY" { val.items() } else { vec![val.clone()] };
                         for v in &vals {
                             nv_hash.get("DelValue").push(v.clone());
                         }
@@ -5350,7 +5361,7 @@ fn set_new_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
                             let verb = if permanent.truthy() { "Replacing" } else { "Deleting" };
                             let from_list = if tag_info.get("List").truthy() { " from list" } else { "" };
                             for mut v in vals {
-                                if v.ref_type() == "HASH" {
+                                if v.rtype() == "HASH" {
                                     crate::runtime::require(it, "Image/ExifTool/XMPStruct.pl")?;
                                     v = pl::call(it, "Image::ExifTool::XMP::SerializeStruct", vec![self_.clone(), v])?;
                                 }
@@ -5428,7 +5439,7 @@ fn set_new_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
                         nv_hash.set("Value", Value::new_array(Vec::new()));
                     }
                     let nvv = nv_hash.get("Value");
-                    let vals = if val.ref_type() == "ARRAY" { val.items() } else { vec![val.clone()] };
+                    let vals = if val.rtype() == "ARRAY" { val.items() } else { vec![val.clone()] };
                     if !tag_info.get("List").truthy() {
                         // not a List tag -- overwrite existing value
                         nvv.set_at(0, val.clone());
@@ -5437,7 +5448,9 @@ fn set_new_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
                         // to this list, so the new values should come before these
                         if let Value::ArrayRef(arr) = &nvv {
                             let mut arr = arr.borrow_mut();
-                            let pos = (arr.len() as i64 - nv_hash.get("AddBefore").to_i64()).max(0) as usize;
+                            // (splice offset -AddBefore: from the end, but -0 is the start)
+                            let off = pl::neg(&nv_hash.get("AddBefore")).to_i64();
+                            let pos = if off < 0 { (arr.len() as i64 + off).max(0) as usize } else { (off as usize).min(arr.len()) };
                             for (j, v) in vals.into_iter().enumerate() {
                                 arr.insert(pos + j, v);
                             }
@@ -5689,12 +5702,12 @@ fn write_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
     let set_mod_date = !get_new_value_nvh(it, &self_, s("FileModifyDate"), &mut nv_hash)?.is_undef();
     let set_create_date = !get_new_value_nvh(it, &self_, s("FileCreateDate"), &mut nv_hash2)?.is_undef();
     let (mut _a_time, mut _m_time, mut c_time) = (Value::Undef, Value::Undef, Value::Undef);
-    if set_mod_date && pl::lt(&overwriting(it, &self_, &nv_hash, None)?, &n(0)) && !infile.is_undef() && infile.ref_type() != "SCALAR" {
+    if set_mod_date && pl::lt(&overwriting(it, &self_, &nv_hash, None)?, &n(0)) && !infile.is_undef() && infile.rtype() != "SCALAR" {
         let t = pl::method_list(it, &self_, "GetFileTime", vec![infile.clone()])?;
         (_a_time, _m_time, c_time) = (arg(&t, 0), arg(&t, 1), arg(&t, 2));
         original_time = _m_time.clone();
     }
-    if set_create_date && pl::lt(&overwriting(it, &self_, &nv_hash2, None)?, &n(0)) && !infile.is_undef() && infile.ref_type() != "SCALAR" {
+    if set_create_date && pl::lt(&overwriting(it, &self_, &nv_hash2, None)?, &n(0)) && !infile.is_undef() && infile.rtype() != "SCALAR" {
         if c_time.is_undef() {
             let t = pl::method_list(it, &self_, "GetFileTime", vec![infile.clone()])?;
             (_a_time, _m_time, c_time) = (arg(&t, 0), arg(&t, 1), arg(&t, 2));
@@ -6007,7 +6020,7 @@ fn write_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 } else if writable_type.exists(type_.to_bytes()) {
                     let wt = writable_type.get(type_.to_bytes());
                     let (module, func);
-                    if wt.ref_type() == "ARRAY" {
+                    if wt.rtype() == "ARRAY" {
                         let m0 = wt.at(0);
                         module = if m0.truthy() { m0 } else { type_.clone() };
                         func = wt.at(1);
