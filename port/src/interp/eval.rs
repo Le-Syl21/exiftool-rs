@@ -1958,7 +1958,11 @@ impl Interp {
                         if p < 0 {
                             p += len;
                         }
-                        self.pos.insert(key, (p.clamp(0, len) as usize, value_tag(&cur)));
+                        let p = p.clamp(0, len);
+                        self.pos.insert(key, (p as usize, value_tag(&cur)));
+                        // The assignment's value is the position set
+                        // (`$pos = pos($$b) = 0` gives 0).
+                        return Ok(Lv::Scalar(Rc::new(RefCell::new(Value::Int(p)))));
                     }
                     return Ok(lv);
                 }
