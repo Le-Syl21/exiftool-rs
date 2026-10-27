@@ -3617,7 +3617,7 @@ fn do_auto_load_v(it: &mut Interp, autoload: &Value, args: Vec<Value>, want: Wan
         let caller = it.package.to_string();
         let _ = caller;
         // reproduce Perl's standard 'undefined subroutine' message:
-        return Err(Flow::Die(Value::from(format!("Undefined subroutine {name} called at (eval) line 1\n"))));
+        return Err(Flow::Die(Value::from(format!("Undefined subroutine {name} called{}", crate::interp::eval::location_suffix()))));
     }
     // call the function (with @_ aliased to our arguments)
     let (r, _, after) = perl_op(it, "no strict 'refs'; &$f(@a)", &[("f", autoload.clone())], Some(args), want)?;

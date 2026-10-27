@@ -2781,7 +2781,7 @@ pub fn ligo_gps_autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<V
     if it.sub(&name).is_none() {
         // (caller(0) as the interpreter gives it)
         // reproduce Perl's standard 'undefined subroutine' message:
-        return crate::interp::eval::die(format!("Undefined subroutine {name} called at (eval) line 1\n"));
+        return crate::interp::eval::die(format!("Undefined subroutine {name} called{}", crate::interp::eval::location_suffix()));
     }
     call_aliased(it, &name, a.clone(), &a, 0, want) // call the function
 }

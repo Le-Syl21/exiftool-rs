@@ -7,6 +7,7 @@
 
 pub mod pld;
 pub mod prototypes;
+pub mod sub_index;
 
 use std::rc::Rc;
 

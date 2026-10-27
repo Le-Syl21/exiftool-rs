@@ -617,3 +617,58 @@ pub fn print_to(it: &mut Interp, fh: Option<&Value>, items: &[Value]) -> ER<bool
         Err(e) => Err(crate::interp::Flow::Die(e)),
     }
 }
+
+/// `pl::at(N)`: the native is now at line N of its Perl sub (for the
+/// location of die/warn messages, "at FILE line N.", as perl's).
+pub fn at(line: u32) {
+    crate::interp::eval::set_line(line);
+}
+
+/// The text perl puts in its messages for a string used as a reference
+/// under `strict refs` (ExifTool's modules use strict).
+fn symref_die<T>(s: &Value, what: &str) -> ER<T> {
+    let b = s.to_bytes();
+    let mut m = String::from("Can't use string (\"");
+    m.push_str(&String::from_utf8_lossy(&b[..b.len().min(32)]));
+    m.push('"');
+    if b.len() > 32 {
+        m.push_str("...");
+    }
+    m.push_str(&format!(") as {what} ref while \"strict refs\" in use"));
+    crate::interp::eval::die(m)
+}
+
+/// `$$r` read as perl does under strict refs: undef dies "Can't use an
+/// undefined value as a SCALAR reference", a string dies with the strict
+/// refs message, another kind of reference "Not a SCALAR reference".
+/// (Not for `defined $$r`, nor for an element `$$r{k}` / `$$r[i]`, which
+/// autovivify instead: see docs/port/PORTING.md.)
+pub fn sderef(r: &Value) -> ER<Value> {
+    match r {
+        Value::ScalarRef(_) | Value::LvRef(_) => Ok(r.deref()),
+        Value::Undef => crate::interp::eval::die("Can't use an undefined value as a SCALAR reference"),
+        v if !v.is_ref() => symref_die(v, "a SCALAR"),
+        _ => crate::interp::eval::die("Not a SCALAR reference"),
+    }
+}
+
+/// `@$r` read as perl does under strict refs (see sderef): the elements.
+pub fn aderef(r: &Value) -> ER<Vec<Value>> {
+    match r {
+        Value::ArrayRef(a) => Ok(a.borrow().clone()),
+        Value::Undef => crate::interp::eval::die("Can't use an undefined value as an ARRAY reference"),
+        v if !v.is_ref() => symref_die(v, "an ARRAY"),
+        _ => crate::interp::eval::die("Not an ARRAY reference"),
+    }
+}
+
+/// `%$r` read as perl does under strict refs (see sderef): the hash
+/// reference itself, checked.
+pub fn hderef(r: &Value) -> ER<Value> {
+    match r {
+        Value::HashRef(_) => Ok(r.clone()),
+        Value::Undef => crate::interp::eval::die("Can't use an undefined value as a HASH reference"),
+        v if !v.is_ref() => symref_die(v, "a HASH"),
+        _ => crate::interp::eval::die("Not a HASH reference"),
+    }
+}

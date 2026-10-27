@@ -82,6 +82,37 @@ them; they are now shared):
 | `eval $string` at an eval site | `pl::eval_site_in(it, code, pkg, Some(runtime::file_scope(it, MODULE)), &[("val", v), ("self", et), ("@val", arr)], want)` |
 | `print $fh LIST` | `pl::print_to` |
 | `Get16u`, `Get32u`, `ReadValue`, `SetByteOrder`... | already ported: call `crate::modules::exiftool::part2::get16u(...)` etc. directly |
+| `$$r`, `@$r`, `%$r` read under strict refs | `pl::sderef`, `pl::aderef`, `pl::hderef` (see "Faithful errors") |
+| the line of the Perl statement (for message locations) | `pl::at(LINE)` |
+
+## Faithful errors: dereferences and locations
+
+Perl's errors are part of what ExifTool does (an `eval` turns them into
+warnings, or a file stops being read), so a port gives the same ones.
+
+**Dereferencing.** ExifTool's modules `use strict`. Under it, perl:
+- dies on `$$r`, `@$r`, `%$r` (a whole-container or scalar read) when `$r`
+  is undef ("Can't use an undefined value as a SCALAR reference" / "as an
+  ARRAY reference" / "as a HASH reference"), a string (the "strict refs"
+  message), or another kind of reference ("Not an ARRAY reference"):
+  use `pl::sderef(&r)?`, `pl::aderef(&r)?`, `pl::hderef(&r)?`;
+- does **not** die but autovivifies `$r` (when `$r` is a variable or an
+  element) for an element access `$$r{k}`, `$r->[i]`, `exists $$r{k}`,
+  for `keys %$r`, `push @$r, ...`, `foreach (@$r)`, `f(@$r)` (sub
+  arguments are lvalues), and a few more;
+- does not die on `defined $$r`.
+These rules have exceptions: check each case you touch with a one-line
+`perl -Mstrict -e '...'` before porting it. `Value::deref()` and friends
+return undef silently: keep them only where perl does not die.
+
+**Locations.** A native runs at the location of its Perl sub: messages
+that perl ends with " at FILE line N." (a `die`/`warn` without a final
+newline, the strict dereference errors, "Illegal division by zero",
+"Undefined subroutine", a method called on undef...) name the module's
+file and, by default, the line of the `sub`. Before each statement that
+can produce such a message, call `pl::at(LINE)` with the line of that
+statement in the Perl source, so the message names the same line as
+perl's. Statements that cannot die need nothing.
 
 ## Before you start
 

@@ -90,6 +90,11 @@ pub fn location_suffix() -> String {
     format!("{at}{}.\n", fh.unwrap_or_default())
 }
 
+/// `pl::at`: the line of the Perl statement a native is at.
+pub fn set_line(line: u32) {
+    LOCATION.with(|l| l.borrow_mut().1 = line);
+}
+
 fn location() -> (Option<Rc<str>>, u32) {
     LOCATION.with(|l| l.borrow().clone())
 }
@@ -394,6 +399,9 @@ pub struct Interp {
     pub source_name: Option<Rc<str>>,
     /// The file each Perl sub was defined in.
     sub_files: HashMap<usize, Rc<str>>,
+    /// The perl location (file path, line of its `sub`) of each native that
+    /// ports one of ExifTool's subs, by the address of its name.
+    native_locs: HashMap<usize, Option<(Rc<str>, u32)>>,
     /// STDOUT output waiting in perl's 8 KiB buffer (passthrough mode).
     stdout_pending: Vec<u8>,
     /// `END` blocks, run by `run_end_blocks`.
@@ -464,6 +472,7 @@ impl Interp {
             passthrough: false,
             source_name: None,
             sub_files: HashMap::new(),
+            native_locs: HashMap::new(),
             stdout_pending: Vec::new(),
             end_blocks: Vec::new(),
             exit_code: None,
@@ -766,6 +775,26 @@ impl Interp {
         }
     }
 
+    /// Where perl would report a native's code: the file its sub is written
+    /// in (as %INC has it) and the line of the `sub`.
+    fn native_location(&mut self, name: &Rc<str>) -> Option<(Rc<str>, u32)> {
+        let k = name.as_ptr() as usize;
+        if let Some(l) = self.native_locs.get(&k) {
+            return l.clone();
+        }
+        let t = crate::runtime::sub_index::SUB_INDEX;
+        let loc = t.binary_search_by(|(n, _, _)| (*n).cmp(name)).ok().map(|i| {
+            let (_, rel, line) = t[i];
+            let path = match self.global(b'%', "main::INC") {
+                Binding::Hash(h) => h.borrow().get(rel.as_bytes()).map(|v| v.to_text()),
+                _ => None,
+            };
+            (Rc::from(path.unwrap_or_else(|| rel.to_string()).as_str()), line)
+        });
+        self.native_locs.insert(k, loc.clone());
+        loc
+    }
+
     /// Call a code value with arguments.
     pub fn call(&mut self, code: &Rc<Code>, args: Vec<Value>, want: Want) -> ER<Vec<Value>> {
         let aliases = self.pending_aliases.take();
@@ -781,9 +810,13 @@ impl Interp {
                 // Always a frame of its own: set_arg in this native must never
                 // reach the variables of an outer call (no aliases = no-op).
                 self.alias_frames.push(AliasFrame { args: None, aliases: aliases.unwrap_or_default(), originals: Vec::new() });
-                // a native has no perl location of its own
+                // a native that ports one of ExifTool's subs runs at that
+                // sub's location (pl::at moves the line); others (perl's own
+                // modules) keep their caller's, as XS and Carp report it
                 let saved_loc = location();
-                set_location((None, saved_loc.1));
+                if let Some((file, line)) = self.native_location(name) {
+                    set_location((Some(file), line));
+                }
                 let saved_warn = WARNINGS_ON.with(|w| w.replace(false));
                 let r = f(self, args, want).map(|v| fit(v, want));
                 WARNINGS_ON.with(|w| w.set(saved_warn));
