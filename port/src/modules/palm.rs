@@ -7,6 +7,7 @@ use crate::interp::{Interp, Want};
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, ret};
+use crate::modules::quick_time_stream::check_invocant;
 
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
@@ -51,7 +52,8 @@ pub fn process_exth(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             pl::s("UTF8")
         }
     };
-    let dir_len = pl::length(&data_pt.deref());
+    pl::at(256);
+    let dir_len = pl::length(&pl::sderef(&data_pt)?);
 
     pl::method(it, &et, "VerboseDir", vec![pl::s("EXTH"), dir_info.get("NumEntries"), dir_len.clone()])?;
 
@@ -111,6 +113,8 @@ pub fn process_pdb(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let _verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
 
     // verify this is a valid Palm DB file
+    pl::at(293);
+    check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&read(it, &raf, &buff, &n(86))?, &n(86)) {
         return ret(n(0));
     }

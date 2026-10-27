@@ -74,6 +74,32 @@ pub(crate) fn ht_v(it: &mut Interp, et: &Value, tbl: &Value, tag: Value, val: Va
     m(it, et, "HandleTag", a)
 }
 
+/// Dies as perl's `$$r` does under strict refs when `r` is not a SCALAR
+/// reference (pl::sderef without copying the value).
+pub(crate) fn check_sref(r: &Value) -> ER<()> {
+    match r {
+        Value::ScalarRef(_) | Value::LvRef(_) => Ok(()),
+        _ => pl::sderef(r).map(|_| ()),
+    }
+}
+
+/// The error perl gives for `$obj->NAME(...)` on an undefined value or an
+/// unblessed reference, at the native's location, before a call made
+/// through a helper that runs the method in a string eval (whose location
+/// would be "(eval N) line 1"). Other invocants pass.
+pub(crate) fn check_invocant(it: &mut Interp, obj: &Value, name: &str) -> ER<()> {
+    let bad = match obj {
+        Value::Undef => true,
+        Value::HashRef(h) => h.borrow().blessed.is_none(),
+        v => v.is_ref(),
+    };
+    if bad {
+        // (call_method dies on such an invocant before calling anything)
+        it.call_method(obj, name, vec![obj.clone()], Want::Scalar)?;
+    }
+    Ok(())
+}
+
 /// `$raf->Read($buff, $len)`: the count, and `buff` updated.
 pub(crate) fn raf_read(it: &mut Interp, raf: &Value, buff: &mut Value, len: Value) -> ER<Value> {
     let mut a = [buff.clone(), len];
@@ -311,7 +337,8 @@ pub fn save_meta_keys(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 fn save_meta_keys_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(a, 0), arg(a, 1), arg(a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(881);
+    let data = pl::sderef(&data_pt)?;
     let dir_len = len_of(&data);
     if dir_len <= 8 {
         return ret(n(0));
@@ -458,6 +485,7 @@ fn set_gps_dt(it: &mut Interp, et: &Value, tag_tbl: &Value, mut sample_time: Val
             if !(value.get("TimeScale").truthy() && value.get("Duration").truthy()) {
                 return Ok(());
             }
+            pl::at(988);
             sample_time = pl::sub(&sample_time, &pl::div(&value.get("Duration"), &value.get("TimeScale"))?);
             warn_lvl(it, et, s("Approximating GPSDateTime as CreateDate - Duration + SampleTime"), 1)?;
         } else {
@@ -531,7 +559,10 @@ fn new_time(it: &mut Interp, et: &Value, time: &Value, tag_tbl: &Value, tags: &V
         if et.get("LastTime").to_bytes() == time.to_bytes() {
             // combine with the previous NMEA sentence
             et.set("DOC_NUM", et.get("LastDoc"));
-        } else if !tags.is_empty() {
+        } else if {
+            pl::at(1037);
+            pl::hderef(tags)?.len() > 0
+        } {
             // handle existing tags and start a new document
             // (see https://exiftool.org/forum/index.php?msg=75422)
             handle_text(it, et, tag_tbl, tags)?;
@@ -571,6 +602,11 @@ pub(crate) fn convert_lat_lon(lat: &mut Value, lon: &mut Value) -> ER<()> {
 /// Inputs: 0) string to decrypt, 1) encryption key
 /// Returns: decrypted string
 pub fn decrypt_lucky(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    if arg(&a, 1).to_bytes().is_empty() {
+        // ($i % length($key) with an empty key)
+        pl::at(1619);
+        pl::modulo(&n(0), &n(0))?;
+    }
     ret(lucky(&arg(&a, 0), &arg(&a, 1)))
 }
 
@@ -637,10 +673,12 @@ fn process_text_impl(it: &mut Interp, et: &Value, mut data_pt: Value, tag_tbl: &
     if pl::ref_of(&data_pt) == "HASH" {
         let dir_name = data_pt.get("DirName");
         data_pt = data_pt.get("DataPt");
-        let l = len_of(&data_pt.deref());
+        pl::at(1063);
+        let l = len_of(&pl::sderef(&data_pt)?);
         m(it, et, "VerboseDir", vec![dir_name, Value::Undef, n(l)])?;
     }
-    let mut data = data_pt.deref();
+    pl::at(1066);
+    let mut data = pl::sderef(&data_pt)?;
 
     for c in re(r"\$(\w+)([^\$\0]*)", "").each(&data) {
         let (tag, dat) = (cap(&c, 1), cap(&c, 2));
@@ -1360,7 +1398,8 @@ fn gmtime_list(it: &mut Interp, t: &Value) -> ER<Vec<Value>> {
 pub fn process_free_gps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let mut data = data_pt.deref();
+    pl::at(1641);
+    let mut data = pl::sderef(&data_pt)?;
     let dir_len = len_of(&data);
     let u = Value::Undef;
     let (mut yr, mut mon, mut day, mut hr, mut min, mut sec, mut lbl, mut ddd, mut done) = (u.clone(), u.clone(), u.clone(), u.clone(), u.clone(), u.clone(), u.clone(), u.clone(), u.clone());
@@ -2458,7 +2497,8 @@ pub fn parse_tag(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 
 fn parse_tag_impl(it: &mut Interp, a: &[Value]) -> ER<()> {
     let (et, tag, data_pt) = (arg(a, 0), arg(a, 1), arg(a, 2));
-    let data = data_pt.deref();
+    pl::at(2493);
+    let data = pl::sderef(&data_pt)?;
     let data_len = len_of(&data);
     let t = |x: &str| tag.eq_str(x);
 
@@ -2580,7 +2620,8 @@ fn parse_tag_impl(it: &mut Interp, a: &[Value]) -> ER<()> {
 /// Returns: 1 on success
 pub fn process_tx3g(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let data = dir_info.get("DataPt").deref();
+    pl::at(2591);
+    let data = pl::sderef(&dir_info.get("DataPt"))?;
     if len_of(&data) < 2 {
         return ret(n(0));
     }
@@ -2658,7 +2699,8 @@ pub fn process_mebx(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         return ret(n(0));
     }
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(2652);
+    let data = pl::sderef(&data_pt)?;
     let dl = len_of(&data);
 
     // parse using information from 'keys' table (eg. Apple iPhone7+ hevc 'Core Media Data Handler')
@@ -2744,6 +2786,8 @@ pub fn process_gps0(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     // check for encrypted format written by Lamax S9 dual dashcam
     // (similar to Ambarella A12, but in multiple 311-byte records)
     let enc = re(r"^.{2}\xf2\xe1\xf0\xeeTT\x98", "s");
+    pl::at(2724);
+    check_sref(&data_pt)?;
     if enc.is_match(&data) {
         let rec_len = 311;
         let mut pos = 0i64;
@@ -2806,7 +2850,8 @@ pub fn process_gps0(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 /// Returns: 1 on success
 pub fn process_gsen(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let data = dir_info.get("DataPt").deref();
+    let data_pt = dir_info.get("DataPt");
+    let data = data_pt.deref();
     let mut dir_len = dir_info.get("DirLen");
     let rec_len = n(3); // 3-byte record length
     m(it, &et, "VerboseDir", vec![s("gsen"), Value::Undef, dir_len.clone()])?;
@@ -2817,6 +2862,8 @@ pub fn process_gsen(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let mut pos = 0i64;
     while pl::le(&n(pos + 3), &dir_len) {
         new_doc(&et);
+        pl::at(2783);
+        check_sref(&data_pt)?;
         let accv: Vec<Value> = pl::unpack(&format!("x{pos}c3"), &data)?.iter().map(|v| pl::div(v, &n(16))).collect::<ER<Vec<Value>>>()?;
         ht(it, &et, &tag_tbl, "Accelerometer", join_sp(&accv))?;
         // (there are no associated timestamps, but these are sampled at 5 Hz in my test video)
@@ -2837,7 +2884,10 @@ pub fn process_gdat(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     }
     let mut data_pt = dir_info.get("DataPt");
     runtime::require(it, "Image::ExifTool::XMP")?;
-    data_pt = pl::call(it, "Image::ExifTool::XMP::DecodeBase64", vec![data_pt.deref()])?;
+    // (an argument of a call: an undefined $dataPt autovivifies)
+    pl::at(2804);
+    let d = if data_pt.is_undef() { Value::Undef } else { pl::sderef(&data_pt)? };
+    data_pt = pl::call(it, "Image::ExifTool::XMP::DecodeBase64", vec![d])?;
     let dbase = Value::new_hash();
     runtime::require(it, "Image::ExifTool::Import")?;
     pl::call(it, "Image::ExifTool::Import::ReadJSON", vec![data_pt, dbase.clone()])?;
@@ -2921,7 +2971,8 @@ pub fn process_nbmt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 /// 0060: 30 34 2b 30 30 32 2b 30 30 39 2b 30 30 35 2b 30 [04+002+009+005+0]
 pub fn process_kenwood(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let data = dir_info.get("DataPt").deref();
+    pl::at(2872);
+    let data = pl::sderef(&dir_info.get("DataPt"))?;
     let _dir_len = dir_info.get("DirLen");
     for c in re(r"\xfe\xfe([^\xfe]+)", "").each(&data) {
         let dat = cap(&c, 1);
@@ -2971,6 +3022,7 @@ pub fn process_riff_trailer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     let mut buff = Value::Undef;
     set_byte_order(it, s("II"))?;
     loop {
+        pl::at(2917);
         if !pl::num_eq(&raf_read(it, &raf, &mut buff, n(8))?, &n(8)) {
             break;
         }
@@ -3107,6 +3159,7 @@ pub fn process_kenwood_trailer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<V
     let raf = dir_info.get("RAF");
     let mut buff = Value::Undef;
     // current file position is 8 bytes into the 14 C's, so test the next 6:
+    pl::at(3014);
     if !(raf_read(it, &raf, &mut buff, n(14))?.truthy() && buff.eq_str("CCCCCCCCCCCCCC")) {
         return ret(n(0));
     }
@@ -3164,7 +3217,8 @@ pub fn process_nmea(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 }
 
 fn nmea(it: &mut Interp, et: &Value, dir_info: &Value, tag_tbl: &Value) -> ER<Value> {
-    let data = dir_info.get("DataPt").deref();
+    pl::at(3053);
+    let data = pl::sderef(&dir_info.get("DataPt"))?;
     let rtn_val = Value::Undef;
     let fix = Value::new_hash();
     let mut p = 0usize; // pos($$dataPt)
@@ -3454,9 +3508,11 @@ fn process_insta360_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
     let (mut dir_table, mut dir_table_pos) = (Value::Undef, 0i64);
 
     if dir_info.truthy() && dir_info.get("DirEnd").truthy() {
+        pl::at(3267);
         raf_seek(it, &raf, n(0), 2)?;
         offset = pl::sub(&raf_tell(it, &raf)?, &dir_info.get("DirEnd"));
     }
+    pl::at(3270);
     let ok = raf_seek(it, &raf, pl::sub(&n(-78), &offset), 2)? && pl::num_eq(&raf_read(it, &raf, &mut buff, n(78))?, &n(78)) && pl::substr(&buff, -32, None).eq_str("8db42d694ccc418790edff439fe026bf"); // check magic number
     if !ok {
         return ret(n(0));
@@ -3770,7 +3826,16 @@ pub fn process_camm(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let (et, dir_info, _tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let mut pos = or(dir_info.get("DirStart"), n(0));
-    let end = pl::add(&pos, &or(dir_info.get("DirLen"), pl::sub(&n(len_of(&data_pt.deref())), &pos)));
+    let dl = dir_info.get("DirLen");
+    let end = pl::add(
+        &pos,
+        &if dl.truthy() {
+            dl
+        } else {
+            pl::at(3489);
+            pl::sub(&n(len_of(&pl::sderef(&data_pt)?)), &pos)
+        },
+    );
     // camm record size for each type, including 4-byte header
     let size_of = |t: i64| -> i64 {
         match t {
@@ -3817,7 +3882,8 @@ pub fn process_camm(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 pub fn process_garmin_gps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data_len = len_of(&data_pt.deref());
+    pl::at(3518);
+    let data_len = len_of(&pl::sderef(&data_pt)?);
     let mut pos = 33i64;
     let epoch = n((66 * 365 + 17) * 24 * 3600); // time is relative to Jan 1, 1904
     let scl = pl::div(&n(180), &n(32768 * 65536))?; // scaling factor for lat/lon
@@ -3852,7 +3918,8 @@ pub fn process_garmin_gps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
 pub fn process_360fly(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(3554);
+    let data = pl::sderef(&data_pt)?;
     let data_len = len_of(&data);
     let mut pos = 16i64;
     let mut last_time = n(-1);
@@ -3881,7 +3948,8 @@ pub fn process_360fly(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 pub fn process_fmas(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(3584);
+    let data = pl::sderef(&data_pt)?;
     if !(re(r"^FMAS\0\0\0\0.{72}SAMM.{36}A", "s").is_match(&data) && len_of(&data) >= 160) {
         return ret(n(0));
     }
@@ -3918,7 +3986,8 @@ pub fn process_fmas(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 pub fn process_wolfbox(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(3619);
+    let data = pl::sderef(&data_pt)?;
     if len_of(&data) < 0xf8 {
         return ret(n(0));
     }

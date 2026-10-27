@@ -10,6 +10,7 @@ use crate::perl::ops;
 use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
 use crate::runtime;
+use crate::modules::quick_time_stream::check_invocant;
 
 const MODULE: &str = "Image::ExifTool::OpenEXR";
 
@@ -45,6 +46,8 @@ pub fn process_exr(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let format_type = runtime::lex_hash(it, MODULE, "formatType");
 
     // verify this is a valid RIFF file
+    pl::at(189);
+    check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&raf_read(it, &raf, &mut buff, n(8))?, &n(8)) {
         return ret(n(0));
     }

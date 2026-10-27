@@ -145,22 +145,24 @@ fn set_last_index(a: &Value, last: i64) {
 ///   cycle is established
 /// - this complexity is necessary because GPS may skip some seconds
 pub fn order_cipher_digits(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    ret(n(order_digits(arg(&a, 0), &arg(&a, 1), &arg(&a, 2), arg(&a, 3))))
+    ret(n(order_digits(arg(&a, 0), &arg(&a, 1), &arg(&a, 2), arg(&a, 3))?))
 }
 
-fn order_digits(mut ch: Value, next: &Value, order: &Value, mut did: Value) -> i64 {
+fn order_digits(mut ch: Value, next: &Value, order: &Value, mut did: Value) -> ER<i64> {
     if !did.truthy() {
         did = Value::new_hash();
     }
     while next.get(ch.to_bytes()).truthy() {
-        if order.len() < 10 {
-            if did.get(ch.to_bytes()).truthy() {
+        pl::at(114);
+        if pl::aderef(order)?.len() < 10 {
+            pl::at(115);
+            if pl::hderef(&did)?.get(ch.to_bytes()).truthy() {
                 break;
             }
         } else {
             // success if we have cycled through all 10 digits and back to the first
             if order.len() == 10 && ch.to_bytes() == order.at(0).to_bytes() {
-                return 1;
+                return Ok(1);
             }
             break;
         }
@@ -168,22 +170,25 @@ fn order_digits(mut ch: Value, next: &Value, order: &Value, mut did: Value) -> i
         did.set(ch.to_bytes(), n(1));
         // continue with next character if there is only one possibility
         let nx = next.get(ch.to_bytes());
-        if nx.len() == 1 {
+        pl::at(124);
+        if pl::aderef(&nx)?.len() == 1 {
             ch = nx.at(0);
             continue;
         }
         // otherwise, test all possibilities
         let nn = order.len() as i64 - 1;
-        for c in nx.items() {
-            let did2 = did.hash_copy(); // make a copy of the used-character lookup
-            if order_digits(c, next, order, did2) != 0 {
-                return 1;
+        pl::at(127);
+        for c in pl::aderef(&nx)? {
+            pl::at(128);
+            let did2 = pl::hderef(&did)?.hash_copy(); // make a copy of the used-character lookup
+            if order_digits(c, next, order, did2)? != 0 {
+                return Ok(1);
             }
             set_last_index(order, nn); // restore order and try next possibility
         }
         break;
     }
-    0 // failure
+    Ok(0) // failure
 }
 
 /// Decipher and parse LIGOGPSINFO record (starting with "####")
@@ -247,7 +252,7 @@ pub fn decipher_ligo_gps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
         }
         let order = Value::new_array(vec![]);
         let mut two = Value::Undef;
-        if order_digits(ch1.clone(), &next, &order, Value::Undef) == 0 {
+        if order_digits(ch1.clone(), &next, &order, Value::Undef)? == 0 {
             return ret(n(1));
         }
         // get index of enciphered "2" in ordered array
@@ -431,7 +436,8 @@ pub fn parse_ligo_gps(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
 pub fn process_gku(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
+    pl::at(277);
+    let data = pl::sderef(&data_pt)?;
     let pos = pl::unpack1("V", &data)?;
     if pl::gt(&pl::add(&pos, &n(13)), &n(len_of(&data))) || !pl::substr(&data, pos.to_i64(), Some(13)).eq_str("LIGOGPSINFO {") {
         return ret(n(0));
@@ -448,9 +454,10 @@ pub fn process_gku(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 pub fn process_ligo_gps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl, mut no_fuzz) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
     let ds = dir_info.get("DirStart");
     let mut pos = pl::add(&if ds.truthy() { ds } else { n(0) }, &n(0x14));
+    pl::at(294);
+    let data = pl::sderef(&data_pt)?;
     if pl::gt(&pos, &n(len_of(&data))) {
         return pl::ret_undef();
     }
@@ -513,9 +520,10 @@ fn scalar1(r: ER<Vec<Value>>) -> ER<Value> {
 pub fn process_ligo_json(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let data = data_pt.deref();
     let _dir_len = dir_info.get("DirLen");
     runtime::require(it, "Image::ExifTool::Import")?;
+    pl::at(340);
+    let data = pl::sderef(&data_pt)?;
     let start = get_pos(it, &data_pt);
     m(it, &et, "VerboseDir", vec![s("LIGO_JSON"), Value::Undef, n(len_of(&data) - start.unwrap_or(0) as i64)])?;
     et.set("SET_GROUP1", s("LIGO"));

@@ -65,11 +65,7 @@ fn is_zero(v: &Value) -> bool {
 
 /// `@{ EXPR }` in rvalue context (under `use strict`): dies on undef.
 fn rv_array(v: &Value) -> ER<Vec<Value>> {
-    match v {
-        Value::ArrayRef(a) => Ok(a.borrow().clone()),
-        Value::Undef => die("Can't use an undefined value as an ARRAY reference"),
-        _ => die("Not an ARRAY reference"),
-    }
+    pl::aderef(v)
 }
 
 /// `@{ $$h{key} }` in lvalue context (push, foreach): autovivified.
@@ -93,15 +89,15 @@ fn lv_elem_hash(a: &Value, i: i64) -> Value {
 fn slice_elem_hash(a: &Value, i: i64) -> ER<Value> {
     let e = a.at(i);
     match &e {
-        Value::HashRef(_) => Ok(e),
         Value::Undef => die("Can't use an undefined value as a HASH reference"),
-        _ => die(format!("Can't use string (\"{}\") as a HASH ref while \"strict refs\" in use", e.to_text())),
+        _ => pl::hderef(&e),
     }
 }
 
 pub fn read_uint32_rs(it: &mut Interp, raf: &Value) -> ER<Value> {
     let mut buff = Value::Undef;
 
+    pl::at(23);
     read(it, raf, &mut buff, n(4))?;
     let output = first(pl::unpack("L", &buff)?);
     Ok(output)
@@ -114,6 +110,7 @@ pub fn read_uint32(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 pub fn read_uint64_rs(it: &mut Interp, raf: &Value) -> ER<Value> {
     let mut buff = Value::Undef;
 
+    pl::at(32);
     read(it, raf, &mut buff, n(1))?;
     let b = ord(&buff).to_i64();
     if b == 255 {
@@ -152,6 +149,7 @@ pub fn read_uint64(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 fn read_real_uint64_rs(it: &mut Interp, raf: &Value) -> ER<Value> {
     let mut buff = Value::Undef;
 
+    pl::at(66);
     read(it, raf, &mut buff, n(8))?;
     let value = pl::unpack1("Q", &buff)?;
     Ok(value)
@@ -166,6 +164,7 @@ fn read_boolean_rs(it: &mut Interp, raf: &Value, count: &Value, checkall: &Value
     let mut result: Vec<Value> = Vec::new();
 
     if checkall.truthy() {
+        pl::at(78);
         read(it, raf, &mut buff, n(1))?;
         let all_defined = ord(&buff);
         if !pl::num_eq(&all_defined, &n(0)) {
@@ -181,6 +180,7 @@ fn read_boolean_rs(it: &mut Interp, raf: &Value, count: &Value, checkall: &Value
     let mut i: i64 = 0;
     while lt_i(i, count) {
         if mask == 0 {
+            pl::at(91);
             read(it, raf, &mut buff, n(1))?;
             b = ord(&buff).to_i64();
             mask = 0x80;
@@ -201,6 +201,7 @@ fn read_utf16_rs(it: &mut Interp, raf: &Value) -> ER<Value> {
     let mut ch = Value::Undef;
 
     for _ in 0..65536 {
+        pl::at(106);
         read(it, raf, &mut ch, n(2))?;
         if pl::str_eq(&ch, "\0\0") {
             break;
@@ -262,6 +263,7 @@ pub fn read_pack_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 }
 
 fn find_in_bin_pair_rs(bindpairs: &Value, index: &Value) -> ER<Value> {
+    pl::at(155);
     let bindpairs = rv_array(bindpairs)?;
 
     for (i, b) in bindpairs.iter().enumerate() {
@@ -362,6 +364,7 @@ pub fn read_folder(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 fn retrieve_coders_info_rs(it: &mut Interp, et: &Value, raf: &Value, folders_ref: &Value) -> ER<Value> {
     let mut buff = Value::Undef;
+    pl::at(239);
     let folders = rv_array(folders_ref)?;
 
     read(it, raf, &mut buff, n(1))?;
@@ -483,18 +486,22 @@ fn read_substreams_info_rs(it: &mut Interp, et: &Value, raf: &Value, numfolders:
         vprint(it, et, s("Size property detected.\n"))?;
         out.set("unpacksizes", Value::Undef);
         let mut i: i64 = 0;
+        pl::at(337);
         while (i as usize) < rv_array(&out.get("num_unpackstreams_folders"))?.len() {
             let mut totalsize = n(0);
             let mut j: i64 = 1;
+            pl::at(339);
             while lt_i(j, &rv_array(&out.get("num_unpackstreams_folders"))?.get(i as usize).cloned().unwrap_or_default()) {
                 let size = read_uint64_rs(it, raf)?;
                 lv_array(&out, "unpacksizes").push(size.clone());
                 totalsize = pl::add(&totalsize, &size);
                 j += 1;
+                pl::at(339);
             }
             let _ = totalsize;
             // self.unpacksizes.append(folders[i].get_unpack_size() - totalsize)
             i += 1;
+            pl::at(337);
         }
         read(it, raf, &mut buff, n(1))?;
         pid = ord(&buff).to_i64();
@@ -503,7 +510,9 @@ fn read_substreams_info_rs(it: &mut Interp, et: &Value, raf: &Value, numfolders:
     let mut num_digests_total = n(0);
     let mut i: i64 = 0;
     while lt_i(i, numfolders) {
+        pl::at(352);
         let numsubstreams = rv_array(&out.get("num_unpackstreams_folders"))?.get(i as usize).cloned().unwrap_or_default();
+        pl::at(353);
         let fi = rv_array(folders)?.get(i as usize).cloned().unwrap_or_default();
         if !pl::num_eq(&numsubstreams, &n(1)) || !fi.get("digestdefined").truthy() {
             num_digests = pl::add(&num_digests, &numsubstreams);
@@ -616,6 +625,7 @@ fn get_decompressor_rs(it: &mut Interp, et: &Value, folder: &Value, input_size: 
     out.set("chain", Value::Undef);
     out.set("input_size", input_size.clone());
     out.set("_unpacksizes", folder.get("unpacksizes"));
+    pl::at(442);
     let c = rv_array(&out.get("_unpacksizes"))?.len();
     out.set("_unpacked", Value::new_array(vec![n(0); c]));
     out.set("consumed", n(0));
@@ -641,6 +651,7 @@ pub fn get_decompressor(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 
 fn read_data_rs(it: &mut Interp, et: &Value, raf: &Value, decompressor: &Value) -> ER<Value> {
     let rest_size = pl::sub(&decompressor.get("input_size"), &decompressor.get("consumed"));
+    pl::at(465);
     let unused_s = n(rv_array(&decompressor.get("_unused"))?.len() as i64);
     let mut read_size = pl::sub(&rest_size, &unused_s);
     let mut data = s("");
@@ -664,7 +675,9 @@ fn decompress_internal_rs(it: &mut Interp, decompressor: &Value, input: &Value) 
     let mut data = s("");
     let mut input = input.clone();
     let mut i: usize = 0;
+    pl::at(480);
     while i < rv_array(&decompressor.get("chain"))?.len() {
+        pl::at(481);
         let unpacked = rv_array(&decompressor.get("_unpacked"))?.get(i).cloned().unwrap_or_default();
         let unpacksize = rv_array(&decompressor.get("_unpacksizes"))?.get(i).cloned().unwrap_or_default();
         if pl::lt(&unpacked, &unpacksize) {
@@ -686,6 +699,7 @@ fn decompress_internal_rs(it: &mut Interp, decompressor: &Value, input: &Value) 
             u.set_at(i, nv);
         }
         i += 1;
+        pl::at(480);
     }
     Ok(data)
 }
@@ -710,6 +724,7 @@ fn read_name_rs(it: &mut Interp, raf: &Value, numfiles: &Value, files: &Value) -
     let mut i = 0;
     while lt_i(i, numfiles) {
         let v = read_utf16_rs(it, raf)?;
+        pl::at(503);
         slice_elem_hash(files, i)?.set("filename", v);
         i += 1;
     }
@@ -736,8 +751,10 @@ fn read_times_rs(it: &mut Interp, et: &Value, raf: &Value, numfiles: &Value, nam
         if defined.get(i as usize).is_some_and(|d| d.truthy()) {
             let mut value = read_real_uint64_rs(it, raf)?;
             value = pl::sub(&pl::div(&value, &Value::Num(10000000.0))?, &n(11644473600));
+            pl::at(525);
             slice_elem_hash(files, i)?.set(name.to_bytes(), value);
         } else {
+            pl::at(528);
             slice_elem_hash(files, i)?.set(name.to_bytes(), Value::Undef);
         }
         i += 1;
@@ -754,8 +771,10 @@ fn read_attributes_rs(it: &mut Interp, raf: &Value, numfiles: &Value, defined: &
     while lt_i(i, numfiles) {
         if defined.at(i).truthy() {
             let value = read_uint32_rs(it, raf)?;
+            pl::at(539);
             slice_elem_hash(files, i)?.set("attributes", ops::shift_right(&value, &n(8)));
         } else {
+            pl::at(542);
             slice_elem_hash(files, i)?.set("attributes", Value::Undef);
         }
         i += 1;
@@ -887,7 +906,10 @@ fn display_files_rs(it: &mut Interp, et: &Value, files: &Value) -> ER<()> {
     let mut doc_num: i64 = 0;
     let tag_table_ptr = pl::call(it, "Image::ExifTool::GetTagTable", vec![s("Image::ExifTool::ZIP::RAR5")])?;
 
-    for currentfile in files.items() {
+    // (foreach autovivifies an undefined $_[0])
+    pl::at(656);
+    let list = if files.is_undef() { Vec::new() } else { pl::aderef(files)? };
+    for currentfile in list {
         doc_num += 1;
         et.set("DOC_NUM", n(doc_num));
         pl::method(it, et, "HandleTag", vec![tag_table_ptr.clone(), s("ModifyDate"), currentfile.get("lastwritetime")])?;
@@ -914,6 +936,7 @@ pub fn process_7z(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let raf = dir_info.get("RAF");
     let mut buff = Value::Undef;
 
+    pl::at(677);
     if !(read(it, &raf, &mut buff, n(6))?.truthy() && buff.to_bytes()[..] == b"7z\xbc\xaf\x27\x1c"[..]) {
         return ret(n(0));
     }
@@ -960,6 +983,7 @@ pub fn process_7z(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         let mut buffer2 = Value::Undef;
         let unpackinfo = streamsinfo.get_or_new_hash("unpackinfo");
         for folder in lv_array(&unpackinfo, "folders").items() {
+            pl::at(717);
             let uncompressed = rv_array(&folder.get("unpacksizes"))?;
             let compressed_size = streamsinfo.get("packinfo").get("packsizes").at(0);
             let uncompressed_size = Value::new_array(uncompressed.clone()).at(uncompressed.len() as i64 - 1);

@@ -52,6 +52,15 @@ fn raf_read(it: &mut Interp, raf: &Value, buff: &mut Value, len: Value) -> ER<Va
     Ok(r)
 }
 
+/// Dies as perl's `$$r` does under strict refs when `r` is not a SCALAR
+/// reference (pl::sderef without copying the value).
+fn check_sref(r: &Value) -> ER<()> {
+    match r {
+        Value::ScalarRef(_) | Value::LvRef(_) => Ok(()),
+        _ => pl::sderef(r).map(|_| ()),
+    }
+}
+
 // ---- the subs ----
 
 /// Convert system time to date/time string
@@ -64,7 +73,8 @@ pub fn convert_system_time(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         return ret(s("<uncalibrated>"));
     }
     if !et.get("SystemTimeListSorted").truthy() {
-        let mut v = sl.items();
+        pl::at(682);
+        let mut v = pl::aderef(&sl)?;
         v.sort_by(|x, y| ops::num_cmp(&x.at(0), &y.at(0)).unwrap_or(std::cmp::Ordering::Equal));
         sl = Value::new_array(v);
         et.set("SystemTimeList", sl.clone());
@@ -128,6 +138,7 @@ fn scale_values_impl(val: &Value, scl: &Value) -> ER<Option<Value>> {
     for val in &v {
         let mut av = pl::split_ws(val);
         for k in 0..av.len() {
+            pl::at(717);
             av[k] = pl::div(&av[k], &scl[k % scl.len()])?;
         }
         scaled.push(pl::join(" ", &av));
@@ -166,7 +177,8 @@ pub fn add_units(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 pub fn process_string(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    let d = data_pt.deref();
+    pl::at(753);
+    let d = pl::sderef(&data_pt)?;
     let list = if pl::ref_of(&d) == "ARRAY" { d.items() } else { vec![d] };
     m(it, &et, "VerboseDir", vec![s("GoPro structure")])?;
     let doc_num = et.get("DOC_NUM");
@@ -204,6 +216,7 @@ pub fn process_gp6(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut len = dir_info.get("DirLen");
     let mut buff = Value::Undef;
     while pl::gt(&len, &n(16)) {
+        pl::at(790);
         if !pl::num_eq(&raf_read(it, &raf, &mut buff, n(16))?, &n(16)) {
             break;
         }
@@ -243,7 +256,16 @@ pub fn process_go_pro(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let ds = dir_info.get("DirStart");
     let mut pos = if ds.truthy() { ds } else { n(0) };
     let dl = dir_info.get("DirLen");
-    let dir_end = pl::add(&pos, &if dl.truthy() { dl } else { pl::sub(&n(data.to_bytes().len() as i64), &pos) });
+    let dir_end = pl::add(
+        &pos,
+        &if dl.truthy() {
+            dl
+        } else {
+            pl::at(816);
+            check_sref(&data_pt)?;
+            pl::sub(&n(data.to_bytes().len() as i64), &pos)
+        },
+    );
     let verbose = m(it, &et, "Options", vec![s("Verbose")])?;
     let unknown = if verbose.truthy() { verbose.clone() } else { m(it, &et, "Options", vec![s("Unknown")])? };
     let mut size = Value::Undef;
@@ -278,6 +300,8 @@ pub fn process_go_pro(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         if !pl::le(&pl::add(&pos, &n(8)), &dir_end) {
             break;
         }
+        pl::at(832);
+        check_sref(&data_pt)?;
         let u = pl::unpack(&format!("x{}a4CCn", pos.to_i64()), &data)?;
         let (tag, fmt, len, count) = (arg(&u, 0), arg(&u, 1), arg(&u, 2), arg(&u, 3));
         if re(r"[^-_a-zA-Z0-9 ]", "").is_match(&tag) {
@@ -345,6 +369,7 @@ pub fn process_go_pro(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
             // unpack multiple undef/string values as a list
             let a = if format.eq_str("undef") { "a" } else { "A" };
             let t = format!("x{}{}", pos.to_i64(), format!("{a}{}", len.to_text()).repeat(count.to_i64().max(0) as usize));
+            pl::at(867);
             val = Value::new_array(pl::unpack(&t, &data)?);
         } else {
             val = scalar(part2::read_value(it, vec![data_pt.clone(), pos.clone(), format.clone(), Value::Undef, size.clone()], Want::Scalar))?;

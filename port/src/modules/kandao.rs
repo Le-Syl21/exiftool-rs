@@ -104,6 +104,7 @@ pub fn process_kandao(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
             let sub_dir_info = hash_of(vec![("DataPt", buff_ref.clone()), ("DataPos", parms_data_pos.clone()), ("DirLen", rec_len.clone()), ("DirName", tag.clone())]);
             let n_limit = n(10000);
             let mut size_limit = size.clone();
+            pl::at(315);
             if ee.truthy() && pl::gt(&pl::int(&pl::div(&pl::sub(&size, &pt), &rec_len)?), &n_limit) && m(it, &et, "Warn", vec![cat(&[&s("Extracting only the first "), &n_limit, &s(" "), &tag_info.get("Name"), &s(" records")]), n(2)])?.truthy() {
                 size_limit = pl::add(&pt, &pl::mul(&rec_len, &n_limit));
             }
@@ -128,6 +129,7 @@ pub fn process_kandao(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
                     format = tag_info.get("Format");
                     parms_format = cat(&[&parms_format, &s(" read as "), &format]);
                     let fs = format_size(it, format.clone())?;
+                    pl::at(337);
                     num = pl::int(&pl::div(&size, &fs)?);
                 }
                 val = read_value(it, &buff_ref, n(0), format.clone(), num.clone(), size.clone())?;
@@ -155,6 +157,7 @@ pub fn process_kvar(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let mut buff = Value::Undef;
 
     // verify this is a valid KVAR file
+    pl::at(360);
     if !pl::num_eq(&raf_read(it, &raf, &mut buff, n(44))?, &n(44)) {
         return ret(n(0));
     }

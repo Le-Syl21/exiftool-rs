@@ -90,6 +90,7 @@ pub fn write_riff(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     'outer: loop {
         let done_dir = Value::new_hash();
         // verify this is a valid RIFF file
+        pl::at(62);
         if !pl::num_eq(&read(it, &raf, &mut buff, n(12))?, &n(12)) {
             return ret(n(0));
         }

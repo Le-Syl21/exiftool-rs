@@ -7,6 +7,7 @@ use crate::interp::{Interp, Want};
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
+use crate::modules::quick_time_stream::check_invocant;
 
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
@@ -22,6 +23,8 @@ pub fn process_dsf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (buff, buf2) = (cell(Value::Undef), cell(Value::Undef));
 
     // verify this is a valid DSF file
+    pl::at(62);
+    check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(40))?, &n(40)) {
         return ret(n(0));
     }

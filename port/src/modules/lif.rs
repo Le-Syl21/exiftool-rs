@@ -7,6 +7,7 @@ use crate::interp::{Interp, Want};
 use crate::modules::random_access::raf_read;
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
+use crate::modules::quick_time_stream::check_invocant;
 
 fn s(x: &str) -> Value {
     pl::s(x)
@@ -70,6 +71,8 @@ pub fn process_lif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut buff = Value::Undef;
 
     // verify this is a valid LIF file
+    pl::at(103);
+    check_invocant(it, &raf, "Read")?;
     if !(pl::num_eq(&raf_read(it, &raf, &mut buff, n(15))?, &n(15)) && re(r"^\x70\0{3}.{4}\x2a.{4}<\0", "s").is_match(&buff)) {
         return ret(n(0));
     }

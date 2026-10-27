@@ -37,6 +37,24 @@ fn match_g(pat: &[u8], flags: &str, subject: &Value, pos: &mut usize) -> ER<Opti
     }
 }
 
+/// `$$h{KEY}` read under strict refs: dies on a string or another kind
+/// of reference (an undefined `$h` autovivifies, and reads undef).
+fn helem(h: &Value, key: &str) -> ER<Value> {
+    if h.is_undef() {
+        return Ok(Value::Undef);
+    }
+    Ok(pl::hderef(h)?.get(key))
+}
+
+/// `$$a[I]` read under strict refs (see helem).
+fn aelem(a: &Value, i: i64) -> ER<Value> {
+    match a {
+        Value::Undef => Ok(Value::Undef),
+        Value::ArrayRef(_) => Ok(a.at(i)),
+        _ => pl::aderef(a).map(|_| Value::Undef),
+    }
+}
+
 /// `@$dirInfo{'DataPos','DirLen'} = ($pos, $len)`
 fn set_pos_len(dir_info: &Value, pos: Value, l: Value) {
     dir_info.set("DataPos", pos);
@@ -65,6 +83,7 @@ pub fn process_vivo(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         return ret(n(0));
     }
     let mut l = pl::sub(&pl::sub(&et.get("FileEnd"), &pos), &dir_info.get("Offset"));
+    pl::at(89);
     if !seek(it, &raf, pos.clone(), 0)? {
         return ret(n(0));
     }
@@ -146,6 +165,7 @@ pub fn process_one_plus(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     if !start.truthy() {
         return ret(n(0));
     }
+    pl::at(143);
     if !(seek(it, &raf, pl::sub(&n(-8), &dir_info.get("Offset")), 2)? && read_eq(it, &raf, &buff, &n(8))?) {
         return ret(n(0));
     }
@@ -170,8 +190,9 @@ pub fn process_one_plus(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             crate::runtime::require(it, "Image::ExifTool::Import")?;
             let list = pl::call(it, "Image::ExifTool::Import::ReadJSONObject", vec![Value::Undef, Value::ScalarRef(buff.clone())])?;
             if list.is_array() {
+                pl::at(159);
                 for e in list.items() {
-                    let off = e.get("offset");
+                    let off = helem(&e, "offset")?;
                     if off.truthy() && pl::gt(&off, &max_off) {
                         max_off = off;
                     }
@@ -187,7 +208,8 @@ pub fn process_one_plus(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
                 }
                 pl::method(it, &et, "HandleTag", vec![tag_table.clone(), s("JSONInfo"), get(&buff)])?;
                 for e in list.items() {
-                    let (off, name, l) = (e.get("offset"), e.get("name"), e.get("length"));
+                    pl::at(171);
+                    let (off, name, l) = (helem(&e, "offset")?, helem(&e, "name")?, helem(&e, "length")?);
                     if !(off.truthy() && name.truthy() && l.truthy()) {
                         continue;
                     }
@@ -277,6 +299,7 @@ pub fn process_google(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
             break;
         }
         let sp = pl::add(&start, &pos);
+        pl::at(236);
         if !(pl::method(it, &raf, "Seek", vec![sp.clone()])?.truthy() && read_eq(it, &raf, &buff, &n(16))? && pl::method(it, &raf, "Seek", vec![sp.clone()])?.truthy()) {
             break;
         }
@@ -338,7 +361,8 @@ pub fn process_google(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         }
         pl::method(it, &et, "HandleTag", vec![tag_table.clone(), ti.clone(), buff_pt.clone(), s("DataPos"), pl::add(&start, &pos), s("DataPt"), buff_pt.clone()])?;
         // (haven't seen non-zero padding, but I assume this is how it works
-        let pd = if pad.truthy() && pad.at(i).truthy() { pad.at(i) } else { n(0) };
+        pl::at(270);
+        let pd = if pad.truthy() && aelem(&pad, i)?.truthy() { pad.at(i) } else { n(0) };
         pos = pl::add(&pos, &pl::add(&li, &pd));
         i += 1;
     }
