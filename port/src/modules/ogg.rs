@@ -22,7 +22,8 @@ fn ord(v: &Value) -> Value {
 
 fn process_packet_impl(it: &mut Interp, et: &Value, data_pt: &Value) -> ER<Value> {
     let mut rtn_val = n(0);
-    let data = data_pt.deref();
+    pl::at(46);
+    let data = pl::sderef(data_pt)?;
     let m = re(r"^(.)(vorbis|theora)", "s").m(&data).or_else(|| re(r"^(OpusHead|OpusTags)", "").m(&data));
     if let Some(m) = m {
         let (tag, type_, pos) = if cap(&m, 2).truthy() { (ord(&cap(&m, 1)), pl::ucfirst(&cap(&m, 2)), n(7)) } else { (cap(&m, 1), pl::s("Opus"), n(8)) };

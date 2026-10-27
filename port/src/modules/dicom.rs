@@ -12,6 +12,17 @@ use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
 use crate::runtime;
 
+/// `$raf->Read(...)`: die before the call, as perl does on an undefined or
+/// unblessed invocant (the read helper runs the call as interpreted code,
+/// which would name its own location in the message).
+fn check_invocant(it: &mut Interp, raf: &Value, name: &str) -> ER<()> {
+    match raf {
+        Value::Str(_) => Ok(()),
+        Value::HashRef(h) if h.borrow().blessed.is_some() => Ok(()),
+        _ => pl::method(it, raf, name, vec![]).map(|_| ()),
+    }
+}
+
 const MODULE: &str = "Image::ExifTool::DICOM";
 
 fn s(x: &str) -> Value {
@@ -65,6 +76,8 @@ pub fn process_dicom(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     //
     // identify the DICOM or ACR-NEMA file
     //
+    pl::at(7779);
+    check_invocant(it, &raf, "Read")?;
     if !read_eq(it, &raf, &hdr, &n(12))? {
         return ret(n(0)); // save for ACR identification later
     }

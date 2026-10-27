@@ -8,6 +8,17 @@ use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::Value;
 use crate::pl::{self, arg, n, re, ret};
 
+/// `$raf->Read(...)`: die before the call, as perl does on an undefined or
+/// unblessed invocant (the read helper runs the call as interpreted code,
+/// which would name its own location in the message).
+fn check_invocant(it: &mut Interp, raf: &Value, name: &str) -> ER<()> {
+    match raf {
+        Value::Str(_) => Ok(()),
+        Value::HashRef(h) if h.borrow().blessed.is_some() => Ok(()),
+        _ => pl::method(it, raf, name, vec![]).map(|_| ()),
+    }
+}
+
 /// `Image::ExifTool::NAME(ARGS)` (the functions imported with :DataAccess :Utils).
 fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
     pl::call(it, &format!("Image::ExifTool::{name}"), args)
@@ -22,6 +33,8 @@ pub fn process_wv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let buff = cell(Value::Undef);
 
     // verify this is a valid WavPack file
+    pl::at(87);
+    check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(32))?, &n(32)) {
         return ret(n(0));
     }

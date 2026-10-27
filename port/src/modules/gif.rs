@@ -123,6 +123,7 @@ pub fn process_gif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (mut frame_count, mut delay_time) = (n(0), n(0));
 
     // verify this is a valid GIF file
+    pl::at(192);
     if !read_eq(it, &raf, &mut buff, &n(6))? {
         return ret(n(0));
     }
@@ -167,7 +168,9 @@ pub fn process_gif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             set_comment = n(1);
         }
         // change to GIF 89a if adding comment, XMP or ICC_Profile
-        if !add_dirs.keys().is_empty() || !new_comment.is_undef() {
+        pl::at(219);
+        if !pl::hderef(&add_dirs)?.is_empty() || !new_comment.is_undef() {
+
             buff = pl::s("GIF89a");
         }
         if !write(it, &outfile, &[buff.clone(), s.clone()])? {

@@ -31,10 +31,13 @@ fn cat(parts: &[Value]) -> Value {
 // Generate a tag ID for this XML tag
 // Inputs: 0) tag property name list ref
 // Returns: tagID and outtermost interesting namespace (or '' if no namespace)
-fn get_tag_id_rs(props: &Value) -> (Value, Value) {
+fn get_tag_id_rs(props: &Value) -> ER<(Value, Value)> {
     let mut tag = Value::Undef;
     let mut namespace = Value::Undef;
-    for prop in props.items() {
+    // (foreach autovivifies an undefined $props, the sub's own copy)
+    pl::at(187);
+    let list = if props.is_undef() { Vec::new() } else { pl::aderef(props)? };
+    for prop in list {
         // split name into namespace and property name
         // (Note: namespace can be '' for property qualifiers)
         let (ns, nm) = match re(r"(.*?):(.*)", "").m(&prop) {
@@ -54,11 +57,11 @@ fn get_tag_id_rs(props: &Value) -> (Value, Value) {
             }
         }
     }
-    (tag, if namespace.truthy() { namespace } else { s("") })
+    Ok((tag, if namespace.truthy() { namespace } else { s("") }))
 }
 
 pub fn get_tag_id(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    let (tag, ns) = get_tag_id_rs(&arg(&a, 0));
+    let (tag, ns) = get_tag_id_rs(&arg(&a, 0))?;
     Ok(vec![tag, ns])
 }
 
@@ -70,7 +73,8 @@ pub fn get_tag_id(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 // Returns: 1 if valid tag was found
 pub fn found_tag(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, mut tag_table_ptr, props, mut val) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
-    if props.is_empty() {
+    pl::at(214);
+    if pl::aderef(&props)?.is_empty() {
         return ret(n(0));
     }
     let verbose = pl::method(it, &et, "Options", vec![s("Verbose")])?;
@@ -109,7 +113,8 @@ pub fn found_tag(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         return ret(n(0));
     }
     let ns;
-    (tag, ns) = get_tag_id_rs(&props);
+    (tag, ns) = get_tag_id_rs(&props)?;
+
     if !tag.truthy() {
         // all properties are in ignored namespaces
         // so 'name' from our queued attributes for the tag
@@ -265,6 +270,7 @@ pub fn process_docx(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 fn docx_members(it: &mut Interp, et: &Value, zip: &Value, tag_table_ptr: &Value) -> ER<()> {
     // extract meta information from all files in ZIP "docProps" directory
     let mut doc_num: i64 = 0;
+    pl::at(341);
     let members = pl::method_list(it, zip, "members", vec![])?;
     for member in members {
         // get filename of this ZIP member

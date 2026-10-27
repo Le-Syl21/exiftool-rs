@@ -13,6 +13,17 @@ use crate::perl::Value;
 use crate::pl::{self, arg, cap, n, re, ret};
 use crate::runtime;
 
+/// `$raf->Read(...)`: die before the call, as perl does on an undefined or
+/// unblessed invocant (the read helper runs the call as interpreted code,
+/// which would name its own location in the message).
+fn check_invocant(it: &mut Interp, raf: &Value, name: &str) -> ER<()> {
+    match raf {
+        Value::Str(_) => Ok(()),
+        Value::HashRef(h) if h.borrow().blessed.is_some() => Ok(()),
+        _ => pl::method(it, raf, name, vec![]).map(|_| ()),
+    }
+}
+
 const MODULE: &str = "Image::ExifTool::PICT";
 
 fn s(x: &str) -> Value {
@@ -202,7 +213,8 @@ pub fn read_pict_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                 let verbose = get(&verbose_c);
                 if verbose.truthy() && !val.is_undef() {
                     let fmt_s = cat(&[get(&indent_c), tag.clone(), s(" (binary[%d]) = <binary data>\n")]);
-                    let line = pl::sprintf_v(&fmt_s, &[pl::length(&val.deref())]);
+                    pl::at(1053);
+                    let line = pl::sprintf_v(&fmt_s, &[pl::length(&pl::sderef(&val)?)]);
                     pl::print_to(it, Some(&get(&out_c)), &[line])?;
                     if pl::gt(&verbose, &n(2)) {
                         hex_dump(it, val.clone(), &get(&out_c), &verbose)?;
@@ -259,6 +271,8 @@ pub fn process_pict(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     // recognize both PICT files and PICT resources (PICT files have a
     // 512-byte header that we ignore, but PICT resources do not)
     loop {
+        pl::at(1094);
+        check_invocant(it, &raf, "Read")?;
         if !read_eq(it, &raf, &mut buff, &n(12))? {
             return ret(n(0));
         }

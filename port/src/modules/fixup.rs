@@ -73,13 +73,16 @@ pub fn clone(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if phash.truthy() {
         clone.set("Pointers", Value::new_hash());
         for byte_order in phash.keys() {
-            let pointers = phash.get(&byte_order).items();
+            pl::at(80);
+            let pointers = pl::aderef(&phash.get(&byte_order))?;
             clone.get("Pointers").set(&byte_order, Value::new_array(pointers));
         }
     }
     if self_.get("Fixups").truthy() {
         clone.set("Fixups", Value::new_array(vec![]));
-        for sub_fixup in self_.get("Fixups").items() {
+        pl::at(87);
+        for sub_fixup in pl::aderef(&self_.get("Fixups"))? {
+            pl::at(88);
             let c = pl::method(it, &sub_fixup, "Clone", vec![])?;
             clone.get_or_new_array("Fixups").push(c);
         }
@@ -149,7 +152,10 @@ fn apply_fixup_impl(it: &mut Interp, self_: &Value, data_pt: &Value) -> ER<Value
             } else {
                 ("Image::ExifTool::Get32s", "Image::ExifTool::Set32u")
             };
-            let arr = phash.get(&byte_order);
+            // (foreach autovivifies the list)
+            let arr = phash.get_or_new_array(&byte_order);
+            pl::at(147);
+            pl::aderef(&arr)?;
             for i in 0..arr.len() {
                 let ptr = pl::add(&arr.at(i as i64), &start); // update pointer to new start location
                 arr.set_at(i, ptr.clone());
@@ -170,7 +176,8 @@ fn apply_fixup_impl(it: &mut Interp, self_: &Value, data_pt: &Value) -> ER<Value
             self_.set("Pointers", phash.clone());
         }
         // loop through all contained fixups
-        for sub_fixup in self_.get("Fixups").items() {
+        pl::at(161);
+        for sub_fixup in pl::aderef(&self_.get("Fixups"))? {
             // adjust the subfixup start and shift
             sub_fixup.set("Start", pl::add(&sub_fixup.get("Start"), &start));
             sub_fixup.set("Shift", pl::add(&sub_fixup.get("Shift"), &pl::sub(&shift, &start)));
@@ -186,7 +193,9 @@ fn apply_fixup_impl(it: &mut Interp, self_: &Value, data_pt: &Value) -> ER<Value
                     phash.set(&byte_order, Value::new_array(vec![]));
                 }
                 let dst = phash.get(&byte_order);
-                for p in shash.get(&byte_order).items() {
+                pl::at(172);
+                pl::aderef(&dst)?;
+                for p in pl::aderef(&shash.get(&byte_order))? {
                     dst.push(p);
                 }
                 shash.delete(&byte_order);
@@ -237,6 +246,7 @@ pub fn has_marker(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if !phash.truthy() {
         return ret(n(0));
     }
+    pl::at(210);
     let r = marker_re(&marker, b"")?;
     if phash.keys().into_iter().any(|k| r.is_match(&Value::from(k))) {
         return ret(n(1));
@@ -244,7 +254,9 @@ pub fn has_marker(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if !self_.get("Fixups").truthy() {
         return ret(n(0));
     }
-    for sub_fixup in self_.get("Fixups").items() {
+    pl::at(213);
+    for sub_fixup in pl::aderef(&self_.get("Fixups"))? {
+        pl::at(214);
         if pl::method(it, &sub_fixup, "HasMarker", vec![marker.clone()])?.truthy() {
             return ret(n(1));
         }
@@ -262,19 +274,25 @@ pub fn set_marker_pointers(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Va
 
     if phash.truthy() {
         let save_order = get_byte_order(it)?; // save original byte ordering
-        let r = marker_re(&marker, b"^(II|MM)(2?)")?;
         for byte_order in phash.keys() {
+            pl::at(233);
+            let r = marker_re(&marker, b"^(II|MM)(2?)")?;
             let Some(m) = r.m(&Value::from(byte_order.clone())) else { continue };
             set_byte_order(it, pl::cap(&m, 1))?;
             let set = if pl::cap(&m, 2).truthy() { "Image::ExifTool::Set16u" } else { "Image::ExifTool::Set32u" };
-            for ptr in phash.get(&byte_order).items() {
+            // (foreach autovivifies the list)
+            let ptrs = phash.get_or_new_array(&byte_order);
+            pl::at(236);
+            for ptr in pl::aderef(&ptrs)? {
                 pl::call(it, set, vec![value.clone(), data_pt.clone(), pl::add(&ptr, &start)])?;
             }
         }
         set_byte_order(it, save_order)?; // restore original byte ordering
     }
     if self_.get("Fixups").truthy() {
-        for sub_fixup in self_.get("Fixups").items() {
+        pl::at(244);
+        for sub_fixup in pl::aderef(&self_.get("Fixups"))? {
+            pl::at(245);
             pl::method(it, &sub_fixup, "SetMarkerPointers", vec![data_pt.clone(), marker.clone(), value.clone(), start.clone()])?;
         }
     }
@@ -293,20 +311,26 @@ pub fn get_marker_pointers(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Va
 
     if phash.truthy() {
         let save_order = get_byte_order(it)?;
+        pl::at(265);
         let r = marker_re(&marker, b"")?;
         let keys: Vec<Value> = phash.keys().into_iter().map(Value::from).filter(|k| r.is_match(k)).collect();
         for byte_order in keys {
             let o = substr(it, &byte_order, &n(0), Some(&n(2)))?;
             set_byte_order(it, o)?;
             let get = if pl::re(r"^(II2|MM2)", "").is_match(&byte_order) { "Image::ExifTool::Get16u" } else { "Image::ExifTool::Get32u" };
-            for ptr in phash.get(byte_order.to_bytes()).items() {
+            // (foreach autovivifies the list)
+            let ptrs = phash.get_or_new_array(byte_order.to_bytes());
+            pl::at(268);
+            for ptr in pl::aderef(&ptrs)? {
                 pointers.push(pl::call(it, get, vec![data_pt.clone(), pl::add(&ptr, &start)])?);
             }
         }
         set_byte_order(it, save_order)?; // restore original byte ordering
     }
     if self_.get("Fixups").truthy() {
-        for sub_fixup in self_.get("Fixups").items() {
+        pl::at(276);
+        for sub_fixup in pl::aderef(&self_.get("Fixups"))? {
+            pl::at(277);
             pointers.extend(pl::method_list(it, &sub_fixup, "GetMarkerPointers", vec![data_pt.clone(), marker.clone(), start.clone()])?);
         }
     }
@@ -326,7 +350,8 @@ fn dump_impl(it: &mut Interp, self_: &Value, indent: &Value) -> ER<()> {
         let mut keys = phash.keys();
         keys.sort();
         for byte_order in keys {
-            let joined: Vec<Vec<u8>> = phash.get(&byte_order).items().iter().map(|v| v.to_bytes().to_vec()).collect();
+            pl::at(296);
+            let joined: Vec<Vec<u8>> = pl::aderef(&phash.get(&byte_order))?.iter().map(|v| v.to_bytes().to_vec()).collect();
             let mut line = indent.to_bytes().to_vec();
             line.extend_from_slice(b"  ");
             line.extend_from_slice(&byte_order);
@@ -337,7 +362,8 @@ fn dump_impl(it: &mut Interp, self_: &Value, indent: &Value) -> ER<()> {
         }
     }
     if self_.get("Fixups").truthy() {
-        for sub_fixup in self_.get("Fixups").items() {
+        pl::at(301);
+        for sub_fixup in pl::aderef(&self_.get("Fixups"))? {
             dump_impl(it, &sub_fixup, &pl::concat(&indent, &pl::s("  ")))?;
         }
     }

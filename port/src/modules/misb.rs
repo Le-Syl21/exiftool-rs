@@ -89,7 +89,8 @@ pub fn process_klv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// Returns: 1 if something was extracted, 0 otherwise
 pub fn parse_misb(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, data_pt, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let end = pl::length(&data_pt.deref());
+    pl::at(391);
+    let end = pl::length(&pl::sderef(&data_pt)?);
     let mut rtn_val = n(0);
     let opts = et.get("OPTIONS");
     let unknown = opts.get("Unknown");

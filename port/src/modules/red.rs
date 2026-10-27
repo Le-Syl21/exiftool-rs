@@ -7,6 +7,17 @@ use crate::modules::random_access::{cell, raf_read_cell};
 use crate::perl::{ops, Value};
 use crate::pl::{self, arg, cap, n, re, ret};
 
+/// `$raf->Read(...)`: die before the call, as perl does on an undefined or
+/// unblessed invocant (the read helper runs the call as interpreted code,
+/// which would name its own location in the message).
+fn check_invocant(it: &mut Interp, raf: &Value, name: &str) -> ER<()> {
+    match raf {
+        Value::Str(_) => Ok(()),
+        Value::HashRef(h) if h.borrow().blessed.is_some() => Ok(()),
+        _ => pl::method(it, raf, name, vec![]).map(|_| ()),
+    }
+}
+
 const MODULE: &str = "Image::ExifTool::Red";
 
 fn val(c: &Cell) -> Value {
@@ -48,6 +59,8 @@ pub fn process_r3d(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>>
     // - blocks begin on even 0x1000 byte boundaries for version 2 files
 
     // validate the file header
+    pl::at(225);
+    check_invocant(it, &raf, "Read")?;
     if !pl::num_eq(&raf_read_cell(it, &raf, &buff, n(8))?, &n(8)) {
         return ret(n(0));
     }

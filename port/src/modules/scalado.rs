@@ -23,7 +23,8 @@ pub fn process_scalado(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let mut pos = n(0);
-    let mut end = pl::length(&data_pt.deref());
+    pl::at(73);
+    let mut end = pl::length(&pl::sderef(&data_pt)?);
     let unknown = pl::method(it, &et, "Options", vec![s("Unknown")])?;
 
     pl::method(it, &et, "VerboseDir", vec![s("APP4 SCALADO"), Value::Undef, end.clone()])?;

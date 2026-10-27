@@ -19,7 +19,8 @@ pub fn process_comments(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let data_pos = dir_info.get("DataPos");
     let pos0 = dir_info.get("DirStart");
     let mut pos = if pos0.truthy() { pos0 } else { n(0) };
-    let end = if dir_info.get("DirLen").truthy() { pl::add(&pos, &dir_info.get("DirLen")) } else { pl::length(&data_pt.deref()) };
+    pl::at(163);
+    let end = if dir_info.get("DirLen").truthy() { pl::add(&pos, &dir_info.get("DirLen")) } else { pl::length(&pl::sderef(&data_pt)?) };
     let (mut num, mut index) = (Value::Undef, Value::Undef);
 
     call(it, "SetByteOrder", vec![pl::s("II")])?;
@@ -32,7 +33,8 @@ pub fn process_comments(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             break;
         }
         let start = pl::add(&pos, &n(4));
-        let buff = substr(it, &data_pt.deref(), &start, Some(&len))?;
+        pl::at(172);
+        let buff = substr(it, &pl::sderef(&data_pt)?, &start, Some(&len))?;
         pos = pl::add(&start, &len);
         let (mut tag, val);
         if !num.is_undef() {
