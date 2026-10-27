@@ -287,6 +287,8 @@ enum Saved {
     Global(Rc<str>, Option<Binding>),
     HElem(HashRc, Rc<[u8]>, Option<Value>),
     AElem(ArrayRc, usize, Value),
+    /// `local *FH`: the handle the name had (None: none).
+    Handle(Rc<str>, Option<io::HandleRc>),
 }
 
 pub type GlobalHook = Rc<dyn Fn(&mut Interp, u8, &str) -> Option<Binding>>;
@@ -324,6 +326,8 @@ pub struct Interp {
     handles: HashMap<Rc<str>, io::HandleRc>,
     /// Write STDOUT/STDERR to the process's streams instead of buffers.
     pub passthrough: bool,
+    /// STDOUT output waiting in perl's 8 KiB buffer (passthrough mode).
+    stdout_pending: Vec<u8>,
     /// `END` blocks, run by `run_end_blocks`.
     end_blocks: Vec<(Rc<Block>, Rc<Scope>)>,
     /// Set by `exit`.
@@ -390,6 +394,7 @@ impl Interp {
             strict: true,
             handles: HashMap::new(),
             passthrough: false,
+            stdout_pending: Vec::new(),
             end_blocks: Vec::new(),
             exit_code: None,
             pending_aliases: None,
@@ -623,6 +628,7 @@ impl Interp {
 
     /// Flush every open output handle.
     pub fn flush_handles(&mut self) {
+        self.flush_stdout();
         if let Some(t) = &mut self.trace {
             use std::io::Write;
             let _ = t.flush();
@@ -631,6 +637,42 @@ impl Interp {
             if let Some(io::Output::File(f)) = &mut h.borrow_mut().output {
                 use std::io::Write;
                 let _ = f.flush();
+            }
+        }
+    }
+
+    /// Write out what STDOUT's buffer holds.
+    pub fn flush_stdout(&mut self) {
+        if !self.stdout_pending.is_empty() {
+            use std::io::Write;
+            let mut o = std::io::stdout();
+            let _ = o.write_all(&self.stdout_pending);
+            let _ = o.flush();
+            self.stdout_pending.clear();
+        }
+    }
+
+    /// STDOUT in passthrough mode, buffered as PerlIO does it: written out
+    /// each time the 8 KiB buffer fills, unless STDOUT is a terminal or `$|`
+    /// is set, which write at once.
+    pub(crate) fn stdout_write(&mut self, data: &[u8]) {
+        use std::io::{IsTerminal, Write};
+        let mut o = std::io::stdout();
+        if o.is_terminal() || self.get_scalar("main::|").truthy() {
+            self.flush_stdout();
+            let _ = o.write_all(data);
+            let _ = o.flush();
+            return;
+        }
+        const BUF: usize = 8192;
+        let mut d = data;
+        while !d.is_empty() {
+            let room = BUF - self.stdout_pending.len();
+            let n = room.min(d.len());
+            self.stdout_pending.extend_from_slice(&d[..n]);
+            d = &d[n..];
+            if self.stdout_pending.len() == BUF {
+                self.flush_stdout();
             }
         }
     }
@@ -838,6 +880,21 @@ impl Interp {
                     let mut a = a.borrow_mut();
                     if i < a.len() {
                         a[i] = v;
+                    }
+                }
+                Saved::Handle(name, old) => {
+                    // the local handle is closed when its scope ends
+                    if let Some(h) = self.handles.remove(&name) {
+                        let mut fh = h.borrow_mut();
+                        if let Some(io::Output::File(f)) = &mut fh.output {
+                            use std::io::Write;
+                            let _ = f.flush();
+                        }
+                        fh.output = None;
+                        fh.input = None;
+                    }
+                    if let Some(h) = old {
+                        self.handles.insert(name, h);
                     }
                 }
             }
@@ -1955,7 +2012,18 @@ impl Interp {
                 Ok(Lv::List(v))
             }
             Expr::Assign(..) => self.lvalue(e, scope),
-            // local *FH: the handle is reopened by the code; nothing to save.
+            // local *FH: a new, closed handle under the name until the
+            // scope ends, then the old one back
+            Expr::Const(Value::Str(g)) if g.starts_with(b"*") => {
+                let name = String::from_utf8_lossy(&g[1..]).into_owned();
+                let name = name.strip_prefix("main::").unwrap_or(&name).to_string();
+                if !matches!(name.as_str(), "STDOUT" | "STDERR" | "STDIN") {
+                    let key: Rc<str> = if name.contains("::") { Rc::from(name.as_str()) } else { Rc::from(format!("{}::{name}", self.package)) };
+                    let old = self.handles.remove(&key);
+                    self.saved.push(Saved::Handle(key, old));
+                }
+                Ok(Lv::Skip)
+            }
             Expr::Const(_) => Ok(Lv::Skip),
             _ => die("Can't localize lexical variable"),
         }

@@ -1933,15 +1933,38 @@ impl<'a> Parser<'a> {
                 (Some(cb), list)
             }
             None if id == "sort" => {
-                // sort SUBNAME LIST / sort $subref LIST / sort LIST
+                // sort SUBNAME LIST / sort $subref LIST / sort LIST. As perl
+                // (toke.c force_word): after `sort` a word that is not a
+                // keyword is the sort sub, even before `(`; inside
+                // `sort(...)`, a word directly followed by `(` is a call
                 let mut cb = None;
+                // sort $subref LIST: a scalar followed by a term, not by an operator
+                if self.at(0) == b'$' && ident_start(self.at(1)) {
+                    let mut e = self.pos + 1;
+                    while e < self.s.len() && ident_char(self.s[e]) {
+                        e += 1;
+                    }
+                    let mut f = e;
+                    while f < self.s.len() && self.s[f].is_ascii_whitespace() {
+                        f += 1;
+                    }
+                    if f > e && matches!(self.s.get(f), Some(b'@' | b'$' | b'(' | b'\'' | b'"')) || (f > e && self.s.get(f).is_some_and(|c| c.is_ascii_alphabetic())) {
+                        let v = Expr::Scalar(Rc::from(String::from_utf8_lossy(&self.s[self.pos + 1..e]).into_owned()));
+                        self.pos = e;
+                        cb = Some(Callback::Expr(Box::new(v)));
+                    }
+                }
+                if cb.is_none() {
                 if let Some(name) = self.peek_ident() {
                     let after = self.pos + name.len();
                     let next = self.s[after..].iter().find(|c| !c.is_ascii_whitespace()).copied();
-                    if !matches!(next, Some(b'(' | b',')) && !NAMED_UNARY.contains(&name) && !LIST_OPS.contains(&name) && name != "map" && name != "grep" && name != "reverse" {
+                    let keyword = NAMED_UNARY.contains(&name) || LIST_OPS.contains(&name) || is_keyword(name) || matches!(name, "map" | "grep" | "sort" | "reverse" | "glob" | "print" | "printf" | "wantarray" | "lc" | "uc" | "exists" | "delete");
+                    let call = paren && self.s.get(after) == Some(&b'(');
+                    if !keyword && !call && next != Some(b',') && !(next == Some(b'=') && self.s[after..].iter().filter(|c| !c.is_ascii_whitespace()).nth(1) == Some(&b'>')) {
                         self.pos = after;
                         cb = Some(Callback::Expr(Box::new(Expr::Const(Value::str(name)))));
                     }
+                }
                 }
                 let list = if (paren && self.starts(")")) || self.at_terminator() { Expr::List(vec![]) } else { self.comma()? };
                 (cb, list)

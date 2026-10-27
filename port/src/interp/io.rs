@@ -181,13 +181,15 @@ impl Interp {
 
     /// Write to a handle (print's work after formatting).
     pub(super) fn write_handle(&mut self, h: &HandleRc, data: &[u8]) -> bool {
+        if self.passthrough && matches!(h.borrow().output, Some(Output::Stdout)) {
+            self.stdout_write(data);
+            return true;
+        }
         let mut fh = h.borrow_mut();
         match &mut fh.output {
             Some(Output::Stdout) => {
                 if self.passthrough {
-                    let mut o = std::io::stdout();
-                    let _ = o.write_all(data);
-                    let _ = o.flush();
+                    unreachable!()
                 } else {
                     self.stdout.extend_from_slice(data);
                 }
@@ -360,7 +362,43 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
             })();
             r.map(|n| vec![Value::Int(n)])
         }
-        "fileno" => Ok(vec![Value::Int(3)]),
+        "fileno" => {
+            // the handle's descriptor: undef when it is not open
+            let hv = match args.first() {
+                Some(a) => match it.scalar(a, scope) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                },
+                None => return Some(Ok(vec![Value::Undef])),
+            };
+            let name = hv.to_text();
+            let bare = name.trim_start_matches('*');
+            let bare = bare.strip_prefix("main::").unwrap_or(bare);
+            if bare == "STDIN" {
+                return Some(Ok(vec![Value::Int(0)]));
+            }
+            let fd = it.handle_of(&hv, false).and_then(|h| {
+                let fh = h.borrow();
+                match (&fh.input, &fh.output) {
+                    (_, Some(Output::Stdout)) => Some(1),
+                    (_, Some(Output::Stderr)) => Some(2),
+                    (Some(i), _) => Some(match i {
+                        #[cfg(unix)]
+                        Input::File(f) => std::os::unix::io::AsRawFd::as_raw_fd(f.get_ref()) as i64,
+                        #[cfg(unix)]
+                        Input::Rw(r) => std::os::unix::io::AsRawFd::as_raw_fd(&r.f) as i64,
+                        _ => -1,
+                    }),
+                    (None, Some(o)) => Some(match o {
+                        #[cfg(unix)]
+                        Output::File(f) => std::os::unix::io::AsRawFd::as_raw_fd(f.get_ref()) as i64,
+                        _ => -1,
+                    }),
+                    (None, None) => None,
+                }
+            });
+            Ok(vec![fd.map(Value::Int).unwrap_or(Value::Undef)])
+        }
         "truncate" => {
             let r = (|| -> ER<bool> {
                 let hv = it.scalar(&args[0], scope)?;

@@ -155,7 +155,24 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             let m = if m == 0.0 { 1.0 } else { m };
             one(Value::Num(pseudo_random() * m))
         }
-        "srand" => one(Value::Int(0)),
+        "srand" => {
+            let seed = match args.first() {
+                Some(a) => {
+                    let v = it.scalar(a, scope)?;
+                    match srand_seed(&v) {
+                        Some(n) => n,
+                        None => {
+                            crate::pl::warn(it, "Integer overflow in srand")?;
+                            u64::MAX
+                        }
+                    }
+                }
+                None => auto_seed() as u64,
+            };
+            seed_rand48(seed as u32);
+            // srand returns its seed ("0 but true" for 0)
+            one(if seed == 0 { Value::str("0 but true") } else { crate::perl::ops::from_uv(seed) })
+        }
         "time" => {
             let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
             one(Value::Int(t as i64))
@@ -475,9 +492,19 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
         "lock" | "study" => one(Value::Int(1)),
         "readpipe" => {
             let cmd = arg_or_topic(it, args, scope)?.to_text();
-            let out = std::process::Command::new("sh").arg("-c").arg(&cmd).output();
+            // perl flushes its output handles before starting a child, and
+            // the child's standard error is the program's
+            it.flush_handles();
+            let mut c = std::process::Command::new("sh");
+            c.arg("-c").arg(&cmd).stdout(std::process::Stdio::piped());
+            c.stderr(if it.passthrough { std::process::Stdio::inherit() } else { std::process::Stdio::piped() });
+            let out = c.output();
             match out {
                 Ok(o) => {
+                    if !it.passthrough {
+                        it.stderr.extend_from_slice(&o.stderr);
+                    }
+                    it.set_scalar("main::?", Value::Int(o.status.code().map(|c| (c as i64) << 8).unwrap_or(-1)));
                     if want == Want::List {
                         let mut lines = Vec::new();
                         for l in o.stdout.split_inclusive(|&b| b == b'\n') {
@@ -592,6 +619,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
         }
         "system" => {
             let a = values(it, args, scope)?;
+            it.flush_handles();
             let status = if a.len() == 1 {
                 std::process::Command::new("sh").arg("-c").arg(arg_text(&a, 0)).status()
             } else {
@@ -812,7 +840,12 @@ fn substr(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     Ok(vec![match substr_range(s.len(), off, len) {
         Some((a, b)) => Value::bytes(&s[a..b]),
         None => {
-            warn(it, Value::str("substr outside of string at (eval) line 1.\n"))?;
+            // a warning only where warnings are enabled: -w here (the
+            // interpreter does not track `use warnings` scopes, and
+            // ExifTool's modules do not enable them)
+            if it.get_scalar("main::^W").truthy() {
+                warn(it, Value::str("substr outside of string at (eval) line 1.\n"))?;
+            }
             Value::Undef
         }
     }])
@@ -903,16 +936,56 @@ fn oct(s: &[u8]) -> Value {
     parse_radix(s, 8)
 }
 
+thread_local! {
+    /// perl's drand48 state (48 bits), None until seeded.
+    static RAND48: RefCell<Option<u64>> = const { RefCell::new(None) };
+}
+
+/// perl's srand seeding of its drand48: x = seed << 16 | 0x330E.
+fn seed_rand48(seed: u32) {
+    RAND48.with(|s| *s.borrow_mut() = Some(((seed as u64) << 16) | 0x330E));
+}
+
+/// The seed srand() picks without an argument (perl's seed(): time, pid
+/// and an address mixed; any value will do).
+fn auto_seed() -> u32 {
+    let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(0);
+    let v = t ^ ((std::process::id() as u64) << 20) ^ (&t as *const u64 as u64);
+    (v ^ (v >> 32)) as u32
+}
+
+/// perl's rand: drand48, x = (0x5DEECE66D * x + 0xB) mod 2**48, seeded on
+/// first use if srand was not called.
 fn pseudo_random() -> f64 {
-    thread_local!(static STATE: RefCell<u64> = RefCell::new(0x2545F4914F6CDD1D));
-    STATE.with(|s| {
-        let mut x = *s.borrow();
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        *s.borrow_mut() = x;
-        (x >> 11) as f64 / (1u64 << 53) as f64
+    if RAND48.with(|s| s.borrow().is_none()) {
+        seed_rand48(auto_seed());
+    }
+    RAND48.with(|s| {
+        let mut st = s.borrow_mut();
+        let x = st.unwrap().wrapping_mul(0x5DEECE66D).wrapping_add(0xB) & ((1u64 << 48) - 1);
+        *st = Some(x);
+        x as f64 / (1u64 << 48) as f64
     })
+}
+
+/// srand's argument as perl reads it (grok_number): the integer part of
+/// its absolute value, or None (perl then warns and uses UV_MAX) if it is
+/// not a plain decimal number within the UV range.
+fn srand_seed(v: &Value) -> Option<u64> {
+    if let Value::Int(i) = v {
+        return Some(i.unsigned_abs());
+    }
+    let t = v.to_text();
+    let t = t.trim_matches(|c: char| c.is_ascii_whitespace());
+    let t = t.strip_prefix(['-', '+']).unwrap_or(t);
+    let (int, frac) = t.split_once('.').unwrap_or((t, ""));
+    if (int.is_empty() && frac.is_empty()) || !int.bytes().all(|c| c.is_ascii_digit()) || !frac.bytes().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    if int.is_empty() {
+        return Some(0);
+    }
+    int.parse::<u64>().ok()
 }
 
 /// `split /PATTERN/, EXPR, LIMIT` with perl's rules (pp_split): a match
