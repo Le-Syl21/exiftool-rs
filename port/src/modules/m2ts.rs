@@ -67,6 +67,27 @@ fn knots_to_kph(it: &mut Interp) -> Value {
     crate::runtime::lex_scalar(it, MODULE, "knotsToKph").borrow().clone()
 }
 
+/// `Image::ExifTool::QuickTime::ConvertLatLon($lat, $lon)`, which writes its
+/// arguments: run as a Perl statement on two `my` cells (pl::call_mut loses
+/// the aliases when the callee is reached through a sub reference).
+fn convert_lat_lon(it: &mut Interp, lat: Value, lon: Value) -> ER<[Value; 2]> {
+    let (a, b) = (cell(lat), cell(lon));
+    perl_eval(it, "Image::ExifTool::QuickTime::ConvertLatLon($lat, $lon)", MODULE, &[("lat", &a), ("lon", &b)], Want::Void)?;
+    let r = [a.borrow().clone(), b.borrow().clone()];
+    Ok(r)
+}
+
+/// `\$data{$pid}` for ParsePID. The element was assigned (or created) since
+/// any earlier match on it, so its pos() is unset in perl: clear what the
+/// interpreter may still hold for that element (the Rust writes to %data
+/// don't reach its pos() bookkeeping).
+fn data_ref(it: &mut Interp, data: &Value, key: &[u8]) -> ER<Value> {
+    let r = pl::elem_ref(data, key);
+    let c = cell(r.clone());
+    perl_eval(it, "pos($$d) = undef", MODULE, &[("d", &c)], Want::Void)?;
+    Ok(r)
+}
+
 fn inc_doc(et: &Value) {
     let dc = pl::add(&et.get("DOC_COUNT"), &n(1));
     et.set("DOC_COUNT", dc.clone());
@@ -272,9 +293,7 @@ fn parse_pid_gps(it: &mut Interp, et: &Value, pid: &Value, data_pt: &Value) -> E
                 let mut lon = pl::abs(&call(it, "GetFloat", vec![pl::sref(dat.clone()), n(8)])?); // (abs just to be safe)
                 let spd = pl::mul(&call(it, "GetFloat", vec![pl::sref(dat.clone()), n(12)])?, &kk);
                 let trk = call(it, "GetFloat", vec![pl::sref(dat.clone()), n(16)])?;
-                let mut ll = [lat, lon];
-                pl::call_mut(it, "Image::ExifTool::QuickTime::ConvertLatLon", &mut ll, Want::Scalar)?;
-                [lat, lon] = ll;
+                [lat, lon] = convert_lat_lon(it, lat, lon)?;
                 let s1 = if pl::substr(&dat, 1, Some(1)).eq_str("S") { n(-1) } else { n(1) };
                 let s2 = if pl::substr(&dat, 2, Some(1)).eq_str("W") { n(-1) } else { n(1) };
                 handle(it, et, &tag_tbl, "GPSLatitude", pl::mul(&pl::abs(&lat), &s1))?;
@@ -325,9 +344,7 @@ fn parse_pid_gps(it: &mut Interp, et: &Value, pid: &Value, data_pt: &Value) -> E
                 inc_doc(et);
                 pl::tr(&mut av[2], ".", ":", "");
                 // (untested, and probably doesn't work for S/W hemispheres)
-                let mut ll = [av[3].clone(), av[4].clone()];
-                pl::call_mut(it, "Image::ExifTool::QuickTime::ConvertLatLon", &mut ll, Want::Scalar)?;
-                let [lat, lon] = ll;
+                let [lat, lon] = convert_lat_lon(it, av[3].clone(), av[4].clone())?;
                 // $a[0] - flags? values: '0x0001','0x0004','0x0008','0x0010'
                 handle(it, et, &tag_tbl, "GPSDateTime", av[2].clone())?;
                 handle(it, et, &tag_tbl, "GPSLatitude", lat)?;
@@ -506,7 +523,8 @@ fn parse_pid_gps(it: &mut Interp, et: &Value, pid: &Value, data_pt: &Value) -> E
 
 fn parse_pid1(it: &mut Interp, et: &Value, pid: &Value, pid_type: &Value, pid_name: &Value, data: &Value) -> ER<Value> {
     let key = pid.to_bytes();
-    let args = vec![et.clone(), pid.clone(), pid_type.get(&key), pid_name.get(&key), pl::elem_ref(data, &key)];
+    let dr = data_ref(it, data, &key)?;
+    let args = vec![et.clone(), pid.clone(), pid_type.get(&key), pid_name.get(&key), dr];
     Ok(parse_pid(it, args, Want::Scalar)?.pop().unwrap_or_default())
 }
 
@@ -1130,7 +1148,8 @@ pub fn process_m2ts(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     keys.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
     for pid in keys {
         let k = pid.to_bytes();
-        let args = vec![et.clone(), pid.clone(), pid_type.get(&k), pid_name.get(&k), pl::elem_ref(&data, &k)];
+        let dr = data_ref(it, &data, &k)?;
+        let args = vec![et.clone(), pid.clone(), pid_type.get(&k), pid_name.get(&k), dr];
         parse_pid(it, args, Want::Scalar)?;
         data.delete(&k);
     }
