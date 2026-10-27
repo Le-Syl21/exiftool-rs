@@ -47,12 +47,47 @@ thread_local! {
     static LOCATION: RefCell<(Option<Rc<str>>, u32)> = const { RefCell::new((None, 1)) };
 }
 
-/// perl's " at FILE line N.\n" for a die or warn without a newline.
+thread_local! {
+    /// The handle last read (perl's PL_last_in_gv) and whether $/ made its
+    /// records chunks rather than lines.
+    static LAST_READ: RefCell<Option<(std::rc::Weak<RefCell<io::FileHandle>>, bool)>> = const { RefCell::new(None) };
+}
+
+thread_local! {
+    /// Whether `use warnings` is in effect for the running Perl code
+    /// (natives: no, as ExifTool's modules do not enable warnings).
+    static WARNINGS_ON: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Whether a warning that perl gives only with warnings enabled is due:
+/// `use warnings` in the running code's scope, or -w ($^W).
+pub fn warnings_enabled(it: &mut Interp) -> bool {
+    WARNINGS_ON.with(|w| w.get()) || it.get_scalar("main::^W").truthy()
+}
+
+pub(crate) fn set_last_read(h: &io::HandleRc, chunk: bool) {
+    LAST_READ.with(|l| *l.borrow_mut() = Some((Rc::downgrade(h), chunk)));
+}
+
+/// perl's " at FILE line N.\n" for a die or warn without a newline, with
+/// ", <FH> line M" when a handle has been read from (and not closed).
 pub fn location_suffix() -> String {
-    LOCATION.with(|l| match &*l.borrow() {
-        (Some(f), line) => format!(" at {f} line {line}.\n"),
-        (None, _) => " at (eval) line 1.\n".to_string(),
-    })
+    let at = LOCATION.with(|l| match &*l.borrow() {
+        (Some(f), line) => format!(" at {f} line {line}"),
+        (None, _) => " at (eval) line 1".to_string(),
+    });
+    let fh = LAST_READ.with(|l| {
+        let l = l.borrow();
+        let (w, chunk) = l.as_ref()?;
+        let h = w.upgrade()?;
+        let h = h.borrow();
+        if h.lines <= 0 {
+            return None;
+        }
+        let name = h.name.clone().unwrap_or_else(|| Rc::from("$fh"));
+        Some(format!(", <{name}> {} {}", if *chunk { "chunk" } else { "line" }, h.lines))
+    });
+    format!("{at}{}.\n", fh.unwrap_or_default())
 }
 
 fn location() -> (Option<Rc<str>>, u32) {
@@ -176,6 +211,8 @@ pub enum Lv {
     LastIndex(ArrayRc),
     /// `pos($x) = N` (the interpreter keeps positions; see assign_scalar)
     Pos(Box<Lv>),
+    /// A literal passed to a sub: `$_[0] = ...` on it is fatal, as in perl.
+    ReadOnly(Value),
 }
 
 impl Lv {
@@ -200,6 +237,7 @@ impl Lv {
             }
             Lv::LastIndex(a) => Value::Int(a.borrow().len() as i64 - 1),
             Lv::Pos(_) => Value::Undef,
+            Lv::ReadOnly(v) => v.clone(),
         }
     }
 
@@ -244,6 +282,7 @@ impl Lv {
                 a.borrow_mut().resize(n, Value::Undef);
             }
             Lv::Pos(_) => {}
+            Lv::ReadOnly(_) => return die("Modification of a read-only value attempted"),
         }
         Ok(())
     }
@@ -625,9 +664,12 @@ impl Interp {
         let saved = self.saved.len();
         self.want_stack.push(want);
         let saved_loc = location();
+        // a file starts without warnings; a string eval has those of its site
+        let saved_warn = WARNINGS_ON.with(|w| if name.is_some() { w.replace(false) } else { w.get() });
         set_location((Some(name.unwrap_or_else(|| Rc::from(format!("(eval {})", self.eval_count)))), 1));
         let r = self.exec_block_in(&block, scope.clone(), want);
         set_location(saved_loc);
+        WARNINGS_ON.with(|w| w.set(saved_warn));
         self.want_stack.pop();
         self.restore_locals(saved);
         match r {
@@ -742,7 +784,9 @@ impl Interp {
                 // a native has no perl location of its own
                 let saved_loc = location();
                 set_location((None, saved_loc.1));
+                let saved_warn = WARNINGS_ON.with(|w| w.replace(false));
                 let r = f(self, args, want).map(|v| fit(v, want));
+                WARNINGS_ON.with(|w| w.set(saved_warn));
                 set_location(saved_loc);
                 self.alias_frames.pop();
                 if traced {
@@ -969,6 +1013,7 @@ impl Interp {
         }
         let saved_pkg = self.package.clone();
         let saved_strict = self.strict;
+        let saved_warn = WARNINGS_ON.with(|w| w.get());
         let mut last = Vec::new();
         let n = block.len();
         let r = (|| {
@@ -1012,6 +1057,7 @@ impl Interp {
         })();
         self.package = saved_pkg;
         self.strict = saved_strict;
+        WARNINGS_ON.with(|w| w.set(saved_warn));
         r
     }
 
@@ -1119,6 +1165,10 @@ impl Interp {
             Stmt::Label(_) => Ok(vec![]),
             Stmt::Line(n) => {
                 LOCATION.with(|l| l.borrow_mut().1 = *n);
+                Ok(vec![])
+            }
+            Stmt::Warnings(on) => {
+                WARNINGS_ON.with(|w| w.set(*on));
                 Ok(vec![])
             }
             Stmt::Modified(cond, e) => {
@@ -1930,7 +1980,19 @@ impl Interp {
             }
             Expr::Elem(c, i) => {
                 let i = self.scalar(i, scope)?.to_i64();
-                Lv::AElem(self.array_of(c, scope, true)?, i)
+                let a = self.array_of(c, scope, true)?;
+                // an element of @_ aliased to a literal is read-only
+                if let Some(f) = self.alias_frames.last() {
+                    if f.args.as_ref().is_some_and(|x| Rc::ptr_eq(x, &a)) {
+                        let len = a.borrow().len();
+                        if let Some(idx) = index(len, i) {
+                            if let Some(Some(Lv::ReadOnly(v))) = f.aliases.get(idx) {
+                                return Ok(Lv::ReadOnly(v.clone()));
+                            }
+                        }
+                    }
+                }
+                Lv::AElem(a, i)
             }
             Expr::HElem(c, k) => {
                 let k = self.hash_key(k, scope)?;
@@ -2871,6 +2933,11 @@ impl Interp {
                         al.push(Some(Lv::AElem(a.clone(), i as i64)));
                     }
                 }
+                // a literal is read-only: writing $_[i] to it dies
+                Expr::Const(c) => {
+                    vals.push(c.clone());
+                    al.push(Some(Lv::ReadOnly(c.clone())));
+                }
                 x => {
                     for v in self.list(x, scope)? {
                         vals.push(v);
@@ -2894,7 +2961,7 @@ impl Interp {
             _ => return die(format!("Can't call method \"{name}\" on unblessed reference")),
         };
         if let Some(qualified) = name.strip_prefix("SUPER::") {
-            let parents = self.isa.get(&*self.package).cloned().unwrap_or_default();
+            let parents = self.parents_of(&self.package.clone());
             for p in parents {
                 if let Some(c) = self.find_method(&p, qualified) {
                     return self.call(&c, args, want);
@@ -2949,7 +3016,22 @@ impl Interp {
         if class == target {
             return true;
         }
-        self.isa.get(class).is_some_and(|ps| ps.iter().any(|p| self.class_isa(p, target)))
+        self.parents_of(class).iter().any(|p| self.class_isa(p, target))
+    }
+
+    /// A class's parents: its @ISA as the program set it, then those the
+    /// runtime declares.
+    fn parents_of(&self, class: &str) -> Vec<Rc<str>> {
+        let mut out: Vec<Rc<str>> = Vec::new();
+        if let Some(Binding::Array(a)) = self.globals.get(&(b'@', Rc::from(format!("{class}::ISA")))) {
+            out.extend(a.borrow().iter().map(|p| Rc::from(p.to_text().as_str())));
+        }
+        for p in self.isa.get(class).map(|v| v.as_slice()).unwrap_or(&[]) {
+            if !out.contains(p) {
+                out.push(p.clone());
+            }
+        }
+        out
     }
 
     fn find_method(&self, class: &str, name: &str) -> Option<Rc<Code>> {

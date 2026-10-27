@@ -3105,7 +3105,13 @@ fn extract_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
             viv_array(&self_, "PATH").push(type_.clone()); // save file type in metadata PATH
 
             // process the file
-            let result = it.call_named(&func, vec![self_.clone(), dir_info.clone()], Want::Scalar)?.pop().unwrap_or_default();
+            let result = match it.call_named(&func, vec![self_.clone(), dir_info.clone()], Want::Scalar) {
+                Ok(mut v) => v.pop().unwrap_or_default(),
+                // a `last` run outside any loop of the processing sub (perl
+                // looks up the call stack) leaves this loop, right here
+                Err(crate::interp::eval::Flow::Last(None)) => break,
+                Err(e) => return Err(e),
+            };
 
             if let Value::ArrayRef(p) = viv_array(&self_, "PATH") {
                 p.borrow_mut().pop();

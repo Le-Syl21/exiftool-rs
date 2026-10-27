@@ -5,7 +5,7 @@
 // (the Perl assigns values it does not read again; the port keeps them)
 #![allow(unused_assignments)]
 
-use crate::interp::eval::{die, Cell, ER};
+use crate::interp::eval::{Cell, ER};
 use crate::interp::{Interp, Want};
 use crate::modules::random_access::{cell, raf_read_cell, substr};
 use crate::perl::Value;
@@ -648,8 +648,10 @@ fn process_woff_impl(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<Value>
                 return Ok(n(1));
             }
             if !seek(it, &raf, n(4), 1)? {
-                // ("$err = 1, last" outside of any loop in the Perl)
-                return die("Can't \"last\" outside a loop block");
+                // ("$err = 1, last" outside of any loop in the Perl: perl
+                // leaves the nearest loop up the call stack, the file type
+                // loop of ExtractInfo)
+                return Err(crate::interp::eval::Flow::Last(None));
             }
             let mut i = n(0);
             while pl::lt(&i, &nn) {

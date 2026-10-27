@@ -154,10 +154,44 @@ pub fn unpack(template: &[u8], data: &[u8]) -> Result<Vec<Value>, String> {
     let items = parse_template(template)?;
     let mut out = Vec::new();
     WARNINGS.with(|w| w.borrow_mut().clear());
-    // a template that starts with U works on characters (U0 mode)
-    U0.with(|u| u.set(items.first().is_some_and(|i| i.letter == b'U')));
-    unpack_items(&items, data, 0, &mut out)?;
+    // a template that starts with U is in U0 mode
+    let u0_start = items.first().is_some_and(|i| i.letter == b'U');
+    let switches = items.iter().any(|i| matches!(i.letter, b'U' | b'C') && i.count == Count::N(0) && i.group.is_none());
+    U0.with(|u| u.set(u0_start));
+    if !u0_start && !switches {
+        unpack_items(&items, data, 0, &mut out)?;
+        return Ok(out);
+    }
+    // U0 mode reads the string as perl's UTF-8 upgrade of it (each byte
+    // from 0x80 becomes two), C0 mode as characters: the rest of the data
+    // is converted at each switch (top-level switches)
+    let mut cur: Vec<u8> = if u0_start { upgrade(data) } else { data.to_vec() };
+    let mut pos = 0;
+    for item in &items {
+        if matches!(item.letter, b'U' | b'C') && item.count == Count::N(0) && item.group.is_none() {
+            let to_u0 = item.letter == b'U';
+            if to_u0 != U0.with(|u| u.get()) {
+                cur = if to_u0 { upgrade(&cur[pos.min(cur.len())..]) } else { downgrade(&cur[pos.min(cur.len())..]) };
+                pos = 0;
+                U0.with(|u| u.set(to_u0));
+            }
+            continue;
+        }
+        pos = unpack_items(std::slice::from_ref(item), &cur, pos, &mut out)?;
+    }
     Ok(out)
+}
+
+/// perl's utf8::upgrade of a byte string: the UTF-8 encoding of its bytes
+/// taken as characters.
+fn upgrade(b: &[u8]) -> Vec<u8> {
+    b.iter().map(|&c| c as char).collect::<String>().into_bytes()
+}
+
+/// Back from the upgraded form to characters (bytes), as far as it decodes.
+fn downgrade(b: &[u8]) -> Vec<u8> {
+    let s = String::from_utf8_lossy(b);
+    s.chars().map(|c| if (c as u32) < 256 { c as u8 } else { b'?' }).collect()
 }
 
 thread_local! {
@@ -430,12 +464,15 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
             b'C' if count == Count::N(0) => U0.with(|u| u.set(false)),
             b'U' => {
                 if U0.with(|u| u.get()) {
-                    // U0 mode: the characters of a byte string are its bytes
-                    let n = repeat(count, remaining);
-                    for &c in &data[pos..pos + n] {
-                        out.push(Value::Int(c as i64));
+                    // U0 mode: characters from the upgraded (UTF-8) data
+                    let text = String::from_utf8_lossy(&data[pos..]).into_owned();
+                    let n = repeat(count, text.chars().count());
+                    let mut used = 0;
+                    for ch in text.chars().take(n) {
+                        out.push(Value::Int(ch as i64));
+                        used += ch.len_utf8();
                     }
-                    pos += n;
+                    pos += used;
                 } else {
                     // C0 mode: U reads UTF-8 characters from the bytes
                     if count == Count::One && pos >= data.len() {

@@ -32,7 +32,7 @@ type R<T> = Result<T, ParseError>;
 
 /// Parse a whole program (an eval string, a config file).
 pub fn parse_program(src: &[u8], package: &str) -> R<Block> {
-    let mut p = Parser { s: src, pos: 0, package: Rc::from(package), line_pos: 0, line: 1 };
+    let mut p = Parser { s: src, pos: 0, package: Rc::from(package), line_pos: 0, line: 1, warnings: false };
     let block = p.statements()?;
     p.ws();
     if p.pos < p.s.len() {
@@ -94,7 +94,7 @@ fn apply_prototype(proto: &str, args: Vec<Expr>) -> Vec<Expr> {
 
 /// Parse the text of an interpolated string (the inside of `"..."`).
 pub fn parse_interpolated(raw: &[u8], package: &str) -> R<Vec<Part>> {
-    let mut p = Parser { s: raw, pos: 0, package: Rc::from(package), line_pos: 0, line: 1 };
+    let mut p = Parser { s: raw, pos: 0, package: Rc::from(package), line_pos: 0, line: 1, warnings: false };
     p.interpolate(raw, false)
 }
 
@@ -105,6 +105,8 @@ struct Parser<'a> {
     /// The line at `line_pos` (counted incrementally for Stmt::Line).
     line_pos: usize,
     line: u32,
+    /// `use warnings` in effect (lexically).
+    warnings: bool,
 }
 
 /// Builtins that take one argument and bind tighter than comparisons.
@@ -281,7 +283,16 @@ impl<'a> Parser<'a> {
                     out.push(Stmt::Line(line));
                     last = line;
                 }
+                let switch = match &st {
+                    Stmt::Use(n, _) if &**n == "warnings" => Some(true),
+                    Stmt::Use(n, _) if &**n == "no warnings" => Some(false),
+                    _ => None,
+                };
                 out.push(st);
+                if let Some(on) = switch {
+                    self.warnings = on;
+                    out.push(Stmt::Warnings(on));
+                }
             }
         }
     }
@@ -301,8 +312,21 @@ impl<'a> Parser<'a> {
 
     fn block(&mut self) -> R<Block> {
         self.expect("{")?;
-        let b = self.statements()?;
+        // `use warnings` is lexical: it ends with the block
+        let saved = self.warnings;
+        let b = self.statements();
+        self.warnings = saved;
+        let b = b?;
         self.expect("}")?;
+        Ok(b)
+    }
+
+    /// A sub's body: it runs with the warnings of where it was written,
+    /// whoever calls it.
+    fn sub_body(&mut self) -> R<Block> {
+        let on = self.warnings;
+        let mut b = self.block()?;
+        b.insert(0, Stmt::Warnings(on));
         Ok(b)
     }
 
@@ -458,7 +482,7 @@ impl<'a> Parser<'a> {
                     if self.eat(";") {
                         return Ok(None);
                     }
-                    let body = self.block()?;
+                    let body = self.sub_body()?;
                     let full: Rc<str> = if name.contains("::") { Rc::from(name) } else { Rc::from(format!("{}::{}", self.package, name)) };
                     return Ok(Some(Stmt::SubDef(Rc::new(Sub { name: Some(full), package: self.package.clone(), body: Rc::new(body) }))));
                 }
@@ -1659,7 +1683,7 @@ impl<'a> Parser<'a> {
             }
             "sub" => {
                 self.skip_prototype();
-                let body = self.block()?;
+                let body = self.sub_body()?;
                 return Ok(Expr::AnonSub(Rc::new(Sub { name: None, package: self.package.clone(), body: Rc::new(body) })));
             }
             "do" => {
@@ -2308,7 +2332,7 @@ impl<'a> Parser<'a> {
                 if let Some(end) = interp_var_end(raw, i, regex) {
                     flush(&mut lit, &mut parts);
                     let src = &raw[i..end];
-                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1 };
+                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: false };
                     let e = sub.postfix()?;
                     parts.push(Part::Scalar(e));
                     i = end;
@@ -2319,7 +2343,7 @@ impl<'a> Parser<'a> {
                 if let Some(end) = interp_var_end(raw, i, regex) {
                     flush(&mut lit, &mut parts);
                     let src = &raw[i..end];
-                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1 };
+                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: false };
                     let e = sub.postfix()?;
                     parts.push(Part::Array(e));
                     i = end;

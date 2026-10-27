@@ -843,7 +843,7 @@ fn substr(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
             // a warning only where warnings are enabled: -w here (the
             // interpreter does not track `use warnings` scopes, and
             // ExifTool's modules do not enable them)
-            if it.get_scalar("main::^W").truthy() {
+            if super::warnings_enabled(it) {
                 warn(it, Value::str(&format!("substr outside of string{}", super::location_suffix())))?;
             }
             Value::Undef

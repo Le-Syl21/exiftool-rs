@@ -223,4 +223,7 @@ pub enum Stmt {
     Modified(Expr, Expr),
     /// The line the next statement starts on (for die/warn locations).
     Line(u32),
+    /// `use warnings` / `no warnings` (lexical): whether warnings are on
+    /// from here to the end of the block.
+    Warnings(bool),
 }

@@ -109,6 +109,8 @@ pub struct FileHandle {
     pub path: Option<String>,
     /// The class it is blessed into (`bless $fh, 'IO::File'`).
     pub class: Option<Rc<str>>,
+    /// Its name in perl's messages ("FH", "$fh"), from the open.
+    pub name: Option<Rc<str>>,
 }
 
 impl std::fmt::Debug for FileHandle {
@@ -223,6 +225,9 @@ impl Interp {
         let hv = self.scalar(h, scope)?;
         let Some(h) = self.handle_of(&hv, false) else { return Ok(if want == Want::List { vec![] } else { vec![Value::Undef] }) };
         let sep = self.get_scalar("main::/");
+        // the handle perl names after "at FILE line N" in die/warn messages
+        let chunk = !(sep.is_undef() == false && &*sep.to_bytes() == b"\n");
+        super::set_last_read(&h, chunk);
         let mut out = Vec::new();
         loop {
             let rec = {
@@ -559,6 +564,22 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
             }
         }
     };
+    // the name perl gives the handle in messages: the bareword, or the
+    // variable the handle went into
+    let name: Option<Rc<str>> = match first {
+        Expr::Const(v) => {
+            let t = v.to_text();
+            let t = t.trim_start_matches('*');
+            Some(Rc::from(t.strip_prefix("main::").unwrap_or(t)))
+        }
+        Expr::Scalar(n) => Some(Rc::from(format!("${n}"))),
+        Expr::My(vars, _) => match vars.first() {
+            Some(Expr::Scalar(n)) => Some(Rc::from(format!("${n}"))),
+            _ => None,
+        },
+        _ => None,
+    };
+    h.borrow_mut().name = name;
     let (mode, target) = if args.len() >= 3 {
         (it.scalar(&args[1], scope)?.to_text(), it.scalar(&args[2], scope)?)
     } else {

@@ -36,7 +36,7 @@ pub(crate) fn substr(it: &mut Interp, s: &Value, off: &Value, len: Option<&Value
         None => {
             // (a warning only with warnings enabled: -w, as ExifTool's
             // modules do not enable them)
-            if it.get_scalar("main::^W").truthy() {
+            if crate::interp::eval::warnings_enabled(it) {
                 it.warn(Value::str("substr outside of string at (eval) line 1.\n"))?;
             }
             Value::Undef
