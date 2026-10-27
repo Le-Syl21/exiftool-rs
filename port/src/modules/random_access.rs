@@ -25,7 +25,8 @@ fn n(i: i64) -> Value {
 }
 
 /// `substr(STR, OFF, LEN)` (rvalue) as the interpreter's builtin does it:
-/// an undefined LEN is 0, and outside the string it warns and gives undef.
+/// an undefined LEN is 0, and outside the string it gives undef (and warns
+/// under -w).
 pub(crate) fn substr(it: &mut Interp, s: &Value, off: &Value, len: Option<&Value>) -> ER<Value> {
     let s = s.to_bytes();
     let off = off.to_i64();
@@ -33,7 +34,11 @@ pub(crate) fn substr(it: &mut Interp, s: &Value, off: &Value, len: Option<&Value
     Ok(match crate::interp::eval::substr_range(s.len(), off, len) {
         Some((a, b)) => Value::bytes(&s[a..b]),
         None => {
-            it.warn(Value::str("substr outside of string at (eval) line 1.\n"))?;
+            // (a warning only with warnings enabled: -w, as ExifTool's
+            // modules do not enable them)
+            if it.get_scalar("main::^W").truthy() {
+                it.warn(Value::str("substr outside of string at (eval) line 1.\n"))?;
+            }
             Value::Undef
         }
     })

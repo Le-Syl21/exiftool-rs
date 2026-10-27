@@ -164,6 +164,7 @@ fn run_source(it: &mut Interp, path: &str) -> ER<()> {
     let scope = crate::interp::Scope::new(None);
     let saved = it.strict;
     it.strict = false;
+    it.source_name = Some(Rc::from(path));
     let r = it.eval_string(&src, "main", &scope, Want::Scalar);
     it.strict = saved;
     // The file's `my` variables, for the module's ported subs: the same

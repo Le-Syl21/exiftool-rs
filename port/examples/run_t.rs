@@ -14,6 +14,7 @@ fn main() {
     let argv: Vec<exiftool_port::perl::Value> = std::env::args().skip(2).map(|a| exiftool_port::perl::Value::str(&a)).collect();
     it.set_global(b'@', "main::ARGV", exiftool_port::interp::Binding::Array(std::rc::Rc::new(std::cell::RefCell::new(argv))));
     let scope = Scope::new(None);
+    it.source_name = Some(std::rc::Rc::from(path.as_str()));
     if let Err(e) = it.eval_string(&src, "main", &scope, Want::Void) {
         if it.exit_code.is_none() {
             eprintln!("died: {}", e.to_text());

@@ -436,7 +436,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 msg = b"Died".to_vec();
             }
             if msg.last() != Some(&b'\n') {
-                msg.extend_from_slice(b" at (eval) line 1.\n");
+                msg.extend_from_slice(super::location_suffix().as_bytes());
             }
             Err(Flow::Die(Value::bytes(msg)))
         }
@@ -447,7 +447,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 msg = b"Warning: something's wrong".to_vec();
             }
             if msg.last() != Some(&b'\n') {
-                msg.extend_from_slice(b" at (eval) line 1.\n");
+                msg.extend_from_slice(super::location_suffix().as_bytes());
             }
             warn(it, Value::bytes(msg))?;
             one(Value::Int(1))
@@ -844,7 +844,7 @@ fn substr(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
             // interpreter does not track `use warnings` scopes, and
             // ExifTool's modules do not enable them)
             if it.get_scalar("main::^W").truthy() {
-                warn(it, Value::str("substr outside of string at (eval) line 1.\n"))?;
+                warn(it, Value::str(&format!("substr outside of string{}", super::location_suffix())))?;
             }
             Value::Undef
         }

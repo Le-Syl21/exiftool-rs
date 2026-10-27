@@ -39,10 +39,34 @@ pub enum Flow {
 
 pub type ER<T> = Result<T, Flow>;
 
+thread_local! {
+    /// Where the running Perl code is: its file (the script, a required
+    /// file, `(eval N)`) and the line of its current statement; no file
+    /// while a native runs (its perl location, in a module's source, is not
+    /// known).
+    static LOCATION: RefCell<(Option<Rc<str>>, u32)> = const { RefCell::new((None, 1)) };
+}
+
+/// perl's " at FILE line N.\n" for a die or warn without a newline.
+pub fn location_suffix() -> String {
+    LOCATION.with(|l| match &*l.borrow() {
+        (Some(f), line) => format!(" at {f} line {line}.\n"),
+        (None, _) => " at (eval) line 1.\n".to_string(),
+    })
+}
+
+fn location() -> (Option<Rc<str>>, u32) {
+    LOCATION.with(|l| l.borrow().clone())
+}
+
+fn set_location(loc: (Option<Rc<str>>, u32)) {
+    LOCATION.with(|l| *l.borrow_mut() = loc);
+}
+
 pub fn die<T>(msg: impl Into<String>) -> ER<T> {
     let mut m: String = msg.into();
     if !m.ends_with('\n') {
-        m.push_str(" at (eval) line 1.\n");
+        m.push_str(&location_suffix());
     }
     Err(Flow::Die(Value::from(m)))
 }
@@ -326,6 +350,11 @@ pub struct Interp {
     handles: HashMap<Rc<str>, io::HandleRc>,
     /// Write STDOUT/STDERR to the process's streams instead of buffers.
     pub passthrough: bool,
+    /// The name the next eval_string runs under (a file's path), instead of
+    /// `(eval N)`.
+    pub source_name: Option<Rc<str>>,
+    /// The file each Perl sub was defined in.
+    sub_files: HashMap<usize, Rc<str>>,
     /// STDOUT output waiting in perl's 8 KiB buffer (passthrough mode).
     stdout_pending: Vec<u8>,
     /// `END` blocks, run by `run_end_blocks`.
@@ -394,6 +423,8 @@ impl Interp {
             strict: true,
             handles: HashMap::new(),
             passthrough: false,
+            source_name: None,
+            sub_files: HashMap::new(),
             stdout_pending: Vec::new(),
             end_blocks: Vec::new(),
             exit_code: None,
@@ -576,11 +607,27 @@ impl Interp {
     }
 
     fn eval_string_inner(&mut self, code: &[u8], scope: &Rc<Scope>, want: Want) -> Result<Vec<Value>, Value> {
-        let block = self.compile(code)?;
-        self.eval_count += 1;
+        let name = self.source_name.take();
+        let block = match self.compile(code) {
+            Ok(b) => b,
+            // a syntax error in a file names the file
+            Err(e) => {
+                return Err(match &name {
+                    Some(f) => Value::from(e.to_text().replacen(&format!("(eval {})", self.eval_count + 1), f, 1)),
+                    None => e,
+                })
+            }
+        };
+        // perl numbers its string evals; a file is not one
+        if name.is_none() {
+            self.eval_count += 1;
+        }
         let saved = self.saved.len();
         self.want_stack.push(want);
+        let saved_loc = location();
+        set_location((Some(name.unwrap_or_else(|| Rc::from(format!("(eval {})", self.eval_count)))), 1));
         let r = self.exec_block_in(&block, scope.clone(), want);
+        set_location(saved_loc);
         self.want_stack.pop();
         self.restore_locals(saved);
         match r {
@@ -692,7 +739,11 @@ impl Interp {
                 // Always a frame of its own: set_arg in this native must never
                 // reach the variables of an outer call (no aliases = no-op).
                 self.alias_frames.push(AliasFrame { args: None, aliases: aliases.unwrap_or_default(), originals: Vec::new() });
+                // a native has no perl location of its own
+                let saved_loc = location();
+                set_location((None, saved_loc.1));
                 let r = f(self, args, want).map(|v| fit(v, want));
+                set_location(saved_loc);
                 self.alias_frames.pop();
                 if traced {
                     self.trace_depth -= 1;
@@ -721,7 +772,11 @@ impl Interp {
                     self.trace_write(&line);
                     self.trace_depth += 1;
                 }
+                let saved_loc = location();
+                let file = self.sub_files.get(&(Rc::as_ptr(sub) as usize)).cloned().or_else(|| saved_loc.0.clone());
+                set_location((file, saved_loc.1));
                 let r = self.call_perl(sub, scope, arr, want);
+                set_location(saved_loc);
                 if traced {
                     self.trace_depth -= 1;
                     let res = match (&r, want) {
@@ -907,6 +962,9 @@ impl Interp {
             if let Stmt::SubDef(sub) = st {
                 let code = Rc::new(Code::Perl(sub.clone(), scope.clone()));
                 self.subs.insert(sub.name.clone().unwrap(), code);
+                if let (Some(f), _) = location() {
+                    self.sub_files.insert(Rc::as_ptr(sub) as usize, f);
+                }
             }
         }
         let saved_pkg = self.package.clone();
@@ -1059,6 +1117,10 @@ impl Interp {
             },
             Stmt::SubDef(_) => Ok(vec![]),
             Stmt::Label(_) => Ok(vec![]),
+            Stmt::Line(n) => {
+                LOCATION.with(|l| l.borrow_mut().1 = *n);
+                Ok(vec![])
+            }
             Stmt::Modified(cond, e) => {
                 let c = self.scalar(cond, scope)?;
                 if !c.truthy() {
@@ -1510,7 +1572,12 @@ impl Interp {
                 }
                 Ok(Value::HashRef(Rc::new(RefCell::new(pairs_to_hash(v)))))
             }
-            Expr::AnonSub(sub) => Ok(Value::Code(Rc::new(Code::Perl(sub.clone(), scope.clone())))),
+            Expr::AnonSub(sub) => {
+                if let (Some(f), _) = location() {
+                    self.sub_files.entry(Rc::as_ptr(sub) as usize).or_insert(f);
+                }
+                Ok(Value::Code(Rc::new(Code::Perl(sub.clone(), scope.clone()))))
+            }
             Expr::Call { .. } | Expr::Method { .. } | Expr::CallRef(..) => Ok(self.eval_call(e, scope, Want::Scalar)?.pop().unwrap_or_default()),
             Expr::Match { .. } => Ok(self.do_match(e, scope, Want::Scalar)?.pop().unwrap_or_default()),
             Expr::Subst { target, pat, repl } => self.subst(target, pat, repl, scope),
@@ -1679,7 +1746,7 @@ impl Interp {
         if s.len() > 32 {
             m.extend_from_slice(b"...");
         }
-        m.extend_from_slice(format!(") as {what} ref while \"strict refs\" in use at (eval) line 1.\n").as_bytes());
+        m.extend_from_slice(format!(") as {what} ref while \"strict refs\" in use{}", location_suffix()).as_bytes());
         Err(Flow::Die(Value::bytes(m)))
     }
 

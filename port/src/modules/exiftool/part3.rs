@@ -49,7 +49,11 @@ fn substr(it: &mut Interp, s: &Value, off: &Value, len: Option<&Value>) -> ER<Va
     Ok(match substr_range(b.len(), off.to_i64(), l) {
         Some((x, y)) => Value::bytes(&b[x..y]),
         None => {
-            it.warn(Value::str("substr outside of string at (eval) line 1.\n"))?;
+            // (a warning only with warnings enabled: -w, as ExifTool's
+            // modules do not enable them)
+            if it.get_scalar("main::^W").truthy() {
+                it.warn(Value::str("substr outside of string at (eval) line 1.\n"))?;
+            }
             Value::Undef
         }
     })

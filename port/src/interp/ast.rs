@@ -221,4 +221,6 @@ pub enum Stmt {
     /// `EXPR if COND` / `EXPR unless COND`: no scope of its own, so
     /// `my $x = ... if ...` declares in the enclosing block.
     Modified(Expr, Expr),
+    /// The line the next statement starts on (for die/warn locations).
+    Line(u32),
 }

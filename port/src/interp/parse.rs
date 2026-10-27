@@ -32,7 +32,7 @@ type R<T> = Result<T, ParseError>;
 
 /// Parse a whole program (an eval string, a config file).
 pub fn parse_program(src: &[u8], package: &str) -> R<Block> {
-    let mut p = Parser { s: src, pos: 0, package: Rc::from(package) };
+    let mut p = Parser { s: src, pos: 0, package: Rc::from(package), line_pos: 0, line: 1 };
     let block = p.statements()?;
     p.ws();
     if p.pos < p.s.len() {
@@ -94,7 +94,7 @@ fn apply_prototype(proto: &str, args: Vec<Expr>) -> Vec<Expr> {
 
 /// Parse the text of an interpolated string (the inside of `"..."`).
 pub fn parse_interpolated(raw: &[u8], package: &str) -> R<Vec<Part>> {
-    let mut p = Parser { s: raw, pos: 0, package: Rc::from(package) };
+    let mut p = Parser { s: raw, pos: 0, package: Rc::from(package), line_pos: 0, line: 1 };
     p.interpolate(raw, false)
 }
 
@@ -102,6 +102,9 @@ struct Parser<'a> {
     s: &'a [u8],
     pos: usize,
     package: Rc<str>,
+    /// The line at `line_pos` (counted incrementally for Stmt::Line).
+    line_pos: usize,
+    line: u32,
 }
 
 /// Builtins that take one argument and bind tighter than comparisons.
@@ -266,15 +269,34 @@ impl<'a> Parser<'a> {
 
     fn statements(&mut self) -> R<Block> {
         let mut out = Vec::new();
+        let mut last = 0;
         loop {
             self.ws();
             if self.pos >= self.s.len() || self.at(0) == b'}' {
                 return Ok(out);
             }
+            let line = self.line_here();
             if let Some(st) = self.statement()? {
+                if line != last && !matches!(st, Stmt::SubDef(_)) {
+                    out.push(Stmt::Line(line));
+                    last = line;
+                }
                 out.push(st);
             }
         }
+    }
+
+    /// The line of the current position (positions only move forward
+    /// between calls, except after backtracking: then counted again).
+    fn line_here(&mut self) -> u32 {
+        if self.pos < self.line_pos {
+            self.line_pos = 0;
+            self.line = 1;
+        }
+        let end = self.pos.min(self.s.len());
+        self.line += self.s[self.line_pos..end].iter().filter(|&&b| b == b'\n').count() as u32;
+        self.line_pos = end;
+        self.line
     }
 
     fn block(&mut self) -> R<Block> {
@@ -2286,7 +2308,7 @@ impl<'a> Parser<'a> {
                 if let Some(end) = interp_var_end(raw, i, regex) {
                     flush(&mut lit, &mut parts);
                     let src = &raw[i..end];
-                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone() };
+                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1 };
                     let e = sub.postfix()?;
                     parts.push(Part::Scalar(e));
                     i = end;
@@ -2297,7 +2319,7 @@ impl<'a> Parser<'a> {
                 if let Some(end) = interp_var_end(raw, i, regex) {
                     flush(&mut lit, &mut parts);
                     let src = &raw[i..end];
-                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone() };
+                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1 };
                     let e = sub.postfix()?;
                     parts.push(Part::Array(e));
                     i = end;

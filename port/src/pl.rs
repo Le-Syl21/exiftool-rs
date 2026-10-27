@@ -269,7 +269,7 @@ pub fn call_list(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Vec<Value>
 pub fn warn(it: &mut Interp, msg: &str) -> ER<()> {
     let mut m = msg.to_string();
     if !m.ends_with('\n') {
-        m.push_str(" at (eval) line 1.\n");
+        m.push_str(&crate::interp::eval::location_suffix());
     }
     it.warn(Value::from(m))
 }
