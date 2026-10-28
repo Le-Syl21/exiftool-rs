@@ -147,6 +147,14 @@ impl Reader<'_> {
                 }
             }
             12 => Value::bytes(self.bytes()?),
+            // \*NAME: the file handle of that name
+            14 => {
+                let name = self.string()?;
+                match it.handle_of_name(&name) {
+                    Some(h) => Value::Handle(h),
+                    None => Value::Undef,
+                }
+            }
             13 => {
                 let _what = self.string()?;
                 Value::Undef

@@ -140,6 +140,22 @@ impl Interp {
         h
     }
 
+    /// The handle `\*NAME` gives (created if needed, as perl's glob).
+    pub fn handle_of_name(&mut self, name: &str) -> Option<HandleRc> {
+        let name = name.strip_prefix("*main::").map(|n| format!("*{n}")).unwrap_or_else(|| name.to_string());
+        self.handle_of(&Value::str(&name), true)
+    }
+
+    /// The handle a bareword names, if there is one (STDIN, STDOUT, STDERR,
+    /// or one the program opened).
+    pub(crate) fn bareword_handle(&mut self, name: &str) -> Option<HandleRc> {
+        if matches!(name, "STDIN" | "STDOUT" | "STDERR") {
+            return Some(self.std_handle(name));
+        }
+        let key: Rc<str> = Rc::from(if name.contains("::") { name.to_string() } else { format!("main::{name}") });
+        self.handles.get(&key).cloned()
+    }
+
     /// The handle a value names: a handle reference, `"*NAME"`, or a name.
     pub(super) fn handle_of(&mut self, v: &Value, create: bool) -> Option<HandleRc> {
         match v {

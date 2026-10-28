@@ -6,7 +6,8 @@ leave. Prints the cases that differ, then the totals and the timings.
     python3 scripts/compare_cli.py [EXIFTOOL_DIR] [FILTER]
 
 EXIFTOOL_DIR is ExifTool's source tree (default ../../exiftool); FILTER keeps
-the cases whose line contains it. Outputs go to target/cli/<n>/{perl,port}.
+the cases whose line contains it; CLI_CASES=FILE reads the cases from FILE.
+Outputs go to target/cli/<n>/{perl,port}.
 """
 import hashlib
 import os
@@ -29,7 +30,7 @@ limit = ["prlimit", "--as=4000000000", "--", "timeout", "300"]
 # themselves, random IDs, the inode, the clock
 VOLATILE = re.compile(r"File (Access|Inode Change|Modification) Date/Time|File(Access|InodeChange|Modify)Date|"
                       r"New [GU]UID|New[GU]UID|File Inode Number|FileInodeNumber|Processing Time|ProcessingTime|"
-                      r"^\[?\w*\]?\s*Now\s*:|\"Now\"")
+                      r"^\[?\w*\]?\s*(Now|Age)\s*:|\"Now\"")
 TODAY = time.strftime("%Y:%m:%d")
 # a date of today (a file's own dates in a format that does not name the
 # tag: -s3, -csv, -l...)
@@ -40,7 +41,9 @@ JSON_IN = '[{"SourceFile":"images/Nikon.jpg","Artist":"From JSON","XMP:Subject":
 
 
 def cases():
-    with open(os.path.join(here, "scripts", "cli_cases.txt")) as f:
+    # (CLI_CASES names another case file, to try one's own cases)
+    path = os.environ.get("CLI_CASES") or os.path.join(here, "scripts", "cli_cases.txt")
+    with open(path) as f:
         for line in f:
             line = line.rstrip("\n")
             if not line or line.startswith("#"):

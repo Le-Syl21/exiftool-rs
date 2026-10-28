@@ -409,6 +409,13 @@ pub struct Interp {
     globals: HashMap<(u8, Rc<str>), Binding>,
     /// Named subs, fully qualified.
     subs: HashMap<Rc<str>, Rc<Code>>,
+    /// The file scope of the program being run, whose `my` variables are
+    /// also `PREFIX::<my>::name` package variables: the natives that port
+    /// the program's subs (the exiftool script's) share them, as the
+    /// modules' ported code shares a module's file lexicals.
+    pub program_scope: Option<(*const Scope, Rc<str>)>,
+    /// Natives that a program's own definition must not replace.
+    pub sticky_natives: std::collections::HashSet<Rc<str>>,
     /// Imports of subs not defined yet (perl's stub, which autoloads in
     /// the package of the sub it names): target -> source.
     sub_aliases: HashMap<Rc<str>, Rc<str>>,
@@ -499,6 +506,8 @@ impl Interp {
         let mut i = Interp {
             globals: HashMap::new(),
             subs: HashMap::new(),
+            program_scope: None,
+            sticky_natives: Default::default(),
             sub_aliases: HashMap::new(),
             isa: HashMap::new(),
             cache: HashMap::new(),
@@ -1098,6 +1107,11 @@ impl Interp {
         // Named subs exist before the code runs, as perl compiles them first.
         for st in block {
             if let Stmt::SubDef(sub) = st {
+                // (a sub the port replaced keeps its native: the exiftool
+                // script's subs, defined when the script runs)
+                if self.sticky_natives.contains(sub.name.as_deref().unwrap_or("")) {
+                    continue;
+                }
                 let code = Rc::new(Code::Perl(sub.clone(), scope.clone()));
                 self.subs.insert(sub.name.clone().unwrap(), code);
                 if let (Some(f), _) = location() {
@@ -2158,6 +2172,40 @@ impl Interp {
     }
 
     fn declare(&mut self, vars: &[Expr], scope: &Rc<Scope>) -> ER<Lv> {
+        // a `my` at the program's file scope: the shared variable, emptied
+        // (the declaration creates a new one each time it runs)
+        if let Some((ptr, prefix)) = self.program_scope.clone() {
+            if std::ptr::eq(Rc::as_ptr(scope), ptr) {
+                let mut out = Vec::new();
+                for v in vars {
+                    out.push(match v {
+                        Expr::Scalar(n) => {
+                            let b = self.global(b'$', &format!("{prefix}::<my>::{n}"));
+                            let Binding::Scalar(c) = b.clone() else { unreachable!() };
+                            *c.borrow_mut() = Value::Undef;
+                            scope.declare(b'$', n, b);
+                            Lv::Scalar(c)
+                        }
+                        Expr::Array(Container::Named(n)) => {
+                            let b = self.global(b'@', &format!("{prefix}::<my>::{n}"));
+                            let Binding::Array(a) = b.clone() else { unreachable!() };
+                            a.borrow_mut().clear();
+                            scope.declare(b'@', n, b);
+                            Lv::Array(a)
+                        }
+                        Expr::Hash(Container::Named(n)) => {
+                            let b = self.global(b'%', &format!("{prefix}::<my>::{n}"));
+                            let Binding::Hash(h) = b.clone() else { unreachable!() };
+                            *h.borrow_mut() = Hash::default();
+                            scope.declare(b'%', n, b);
+                            Lv::Hash(h)
+                        }
+                        _ => Lv::Skip,
+                    });
+                }
+                return Ok(if out.len() == 1 && !matches!(vars.first(), None) { out.pop().unwrap() } else { Lv::List(out) });
+            }
+        }
         let mut out = Vec::new();
         for v in vars {
             out.push(match v {
@@ -2886,7 +2934,12 @@ impl Interp {
             *a_cell.borrow_mut() = items[x].clone();
             *b_cell.borrow_mut() = items[y].clone();
             let r = match (cb, &code) {
-                (Callback::Block(b), _) => me.run_block(b, scope, Want::Scalar),
+                // (a sort block is a sub: `return` ends the comparison, as
+                // in the exiftool script's -fileOrder sort)
+                (Callback::Block(b), _) => match me.run_block(b, scope, Want::Scalar) {
+                    Err(Flow::Return(v)) => Ok(v),
+                    r => r,
+                },
                 (_, Some(c)) => me.call(c, vec![], Want::Scalar),
                 _ => Ok(vec![Value::Int(0)]),
             };
@@ -3051,11 +3104,24 @@ impl Interp {
                 None => return die(format!("Can't call method \"{name}\" on unblessed reference")),
             },
             Value::Undef => return die(format!("Can't call method \"{name}\" on an undefined value")),
-            // any other plain value names a class
+            // any other plain value names a class, or a bareword file
+            // handle with no package of that name (STDOUT->autoflush(1)),
+            // which is an IO::File
             v if !v.is_ref() => {
                 let t = v.to_text();
                 if t.is_empty() {
                     return die(format!("Can't call method \"{name}\" without a package or object reference"));
+                }
+                let prefix = format!("{t}::");
+                let is_pkg = self.subs.keys().any(|k| k.starts_with(&prefix));
+                if !is_pkg {
+                    if let Some(h) = self.bareword_handle(&t) {
+                        let mut args = args;
+                        if let Some(first) = args.first_mut() {
+                            *first = Value::Handle(h);
+                        }
+                        return self.call_method(&args[0].clone(), name, args, want);
+                    }
                 }
                 Rc::from(t.as_str())
             }

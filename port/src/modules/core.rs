@@ -96,7 +96,24 @@ fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
+/// `$fh->autoflush(N)` (IO::Handle): STDOUT unbuffered when set, as `$|`;
+/// other handles are written at once here.
+fn io_autoflush(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let on = a.get(1).map(|v| v.truthy()).unwrap_or(true);
+    if let Some(Value::Handle(h)) = a.first() {
+        if std::rc::Rc::ptr_eq(h, &it.bareword_handle("STDOUT").unwrap()) {
+            let old = it.get_scalar("main::|");
+            it.set_scalar("main::|", Value::Int(on as i64));
+            return Ok(vec![old]);
+        }
+    }
+    Ok(vec![Value::Int(0)])
+}
+
 pub fn register(it: &mut Interp) {
+    it.define_native("IO::Handle::autoflush", io_autoflush);
+    it.set_global(b'@', "IO::File::ISA", crate::interp::Binding::Array(std::rc::Rc::new(std::cell::RefCell::new(vec![Value::str("IO::Handle")]))));
+    it.set_global(b'@', "FileHandle::ISA", crate::interp::Binding::Array(std::rc::Rc::new(std::cell::RefCell::new(vec![Value::str("IO::File")]))));
     // Digest::MD5, functional and OO (the object keeps the data added).
     it.define_native("Digest::MD5::md5", |_, a, _| ret(Value::bytes(md5(&a.iter().flat_map(|v| v.to_bytes().to_vec()).collect::<Vec<u8>>()))));
     it.define_native("Digest::MD5::md5_hex", |_, a, _| ret(Value::str(&hex(&md5(&a.iter().flat_map(|v| v.to_bytes().to_vec()).collect::<Vec<u8>>())))));

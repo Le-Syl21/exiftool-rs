@@ -4737,7 +4737,12 @@ fn init_config(it: &mut Interp, _a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             }
             // load the config file (perl looks in the current directory
             // first, as a relative name is opened here)
-            match crate::runtime::require_path(it, &file) {
+            // (ExifTool.pm's code runs in package Image::ExifTool, where the
+            // config file starts)
+            let saved_pkg = std::mem::replace(&mut it.package, std::rc::Rc::from(ET));
+            let r = crate::runtime::require_path(it, &file);
+            it.package = saved_pkg;
+            match r {
                 Ok(()) => {
                     it.set_scalar("main::@", Value::str(""));
                     Ok(())

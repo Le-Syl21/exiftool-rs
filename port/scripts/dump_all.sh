@@ -12,7 +12,6 @@ echo "Image::ExifTool	ExifTool" >"$out/modules.txt"
 perl "$here/dump_module.pl" "$lib" File::RandomAccess "$out/File_RandomAccess.pld"
 echo "File::RandomAccess	File_RandomAccess" >>"$out/modules.txt"
 (cd "$lib/Image/ExifTool" && find . -name '*.pm' -o -name '*.pl') | sed 's|^\./||; s|\.p[lm]$||' | sort -u | while read -r f; do
-    case "$f" in BuildTagLookup|TagInfoXML|HtmlDump|Plot) continue ;; esac
     mod="Image::ExifTool::$(echo "$f" | sed 's|/|::|g')"
     name=$(echo "$f" | sed 's|/|_|g')
     if perl "$here/dump_module.pl" "$lib" "$mod" "$out/$name.pld" 2>>"$out/dump.log"; then

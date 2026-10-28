@@ -113,7 +113,7 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
         return require_file(it, what, &key);
     }
     // Pragmas and modules perl provides: nothing to load.
-    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname" | "Compress::Zlib" | "IO::Uncompress::RawInflate" | "IO::Uncompress::Gunzip" | "IO::Compress::RawDeflate" | "Archive::Zip" | "IO::Compress::Brotli" | "IO::Uncompress::Brotli" | "IO::Uncompress::Bunzip2" | "Time::Piece") {
+    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname" | "Compress::Zlib" | "IO::Uncompress::RawInflate" | "IO::Uncompress::Gunzip" | "IO::Compress::RawDeflate" | "Archive::Zip" | "IO::Compress::Brotli" | "IO::Uncompress::Brotli" | "IO::Uncompress::Bunzip2" | "Time::Piece" | "FileHandle" | "IO::Handle") {
         inc.borrow_mut().insert(key.as_bytes(), Value::str(&key));
         return Ok(());
     }
@@ -241,7 +241,10 @@ fn require_file(it: &mut Interp, path: &str, key: &str) -> ER<()> {
     let scope = crate::interp::Scope::new(None);
     let saved = it.strict;
     it.strict = false;
-    let r = it.eval_string(&src, "main", &scope, Want::Scalar);
+    // (a required file starts in its caller's package, as in perl: a config
+    // file's subs are Image::ExifTool's)
+    let package = it.package.to_string();
+    let r = it.eval_string(&src, &package, &scope, Want::Scalar);
     it.strict = saved;
     // The file's `my` variables, under MODULE::<my>::name when the module
     // has none of that name (a Write*.pl file shares its module's package

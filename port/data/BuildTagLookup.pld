@@ -1,0 +1,566 @@
+PLD1Image::ExifTool::CanonImage::ExifTool::ExifImage::ExifTool::GPSImage::ExifTool::HTMLImage::ExifTool::IPTCImage::ExifTool::MacOSImage::ExifTool::MakerNotesImage::ExifTool::MinoltaImage::ExifTool::NikonImage::ExifTool::NikonCustomImage::ExifTool::PostScriptImage::ExifTool::ShortcutsImage::ExifTool::SonyImage::ExifTool::ValidateImage::ExifTool::XMPInternals::PldImport∆+Image::ExifTool::BuildTagLookup::EscapeHTML!Image::ExifTool::HTML::EscapeHTML/Image::ExifTool::BuildTagLookup::GetTagInfoListImage::ExifTool::GetTagInfoList,Image::ExifTool::BuildTagLookup::GetTagTableImage::ExifTool::GetTagTable(Image::ExifTool::BuildTagLookup::HexDumpImage::ExifTool::HexDump-Image::ExifTool::BuildTagLookup::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::Canon::Get16sImage::ExifTool::Get16sImage::ExifTool::Canon::Get16uImage::ExifTool::Get16uImage::ExifTool::Canon::Get32sImage::ExifTool::Get32sImage::ExifTool::Canon::Get32uImage::ExifTool::Get32uImage::ExifTool::Canon::Get64sImage::ExifTool::Get64sImage::ExifTool::Canon::Get64uImage::ExifTool::Get64uImage::ExifTool::Canon::Get8sImage::ExifTool::Get8sImage::ExifTool::Canon::Get8uImage::ExifTool::Get8u$Image::ExifTool::Canon::GetByteOrderImage::ExifTool::GetByteOrder!Image::ExifTool::Canon::GetDoubleImage::ExifTool::GetDouble#Image::ExifTool::Canon::GetFixed32sImage::ExifTool::GetFixed32s Image::ExifTool::Canon::GetFloatImage::ExifTool::GetFloat&Image::ExifTool::Canon::GetTagInfoListImage::ExifTool::GetTagInfoList#Image::ExifTool::Canon::GetTagTableImage::ExifTool::GetTagTableImage::ExifTool::Canon::HexDumpImage::ExifTool::HexDump!Image::ExifTool::Canon::ReadValueImage::ExifTool::ReadValueImage::ExifTool::Canon::Set16uImage::ExifTool::Set16uImage::ExifTool::Canon::Set32uImage::ExifTool::Set32uImage::ExifTool::Canon::Set64sImage::ExifTool::Set64sImage::ExifTool::Canon::Set64uImage::ExifTool::Set64uImage::ExifTool::Canon::Set8sImage::ExifTool::Set8sImage::ExifTool::Canon::Set8uImage::ExifTool::Set8u$Image::ExifTool::Canon::SetByteOrderImage::ExifTool::SetByteOrder$Image::ExifTool::Canon::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::Canon::TellImage::ExifTool::Tell'Image::ExifTool::Canon::ToggleByteOrder Image::ExifTool::ToggleByteOrderImage::ExifTool::Canon::WriteImage::ExifTool::Write"Image::ExifTool::Canon::WriteValueImage::ExifTool::WriteValueImage::ExifTool::Exif::Get16sImage::ExifTool::Get16sImage::ExifTool::Exif::Get16uImage::ExifTool::Get16uImage::ExifTool::Exif::Get32sImage::ExifTool::Get32sImage::ExifTool::Exif::Get32uImage::ExifTool::Get32uImage::ExifTool::Exif::Get64sImage::ExifTool::Get64sImage::ExifTool::Exif::Get64uImage::ExifTool::Get64uImage::ExifTool::Exif::Get8sImage::ExifTool::Get8sImage::ExifTool::Exif::Get8uImage::ExifTool::Get8u#Image::ExifTool::Exif::GetByteOrderImage::ExifTool::GetByteOrder Image::ExifTool::Exif::GetDoubleImage::ExifTool::GetDouble"Image::ExifTool::Exif::GetFixed32sImage::ExifTool::GetFixed32sImage::ExifTool::Exif::GetFloatImage::ExifTool::GetFloat%Image::ExifTool::Exif::GetTagInfoListImage::ExifTool::GetTagInfoList"Image::ExifTool::Exif::GetTagTableImage::ExifTool::GetTagTableImage::ExifTool::Exif::HexDumpImage::ExifTool::HexDump Image::ExifTool::Exif::ReadValueImage::ExifTool::ReadValueImage::ExifTool::Exif::Set16uImage::ExifTool::Set16uImage::ExifTool::Exif::Set32uImage::ExifTool::Set32uImage::ExifTool::Exif::Set64sImage::ExifTool::Set64sImage::ExifTool::Exif::Set64uImage::ExifTool::Set64uImage::ExifTool::Exif::Set8sImage::ExifTool::Set8sImage::ExifTool::Exif::Set8uImage::ExifTool::Set8u#Image::ExifTool::Exif::SetByteOrderImage::ExifTool::SetByteOrder#Image::ExifTool::Exif::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::Exif::TellImage::ExifTool::Tell&Image::ExifTool::Exif::ToggleByteOrder Image::ExifTool::ToggleByteOrderImage::ExifTool::Exif::WriteImage::ExifTool::Write!Image::ExifTool::Exif::WriteValueImage::ExifTool::WriteValue Image::ExifTool::HTML::EscapeXMLImage::ExifTool::XMP::EscapeXMLImage::ExifTool::HTML::Get16sImage::ExifTool::Get16sImage::ExifTool::HTML::Get16uImage::ExifTool::Get16uImage::ExifTool::HTML::Get32sImage::ExifTool::Get32sImage::ExifTool::HTML::Get32uImage::ExifTool::Get32uImage::ExifTool::HTML::Get64sImage::ExifTool::Get64sImage::ExifTool::HTML::Get64uImage::ExifTool::Get64uImage::ExifTool::HTML::Get8sImage::ExifTool::Get8sImage::ExifTool::HTML::Get8uImage::ExifTool::Get8u#Image::ExifTool::HTML::GetByteOrderImage::ExifTool::GetByteOrder Image::ExifTool::HTML::GetDoubleImage::ExifTool::GetDouble"Image::ExifTool::HTML::GetFixed32sImage::ExifTool::GetFixed32sImage::ExifTool::HTML::GetFloatImage::ExifTool::GetFloat%Image::ExifTool::HTML::GetTagInfoListImage::ExifTool::GetTagInfoList"Image::ExifTool::HTML::GetTagTableImage::ExifTool::GetTagTableImage::ExifTool::HTML::HexDumpImage::ExifTool::HexDump Image::ExifTool::HTML::ReadValueImage::ExifTool::ReadValueImage::ExifTool::HTML::Set16uImage::ExifTool::Set16uImage::ExifTool::HTML::Set32uImage::ExifTool::Set32uImage::ExifTool::HTML::Set64sImage::ExifTool::Set64sImage::ExifTool::HTML::Set64uImage::ExifTool::Set64uImage::ExifTool::HTML::Set8sImage::ExifTool::Set8sImage::ExifTool::HTML::Set8uImage::ExifTool::Set8u#Image::ExifTool::HTML::SetByteOrderImage::ExifTool::SetByteOrder#Image::ExifTool::HTML::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::HTML::TellImage::ExifTool::Tell&Image::ExifTool::HTML::ToggleByteOrder Image::ExifTool::ToggleByteOrder"Image::ExifTool::HTML::UnescapeXML!Image::ExifTool::XMP::UnescapeXMLImage::ExifTool::HTML::WriteImage::ExifTool::Write!Image::ExifTool::HTML::WriteValueImage::ExifTool::WriteValueImage::ExifTool::IPTC::Get16sImage::ExifTool::Get16sImage::ExifTool::IPTC::Get16uImage::ExifTool::Get16uImage::ExifTool::IPTC::Get32sImage::ExifTool::Get32sImage::ExifTool::IPTC::Get32uImage::ExifTool::Get32uImage::ExifTool::IPTC::Get64sImage::ExifTool::Get64sImage::ExifTool::IPTC::Get64uImage::ExifTool::Get64uImage::ExifTool::IPTC::Get8sImage::ExifTool::Get8sImage::ExifTool::IPTC::Get8uImage::ExifTool::Get8u#Image::ExifTool::IPTC::GetByteOrderImage::ExifTool::GetByteOrder Image::ExifTool::IPTC::GetDoubleImage::ExifTool::GetDouble"Image::ExifTool::IPTC::GetFixed32sImage::ExifTool::GetFixed32sImage::ExifTool::IPTC::GetFloatImage::ExifTool::GetFloat%Image::ExifTool::IPTC::GetTagInfoListImage::ExifTool::GetTagInfoList"Image::ExifTool::IPTC::GetTagTableImage::ExifTool::GetTagTableImage::ExifTool::IPTC::HexDumpImage::ExifTool::HexDump Image::ExifTool::IPTC::ReadValueImage::ExifTool::ReadValueImage::ExifTool::IPTC::Set16uImage::ExifTool::Set16uImage::ExifTool::IPTC::Set32uImage::ExifTool::Set32uImage::ExifTool::IPTC::Set64sImage::ExifTool::Set64sImage::ExifTool::IPTC::Set64uImage::ExifTool::Set64uImage::ExifTool::IPTC::Set8sImage::ExifTool::Set8sImage::ExifTool::IPTC::Set8uImage::ExifTool::Set8u#Image::ExifTool::IPTC::SetByteOrderImage::ExifTool::SetByteOrder#Image::ExifTool::IPTC::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::IPTC::TellImage::ExifTool::Tell&Image::ExifTool::IPTC::ToggleByteOrder Image::ExifTool::ToggleByteOrderImage::ExifTool::IPTC::WriteImage::ExifTool::Write!Image::ExifTool::IPTC::WriteValueImage::ExifTool::WriteValueImage::ExifTool::MacOS::Get16sImage::ExifTool::Get16sImage::ExifTool::MacOS::Get16uImage::ExifTool::Get16uImage::ExifTool::MacOS::Get32sImage::ExifTool::Get32sImage::ExifTool::MacOS::Get32uImage::ExifTool::Get32uImage::ExifTool::MacOS::Get64sImage::ExifTool::Get64sImage::ExifTool::MacOS::Get64uImage::ExifTool::Get64uImage::ExifTool::MacOS::Get8sImage::ExifTool::Get8sImage::ExifTool::MacOS::Get8uImage::ExifTool::Get8u$Image::ExifTool::MacOS::GetByteOrderImage::ExifTool::GetByteOrder!Image::ExifTool::MacOS::GetDoubleImage::ExifTool::GetDouble#Image::ExifTool::MacOS::GetFixed32sImage::ExifTool::GetFixed32s Image::ExifTool::MacOS::GetFloatImage::ExifTool::GetFloat&Image::ExifTool::MacOS::GetTagInfoListImage::ExifTool::GetTagInfoList#Image::ExifTool::MacOS::GetTagTableImage::ExifTool::GetTagTableImage::ExifTool::MacOS::HexDumpImage::ExifTool::HexDump!Image::ExifTool::MacOS::ReadValueImage::ExifTool::ReadValueImage::ExifTool::MacOS::Set16uImage::ExifTool::Set16uImage::ExifTool::MacOS::Set32uImage::ExifTool::Set32uImage::ExifTool::MacOS::Set64sImage::ExifTool::Set64sImage::ExifTool::MacOS::Set64uImage::ExifTool::Set64uImage::ExifTool::MacOS::Set8sImage::ExifTool::Set8sImage::ExifTool::MacOS::Set8uImage::ExifTool::Set8u$Image::ExifTool::MacOS::SetByteOrderImage::ExifTool::SetByteOrder$Image::ExifTool::MacOS::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::MacOS::TellImage::ExifTool::Tell'Image::ExifTool::MacOS::ToggleByteOrder Image::ExifTool::ToggleByteOrderImage::ExifTool::MacOS::WriteImage::ExifTool::Write"Image::ExifTool::MacOS::WriteValueImage::ExifTool::WriteValue#Image::ExifTool::MakerNotes::Get16sImage::ExifTool::Get16s#Image::ExifTool::MakerNotes::Get16uImage::ExifTool::Get16u#Image::ExifTool::MakerNotes::Get32sImage::ExifTool::Get32s#Image::ExifTool::MakerNotes::Get32uImage::ExifTool::Get32u#Image::ExifTool::MakerNotes::Get64sImage::ExifTool::Get64s#Image::ExifTool::MakerNotes::Get64uImage::ExifTool::Get64u"Image::ExifTool::MakerNotes::Get8sImage::ExifTool::Get8s"Image::ExifTool::MakerNotes::Get8uImage::ExifTool::Get8u)Image::ExifTool::MakerNotes::GetByteOrderImage::ExifTool::GetByteOrder&Image::ExifTool::MakerNotes::GetDoubleImage::ExifTool::GetDouble(Image::ExifTool::MakerNotes::GetFixed32sImage::ExifTool::GetFixed32s%Image::ExifTool::MakerNotes::GetFloatImage::ExifTool::GetFloat&Image::ExifTool::MakerNotes::ReadValueImage::ExifTool::ReadValue#Image::ExifTool::MakerNotes::Set16uImage::ExifTool::Set16u#Image::ExifTool::MakerNotes::Set32uImage::ExifTool::Set32u#Image::ExifTool::MakerNotes::Set64sImage::ExifTool::Set64s#Image::ExifTool::MakerNotes::Set64uImage::ExifTool::Set64u"Image::ExifTool::MakerNotes::Set8sImage::ExifTool::Set8s"Image::ExifTool::MakerNotes::Set8uImage::ExifTool::Set8u)Image::ExifTool::MakerNotes::SetByteOrderImage::ExifTool::SetByteOrder!Image::ExifTool::MakerNotes::TellImage::ExifTool::Tell,Image::ExifTool::MakerNotes::ToggleByteOrder Image::ExifTool::ToggleByteOrder"Image::ExifTool::MakerNotes::WriteImage::ExifTool::Write'Image::ExifTool::MakerNotes::WriteValueImage::ExifTool::WriteValue Image::ExifTool::Minolta::Get16sImage::ExifTool::Get16s Image::ExifTool::Minolta::Get16uImage::ExifTool::Get16u Image::ExifTool::Minolta::Get32sImage::ExifTool::Get32s Image::ExifTool::Minolta::Get32uImage::ExifTool::Get32u Image::ExifTool::Minolta::Get64sImage::ExifTool::Get64s Image::ExifTool::Minolta::Get64uImage::ExifTool::Get64uImage::ExifTool::Minolta::Get8sImage::ExifTool::Get8sImage::ExifTool::Minolta::Get8uImage::ExifTool::Get8u&Image::ExifTool::Minolta::GetByteOrderImage::ExifTool::GetByteOrder#Image::ExifTool::Minolta::GetDoubleImage::ExifTool::GetDouble%Image::ExifTool::Minolta::GetFixed32sImage::ExifTool::GetFixed32s"Image::ExifTool::Minolta::GetFloatImage::ExifTool::GetFloat(Image::ExifTool::Minolta::GetTagInfoListImage::ExifTool::GetTagInfoList%Image::ExifTool::Minolta::GetTagTableImage::ExifTool::GetTagTable!Image::ExifTool::Minolta::HexDumpImage::ExifTool::HexDump#Image::ExifTool::Minolta::ReadValueImage::ExifTool::ReadValue Image::ExifTool::Minolta::Set16uImage::ExifTool::Set16u Image::ExifTool::Minolta::Set32uImage::ExifTool::Set32u Image::ExifTool::Minolta::Set64sImage::ExifTool::Set64s Image::ExifTool::Minolta::Set64uImage::ExifTool::Set64uImage::ExifTool::Minolta::Set8sImage::ExifTool::Set8sImage::ExifTool::Minolta::Set8uImage::ExifTool::Set8u&Image::ExifTool::Minolta::SetByteOrderImage::ExifTool::SetByteOrder&Image::ExifTool::Minolta::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::Minolta::TellImage::ExifTool::Tell)Image::ExifTool::Minolta::ToggleByteOrder Image::ExifTool::ToggleByteOrderImage::ExifTool::Minolta::WriteImage::ExifTool::Write$Image::ExifTool::Minolta::WriteValueImage::ExifTool::WriteValueImage::ExifTool::Nikon::Get16sImage::ExifTool::Get16sImage::ExifTool::Nikon::Get16uImage::ExifTool::Get16uImage::ExifTool::Nikon::Get32sImage::ExifTool::Get32sImage::ExifTool::Nikon::Get32uImage::ExifTool::Get32uImage::ExifTool::Nikon::Get64sImage::ExifTool::Get64sImage::ExifTool::Nikon::Get64uImage::ExifTool::Get64uImage::ExifTool::Nikon::Get8sImage::ExifTool::Get8sImage::ExifTool::Nikon::Get8uImage::ExifTool::Get8u$Image::ExifTool::Nikon::GetByteOrderImage::ExifTool::GetByteOrder!Image::ExifTool::Nikon::GetDoubleImage::ExifTool::GetDouble#Image::ExifTool::Nikon::GetFixed32sImage::ExifTool::GetFixed32s Image::ExifTool::Nikon::GetFloatImage::ExifTool::GetFloat&Image::ExifTool::Nikon::GetTagInfoListImage::ExifTool::GetTagInfoList#Image::ExifTool::Nikon::GetTagTableImage::ExifTool::GetTagTableImage::ExifTool::Nikon::HexDumpImage::ExifTool::HexDump!Image::ExifTool::Nikon::ReadValueImage::ExifTool::ReadValueImage::ExifTool::Nikon::Set16uImage::ExifTool::Set16uImage::ExifTool::Nikon::Set32uImage::ExifTool::Set32uImage::ExifTool::Nikon::Set64sImage::ExifTool::Set64sImage::ExifTool::Nikon::Set64uImage::ExifTool::Set64uImage::ExifTool::Nikon::Set8sImage::ExifTool::Set8sImage::ExifTool::Nikon::Set8uImage::ExifTool::Set8u$Image::ExifTool::Nikon::SetByteOrderImage::ExifTool::SetByteOrder$Image::ExifTool::Nikon::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::Nikon::TellImage::ExifTool::Tell'Image::ExifTool::Nikon::ToggleByteOrder Image::ExifTool::ToggleByteOrderImage::ExifTool::Nikon::WriteImage::ExifTool::Write"Image::ExifTool::Nikon::WriteValueImage::ExifTool::WriteValue#Image::ExifTool::PostScript::Get16sImage::ExifTool::Get16s#Image::ExifTool::PostScript::Get16uImage::ExifTool::Get16u#Image::ExifTool::PostScript::Get32sImage::ExifTool::Get32s#Image::ExifTool::PostScript::Get32uImage::ExifTool::Get32u#Image::ExifTool::PostScript::Get64sImage::ExifTool::Get64s#Image::ExifTool::PostScript::Get64uImage::ExifTool::Get64u"Image::ExifTool::PostScript::Get8sImage::ExifTool::Get8s"Image::ExifTool::PostScript::Get8uImage::ExifTool::Get8u)Image::ExifTool::PostScript::GetByteOrderImage::ExifTool::GetByteOrder&Image::ExifTool::PostScript::GetDoubleImage::ExifTool::GetDouble(Image::ExifTool::PostScript::GetFixed32sImage::ExifTool::GetFixed32s%Image::ExifTool::PostScript::GetFloatImage::ExifTool::GetFloat+Image::ExifTool::PostScript::GetTagInfoListImage::ExifTool::GetTagInfoList(Image::ExifTool::PostScript::GetTagTableImage::ExifTool::GetTagTable$Image::ExifTool::PostScript::HexDumpImage::ExifTool::HexDump&Image::ExifTool::PostScript::ReadValueImage::ExifTool::ReadValue#Image::ExifTool::PostScript::Set16uImage::ExifTool::Set16u#Image::ExifTool::PostScript::Set32uImage::ExifTool::Set32u#Image::ExifTool::PostScript::Set64sImage::ExifTool::Set64s#Image::ExifTool::PostScript::Set64uImage::ExifTool::Set64u"Image::ExifTool::PostScript::Set8sImage::ExifTool::Set8s"Image::ExifTool::PostScript::Set8uImage::ExifTool::Set8u)Image::ExifTool::PostScript::SetByteOrderImage::ExifTool::SetByteOrder)Image::ExifTool::PostScript::TagTableKeysImage::ExifTool::TagTableKeys!Image::ExifTool::PostScript::TellImage::ExifTool::Tell,Image::ExifTool::PostScript::ToggleByteOrder Image::ExifTool::ToggleByteOrder"Image::ExifTool::PostScript::WriteImage::ExifTool::Write'Image::ExifTool::PostScript::WriteValueImage::ExifTool::WriteValueImage::ExifTool::Sony::Get16sImage::ExifTool::Get16sImage::ExifTool::Sony::Get16uImage::ExifTool::Get16uImage::ExifTool::Sony::Get32sImage::ExifTool::Get32sImage::ExifTool::Sony::Get32uImage::ExifTool::Get32uImage::ExifTool::Sony::Get64sImage::ExifTool::Get64sImage::ExifTool::Sony::Get64uImage::ExifTool::Get64uImage::ExifTool::Sony::Get8sImage::ExifTool::Get8sImage::ExifTool::Sony::Get8uImage::ExifTool::Get8u#Image::ExifTool::Sony::GetByteOrderImage::ExifTool::GetByteOrder Image::ExifTool::Sony::GetDoubleImage::ExifTool::GetDouble"Image::ExifTool::Sony::GetFixed32sImage::ExifTool::GetFixed32sImage::ExifTool::Sony::GetFloatImage::ExifTool::GetFloat%Image::ExifTool::Sony::GetTagInfoListImage::ExifTool::GetTagInfoList"Image::ExifTool::Sony::GetTagTableImage::ExifTool::GetTagTableImage::ExifTool::Sony::HexDumpImage::ExifTool::HexDump Image::ExifTool::Sony::ReadValueImage::ExifTool::ReadValueImage::ExifTool::Sony::Set16uImage::ExifTool::Set16uImage::ExifTool::Sony::Set32uImage::ExifTool::Set32uImage::ExifTool::Sony::Set64sImage::ExifTool::Set64sImage::ExifTool::Sony::Set64uImage::ExifTool::Set64uImage::ExifTool::Sony::Set8sImage::ExifTool::Set8sImage::ExifTool::Sony::Set8uImage::ExifTool::Set8u#Image::ExifTool::Sony::SetByteOrderImage::ExifTool::SetByteOrder#Image::ExifTool::Sony::TagTableKeysImage::ExifTool::TagTableKeysImage::ExifTool::Sony::TellImage::ExifTool::Tell&Image::ExifTool::Sony::ToggleByteOrder Image::ExifTool::ToggleByteOrderImage::ExifTool::Sony::WriteImage::ExifTool::Write!Image::ExifTool::Sony::WriteValueImage::ExifTool::WriteValue)Image::ExifTool::Validate::GetTagInfoListImage::ExifTool::GetTagInfoList&Image::ExifTool::Validate::GetTagTableImage::ExifTool::GetTagTable"Image::ExifTool::Validate::HexDumpImage::ExifTool::HexDump'Image::ExifTool::Validate::TagTableKeysImage::ExifTool::TagTableKeys$Image::ExifTool::XMP::GetTagInfoListImage::ExifTool::GetTagInfoList!Image::ExifTool::XMP::GetTagTableImage::ExifTool::GetTagTableImage::ExifTool::XMP::HexDumpImage::ExifTool::HexDump"Image::ExifTool::XMP::TagTableKeysImage::ExifTool::TagTableKeys$Image::ExifTool::debug@$Image::ExifTool::BuildTagLookup::ISA Exporter$(Image::ExifTool::BuildTagLookup::VERSION3.69%*Image::ExifTool::BuildTagLookup::allTables  @*Image::ExifTool::BuildTagLookup::fileTypesqJPEGEXVCRWDR4TIFFGIFMRWRAFX3FJP2PNGMIEMIFFPSPDFPSDXMPBMPWPGBPGPPMWVRIFFAIFFASFMOVMPEGRealSWFPSPFLVOGGFLACAPEMPCMKVMXFDVPMPINDPGFICCITCFLIRFLIFFPFLFPHTMLVRDRTFFITFITSXISFXCFDSFDSSQTIFFPXPICTZIPGZIPPLISTRAR7ZBZ2CZITAREXEEXRHDRCHMLNKWMFAVCDEXDPXRAWFontJUMBFRSRCM2TSMacOSPHPPCXDCXDWFDWGDXFWTVTorrentVCardLRIR3DAAPDBPFM2MRCLIFJXLMOIISOALIASPCAPJSONMP3KVARTNEFDICOMPCDNKAICOTXTAAC@+Image::ExifTool::BuildTagLookup::tableOrder %createdFiles  $
+createDateFeb 15, 2005$homePagehttps://exiftool.org$caseInsensitive $numbersFirst%
+tweakOrder .CBORJSONCanonVRDCanonCustom
+CaptureOneCanonVRD	CompositeExtraDJICasioDNGUnknown
+DarwinCoreAFCPFLIRDJIFujiFilmFLIRFujiFilm::RAFFujiFilm::RAFHeaderFujiFilm::RAFDataFujiFilm::RAFGIMP	MicrosoftGPSXMPGeoTiffGPSGoProGoogleGoogleGEID3
+PostScriptIPTCExifJPEG-KodakJVC
+KyoceraRawCanonRawLeafKodakLytroLeafMWG	Shortcuts	MicrosoftPhotoMechanicMinoltaLytro
+MinoltaRaw
+KyoceraRawMotorolaMinoltaNikonMotorolaNikonCaptureNikonNikonCustomNikonCaptureNikonSettingsNikonCustomNintendoNikonSettings	PanasonicOlympusPanasonicRaw
+MinoltaRawPentax	PanasonicPhotoMechanicFotoStationPrintIMICC_ProfileQuickTime::AudioKeysQuickTime::KeysQuickTime::VideoKeysQuickTime::AudioKeysRicohReconyxSamsungRicohSigmaRawPanasonicRawSonyIDCSonyUnknownSonyIDCVorbisOgg$docTypeo<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+%docs  CanonRaw˛
+These tags apply to CRW-format Canon RAW files and information in the APP0
+"CIFF" segment of JPEG images.  When writing CanonRaw/CIFF information, the
+length of the information is preserved (and the new information is truncated
+or padded as required) unless B<Writable> is C<resize>. Currently, only
+JpgFromRaw and ThumbnailImage are allowed to change size.  See
+L<https://exiftool.org/canon_raw.html> for a description of the Canon CRW
+format.
+
+CRW images also support the addition of a CanonVRD trailer, which in turn
+supports XMP.  This trailer is created automatically if necessary when
+ExifTool is used to write XMP to a CRW image.
+	Composite∑
+The values of the composite tags are B<Derived From> the values of other
+tags.  These are convenience tags which are calculated after all other
+information is extracted.  Only a few of these tags are writable directly,
+the others are changed by writing the corresponding B<Derived From> tags.
+User-defined Composite tags, also useful for custom-formatting of tag
+values, may created via the L<ExifTool configuration file|../config.html>.
+DNGı
+The main DNG tags are found in the EXIF table.  The tables below define only
+information found within structures of these main DNG tag values.  See
+L<https://helpx.adobe.com/camera-raw/digital-negative.html> for the official
+DNG specification.
+EXIF 	
+EXIF stands for "Exchangeable Image File Format".  This type of information
+is formatted according to the TIFF specification, and may be found in JPG,
+TIFF, PNG, JP2, PGF, MIFF, HDP, PSP and XCF images, as well as many
+TIFF-based RAW images, and even some AVI and MOV videos.
+
+The EXIF meta information is organized into different Image File Directories
+(IFD's) within an image.  The names of these IFD's correspond to the
+ExifTool family 1 group names.  When writing EXIF information, the default
+B<Group> listed below is used unless another group is specified.
+
+Mandatory tags (indicated by a colon after the B<Writable> type) may be
+added automatically with default values when creating a new IFD, and the IFD
+is removed automatically when deleting tags if only default-valued mandatory
+tags remain.
+
+The table below lists all EXIF tags.  Also listed are TIFF, DNG, HDP and
+other tags which are not part of the EXIF specification, but may co-exist
+with EXIF tags in some images.  Tags which are part of the EXIF 3.1
+specification have an underlined B<Tag Name> in the HTML version of this
+documentation.  See
+L<https://www.cipa.jp/std/documents/download_e.html?CIPA_DC-008-2026-E>
+for the official EXIF 3.1 specification.
+ExifToolø
+The tables listed below give the names of all tags recognized by ExifTool.
+They contain a total of $$self{COUNT}{'total tags'} tags, with $$self{COUNT}{'unique tag names'} unique tag names.
+	ExifTool2ƒ(
+B<Tag ID>, B<Index#> or B<Sequence> is given in the first column of each
+table.  A B<Tag ID> is the computer-readable equivalent of a tag name, and
+is the identifier that is actually stored in the file.  B<Index#> refers to
+the offset of a value when found at a fixed position within a data block
+(B<#> is the multiplier for calculating a byte offset: B<1>, B<2>, B<4> or
+B<8>).  These offsets may have a decimal part which is used only to
+differentiate tags with values stored at the same position.  (Note that
+writable tags within binary data blocks are not individually deletable,
+and the usual alternative is to set them to a value of zero.)  B<Sequence>
+gives the order of values for a serial data stream.
+
+A B<Tag Name> is the handle by which the information is accessed in
+ExifTool.  In some instances, more than one name may correspond to a single
+tag ID.  In these cases, the actual name used depends on the context in
+which the information is found.  Valid characters in a tag name are A-Z,
+a-z, 0-9, hyphen (-) and underline (_).  Case is not significant.  A
+question mark (C<?>) after a tag name indicates that the information is
+either not understood, not verified, or not very useful -- these tags are
+not extracted by ExifTool unless the L<Unknown|../ExifTool.html#Unknown> (-u) option is enabled.  Be
+aware that some tag names are different than the descriptions printed out by
+default when extracting information with exiftool.  To see the tag names
+instead of the descriptions, use C<exiftool -s>.
+
+The B<Writable> column indicates whether the tag is writable by ExifTool.
+Anything but a C<no> in this column means the tag is writable.  A C<yes>
+indicates writable information that is either unformatted or written using
+the existing format.  Other expressions give details about the format of the
+stored value, and vary depending on the general type of information.  The
+format name may be followed by a number in square brackets to indicate the
+number of values written, or the number of characters in a fixed-length
+string (including a null terminator which is added if required).
+
+A plus sign (C<+>) after an entry in the B<Writable> column indicates a
+I<List> tag which supports multiple values and allows individual values to
+be added and deleted.  A slash (C</>) indicates a tag that ExifTool will
+I<Avoid> when writing.  These will be edited but not created if another
+same-named tag may be created instead.  To create these tags, the group
+should be specified.  A tilde (C<~>) indicates a tag this is writable only
+when the print conversion is disabled (by setting L<PrintConv|../ExifTool.html#PrintConv> to 0, using the
+-n option, or suffixing the tag name with a C<#> character). An exclamation
+point (C<!>) indicates a tag that is considered I<Unsafe> to write under
+normal circumstances.  These tags are not written unless specified
+explicitly (ie. not when wildcards or "all" are used), and care should be
+taken when editing them manually since they may affect the way an image is
+rendered.  An asterisk (C<*>) indicates a I<Protected> tag which is not
+writable directly, but is written automatically by ExifTool (often when a
+corresponding L<Composite|Image::ExifTool::TagNames/Composite Tags> or
+L<Extra|Image::ExifTool::TagNames/Extra Tags> tag is written). A colon
+(C<:>) indicates a I<Mandatory> tag which may be added automatically when
+writing (use the API L<NoMandatory|../ExifTool.html#NoMandatory> option to avoid creating mandatory EXIF
+tags).  Normally MakerNotes tags may not be deleted individually, but a
+caret (C<^>) indicates a I<Deletable> MakerNotes tag.
+
+The HTML version of these tables also lists possible B<Values> for
+discrete-valued tags, as well as B<Notes> for some tags.  The B<Values> are
+listed with the computer-readable values on the left of the equals sign
+(C<=>), and the human-readable values on the right.  The human-readable
+values are used by default when reading and writing, but the
+computer-readable values may be accessed by disabling the value conversion
+with the -n option on the command line, by setting the L<PrintConv|../ExifTool.html#PrintConv> option to 0
+in the API, or or on a per-tag basis by adding a hash (C<#>) after the tag
+name.
+
+B<Note>: If you are familiar with common meta-information tag names, you may
+find that some ExifTool tag names are different than expected.  The usual
+reason for this is to make the tag names more consistent across different
+types of meta information.  To determine a tag name, either consult this
+documentation or run C<exiftool -s> on a file containing the information in
+question.
+
+I<(This documentation is the result of decades of research, testing and
+reverse engineering, and is the most complete metadata tag list available
+anywhere on the internet.  It is provided not only for ExifTool users, but
+more importantly as a public service to help augment the collective
+knowledge, and is often used as a primary source of information in the
+development of other metadata software.  Please help keep this documentation
+as accurate and complete as possible, and feed any new discoveries back to
+ExifTool.  A big thanks to everyone who has helped with this so far!)>
+ExtraÖ
+The extra tags provide extra features or extra information extracted or
+generated by ExifTool that is not directly associated with another tag
+group.  The B<Group> column lists the family 1 group name when reading.
+Tags with a "-" in this column are write-only.
+
+Tags in the family 1 "System" group are referred to as "pseudo" tags because
+they don't represent real metadata in the file.  Instead, this information
+is stored in the directory structure of the filesystem.  The B<Writable>
+System "pseudo" tags in this table may be written without modifying the file
+itself.  The TestName tag is used for dry-run testing before writing
+FileName.
+GM≤
+These tags are extracted from GM/Cosworth PDR (Performance Data Recorder)
+information found in videos from General Motors cars such as Corvette and
+Camero.
+
+Use the API L<PrintCSV|../ExifTool.html#PrintCSV> option to output all timed
+PDR data in CSV format at greatly increased speed and with much lower memory
+usage.  This option prints the numerical values for each channel in CSV
+format, suitable for import into RaceRender.  In this output, the gear
+numbers for Neutral and Reverse are changed to -1 and -100 respectively for
+compatibility with RaceRender.
+GPS•	
+These GPS tags are part of the EXIF standard, and are stored in a separate
+IFD within the EXIF information.
+
+ExifTool is very flexible about the input format when writing lat/long
+coordinates, and will accept from 1 to 3 floating point numbers (for decimal
+degrees, degrees and minutes, or degrees, minutes and seconds) separated by
+just about anything, and will format them properly according to the EXIF
+specification.
+
+Some GPS tags have values which are fixed-length strings. For these, the
+indicated string lengths include a null terminator which is added
+automatically by ExifTool.  Remember that the descriptive values are used
+when writing (eg. 'Above Sea Level', not '0') unless the print conversion is
+disabled (with '-n' on the command line or the L<PrintConv|../ExifTool.html#PrintConv> option in the API,
+or by suffixing the tag name with a C<#> character).
+
+When adding GPS information to an image, it is important to set all of the
+following tags: GPSLatitude, GPSLatitudeRef, GPSLongitude, GPSLongitudeRef,
+and GPSAltitude and GPSAltitudeRef if the altitude is known.  ExifTool will
+write the required GPSVersionID tag automatically if new a GPS IFD is added
+to an image.
+GeoTiffÇ
+ExifTool extracts the following tags from GeoTIFF images.  See
+L<https://web.archive.org/web/20070820121549/http://www.remotesensing.org/geotiff/spec/geotiffhome.html>
+for the complete GeoTIFF specification.  Also included in the table below
+are ChartTIFF tags (see
+L<https://web.archive.org/web/20020828193928/http://www.charttiff.com/whitepapers.shtml>).
+GeoTIFF tags are not writable individually, but they may be copied en mass
+via the block tags GeoTiffDirectory, GeoTiffDoubleParams and
+GeoTiffAsciiParams.
+IPTC 
+The tags listed below are part of the International Press Telecommunications
+Council (IPTC) and the Newspaper Association of America (NAA) Information
+Interchange Model (IIM).  This is an older meta information format, slowly
+being phased out in favor of XMP -- the newer IPTCCore specification uses
+XMP format.  IPTC information may be found in JPG, TIFF, PNG, MIFF, PS, PDF,
+PSD, XCF and DNG images.
+
+IPTC information is separated into different records, each of which has its
+own set of tags.  See
+L<http://www.iptc.org/std/IIM/4.1/specification/IIMV4.1.pdf> for the
+official IPTC IIM specification.
+
+This specification dictates a length for ASCII (C<string> or C<digits>) and
+binary (C<undef>) values.  These lengths are given in square brackets after
+the B<Writable> format name.  For tags where a range of lengths is allowed,
+the minimum and maximum lengths are separated by a comma within the
+brackets.  When writing, ExifTool issues a minor warning and truncates the
+value if it is longer than allowed by the IPTC specification.  Minor errors
+may be ignored with the L<IgnoreMinorErrors|../ExifTool.html#IgnoreMinorErrors> (-m) option, allowing longer
+values to be written, but beware that values like this may cause problems
+for some other IPTC readers. ExifTool will happily read IPTC values of any
+length.
+
+Separate IPTC date and time tags may be written with a combined date/time
+value and ExifTool automagically takes the appropriate part of the date/time
+string depending on whether a date or time tag is being written.  This is
+very useful when copying date/time values to IPTC from other metadata
+formats.
+
+IPTC time values include a timezone offset.  If written with a value which
+doesn't include a timezone then the current local timezone offset is used
+(unless written with a combined date/time, in which case the local timezone
+offset at the specified date/time is used, which may be different due to
+changes in daylight savings time).
+
+Note that it is not uncommon for IPTC to be found in non-standard locations
+in JPEG and TIFF-based images.  When reading, the family 1 group name has a
+number added for non-standard IPTC ("IPTC2", "IPTC3", etc), but when writing
+only "IPTC" may be specified as the group.  To keep the IPTC consistent,
+ExifTool updates tags in all existing IPTC locations, but will create a new
+IPTC group only in the standard location.
+JFIFó
+The following information is extracted from the JPEG JFIF header.  See
+L<https://www.w3.org/Graphics/JPEG/jfif3.pdf> for the JFIF 1.02
+specification.
+KodakÃ
+Many Kodak models don't store the maker notes in standard IFD format, and
+these formats vary with different models.  Some information has been
+decoded, but much of the Kodak information remains unknown.
+Kodak SpecialEffectsm
+The Kodak SpecialEffects and Borders tags are found in sub-IFD's within the
+Kodak JPEG APP3 "Meta" segment.
+MPEGß
+The MPEG format doesn't specify any file-level meta information.  In lieu of
+this, information is extracted from the first audio and video frame headers
+in the file.
+MWGı
+The Metadata Working Group (MWG) recommends techniques to allow certain
+overlapping EXIF, IPTC and XMP tags to be reconciled when reading, and
+synchronized when writing.  The MWG Composite tags below are designed to aid
+in the implementation of these recommendations.  As well, the MWG defines
+new XMP tags which are listed in the subsequent tables below.  See
+L<https://web.archive.org/web/20180919181934/http://www.metadataworkinggroup.org/pdf/mwg_guidance.pdf>
+for the official MWG specification.
+MacOSÈ
+On MacOS systems, the there are additional MDItem and XAttr Finder tags that
+may be extracted.  These tags are not extracted by default -- they must be
+specifically requested or enabled via an API option.  (Except when reading
+MacOS "._" files directly, see below.)
+
+The tables below list some of the tags that may be extracted, but ExifTool
+will extract all available information even for tags not listed.
+
+Tags in these tables are referred to as "pseudo" tags because their
+information is not stored in the file itself.  As such, B<Writable> tags in
+these tables may be changed without having to rewrite the file.
+Minolta…
+These tags are used by Minolta, Konica/Minolta as well as some Sony cameras.
+Minolta doesn't make things easy for decoders because the meaning of some
+tags and the location where some information is stored is different for
+different camera models.  (Take MinoltaQuality for example, which may be
+located in 5 different places.)
+NikonCustom™
+Unfortunately, the NikonCustom settings are stored in a binary data block
+which changes from model to model.  This means that significant effort must
+be spent in decoding these for each model, usually requiring hundreds of
+test images from a dedicated Nikon owner.  For this reason, the NikonCustom
+settings have not been decoded for all models.  The tables below list the
+custom settings for the currently supported models.
+Olympus§
+Tags 0x0000 through 0x0103 are used by some older Olympus cameras, and are
+the same as Konica/Minolta tags.  These tags are also used for some models
+from other brands such as Acer, BenQ, Epson, Hitachi, HP, Maginon, Minolta,
+Pentax, Ricoh, Samsung, Sanyo, SeaLife, Sony, Supra and Vivitar.
+PDFÄ
+The tags listed in the PDF tables below are those which are used by ExifTool
+to extract meta information, but they are only a small fraction of the total
+number of available PDF tags.  See
+L<http://www.adobe.com/devnet/pdf/pdf_reference.html> for the official PDF
+specification.
+
+ExifTool supports reading and writing PDF documents up to version 2.0,
+including support for RC4, AES-128 and AES-256 encryption.  A
+L<Password|../ExifTool.html#Password> option is provided to allow processing
+of password-protected PDF files.
+
+ExifTool may be used to write native PDF and XMP metadata to PDF files. It
+uses an incremental update technique that has the advantages of being both
+fast and reversible.  If ExifTool was used to modify a PDF file, the
+original may be recovered by deleting the C<PDF-update> pseudo-group (with
+C<-PDF-update:all=> on the command line).  However, there are two main
+disadvantages to this technique:
+
+1) A linearized PDF file is no longer linearized after the update, so it
+must be subsequently re-linearized if this is required.
+
+2) All metadata edits are reversible.  While this would normally be
+considered an advantage, it is a potential security problem because old
+information is never actually deleted from the file.  (However, after
+running ExifTool the old information may be removed permanently using the
+"qpdf" utility with this command: "qpdf --linearize in.pdf out.pdf".)
+	Panasonic1
+These tags are used in Panasonic/Leica cameras.
+Pentax4
+These tags are used in Pentax/Asahi/Ricoh cameras.
+	Photoshopè
+Photoshop tags are found in PSD and PSB files, as well as inside embedded
+Photoshop information in many other file types (JPEG, TIFF, PDF, PNG to name
+a few).
+
+Many Photoshop tags are marked as Unknown (indicated by a question mark
+after the tag name) because the information they provide is not very useful
+under normal circumstances.  These unknown tags are not extracted unless the
+L<Unknown|../ExifTool.html#Unknown> (-u) option is used.  See
+L<http://www.adobe.com/devnet-apps/photoshop/fileformatashtml/> for the
+official specification
+
+Photoshop path tags (Tag ID's 0x7d0 to 0xbb5) are not defined by default,
+but a config file included in the full ExifTool distribution
+(config_files/photoshop_paths.config) contains the tag definitions to allow
+access to this information.
+	PodHeader¡
+~head1 NAME
+
+Image::ExifTool::TagNames - ExifTool tag name documentation
+
+~head1 DESCRIPTION
+
+This document contains a complete list of ExifTool tag names, organized into
+tables based on information type.  Tag names are used to reference specific
+meta information extracted from or written to a file.
+
+~head1 TAG TABLES
+
+PodTrailer˜
+~head1 NOTES
+
+This document generated automatically by
+L<Image::ExifTool::BuildTagLookup|Image::ExifTool::BuildTagLookup>.
+
+~head1 AUTHOR
+
+Copyright 2003-2026, Phil Harvey (philharvey66 at gmail.com)
+
+This library is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+~head1 SEE ALSO
+
+L<Image::ExifTool(3pm)|Image::ExifTool>
+
+~cut
+PrintIMµ
+The format of the PrintIM information is known, however no PrintIM tags have
+been decoded.  Use the L<Unknown|../ExifTool.html#Unknown> (-u) option to extract PrintIM information.
+	QuickTimeá
+The QuickTime format is used for many different types of audio, video and
+image files (most notably, MOV/MP4 videos and HEIC/CR3 images).  ExifTool
+extracts standard meta information and a variety of audio, video and image
+parameters, as well as proprietary information written by many camera
+models.  Tags with a question mark after their name are not extracted unless
+the L<Unknown|../ExifTool.html#Unknown> option is set.
+
+When writing video files, ExifTool creates both QuickTime and XMP tags by
+default, but the group may be specified to write one or the other
+separately.  If no location is specified, newly created QuickTime tags are
+added in the L<ItemList|Image::ExifTool::TagNames/QuickTime ItemList Tags>
+location if possible, otherwise in
+L<UserData|Image::ExifTool::TagNames/QuickTime UserData Tags>, and
+finally in L<Keys|Image::ExifTool::TagNames/QuickTime Keys Tags>,
+but this order may be changed by setting the PREFERRED level of the
+appropriate table in the config file (see
+L<example.config|../config.html#PREF> in the full distribution for an
+example).  Note that some tags with the same name but different ID's may
+exist in the same location, but the family 7 group names may be used to
+differentiate these.
+
+ExifTool currently writes
+L<ItemList|Image::ExifTool::TagNames/QuickTime ItemList Tags> and
+L<UserData|Image::ExifTool::TagNames/QuickTime UserData Tags> only as
+top-level metadata, but select Keys tags are may be written to the audio or
+video track.  See the
+L<AudioKeys|Image::ExifTool::TagNames/QuickTime AudioKeys Tags> and
+L<VideoKeys|Image::ExifTool::TagNames/QuickTime VideoKeys Tags> tags for
+more information.
+
+Alternate language tags may be accessed for
+L<ItemList|Image::ExifTool::TagNames/QuickTime ItemList Tags> and
+L<Keys|Image::ExifTool::TagNames/QuickTime Keys Tags> tags by adding
+a 3-character ISO 639-2 language code and an optional ISO 3166-1 alpha 2
+country code to the tag name (eg. "ItemList:Artist-deu" or
+"ItemList::Artist-deu-DE").  Most
+L<UserData|Image::ExifTool::TagNames/QuickTime UserData Tags> tags support a
+language code, but without a country code.  If no language code is specified
+when writing, the default language is written and alternate languages for
+the tag are deleted.  Use the "und" language code to write the default
+language without deleting alternate languages.  Note that when reading,
+"eng" is also treated as the default language if there is no country code.
+
+According to the specification, integer-format QuickTime date/time tags
+should be stored as UTC.  Unfortunately, digital cameras often store local
+time values instead (presumably because they don't know the time zone).  For
+this reason, by default ExifTool does not assume a time zone for these
+values.  However, if the API L<QuickTimeUTC|../ExifTool.html#QuickTimeUTC> option is set, then ExifTool will
+assume these values are properly stored as UTC, and will convert them to
+local time when extracting.
+
+When writing string-based date/time tags, the system time zone is added if
+the L<PrintConv|../ExifTool.html#PrintConv> option is enabled and no time zone is specified.  This is
+because Apple software may display crazy values if the time zone is missing
+for some tags.
+
+By default ExifTool will remove null padding from some QuickTime containers
+in Canon CR3 files when writing, but the
+L<QuickTimePad|../ExifTool.html#QuickTimePad> option may be used to preserve
+the original size by padding with nulls if necessary.
+
+See
+L<https://developer.apple.com/library/archive/documentation/QuickTime/QTFF/>
+for the official QuickTime specification.
+Realô
+ExifTool recognizes three basic types of Real audio/video files: 1)
+RealMedia (RM, RV and RMVB), 2) RealAudio (RA), and 3) Real Metafile (RAM
+and RPM).
+	Shortcuts§
+Shortcut tags are convenience tags that represent one or more other tag
+names.  They are used like regular tags to read and write the information
+for a specified set of tags.
+
+The shortcut tags below have been pre-defined, but user-defined shortcuts
+may be added via the %Image::ExifTool::UserDefined::Shortcuts lookup in the
+~/.ExifTool_config file.  See the Image::ExifTool::Shortcuts documentation
+for more details.
+Unknownî
+The following tags are decoded in unsupported maker notes.  Use the L<Unknown|../ExifTool.html#Unknown>
+(-u) option to display other unknown tags.
+XMPì'
+XMP stands for "Extensible Metadata Platform", an XML/RDF-based metadata
+format which is being pushed by Adobe.  Information in this format can be
+embedded in many different image file types including JPG, JP2, TIFF, GIF,
+EPS, PDF, PSD, IND, INX, PNG, DJVU, SVG, PGF, MIFF, XCF, CRW, DNG and a
+variety of proprietary TIFF-based RAW images, as well as MOV, AVI, ASF, WMV,
+FLV, SWF and MP4 videos, and WMA and audio formats supporting ID3v2
+information.
+
+The XMP B<Tag ID>'s aren't listed because in most cases they are identical
+to the B<Tag Name> (aside from differences in case).  Tags with different
+ID's are mentioned in the B<Notes> column of the HTML version of this
+document.
+
+All XMP information is stored as character strings.  The B<Writable> column
+specifies the information format:  C<string> is an unformatted string,
+C<integer> is a string of digits (possibly beginning with a '+' or '-'),
+C<real> is a floating point number, C<rational> is entered as a floating
+point number but stored as two C<integer> strings separated by a '/'
+character, C<date> is a date/time string entered in the format "YYYY:mm:dd
+HH:MM:SS[.ss][+/-HH:MM]" but some partial date/time formats are also
+accepted (see L<https://exiftool.org/faq.html#Q5>), C<boolean> is either
+"True" or "False" (but "true" and "false" may be written as a ValueConv
+value for compatibility with non-conforming applications), C<struct>
+indicates a structured tag, and C<lang-alt> is a tag that supports alternate
+languages.
+
+When reading, C<struct> tags are extracted only if the L<Struct|../ExifTool.html#Struct> (-struct)
+option is used.  Otherwise the corresponding I<Flattened> tags, indicated by
+an underline (C<_>) after the B<Writable> type, are extracted.  When
+copying, by default both structured and flattened tags are available, but
+the flattened tags are considered "unsafe" so they aren't copied unless
+specified explicitly.  The L<Struct|../ExifTool.html#Struct> option may be disabled by setting Struct
+to 0 via the API or with --struct on the command line to copy only flattened
+tags, or enabled by setting Struct to 1 via the API or with -struct on the
+command line to copy only as structures.  When writing, the L<Struct|../ExifTool.html#Struct> option
+has no effect, and both structured and flattened tags may be written.  See
+L<https://exiftool.org/struct.html> for more details.
+
+Individual languages for C<lang-alt> tags are accessed by suffixing the tag
+name with a '-', followed by an RFC 3066 language code (eg. "XMP:Title-fr",
+or "Rights-en-US").  (See L<http://www.ietf.org/rfc/rfc3066.txt> for the RFC
+3066 specification.)  A C<lang-alt> tag with no language code accesses the
+"x-default" language, but causes other languages for this tag to be deleted
+when writing.  The "x-default" language code may be specified when writing
+to preserve other existing languages (eg. "XMP-dc:Description-x-default").
+When reading, "x-default" is not specified.
+
+The XMP tags are organized according to schema B<Namespace> in the following
+tables.  The ExifTool family 1 group names are derived from the namespace
+prefixes by adding a leading "XMP-" (eg. "XMP-dc").  A few of the longer
+prefixes have been shortened (as mentioned in the documentation below) to
+avoid excessively long ExifTool group names.  The tags of any namespace may
+be deleted as a group by specifying the family 1 group name (eg.
+"-XMP-dc:all=" on the command line).  This includes namespaces which are not
+pre-defined by ExifTool.
+
+In cases where a tag name exists in more than one namespace, less common
+namespaces are avoided when writing.  However, a specific namespace may be
+written by providing a family 1 group name for the tag (eg. XMP-crs:Contrast
+or XMP-exif:Contrast).  When deciding on which tags to add to an image,
+using standard schemas such as L<dc|/XMP dc Tags>, L<xmp|/XMP xmp Tags>,
+L<iptcCore|/XMP iptcCore Tags> and L<iptcExt|/XMP iptcExt Tags> is
+recommended if possible.
+
+For structures, the heading of the first column is B<Field Name>.  Field
+names are very similar to tag names, except they are used to identify fields
+inside structures instead of stand-alone tags.  See
+L<the Field Name section of the Structured Information documentation|https://exiftool.org/struct.html#Fields> for more
+details.
+
+ExifTool will extract XMP information even if it is not listed in these
+tables, but other tags are not writable unless added as user-defined tags in
+the L<ExifTool config file|../config.html>.  For example, the C<pdfx> namespace doesn't have a
+predefined set of tag names because it is used to store application-defined
+PDF information, so although this information will be extracted, it is only
+writable if the corresponding user-defined tags have been created.
+
+The tables below list tags from the official XMP specification (with an
+underlined B<Namespace> in the HTML version of this documentation), as well
+as extensions from various other sources.  See
+L<http://www.adobe.com/devnet/xmp/> for the official XMP specification.
+@pluginTablesImage::ExifTool::MWG::Composite$noteFont<span class=n>%riffSpec IARLIARTICMSICMTICOPICRDICRPIDIMIDPIIENGIGNRIKEYILGTIMEDINAMIPLTIPRDISBJISFTISHPISRCISRFITCH%xmpSpec	 auxcrsdcexifpdfpdfx	photoshoptiffxxmpxmpBJxmpDMxmpMMxmpNote	xmpRightsxmpTPg$noteFontSmall<span class='n s'>%shortcutNotes
+ AllDatesù
+        contrary to the shortcut name, this represents only the common EXIF
+        date/time tags.  To access all date/time tags, use Time:All instead
+    ColorSpaceTagså
+        standard tags which carry color space information.  Useful for preserving
+        color space when deleting all other metadata
+    
+CommonIFD0≈
+        common metadata tags found in IFD0 of TIFF-format images.  Used to simplify
+        deletion of all metadata from these images.  See
+        L<FAQ number 7|../faq.html#Q7> for details
+    	LargeTags}
+        large binary data tags which may be excluded to reduce memory usage if
+        memory limitations are a problem
+    
+MakerNotesÜ
+        useful when copying tags between files to either copy the maker notes as a
+        block or prevent it from being copied
+    Unsafeﬂ
+        I<Unsafe> tags in JPEG images which are normally not copied.  Defined here
+        as a shortcut to use when rebuilding JPEG EXIF from scratch. See
+        L<FAQ number 20|../faq.html#Q20> for more information
+    ls-lø
+        mimics columns shown by Unix "ls -l" command.  Includes some tags which are
+        extracted only if the API L<SystemTags|../ExifTool.html#SystemTags> option
+        is enabled
+    %formatOK 3012GUIDUnicodebinarybooleancomplexdatedigitsdoubleextendedfixed16sfixed16ufixed32sfixed32ufloatifdifd64$int16sint16u	int16uRevint32sint32u	int32uRevint64s"int64u int8sint8uintegerlang-altpstringrationalrational32srational32urational64srational64u
+realresizesignedstringundefunicodeunsignedutf8
+var_int16u
+var_pstr32
+var_stringvar_ue7
+var_ustr32vt_filetime

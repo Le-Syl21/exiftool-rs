@@ -4,6 +4,7 @@
 //! here can be read side by side with the Perl it comes from. See
 //! `docs/port/ARCHITECTURE.md`.
 
+pub mod cli;
 pub mod interp;
 pub mod modules;
 pub mod perl;

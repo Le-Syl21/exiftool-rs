@@ -24,6 +24,7 @@
 #   8 named code: full name | 9 anonymous code: id, name, deparsed source
 #   10 global: sigil byte, full name (a package variable of another module)
 #   12 regexp: pattern | 13 other reference: description
+#   14 glob reference: *PACKAGE::NAME
 use strict;
 use warnings;
 no warnings 'once';
@@ -289,6 +290,10 @@ sub node {
         } elsif ($type eq 'SCALAR' or $type eq 'REF') {
             $buf .= chr(6) . varint($id{$addr});
             node($$v);
+        } elsif ($type eq 'GLOB') {
+            # \*STDOUT (the TextOut option's default): the handle, by name
+            my $gv = B::svref_2object($v);
+            $buf .= chr(14) . str('*' . $gv->STASH->NAME . '::' . $gv->NAME);
         } else {
             $buf .= chr(13) . str("$type");
         }
