@@ -84,6 +84,8 @@ pub enum CaseOp {
 #[derive(Debug, Clone)]
 pub enum Part {
     Lit(Vec<u8>),
+    /// A literal holding characters: its UTF-8 form.
+    ULit(Vec<u8>),
     /// A scalar expression, stringified.
     Scalar(Expr),
     /// An array expression, joined with `$"`.
@@ -205,7 +207,8 @@ pub enum SubstRepl {
 pub enum Stmt {
     Expr(Expr),
     If(Vec<(Expr, Block)>, Option<Block>),
-    While { label: Option<Rc<str>>, cond: Option<Expr>, body: Block, until: bool, post: bool },
+    /// `modifier`: `EXPR while COND` (no block, so no scope of its own).
+    While { label: Option<Rc<str>>, cond: Option<Expr>, body: Block, until: bool, post: bool, modifier: bool },
     ForC { label: Option<Rc<str>>, init: Option<Expr>, cond: Option<Expr>, step: Option<Expr>, body: Block },
     /// `foreach [my] $var (LIST) BLOCK`; `var` is `None` for `$_`.
     Foreach { label: Option<Rc<str>>, var: Option<(bool, Rc<str>)>, list: Expr, body: Block },

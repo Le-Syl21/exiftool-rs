@@ -2766,7 +2766,7 @@ pub fn set_found_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
 /// storage, number or reference), as the interpreter judges @_ aliases.
 fn unchanged(a: &Value, b: &Value) -> bool {
     match (a, b) {
-        (Value::Str(x), Value::Str(y)) => Rc::ptr_eq(x, y) || x == y,
+        (Value::Str(x), Value::Str(y)) | (Value::UStr(x), Value::UStr(y)) => Rc::ptr_eq(x, y) || x == y,
         (Value::Int(x), Value::Int(y)) => x == y,
         (Value::UInt(x), Value::UInt(y)) => x == y,
         (Value::Num(x), Value::Num(y)) => x.to_bits() == y.to_bits(),

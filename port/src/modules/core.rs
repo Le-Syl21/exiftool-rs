@@ -205,43 +205,36 @@ pub fn register(it: &mut Interp) {
             ret(Value::bytes(b))
         }
     });
-    // Encode: the port's strings are bytes with no UTF-8 flag, so a string
-    // is never flagged, and encode/decode work on characters 0..255 as
-    // perl does for an unflagged string
-    it.define_native("Encode::is_utf8", |_, _, _| ret(Value::from(false)));
-    fn latin1_to_utf8(b: &[u8]) -> Vec<u8> {
-        b.iter().map(|&c| c as char).collect::<String>().into_bytes()
-    }
-    fn utf8_to_latin1(b: &[u8]) -> Vec<u8> {
-        match std::str::from_utf8(b) {
-            Ok(s) if s.chars().all(|c| (c as u32) < 256) => s.chars().map(|c| c as u8).collect(),
-            _ => b.to_vec(),
-        }
-    }
-    let is_utf8_name = |e: &Value| matches!(e.to_text().to_ascii_lowercase().replace('-', "").as_str(), "utf8");
-    it.define_native("Encode::encode", move |_, a, _| {
+    // Encode, on perl's character strings (Value::UStr): decoding makes
+    // one, encoding gives bytes
+    it.define_native("Encode::is_utf8", |_, a, _| ret(Value::from(arg(&a, 0).is_utf8())));
+    it.define_native("Encode::encode", |_, a, _| {
         let v = arg(&a, 1);
         if v.is_undef() {
             return ret(Value::Undef);
         }
-        let b = v.to_bytes();
-        ret(Value::bytes(if is_utf8_name(&arg(&a, 0)) { latin1_to_utf8(&b) } else { b.to_vec() }))
+        ret(match encode_to(&arg(&a, 0).to_text(), &v) {
+            Some(b) => Value::bytes(b),
+            None => Value::bytes(v.to_bytes()),
+        })
     });
     it.define_native("Encode::encode_utf8", |_, a, _| {
         let v = arg(&a, 0);
-        ret(if v.is_undef() { Value::Undef } else { Value::bytes(latin1_to_utf8(&v.to_bytes())) })
+        ret(if v.is_undef() { Value::Undef } else { Value::bytes(v.utf8_bytes()) })
     });
-    it.define_native("Encode::decode", move |_, a, _| {
+    it.define_native("Encode::decode", |_, a, _| {
         let v = arg(&a, 1);
         if v.is_undef() {
             return ret(Value::Undef);
         }
-        let b = v.to_bytes();
-        ret(Value::bytes(if is_utf8_name(&arg(&a, 0)) { utf8_to_latin1(&b) } else { b.to_vec() }))
+        ret(match decode_from(&arg(&a, 0).to_text(), &v.to_bytes()) {
+            Some(c) => Value::chars(c),
+            None => Value::bytes(v.to_bytes()),
+        })
     });
     it.define_native("Encode::decode_utf8", |_, a, _| {
         let v = arg(&a, 0);
-        ret(if v.is_undef() { Value::Undef } else { Value::bytes(utf8_to_latin1(&v.to_bytes())) })
+        ret(if v.is_undef() { Value::Undef } else { Value::chars(crate::perl::utf8::decode_strict(&v.to_bytes())) })
     });
     it.define_native("File::Glob::bsd_glob", |_, a, _| Ok(crate::interp::eval::glob::bsd_glob(&arg(&a, 0).to_bytes()).into_iter().map(Value::bytes).collect()));
     it.define_native("File::Glob::csh_glob", |_, a, _| Ok(crate::interp::eval::glob::csh_glob(&arg(&a, 0).to_bytes()).into_iter().map(Value::bytes).collect()));
@@ -315,14 +308,158 @@ pub fn register(it: &mut Interp) {
         let v = arg(&a, 0);
         ret(if v.is_ref() { Value::str(v.ref_type()) } else { Value::Undef })
     });
-    // utf8:: functions on byte strings: perl's character strings are not
-    // modelled; byte strings are what ExifTool handles.
-    it.define_native("utf8::is_utf8", |_, _, _| ret(Value::from(false)));
-    it.define_native("utf8::upgrade", |_, a, _| ret(Value::Int(arg(&a, 0).to_bytes().len() as i64)));
-    it.define_native("utf8::downgrade", |_, _, _| ret(Value::Int(1)));
-    it.define_native("utf8::encode", |_, _, _| Ok(vec![]));
-    it.define_native("utf8::decode", |_, a, _| ret(Value::from(std::str::from_utf8(&arg(&a, 0).to_bytes()).is_ok())));
-    it.define_native("utf8::valid", |_, a, _| ret(Value::from(std::str::from_utf8(&arg(&a, 0).to_bytes()).is_ok())));
+    // utf8::, on perl's character strings (Value::UStr); the ones that
+    // change their argument write it back (`$_[0]`)
+    it.define_native("utf8::is_utf8", |_, a, _| ret(Value::from(arg(&a, 0).is_utf8())));
+    it.define_native("utf8::upgrade", |it, a, _| {
+        let v = arg(&a, 0);
+        if v.is_undef() {
+            return ret(Value::Int(0));
+        }
+        let u = v.utf8_bytes();
+        let n = u.len() as i64;
+        if !v.is_utf8() {
+            it.set_arg(0, Value::chars(u))?;
+        }
+        ret(Value::Int(n))
+    });
+    it.define_native("utf8::downgrade", |it, a, _| {
+        let v = arg(&a, 0);
+        let Value::UStr(s) = &v else { return ret(Value::Int(1)) };
+        match crate::perl::utf8::downgrade(s) {
+            Some(b) => {
+                it.set_arg(0, Value::bytes(b))?;
+                ret(Value::Int(1))
+            }
+            None if arg(&a, 1).truthy() => ret(Value::str("")),
+            None => crate::interp::eval::die(format!("Wide character in subroutine entry{}", crate::interp::eval::location_suffix())),
+        }
+    });
+    it.define_native("utf8::encode", |it, a, _| {
+        let v = arg(&a, 0);
+        if !v.is_undef() {
+            it.set_arg(0, Value::bytes(v.utf8_bytes()))?;
+        }
+        Ok(vec![])
+    });
+    it.define_native("utf8::decode", |it, a, _| {
+        let v = arg(&a, 0);
+        // a character string is first made bytes again (not possible with
+        // a character above 0xFF)
+        let b = match &v {
+            Value::UStr(s) => match crate::perl::utf8::downgrade(s) {
+                Some(b) => b,
+                None => return ret(Value::str("")),
+            },
+            _ => v.to_bytes().to_vec(),
+        };
+        if !crate::perl::utf8::is_lax_utf8(&b) {
+            return ret(Value::str(""));
+        }
+        // (only a string with non-ASCII characters gets the flag)
+        if !b.is_ascii() {
+            it.set_arg(0, Value::chars(b))?;
+        } else if v.is_utf8() {
+            it.set_arg(0, Value::bytes(b))?;
+        }
+        ret(Value::Int(1))
+    });
+    it.define_native("utf8::valid", |_, a, _| {
+        let v = arg(&a, 0);
+        ret(Value::from(match &v {
+            Value::UStr(s) => crate::perl::utf8::is_lax_utf8(s),
+            _ => true,
+        }))
+    });
+}
+
+/// The name of an encoding as Encode resolves it (lower case, without
+/// `-` and `_`).
+fn encoding_key(name: &str) -> String {
+    name.to_ascii_lowercase().chars().filter(|c| *c != '-' && *c != '_' && *c != ' ').collect()
+}
+
+/// `Encode::decode(NAME, BYTES)` for the encodings the port knows: the
+/// characters' UTF-8 form; None for another encoding (the bytes are kept).
+fn decode_from(name: &str, b: &[u8]) -> Option<Vec<u8>> {
+    use crate::perl::utf8::{push_cp, upgrade};
+    let units16 = |be: bool| -> Vec<u8> {
+        let mut out = Vec::new();
+        let u: Vec<u16> = b.chunks_exact(2).map(|c| if be { u16::from_be_bytes([c[0], c[1]]) } else { u16::from_le_bytes([c[0], c[1]]) }).collect();
+        for r in char::decode_utf16(u) {
+            push_cp(&mut out, r.map(|c| c as u32).unwrap_or(0xFFFD));
+        }
+        if b.len() % 2 == 1 {
+            push_cp(&mut out, 0xFFFD);
+        }
+        out
+    };
+    let units32 = |be: bool| -> Vec<u8> {
+        let mut out = Vec::new();
+        for c in b.chunks(4) {
+            let v = if c.len() < 4 { 0xFFFD } else if be { u32::from_be_bytes([c[0], c[1], c[2], c[3]]) } else { u32::from_le_bytes([c[0], c[1], c[2], c[3]]) };
+            push_cp(&mut out, if v > 0x10FFFF { 0xFFFD } else { v });
+        }
+        out
+    };
+    Some(match encoding_key(name).as_str() {
+        "utf8" | "utf8strict" => crate::perl::utf8::decode_strict(b),
+        "latin1" | "iso88591" | "l1" => upgrade(b),
+        "ascii" | "usascii" => {
+            let mut out = Vec::new();
+            for &c in b {
+                push_cp(&mut out, if c < 0x80 { c as u32 } else { 0xFFFD });
+            }
+            out
+        }
+        "utf16be" | "ucs2be" => units16(true),
+        "utf16le" | "ucs2le" => units16(false),
+        "utf16" => match b {
+            [0xFF, 0xFE, rest @ ..] => decode_from("UTF-16LE", rest)?,
+            [0xFE, 0xFF, rest @ ..] => decode_from("UTF-16BE", rest)?,
+            _ => units16(true),
+        },
+        "utf32be" | "ucs4be" => units32(true),
+        "utf32le" | "ucs4le" => units32(false),
+        _ => return None,
+    })
+}
+
+/// `Encode::encode(NAME, STRING)` for the encodings the port knows (a
+/// byte string is taken as its characters 0-255); None for another
+/// encoding. Characters the encoding has not become `?`, as Encode's
+/// default substitution.
+fn encode_to(name: &str, v: &Value) -> Option<Vec<u8>> {
+    let chars: Vec<u32> = match v {
+        Value::UStr(s) => crate::perl::utf8::chars(s).collect(),
+        _ => v.to_bytes().iter().map(|&c| c as u32).collect(),
+    };
+    let units16 = |be: bool| -> Vec<u8> {
+        let mut out = Vec::new();
+        for &c in &chars {
+            let ch = char::from_u32(c).unwrap_or('\u{FFFD}');
+            let mut buf = [0u16; 2];
+            for u in ch.encode_utf16(&mut buf) {
+                out.extend_from_slice(&if be { u.to_be_bytes() } else { u.to_le_bytes() });
+            }
+        }
+        out
+    };
+    Some(match encoding_key(name).as_str() {
+        "utf8" | "utf8strict" => v.utf8_bytes().to_vec(),
+        "latin1" | "iso88591" | "l1" => chars.iter().map(|&c| if c < 256 { c as u8 } else { b'?' }).collect(),
+        "ascii" | "usascii" => chars.iter().map(|&c| if c < 128 { c as u8 } else { b'?' }).collect(),
+        "utf16be" | "ucs2be" => units16(true),
+        "utf16le" | "ucs2le" => units16(false),
+        "utf16" => {
+            let mut out = vec![0xFE, 0xFF];
+            out.extend(units16(true));
+            out
+        }
+        "utf32be" | "ucs4be" => chars.iter().flat_map(|c| c.to_be_bytes()).collect(),
+        "utf32le" | "ucs4le" => chars.iter().flat_map(|c| c.to_le_bytes()).collect(),
+        _ => return None,
+    })
 }
 
 /// Time::Local's _daygm: days since the epoch of (mday, month, tm_year),

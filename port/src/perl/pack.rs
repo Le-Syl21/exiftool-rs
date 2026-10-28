@@ -182,6 +182,48 @@ pub fn unpack(template: &[u8], data: &[u8]) -> Result<Vec<Value>, String> {
     Ok(out)
 }
 
+/// Whether a template starts with `U`: pack then makes a character string
+/// (the bytes it packs are its UTF-8 form), unpack reads one in U0 mode.
+pub fn starts_with_u(template: &[u8]) -> bool {
+    template.iter().find(|c| !c.is_ascii_whitespace()) == Some(&b'U')
+}
+
+/// `unpack` of a character string (`s`: its UTF-8 form). Its characters
+/// are the units, as perl reads them: when they are all below 256, as the
+/// bytes of a byte string; otherwise U0 mode (a template that starts with
+/// U) reads the UTF-8 form, and `C`, `U` and `W` read one character each.
+pub fn unpack_chars(template: &[u8], s: &[u8]) -> Result<Vec<Value>, String> {
+    if let Some(d) = crate::perl::utf8::downgrade(s) {
+        return unpack(template, &d);
+    }
+    let items = parse_template(template)?;
+    if items.iter().all(|i| matches!(i.letter, b'C' | b'U' | b'W') && i.group.is_none()) && !starts_with_u(template) {
+        WARNINGS.with(|w| w.borrow_mut().clear());
+        let chars: Vec<u32> = crate::perl::utf8::chars(s).collect();
+        let mut out = Vec::new();
+        let mut pos = 0;
+        for item in &items {
+            let n = match item.count {
+                Count::Star => chars.len().saturating_sub(pos),
+                Count::One => 1,
+                Count::N(n) => n,
+            };
+            for _ in 0..n {
+                let Some(&c) = chars.get(pos) else { break };
+                pos += 1;
+                out.push(Value::Int(c as i64));
+            }
+        }
+        return Ok(out);
+    }
+    // U0 mode: the UTF-8 form is what unpack reads after its upgrade
+    let mut out = Vec::new();
+    WARNINGS.with(|w| w.borrow_mut().clear());
+    U0.with(|u| u.set(true));
+    unpack_items(&items, s, 0, &mut out)?;
+    Ok(out)
+}
+
 /// perl's utf8::upgrade of a byte string: the UTF-8 encoding of its bytes
 /// taken as characters.
 fn upgrade(b: &[u8]) -> Vec<u8> {

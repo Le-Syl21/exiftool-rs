@@ -278,13 +278,10 @@ impl Lv {
             Lv::Hash(h) => Value::Int(h.borrow().len() as i64),
             Lv::List(l) => l.last().map(|x| x.get()).unwrap_or_default(),
             Lv::Skip => Value::Undef,
-            Lv::Substr(base, off, len) => {
-                let s = base.get().to_bytes();
-                match substr_range(s.len(), *off, *len) {
-                    Some((a, b)) => Value::bytes(&s[a..b]),
-                    None => Value::Undef,
-                }
-            }
+            Lv::Substr(base, off, len) => match substr_of(&base.get(), *off, *len) {
+                Some((v, _, _)) => v,
+                None => Value::Undef,
+            },
             Lv::LastIndex(a) => Value::Int(a.borrow().len() as i64 - 1),
             Lv::Pos(_) => Value::Undef,
             Lv::ReadOnly(v) => v.clone(),
@@ -320,12 +317,9 @@ impl Lv {
             }
             Lv::Skip => {}
             Lv::Substr(base, off, len) => {
-                let s = base.get().to_bytes();
-                let Some((a, b)) = substr_range(s.len(), *off, *len) else { return die("substr outside of string") };
-                let mut n = s[..a].to_vec();
-                n.extend_from_slice(&v.to_bytes());
-                n.extend_from_slice(&s[b..]);
-                base.set(Value::bytes(n))?;
+                let cur = base.get();
+                let Some((_, a, b)) = substr_of(&cur, *off, *len) else { return die("substr outside of string") };
+                base.set(splice_str(&cur, a, b, &v))?;
             }
             Lv::LastIndex(a) => {
                 let n = (v.to_i64() + 1).max(0) as usize;
@@ -352,6 +346,34 @@ fn index(len: usize, i: i64) -> Option<usize> {
     }
 }
 
+/// `substr(STR, OFF, LEN)` of a value: the piece, and its byte range in
+/// the value's string form (a character string counts characters).
+pub fn substr_of(v: &Value, off: i64, len: Option<i64>) -> Option<(Value, usize, usize)> {
+    match v {
+        Value::UStr(s) => {
+            let (a, b) = substr_range(crate::perl::utf8::count(s), off, len)?;
+            let (x, y) = crate::perl::utf8::char_range_to_bytes(s, a, b);
+            Some((Value::chars(&s[x..y]), x, y))
+        }
+        _ => {
+            let s = v.to_bytes();
+            let (a, b) = substr_range(s.len(), off, len)?;
+            Some((Value::bytes(&s[a..b]), a, b))
+        }
+    }
+}
+
+/// A value's string with bytes `a..b` of its form replaced by `repl` (a
+/// byte string upgraded when a character string joins it).
+pub fn splice_str(v: &Value, a: usize, b: usize, repl: &Value) -> Value {
+    let (s, utf8) = v.str_form();
+    let mut out = crate::perl::utf8::StrBuf { buf: Vec::with_capacity(s.len() + 8), utf8 };
+    out.push_form(&s[..a], utf8);
+    out.push_value(repl);
+    out.push_form(&s[b..], utf8);
+    out.into_value()
+}
+
 /// The byte range of `substr(STR, OFF, LEN)`, `None` when outside.
 pub fn substr_range(len: usize, off: i64, l: Option<i64>) -> Option<(usize, usize)> {
     let len_i = len as i64;
@@ -375,6 +397,33 @@ pub struct LastMatch {
     pub spans: Vec<Option<(usize, usize)>>,
     /// The pattern's group names, when it has any (for %+ and %-).
     pub names: Vec<Option<String>>,
+    /// The subject is a character string (its UTF-8 form): the captures
+    /// are character strings, the offsets count characters.
+    pub utf8: bool,
+}
+
+impl LastMatch {
+    /// A piece of the subject (a capture, the pre- or post-match).
+    pub fn piece(&self, s: usize, e: usize) -> Value {
+        Value::string(&self.subject[s..e], self.utf8)
+    }
+
+    /// Capture group `n` (0: the whole match).
+    pub fn group(&self, n: usize) -> Value {
+        match self.spans.get(n).copied().flatten() {
+            Some((s, e)) => self.piece(s, e),
+            None => Value::Undef,
+        }
+    }
+
+    /// A byte offset in the subject as perl counts it (characters).
+    pub fn offset(&self, b: usize) -> usize {
+        if self.utf8 {
+            crate::perl::utf8::char_offset(&self.subject, b)
+        } else {
+            b
+        }
+    }
 }
 
 /// The aliases of one call's `@_`: where each element came from, and its
@@ -388,7 +437,7 @@ struct AliasFrame {
 /// Whether a value is unchanged (the same string storage, number or ref).
 fn identical(a: &Value, b: &Value) -> bool {
     match (a, b) {
-        (Value::Str(x), Value::Str(y)) => Rc::ptr_eq(x, y) || x == y,
+        (Value::Str(x), Value::Str(y)) | (Value::UStr(x), Value::UStr(y)) => Rc::ptr_eq(x, y) || x == y,
         (Value::Int(x), Value::Int(y)) => x == y,
         (Value::UInt(x), Value::UInt(y)) => x == y,
         (Value::Num(x), Value::Num(y)) => x.to_bits() == y.to_bits(),
@@ -437,7 +486,9 @@ pub struct Interp {
     pub lex_memo: HashMap<String, HashMap<String, Vec<(u8, Binding)>>>,
     pub scope_memo: HashMap<String, Rc<Scope>>,
     pub package: Rc<str>,
-    pub last_match: Option<LastMatch>,
+    /// The last successful match of the current dynamic scope: blocks,
+    /// subs and loops put back the one before them when they end.
+    pub last_match: Option<Rc<LastMatch>>,
     /// `pos()` of scalars, by cell address.
     /// pos() of scalars by cell address, with the string it applies to
     /// (a new value of the variable resets it, as in perl).
@@ -726,8 +777,9 @@ impl Interp {
     /// back as `$@` would hold them, and `$@` is set.
     pub fn eval_string(&mut self, code: &[u8], package: &str, scope: &Rc<Scope>, want: Want) -> Result<Vec<Value>, Value> {
         let saved_pkg = std::mem::replace(&mut self.package, Rc::from(package));
-        // The capture variables of the code's own matches end with it.
-        let saved_match = self.last_match.take();
+        // The capture variables of the code's own matches end with it (it
+        // sees those of its caller).
+        let saved_match = self.last_match.clone();
         let saved_strict = self.strict;
         let r = self.eval_string_inner(code, scope, want);
         self.strict = saved_strict;
@@ -1215,7 +1267,18 @@ impl Interp {
     }
 
     /// Run a block in a new scope (with `local` undone at its end).
+    /// The last match is the block's own until it ends (perl's dynamic
+    /// scope of `$1`...): the one before it is then put back.
     fn run_block(&mut self, block: &Block, scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
+        let saved_match = self.last_match.clone();
+        let r = self.run_body(block, scope, want);
+        self.last_match = saved_match;
+        r
+    }
+
+    /// A loop's body: a new lexical scope, but the last match carries over
+    /// to the next iteration (perl restores it when the loop ends).
+    fn run_body(&mut self, block: &Block, scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
         let saved = self.saved.len();
         let r = self.exec_block_in(block, Scope::new(Some(scope.clone())), want);
         self.restore_locals(saved);
@@ -1261,54 +1324,31 @@ impl Interp {
                     None => Ok(vec![]),
                 }
             }
-            Stmt::While { label, cond, body, until, post } => {
-                let mut first = true;
-                loop {
-                    // A `my` in the condition is visible in the body.
-                    let inner = Scope::new(Some(scope.clone()));
-                    if !(*post && first) {
-                        let c = match cond {
-                            Some(c) => self.scalar(c, &inner)?.truthy(),
-                            None => true,
-                        };
-                        if c == *until {
-                            break;
-                        }
-                    }
-                    first = false;
-                    match self.run_block(body, &inner, Want::Void) {
-                        Ok(_) => {}
-                        Err(Flow::Last(l)) if label_matches(&l, label) => break,
-                        Err(Flow::Next(l)) if label_matches(&l, label) => continue,
-                        Err(e) => return Err(e),
-                    }
+            Stmt::While { label, cond, body, until, post, modifier } => {
+                // the loop is a scope for the last match, the condition's
+                // included; `do BLOCK while` and `EXPR while` are not loops
+                // (the do block is a scope of its own), and a `my` in the
+                // condition makes each iteration one
+                let saved_match = (!*post && !*modifier).then(|| self.last_match.clone());
+                let per_iteration = *post || cond.as_ref().is_some_and(declares_my);
+                let r = self.while_loop(label, cond, body, *until, *post, per_iteration, scope);
+                if let Some(m) = saved_match {
+                    self.last_match = m;
                 }
-                Ok(vec![])
+                r
             }
             Stmt::ForC { label, init, cond, step, body } => {
-                let inner = Scope::new(Some(scope.clone()));
-                if let Some(i) = init {
-                    self.void(i, &inner)?;
-                }
-                loop {
-                    if let Some(c) = cond {
-                        if !self.scalar(c, &inner)?.truthy() {
-                            break;
-                        }
-                    }
-                    match self.run_block(body, &inner, Want::Void) {
-                        Ok(_) => {}
-                        Err(Flow::Last(l)) if label_matches(&l, label) => break,
-                        Err(Flow::Next(l)) if label_matches(&l, label) => {}
-                        Err(e) => return Err(e),
-                    }
-                    if let Some(s) = step {
-                        self.void(s, &inner)?;
-                    }
-                }
-                Ok(vec![])
+                let saved_match = self.last_match.clone();
+                let r = self.c_for(label, init, cond, step, body, scope);
+                self.last_match = saved_match;
+                r
             }
-            Stmt::Foreach { label, var, list, body } => self.foreach(label, var, list, body, scope),
+            Stmt::Foreach { label, var, list, body } => {
+                let saved_match = self.last_match.clone();
+                let r = self.foreach(label, var, list, body, scope);
+                self.last_match = saved_match;
+                r
+            }
             Stmt::Block(label, body) => match self.run_block(body, scope, want) {
                 Ok(v) => Ok(v),
                 Err(Flow::Last(l)) | Err(Flow::Next(l)) if label_matches(&l, label) => Ok(vec![]),
@@ -1413,6 +1453,57 @@ impl Interp {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
+    fn while_loop(&mut self, label: &Option<Rc<str>>, cond: &Option<Expr>, body: &Block, until: bool, post: bool, per_iteration: bool, scope: &Rc<Scope>) -> ER<Vec<Value>> {
+        let mut first = true;
+        loop {
+            // A `my` in the condition is visible in the body.
+            let inner = Scope::new(Some(scope.clone()));
+            if !(post && first) {
+                let c = match cond {
+                    Some(c) => self.scalar(c, &inner)?.truthy(),
+                    None => true,
+                };
+                if c == until {
+                    break;
+                }
+            }
+            first = false;
+            let r = if per_iteration { self.run_block(body, &inner, Want::Void) } else { self.run_body(body, &inner, Want::Void) };
+            match r {
+                Ok(_) => {}
+                Err(Flow::Last(l)) if label_matches(&l, label) => break,
+                Err(Flow::Next(l)) if label_matches(&l, label) => continue,
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(vec![])
+    }
+
+    fn c_for(&mut self, label: &Option<Rc<str>>, init: &Option<Expr>, cond: &Option<Expr>, step: &Option<Expr>, body: &Block, scope: &Rc<Scope>) -> ER<Vec<Value>> {
+        let inner = Scope::new(Some(scope.clone()));
+        if let Some(i) = init {
+            self.void(i, &inner)?;
+        }
+        loop {
+            if let Some(c) = cond {
+                if !self.scalar(c, &inner)?.truthy() {
+                    break;
+                }
+            }
+            match self.run_body(body, &inner, Want::Void) {
+                Ok(_) => {}
+                Err(Flow::Last(l)) if label_matches(&l, label) => break,
+                Err(Flow::Next(l)) if label_matches(&l, label) => {}
+                Err(e) => return Err(e),
+            }
+            if let Some(s) = step {
+                self.void(s, &inner)?;
+            }
+        }
+        Ok(vec![])
+    }
+
     fn require(&mut self, module: &str) -> ER<()> {
         match self.require_hook.clone() {
             Some(h) => h(self, module),
@@ -1447,7 +1538,7 @@ impl Interp {
                 (None, Some((_, name))) => inner.declare(b'$', name, Binding::Scalar(cell.clone())),
                 _ => unreachable!(),
             }
-            let r = self.run_block(body, &inner, Want::Void);
+            let r = self.run_body(body, &inner, Want::Void);
             if let Some(lv) = back {
                 lv.set(cell.borrow().clone())?;
             }
@@ -1676,7 +1767,7 @@ impl Interp {
     pub fn scalar(&mut self, e: &Expr, scope: &Rc<Scope>) -> ER<Value> {
         match e {
             Expr::Const(v) => Ok(v.clone()),
-            Expr::Interp(parts) => Ok(Value::bytes(self.interpolate(parts, scope, false)?)),
+            Expr::Interp(parts) => Ok(self.interpolate_in(parts, scope, false, false)?.into_value()),
             Expr::Scalar(name) => Ok(self.read_scalar(name, scope)),
             Expr::ScalarDeref(inner) => {
                 let v = self.scalar(inner, scope)?;
@@ -1684,7 +1775,7 @@ impl Interp {
                     Value::ScalarRef(c) => Ok(c.borrow().clone()),
                     Value::LvRef(l) => Ok(l.get()),
                     Value::Undef => die("Can't use an undefined value as a SCALAR reference"),
-                    Value::Str(s) => {
+                    Value::Str(s) | Value::UStr(s) => {
                         self.check_symref(&s, "a SCALAR")?;
                         let name = String::from_utf8_lossy(&s).into_owned();
                         Ok(self.get_scalar(&name))
@@ -1802,23 +1893,23 @@ impl Interp {
                         }
                     }
                 }
-                let s = s.to_bytes();
-                let (out, count) = crate::perl::tr::tr(&s, search, repl, flags);
+                let (s, utf8) = s.str_form();
+                let (out, count) = if utf8 { crate::perl::tr::tr_chars(&s, search, repl, flags) } else { crate::perl::tr::tr(&s, search, repl, flags) };
                 if flags.contains('r') {
-                    return Ok(Value::bytes(out));
+                    return Ok(Value::string(out, utf8));
                 }
                 if out[..] != s[..] {
-                    lv.set(Value::bytes(out))?;
+                    lv.set(Value::string(out, utf8))?;
                 }
                 Ok(Value::Int(count as i64))
             }
             Expr::Qr(pat) => {
-                let p = self.pattern_bytes(pat, scope)?;
+                let (p, utf8) = self.pattern_form(pat, scope)?;
                 let flags: String = pat.flags.chars().filter(|c| "imsx".contains(*c)).collect();
                 let mut s = format!("(?^{flags}:").into_bytes();
                 s.extend_from_slice(&p);
                 s.push(b')');
-                Ok(Value::bytes(s))
+                Ok(Value::string(s, utf8))
             }
             Expr::Do(b) => Ok(self.run_block(b, scope, Want::Scalar)?.pop().unwrap_or_default()),
             Expr::Eval(b) => Ok(self.eval_block(b, scope, Want::Scalar)?.pop().unwrap_or_default()),
@@ -1902,26 +1993,27 @@ impl Interp {
                 if topic {
                     vals.push(self.read_scalar("_", scope));
                 }
-                let out = if *printf {
-                    self.sprintf_warned(&vals, args, &origin, scope, "printf")?
+                // the pieces written, in order
+                let mut pieces: Vec<Value> = Vec::with_capacity(vals.len() * 2 + 1);
+                if *printf {
+                    pieces.push(self.sprintf_warned(&vals, args, &origin, scope, "printf")?);
                 } else {
-                    let sep = self.get_scalar("main::,").to_bytes();
-                    let mut o = Vec::new();
+                    let sep = self.get_scalar("main::,");
+                    let has_sep = !sep.is_undef();
                     for (k, v) in vals.iter().enumerate() {
-                        if k > 0 {
-                            o.extend_from_slice(&sep);
+                        if k > 0 && has_sep {
+                            pieces.push(sep.clone());
                         }
                         if v.is_undef() && self.warn_on() {
                             let n = if topic { Some("$_".to_string()) } else { self.list_name(k, args, &origin, scope) };
                             self.report_uninit(n, "print")?;
                         }
-                        o.extend_from_slice(&v.to_bytes());
+                        pieces.push(v.clone());
                     }
-                    o
-                };
-                let mut out = out;
-                if !*printf {
-                    out.extend_from_slice(&self.get_scalar("main::\\").to_bytes());
+                    let ors = self.get_scalar("main::\\");
+                    if !ors.is_undef() {
+                        pieces.push(ors);
+                    }
                 }
                 let h = match fh {
                     Some(e) => {
@@ -1930,12 +2022,46 @@ impl Interp {
                     }
                     None => self.handle_of(&Value::str("*STDOUT"), false),
                 };
+                let layer = h.as_ref().is_some_and(|h| h.borrow().utf8);
+                let mut out = Vec::new();
+                for v in &pieces {
+                    self.output_form(&mut out, v, layer, if *printf { "printf" } else { "print" })?;
+                }
                 Ok(Value::from(match h {
                     Some(h) => self.write_handle(&h, &out),
                     None => false,
                 }))
             }
         }
+    }
+
+    /// A string as a handle gets it: without a `:utf8` layer, a character
+    /// string's characters as bytes, or, when one is above 0xFF, its UTF-8
+    /// form with perl's "Wide character" warning; with the layer, UTF-8
+    /// (a byte string upgraded).
+    pub(crate) fn output_form(&mut self, out: &mut Vec<u8>, v: &Value, layer: bool, op: &str) -> ER<()> {
+        match v {
+            Value::UStr(s) if layer => out.extend_from_slice(s),
+            Value::UStr(s) => match crate::perl::utf8::downgrade(s) {
+                Some(d) => out.extend_from_slice(&d),
+                None => {
+                    // (a default warning: only `no warnings` silences it)
+                    if WARNINGS_ON.with(|w| w.get()) != Some(false) {
+                        self.warn(Value::from(format!("Wide character in {op}{}", location_suffix())))?;
+                    }
+                    out.extend_from_slice(s);
+                }
+            },
+            _ => {
+                let b = v.to_bytes();
+                if layer && !b.is_ascii() {
+                    out.extend_from_slice(&crate::perl::utf8::upgrade(&b));
+                } else {
+                    out.extend_from_slice(&b);
+                }
+            }
+        }
+        Ok(())
     }
 
     /// pos() by key (see pos_key), checked against the current value.
@@ -1984,13 +2110,13 @@ impl Interp {
             "`" | "'" => {
                 let Some(m) = &self.last_match else { return Value::Undef };
                 let (s, e) = m.spans[0].unwrap();
-                return if name == "`" { Value::bytes(&m.subject[..s]) } else { Value::bytes(&m.subject[e..]) };
+                return if name == "`" { m.piece(0, s) } else { m.piece(e, m.subject.len()) };
             }
             "+" => {
                 let Some(m) = &self.last_match else { return Value::Undef };
                 for k in (1..m.spans.len()).rev() {
                     if let Some((s, e)) = m.spans[k] {
-                        return Value::bytes(&m.subject[s..e]);
+                        return m.piece(s, e);
                     }
                 }
                 return Value::Undef;
@@ -2003,7 +2129,7 @@ impl Interp {
     /// A successful match: what `$1`, `$&`, `@-`, `@+`, `%+` and `%-` read.
     fn set_last_match(&mut self, re: &crate::perl::regex::PerlRegex, subject: &Rc<[u8]>, spans: &crate::perl::regex::Spans) {
         let names = if re.names.iter().any(|n| n.is_some()) { re.names.clone() } else { Vec::new() };
-        self.last_match = Some(LastMatch { subject: subject.clone(), spans: spans.clone(), names });
+        self.last_match = Some(Rc::new(LastMatch { subject: subject.clone(), spans: spans.clone(), names, utf8: re.utf }));
     }
 
     /// `@-`, `@+`, `%+` and `%-`: made from the last successful match when
@@ -2020,7 +2146,7 @@ impl Interp {
                     let last = if start { m.spans.iter().rposition(|s| s.is_some()).unwrap_or(0) } else { m.spans.len() - 1 };
                     for sp in &m.spans[..=last] {
                         v.push(match sp {
-                            Some((a, b)) => Value::Int(if start { *a } else { *b } as i64),
+                            Some((a, b)) => Value::Int(m.offset(if start { *a } else { *b }) as i64),
                             None => Value::Undef,
                         });
                     }
@@ -2032,10 +2158,7 @@ impl Interp {
                 if let Some(m) = m {
                     for (i, name) in m.names.iter().enumerate() {
                         let Some(name) = name else { continue };
-                        let v = match m.spans.get(i).copied().flatten() {
-                            Some((a, b)) => Value::bytes(&m.subject[a..b]),
-                            None => Value::Undef,
-                        };
+                        let v = m.group(i);
                         if key == "main::+" {
                             // the leftmost group of that name that took part
                             if !v.is_undef() && h.get(name.as_bytes()).is_none() {
@@ -2058,10 +2181,7 @@ impl Interp {
 
     fn capture(&self, n: usize) -> Value {
         match &self.last_match {
-            Some(m) => match m.spans.get(n).copied().flatten() {
-                Some((s, e)) => Value::bytes(&m.subject[s..e]),
-                None => Value::Undef,
-            },
+            Some(m) => m.group(n),
             None => Value::Undef,
         }
     }
@@ -2112,7 +2232,7 @@ impl Interp {
                     Value::ArrayRef(a) => Ok(a),
                     Value::Undef if autoviv => Ok(Rc::new(RefCell::new(Vec::new()))),
                     Value::Undef => die("Can't use an undefined value as an ARRAY reference"),
-                    Value::Str(s) => {
+                    Value::Str(s) | Value::UStr(s) => {
                         self.check_symref(&s, "an ARRAY")?;
                         let name = String::from_utf8_lossy(&s).into_owned();
                         match self.global(b'@', &name) {
@@ -2153,7 +2273,7 @@ impl Interp {
                     Value::HashRef(h) => Ok(h),
                     Value::Undef if autoviv => Ok(Rc::new(RefCell::new(Hash::default()))),
                     Value::Undef => die("Can't use an undefined value as a HASH reference"),
-                    Value::Str(s) => {
+                    Value::Str(s) | Value::UStr(s) => {
                         self.check_symref(&s, "a HASH")?;
                         let name = String::from_utf8_lossy(&s).into_owned();
                         match self.global(b'%', &name) {
@@ -2197,7 +2317,7 @@ impl Interp {
                 match v {
                     Value::ScalarRef(c) => Lv::Scalar(c),
                     Value::LvRef(l) => (*l).clone(),
-                    Value::Str(s) => {
+                    Value::Str(s) | Value::UStr(s) => {
                         self.check_symref(&s, "a SCALAR")?;
                         let name = String::from_utf8_lossy(&s).into_owned();
                         match self.global(b'$', &name) {
@@ -2435,13 +2555,18 @@ impl Interp {
                         self.pos.remove(&key);
                     } else {
                         let cur = target.get();
-                        let len = cur.to_bytes().len() as i64;
+                        let len = crate::pl::length(&cur).to_i64();
                         let mut p = v.to_i64();
                         if p < 0 {
                             p += len;
                         }
                         let p = p.clamp(0, len);
-                        self.pos_set(key, p as usize, value_tag(&cur));
+                        // (kept as a byte offset in the string's form)
+                        let at = match &cur {
+                            Value::UStr(s) => crate::perl::utf8::byte_offset(s, p as usize),
+                            _ => p as usize,
+                        };
+                        self.pos_set(key, at, value_tag(&cur));
                         // The assignment's value is the position set
                         // (`$pos = pos($$b) = 0` gives 0).
                         return Ok(Lv::Scalar(Rc::new(RefCell::new(Value::Int(p)))));
@@ -2483,7 +2608,7 @@ impl Interp {
                     }
                     op => {
                         let rv = self.scalar(r, scope)?;
-                        if matches!(old, Value::Undef | Value::Str(_)) || matches!(rv, Value::Undef | Value::Str(_)) {
+                        if matches!(old, Value::Undef | Value::Str(_) | Value::UStr(_)) || matches!(rv, Value::Undef | Value::Str(_) | Value::UStr(_)) {
                             self.bin_warnings(op, &old, &rv, l, r, scope, true)?;
                         }
                         self.apply_bin(op, &old, &rv)?
@@ -2550,7 +2675,7 @@ impl Interp {
             _ => {
                 let a = self.scalar(l, scope)?;
                 let b = self.scalar(r, scope)?;
-                if matches!(a, Value::Undef | Value::Str(_)) || matches!(b, Value::Undef | Value::Str(_)) {
+                if matches!(a, Value::Undef | Value::Str(_) | Value::UStr(_)) || matches!(b, Value::Undef | Value::Str(_) | Value::UStr(_)) {
                     self.bin_warnings(op, &a, &b, l, r, scope, false)?;
                 }
                 self.apply_bin(op, &a, &b)
@@ -2626,15 +2751,8 @@ impl Interp {
                 Err(e) => return die(e),
             },
             BinOp::Pow => ops::pow(a, b),
-            BinOp::Concat => {
-                let mut s = a.to_bytes().to_vec();
-                s.extend_from_slice(&b.to_bytes());
-                Value::bytes(s)
-            }
-            BinOp::Repeat => {
-                let n = b.to_i64().max(0) as usize;
-                Value::bytes(a.to_bytes().repeat(n))
-            }
+            BinOp::Concat => ops::concat(a, b),
+            BinOp::Repeat => ops::repeat(a, b.to_i64().max(0) as usize),
             BinOp::NumEq => boolean(ops::num_cmp(a, b) == Some(Equal)),
             BinOp::NumNe => boolean(ops::num_cmp(a, b) != Some(Equal)),
             BinOp::NumLt => boolean(ops::num_cmp(a, b) == Some(Less)),
@@ -2689,10 +2807,10 @@ impl Interp {
                 match &v {
                     Value::Undef => self.uninit_slow(e, scope, "negation (-)", false)?,
                     // -"foo" and -"+x" are string operations (as in ops::negate)
-                    Value::Str(s) if !(s.is_empty() || s[0].is_ascii_alphabetic() || s[0] == b'_' || s[0] == b'+' || (s[0] == b'-' && !v.looks_like_number())) => {
+                    Value::Str(s) | Value::UStr(s) if !(s.is_empty() || s[0].is_ascii_alphabetic() || s[0] == b'_' || s[0] == b'+' || (s[0] == b'-' && !v.looks_like_number())) => {
                         self.use_num(&v, e, scope, "negation (-)", false)?
                     }
-                    Value::Str(s) if s.is_empty() => self.use_num(&v, e, scope, "negation (-)", false)?,
+                    Value::Str(s) | Value::UStr(s) if s.is_empty() => self.use_num(&v, e, scope, "negation (-)", false)?,
                     _ => {}
                 }
                 ops::negate(&v)
@@ -2754,14 +2872,14 @@ impl Interp {
     fn range(&mut self, ae: &Expr, be: &Expr, scope: &Rc<Scope>) -> ER<Vec<Value>> {
         let a = self.scalar(ae, scope)?;
         let b = self.scalar(be, scope)?;
-        if !(matches!(a, Value::Str(_)) && !a.looks_like_number()) {
+        if !(a.is_str() && !a.looks_like_number()) {
             self.use_num(&a, ae, scope, "range (or flop)", false)?;
             self.use_num(&b, be, scope, "range (or flop)", false)?;
         }
-        if let (Value::Str(s), false) = (&a, a.looks_like_number()) {
+        if let (Value::Str(_) | Value::UStr(_), false) = (&a, a.looks_like_number()) {
             // 'aa'..'ad'
             let mut out = Vec::new();
-            let mut cur = Value::Str(s.clone());
+            let mut cur = a.clone();
             let end = b.to_bytes();
             for _ in 0..1_000_000 {
                 let cb = cur.to_bytes();
@@ -2794,7 +2912,7 @@ impl Interp {
     /// Build an interpolated string. In a pattern (`regex`), interpolated
     /// values are inserted as is (they are pattern text) unless under \Q.
     pub fn interpolate(&mut self, parts: &[Part], scope: &Rc<Scope>, regex: bool) -> ER<Vec<u8>> {
-        self.interpolate_in(parts, scope, regex, false)
+        Ok(self.interpolate_in(parts, scope, regex, false)?.into_value().to_bytes().to_vec())
     }
 
     /// perl's description of the operator that stringifies the values of
@@ -2804,19 +2922,22 @@ impl Interp {
             return "regexp compilation";
         }
         let vals = parts.iter().filter(|p| matches!(p, Part::Scalar(_) | Part::Array(_))).count();
-        let lits = parts.iter().any(|p| matches!(p, Part::Lit(b) if !b.is_empty()));
+        let lits = parts.iter().any(|p| matches!(p, Part::Lit(b) | Part::ULit(b) if !b.is_empty()));
         if vals == 1 && !lits {
             return if subst { "substitution (s///)" } else { "string" };
         }
         "concatenation (.) or string"
     }
 
-    fn interpolate_in(&mut self, parts: &[Part], scope: &Rc<Scope>, regex: bool, subst: bool) -> ER<Vec<u8>> {
-        let mut out = Vec::new();
+    fn interpolate_in(&mut self, parts: &[Part], scope: &Rc<Scope>, regex: bool, subst: bool) -> ER<crate::perl::utf8::StrBuf> {
+        let mut out = crate::perl::utf8::StrBuf::new();
         // Active modes: \U / \L / \Q, until \E; and a pending \u / \l.
         let mut modes: Vec<CaseOp> = Vec::new();
         let mut next: Option<CaseOp> = None;
         for p in parts {
+            // (each piece is a byte string, or a character string's UTF-8
+            // form: `utf8`)
+            let mut utf8 = false;
             let piece: Vec<u8> = match p {
                 Part::Lit(b) => {
                     if regex && modes.contains(&CaseOp::Quote) {
@@ -2826,6 +2947,10 @@ impl Interp {
                     } else {
                         b.clone()
                     }
+                }
+                Part::ULit(b) => {
+                    utf8 = true;
+                    b.clone()
                 }
                 Part::Scalar(e) => {
                     let v = self.scalar(e, scope)?;
@@ -2847,23 +2972,26 @@ impl Interp {
                         };
                         self.uninit_slow(e, scope, desc, many)?;
                     }
-                    v.to_bytes().to_vec()
+                    let (b, u) = v.str_form();
+                    utf8 = u;
+                    b.to_vec()
                 }
                 Part::Array(e) => {
                     let vals = self.list(e, scope)?;
-                    let sep = self.get_scalar("main::\"").to_bytes();
-                    let mut o = Vec::new();
+                    let sep = self.get_scalar("main::\"");
+                    let mut o = crate::perl::utf8::StrBuf::new();
                     for (k, v) in vals.iter().enumerate() {
                         if k > 0 {
-                            o.extend_from_slice(&sep);
+                            o.push_value(&sep);
                         }
                         if v.is_undef() && self.warn_on() {
                             let n = self.elem_name(e, k, scope, false);
                             self.report_uninit(n, "join or string")?;
                         }
-                        o.extend_from_slice(&v.to_bytes());
+                        o.push_value(v);
                     }
-                    o
+                    utf8 = o.utf8;
+                    o.buf
                 }
                 Part::Case(op) => {
                     match op {
@@ -2884,40 +3012,64 @@ impl Interp {
                 }
             };
             let mut piece = piece;
+            use crate::perl::utf8::{change_case, Case};
             for m in &modes {
                 piece = match m {
-                    CaseOp::Upper => piece.to_ascii_uppercase(),
-                    CaseOp::Lower => piece.to_ascii_lowercase(),
+                    CaseOp::Upper => change_case(&piece, utf8, Case::Upper),
+                    CaseOp::Lower => change_case(&piece, utf8, Case::Lower),
+                    CaseOp::Quote if utf8 => crate::perl::regex::quotemeta_chars(&piece),
                     CaseOp::Quote => crate::perl::regex::quotemeta(&piece),
                     _ => piece,
                 };
             }
             if let Some(op) = next {
-                if let Some(first) = piece.first_mut() {
-                    *first = if op == CaseOp::UpperNext { first.to_ascii_uppercase() } else { first.to_ascii_lowercase() };
+                if !piece.is_empty() {
+                    piece = change_case(&piece, utf8, if op == CaseOp::UpperNext { Case::UpperFirst } else { Case::LowerFirst });
                     next = None;
                 }
             }
-            out.extend_from_slice(&piece);
+            out.push_form(&piece, utf8);
         }
         Ok(out)
     }
 
-    fn pattern_bytes(&mut self, pat: &Pat, scope: &Rc<Scope>) -> ER<Vec<u8>> {
+    /// A pattern's text, and whether it is a character string (its UTF-8
+    /// form then).
+    pub(crate) fn pattern_form(&mut self, pat: &Pat, scope: &Rc<Scope>) -> ER<(Vec<u8>, bool)> {
         match pat.constant() {
-            Some(b) => Ok(b.to_vec()),
-            None => self.interpolate(&pat.parts, scope, true),
+            Some(b) => Ok((b.to_vec(), false)),
+            None => {
+                let b = self.interpolate_in(&pat.parts, scope, true, false)?;
+                Ok((b.buf, b.utf8))
+            }
         }
     }
 
     pub fn regex(&mut self, pat: &Pat, scope: &Rc<Scope>) -> ER<Rc<crate::perl::regex::PerlRegex>> {
-        let mut bytes = self.pattern_bytes(pat, scope)?;
+        let (bytes, utf8) = self.pattern_form(pat, scope)?;
+        self.regex_for(&bytes, utf8, &pat.flags, false)
+    }
+
+    /// Compile a pattern for a subject: bytes in byte mode, unless the
+    /// subject is a character string (`subject_utf8`) or the pattern has
+    /// characters above 0xFF, which match in UTF mode (the subject then
+    /// upgraded), as perl does.
+    pub(crate) fn regex_for(&mut self, bytes: &[u8], pat_utf8: bool, flags: &str, subject_utf8: bool) -> ER<Rc<crate::perl::regex::PerlRegex>> {
+        use crate::perl::regex as re;
         // An empty pattern reuses the last successful one; ExifTool never
         // relies on it, so treat it as matching the empty string.
-        if bytes.is_empty() {
-            bytes = b"(?:)".to_vec();
-        }
-        match crate::perl::regex::compile(&bytes, &pat.flags) {
+        let bytes: &[u8] = if bytes.is_empty() { b"(?:)" } else { bytes };
+        let r = if !subject_utf8 && !pat_utf8 {
+            match re::compile(bytes, flags) {
+                Err(_) if re::needs_utf(bytes) => re::compile_utf(bytes, false, flags),
+                r => r,
+            }
+        } else if !subject_utf8 && crate::perl::utf8::is_downgradable(bytes) {
+            re::compile(&crate::perl::utf8::downgrade(bytes).unwrap_or_default(), flags)
+        } else {
+            re::compile_utf(bytes, pat_utf8, flags)
+        };
+        match r {
             Ok(r) => Ok(r),
             Err(e) => die(e),
         }
@@ -2925,20 +3077,20 @@ impl Interp {
 
     fn do_match(&mut self, e: &Expr, scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
         let Expr::Match { target, neg, pat } = e else { unreachable!() };
-        let re = self.regex(pat, scope)?;
+        let (pbytes, putf) = self.pattern_form(pat, scope)?;
         // The target, and where its pos() is kept (variables and elements).
-        let (subject, cell) = match target {
+        let (subject_v, cell) = match target {
             Some(t) => match &**t {
                 Expr::Scalar(_) | Expr::ScalarDeref(_) | Expr::Elem(..) | Expr::HElem(..) => {
                     let lv = self.lvalue(t, scope)?;
                     let v = lv.get();
                     self.use_str(&v, t, scope, "pattern match (m//)", false)?;
-                    (v.to_bytes(), pos_key(&lv).map(|k| (k, lv)))
+                    (v, pos_key(&lv).map(|k| (k, lv)))
                 }
                 t => {
                     let v = self.scalar(t, scope)?;
                     self.use_str(&v, t, scope, "pattern match (m//)", false)?;
-                    (v.to_bytes(), None)
+                    (v, None)
                 }
             },
             None => {
@@ -2947,23 +3099,29 @@ impl Interp {
                 if v.is_undef() && self.warn_on() {
                     self.report_uninit(Some("$_".into()), "pattern match (m//)")?;
                 }
-                let s = v.to_bytes();
-                (s, pos_key(&lv).map(|k| (k, lv)))
+                (v, pos_key(&lv).map(|k| (k, lv)))
             }
         };
+        let re = self.regex_for(&pbytes, putf, &pat.flags, subject_v.is_utf8())?;
+        // (a byte string matched in UTF mode is upgraded: its pos() is
+        // converted between the two forms)
+        let (subject, upgraded) = subject_form(&re, &subject_v);
+        let utf = re.utf;
+        let pos_in = |p: usize| if upgraded { crate::perl::utf8::byte_offset(&subject, p) } else { p };
+        let pos_out = |p: usize| if upgraded { crate::perl::utf8::char_offset(&subject, p) } else { p };
         let global = pat.flags.contains('g');
         if global && want == Want::List && !neg {
-            let start = cell.as_ref().and_then(|(k, lv)| self.pos_at(*k, lv)).unwrap_or(0);
+            let start = cell.as_ref().and_then(|(k, lv)| self.pos_at(*k, lv)).map(pos_in).unwrap_or(0);
             let all = re.match_all(&subject, start).map_err(|e| Flow::Die(Value::from(e)))?;
             let mut out = Vec::new();
             for spans in &all {
                 if spans.len() == 1 {
                     let (s, e) = spans[0].unwrap();
-                    out.push(Value::bytes(&subject[s..e]));
+                    out.push(Value::string(&subject[s..e], utf));
                 } else {
                     for g in &spans[1..] {
                         out.push(match g {
-                            Some((s, e)) => Value::bytes(&subject[*s..*e]),
+                            Some((s, e)) => Value::string(&subject[*s..*e], utf),
                             None => Value::Undef,
                         });
                     }
@@ -2977,7 +3135,7 @@ impl Interp {
             }
             return Ok(out);
         }
-        let start = if global { cell.as_ref().and_then(|(k, lv)| self.pos_at(*k, lv)).unwrap_or(0) } else { 0 };
+        let start = if global { cell.as_ref().and_then(|(k, lv)| self.pos_at(*k, lv)).map(pos_in).unwrap_or(0) } else { 0 };
         let m = re.match_at(&subject, start).map_err(|e| Flow::Die(Value::from(e)))?;
         let matched = m.is_some();
         if let Some(spans) = &m {
@@ -2985,10 +3143,10 @@ impl Interp {
                 if let Some((k, lv)) = &cell {
                     let (_, e) = spans[0].unwrap();
                     let tag = value_tag(&lv.get());
-                    self.pos_set(*k, e, tag);
+                    self.pos_set(*k, pos_out(e), tag);
                 }
             }
-            self.set_last_match(&re, &subject, &spans);
+            self.set_last_match(&re, &subject, spans);
         } else if global {
             if let Some((k, _)) = &cell {
                 if !pat.flags.contains('c') {
@@ -3006,7 +3164,7 @@ impl Interp {
                 Some(spans) => spans[1..]
                     .iter()
                     .map(|g| match g {
-                        Some((s, e)) => Value::bytes(&subject[*s..*e]),
+                        Some((s, e)) => Value::string(&subject[*s..*e], utf),
                         None => Value::Undef,
                     })
                     .collect(),
@@ -3016,7 +3174,7 @@ impl Interp {
     }
 
     fn subst(&mut self, target: &Option<P<Expr>>, pat: &Pat, repl: &SubstRepl, scope: &Rc<Scope>) -> ER<Value> {
-        let re = self.regex(pat, scope)?;
+        let (pbytes, putf) = self.pattern_form(pat, scope)?;
         let lv = match target {
             Some(t) => self.lvalue(t, scope)?,
             None => Lv::Scalar(self.scalar_cell(scope, "_")),
@@ -3032,9 +3190,12 @@ impl Interp {
                 }
             }
         }
-        let subject = subject.to_bytes();
+        let subject_v = subject;
+        let re = self.regex_for(&pbytes, putf, &pat.flags, subject_v.is_utf8())?;
+        let (subject, _) = subject_form(&re, &subject_v);
+        let utf = re.utf;
         let global = pat.flags.contains('g');
-        let mut out = Vec::with_capacity(subject.len());
+        let mut out = crate::perl::utf8::StrBuf { buf: Vec::with_capacity(subject.len()), utf8: utf };
         let mut last = 0;
         let mut count = 0;
         let mut start = 0;
@@ -3042,9 +3203,12 @@ impl Interp {
             let Some(spans) = re.match_at(&subject, start).map_err(|e| Flow::Die(Value::from(e)))? else { break };
             let (s, e) = spans[0].unwrap();
             self.set_last_match(&re, &subject, &spans);
-            out.extend_from_slice(&subject[last..s]);
-            let r = match repl {
-                SubstRepl::Interp(parts) => self.interpolate_in(parts, scope, false, true)?,
+            out.push_form(&subject[last..s], utf);
+            match repl {
+                SubstRepl::Interp(parts) => {
+                    let r = self.interpolate_in(parts, scope, false, true)?;
+                    out.push_form(&r.buf, r.utf8);
+                }
                 SubstRepl::Code(block) => {
                     let mut v = self.run_block(block, scope, Want::Scalar)?;
                     if pat.flags.matches('e').count() > 1 {
@@ -3062,23 +3226,23 @@ impl Interp {
                         };
                         self.report_uninit(n, "substitution (s///)")?;
                     }
-                    r.to_bytes().to_vec()
+                    out.push_value(&r);
                 }
-            };
-            out.extend_from_slice(&r);
+            }
             count += 1;
             last = e;
             if !global {
                 break;
             }
             if e == s {
-                // After an empty match, copy one byte and go on.
+                // After an empty match, copy one character and go on.
                 if e >= subject.len() {
                     break;
                 }
-                out.push(subject[e]);
-                last = e + 1;
-                start = e + 1;
+                let n = crate::perl::utf8::step(&subject, e, utf);
+                out.push_form(&subject[e..e + n], utf);
+                last = e + n;
+                start = e + n;
             } else {
                 start = e;
             }
@@ -3087,14 +3251,14 @@ impl Interp {
             }
         }
         if count == 0 {
-            return Ok(if pat.flags.contains('r') { Value::Str(subject) } else { NO() });
+            return Ok(if pat.flags.contains('r') { if subject_v.is_str() { subject_v.clone() } else { Value::bytes(subject_v.to_bytes()) } } else { NO() });
         }
-        out.extend_from_slice(&subject[last.min(subject.len())..]);
+        out.push_form(&subject[last.min(subject.len())..], utf);
         if pat.flags.contains('r') {
-            return Ok(Value::bytes(out));
+            return Ok(out.into_value());
         }
         self.forget_pos(&lv);
-        lv.set(Value::bytes(out))?;
+        lv.set(out.into_value())?;
         Ok(Value::Int(count))
     }
 
@@ -3135,11 +3299,10 @@ impl Interp {
             let r = match cb {
                 Callback::Block(b) => self.run_block(b, scope, if map { Want::List } else { Want::Scalar }),
                 Callback::Expr(e) => {
-                    if map {
-                        self.list(e, scope)
-                    } else {
-                        self.scalar(e, scope).map(|v| vec![v])
-                    }
+                    let saved_match = self.last_match.clone();
+                    let r = if map { self.list(e, scope) } else { self.scalar(e, scope).map(|v| vec![v]) };
+                    self.last_match = saved_match;
+                    r
                 }
             };
             let r = match r {
@@ -3173,7 +3336,7 @@ impl Interp {
     fn sort(&mut self, cb: &Option<Callback>, l: &Expr, scope: &Rc<Scope>) -> ER<Vec<Value>> {
         let mut items = self.list(l, scope)?;
         let Some(cb) = cb else {
-            items.sort_by(|a, b| a.to_bytes()[..].cmp(&b.to_bytes()[..]));
+            items.sort_by(ops::str_cmp);
             return Ok(items);
         };
         let a_cell: Cell = Rc::new(RefCell::new(Value::Undef));
@@ -3287,7 +3450,7 @@ impl Interp {
                         self.pending_aliases = Some(al);
                         self.call(&c, a, want)
                     }
-                    Value::Str(s) => {
+                    Value::Str(s) | Value::UStr(s) => {
                         self.check_symref(&s, "a subroutine")?;
                         let n = String::from_utf8_lossy(&s).into_owned();
                         self.pending_aliases = Some(al);
@@ -3563,7 +3726,7 @@ pub(crate) enum PosTag {
 
 fn value_tag(v: &Value) -> PosTag {
     match v {
-        Value::Str(s) => PosTag::Str(Rc::downgrade(s)),
+        Value::Str(s) | Value::UStr(s) => PosTag::Str(Rc::downgrade(s)),
         _ => PosTag::Other,
     }
 }
@@ -3571,8 +3734,8 @@ fn value_tag(v: &Value) -> PosTag {
 impl PosTag {
     fn matches(&self, v: &Value) -> bool {
         match (self, v) {
-            (PosTag::Str(w), Value::Str(s)) => w.upgrade().is_some_and(|x| Rc::ptr_eq(&x, s)),
-            (PosTag::Other, Value::Str(_)) => false,
+            (PosTag::Str(w), Value::Str(s) | Value::UStr(s)) => w.upgrade().is_some_and(|x| Rc::ptr_eq(&x, s)),
+            (PosTag::Other, Value::Str(_) | Value::UStr(_)) => false,
             (PosTag::Str(_), _) => false,
             (PosTag::Other, _) => true,
         }
@@ -3715,9 +3878,32 @@ fn fit(mut v: Vec<Value>, want: Want) -> Vec<Value> {
     }
 }
 
+/// The subject of a match in the form the pattern was compiled for: the
+/// UTF-8 form in UTF mode (a byte string upgraded: `true`), bytes otherwise.
+pub(crate) fn subject_form(re: &crate::perl::regex::PerlRegex, v: &Value) -> (Rc<[u8]>, bool) {
+    match v {
+        Value::UStr(s) => (s.clone(), false),
+        _ if re.utf => {
+            let b = v.utf8_bytes();
+            let up = !b.is_ascii();
+            (b, up)
+        }
+        _ => (v.to_bytes(), false),
+    }
+}
+
+/// Whether a loop condition declares a variable (`while (my $x = ...)`).
+fn declares_my(e: &Expr) -> bool {
+    match e {
+        Expr::My(..) => true,
+        Expr::Assign(_, l, _) => declares_my(l),
+        _ => false,
+    }
+}
+
 /// A string operand of a bitwise operator: a string never used as a number.
 fn is_string_operand(v: &Value) -> bool {
-    matches!(v, Value::Str(_))
+    v.is_str()
 }
 
 fn string_bitop(a: &[u8], b: &[u8], f: impl Fn(u8, u8) -> u8) -> Vec<u8> {
@@ -3728,7 +3914,8 @@ fn string_bitop(a: &[u8], b: &[u8], f: impl Fn(u8, u8) -> u8) -> Vec<u8> {
 /// Perl's magic string increment: "aa"++ is "ab", "Az"++ is "Ba", "zz"++
 /// is "aaa", "a9"++ is "b0".
 fn string_increment(v: &Value) -> Option<Value> {
-    let Value::Str(s) = v else { return None };
+    let (Value::Str(s) | Value::UStr(s)) = v else { return None };
+    let utf8 = v.is_utf8();
     if s.is_empty() || v.looks_like_number() {
         return None;
     }
@@ -3746,7 +3933,7 @@ fn string_increment(v: &Value) -> Option<Value> {
                 _ => b'A',
             };
             b.insert(0, first);
-            return Some(Value::bytes(b));
+            return Some(Value::string(b, utf8));
         }
         i -= 1;
         match b[i] {
@@ -3755,7 +3942,7 @@ fn string_increment(v: &Value) -> Option<Value> {
             b'9' => b[i] = b'0',
             c => {
                 b[i] = c + 1;
-                return Some(Value::bytes(b));
+                return Some(Value::string(b, utf8));
             }
         }
     }

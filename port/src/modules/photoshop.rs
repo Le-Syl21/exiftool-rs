@@ -32,7 +32,7 @@ fn read_eq(it: &mut Interp, raf: &Value, buff: &Cell, len: &Value) -> ER<bool> {
     // (die here, as perl does, on an undefined or unblessed invocant: the
     //  read helper runs the call as interpreted code, with its own location)
     match raf {
-        Value::Str(_) => {}
+        Value::Str(_) | Value::UStr(_) => {}
         Value::HashRef(h) if h.borrow().blessed.is_some() => {}
         _ => {
             pl::method(it, raf, "Read", vec![])?;

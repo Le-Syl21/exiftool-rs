@@ -466,7 +466,7 @@ impl<'a> Parser<'a> {
                     c => c,
                 });
                 let body = self.block()?;
-                return Ok(Some(Stmt::While { label, cond, body, until, post: false }));
+                return Ok(Some(Stmt::While { label, cond, body, until, post: false, modifier: false }));
             }
             Some("for") | Some("foreach") => {
                 self.pos += word.unwrap().len();
@@ -554,12 +554,12 @@ impl<'a> Parser<'a> {
                     } {
                         let cond = self.expr()?;
                         self.end_statement()?;
-                        return Ok(Some(Stmt::While { label, cond: Some(cond), body, until: false, post: true }));
+                        return Ok(Some(Stmt::While { label, cond: Some(cond), body, until: false, post: true, modifier: false }));
                     }
                     if self.eat_word("until") {
                         let cond = self.expr()?;
                         self.end_statement()?;
-                        return Ok(Some(Stmt::While { label, cond: Some(cond), body, until: true, post: true }));
+                        return Ok(Some(Stmt::While { label, cond: Some(cond), body, until: true, post: true, modifier: false }));
                     }
                 }
                 self.pos = save;
@@ -621,7 +621,7 @@ impl<'a> Parser<'a> {
             Some("while") | Some("until") => {
                 self.pos += 5;
                 let cond = self.expr()?;
-                Stmt::While { label: None, cond: Some(cond), body: vec![Stmt::Expr(e)], until: word == Some("until"), post: false }
+                Stmt::While { label: None, cond: Some(cond), body: vec![Stmt::Expr(e)], until: word == Some("until"), post: false, modifier: true }
             }
             Some("for") | Some("foreach") => {
                 self.pos += word.unwrap().len();
@@ -1450,6 +1450,7 @@ impl<'a> Parser<'a> {
         Ok(match parts.as_slice() {
             [] => Expr::Const(Value::str("")),
             [Part::Lit(b)] => Expr::Const(Value::bytes(b)),
+            [Part::ULit(b)] => Expr::Const(Value::chars(b)),
             _ => Expr::Interp(parts),
         })
     }
@@ -2408,11 +2409,16 @@ impl<'a> Parser<'a> {
     fn interpolate(&mut self, raw: &[u8], regex: bool) -> R<Vec<Part>> {
         let mut parts = Vec::new();
         let mut lit = Vec::new();
+        // the literal holds characters (a \x{...} above 0xFF, \N{...}): its
+        // UTF-8 form, as perl upgrades the string
+        let mut wide = false;
         let mut i = 0;
-        let flush = |lit: &mut Vec<u8>, parts: &mut Vec<Part>| {
+        let flush = |lit: &mut Vec<u8>, parts: &mut Vec<Part>, wide: &mut bool| {
             if !lit.is_empty() {
-                parts.push(Part::Lit(std::mem::take(lit)));
+                let b = std::mem::take(lit);
+                parts.push(if *wide { Part::ULit(b) } else { Part::Lit(b) });
             }
+            *wide = false;
         };
         while i < raw.len() {
             let c = raw[i];
@@ -2428,7 +2434,7 @@ impl<'a> Parser<'a> {
                     _ => None,
                 };
                 if let Some(op) = case {
-                    flush(&mut lit, &mut parts);
+                    flush(&mut lit, &mut parts, &mut wide);
                     parts.push(Part::Case(op));
                     i += 2;
                     continue;
@@ -2439,14 +2445,22 @@ impl<'a> Parser<'a> {
                     i += 2;
                     continue;
                 }
-                let (bytes, n) = string_escape(&raw[i + 1..]);
-                lit.extend_from_slice(&bytes);
+                let (cp, n, chars) = string_escape(&raw[i + 1..]);
+                if (cp > 0xFF || chars) && !wide {
+                    lit = crate::perl::utf8::upgrade(&lit);
+                    wide = true;
+                }
+                if wide {
+                    crate::perl::utf8::push_cp(&mut lit, cp);
+                } else {
+                    lit.push(cp as u8);
+                }
                 i += 1 + n;
                 continue;
             }
             if c == b'$' && i + 1 < raw.len() {
                 if let Some(end) = interp_var_end(raw, i, regex) {
-                    flush(&mut lit, &mut parts);
+                    flush(&mut lit, &mut parts, &mut wide);
                     let src = &raw[i..end];
                     let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: None };
                     let e = sub.postfix()?;
@@ -2455,9 +2469,19 @@ impl<'a> Parser<'a> {
                     continue;
                 }
             }
+            // "@-" and "@+": the match offsets (in a string)
+            if c == b'@' && !regex && matches!(raw.get(i + 1), Some(b'-' | b'+')) {
+                flush(&mut lit, &mut parts, &mut wide);
+                let src = &raw[i..i + 2];
+                let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: None };
+                let e = sub.postfix()?;
+                parts.push(Part::Array(e));
+                i += 2;
+                continue;
+            }
             if c == b'@' && i + 1 < raw.len() && (ident_start(raw[i + 1]) || raw[i + 1] == b'{' || raw[i + 1] == b'$' || raw[i + 1] == b'_') {
                 if let Some(end) = interp_var_end(raw, i, regex) {
-                    flush(&mut lit, &mut parts);
+                    flush(&mut lit, &mut parts, &mut wide);
                     let src = &raw[i..end];
                     let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: None };
                     let e = sub.postfix()?;
@@ -2466,10 +2490,14 @@ impl<'a> Parser<'a> {
                     continue;
                 }
             }
-            lit.push(c);
+            if wide {
+                crate::perl::utf8::push_cp(&mut lit, c as u32);
+            } else {
+                lit.push(c);
+            }
             i += 1;
         }
-        flush(&mut lit, &mut parts);
+        flush(&mut lit, &mut parts, &mut wide);
         Ok(parts)
     }
 }
@@ -2512,11 +2540,12 @@ fn single_quoted(raw: &[u8], delim: u8) -> Vec<u8> {
     out
 }
 
-/// A double-quoted escape (after the backslash): the bytes and how many
-/// input bytes it used.
-fn string_escape(s: &[u8]) -> (Vec<u8>, usize) {
+/// A double-quoted escape (after the backslash): the character, how many
+/// input bytes it used, and whether it makes the string a character string
+/// whatever its code (`\N{...}`).
+fn string_escape(s: &[u8]) -> (u32, usize, bool) {
     let c = s[0];
-    let one = |b: u8| (vec![b], 1);
+    let one = |b: u8| (b as u32, 1, false);
     match c {
         b'n' => one(b'\n'),
         b't' => one(b'\t'),
@@ -2531,41 +2560,31 @@ fn string_escape(s: &[u8]) -> (Vec<u8>, usize) {
                 v = v * 8 + (s[n] - b'0') as u32;
                 n += 1;
             }
-            (encode_char(v), n)
+            (v, n, false)
         }
         b'x' => {
             if s.get(1) == Some(&b'{') {
                 let end = s.iter().position(|&b| b == b'}').unwrap_or(s.len());
                 let hex = String::from_utf8_lossy(&s[2..end]).replace('_', "");
                 let v = u32::from_str_radix(hex.trim(), 16).unwrap_or(0);
-                (encode_char(v), end + 1)
+                (v, end + 1, false)
             } else {
                 let mut n = 1;
                 while n < 3 && n < s.len() && s[n].is_ascii_hexdigit() {
                     n += 1;
                 }
                 let v = u32::from_str_radix(std::str::from_utf8(&s[1..n]).unwrap_or("0"), 16).unwrap_or(0);
-                (vec![v as u8], n)
+                (v, n, false)
             }
         }
-        b'c' if s.len() > 1 => (vec![s[1].to_ascii_uppercase() ^ 64], 2),
+        b'c' if s.len() > 1 => one(s[1].to_ascii_uppercase() ^ 64),
         b'N' if s.get(1) == Some(&b'{') => {
             let end = s.iter().position(|&b| b == b'}').unwrap_or(s.len());
             let name = String::from_utf8_lossy(&s[2..end]).into_owned();
             let v = name.strip_prefix("U+").and_then(|h| u32::from_str_radix(h, 16).ok()).unwrap_or(0xFFFD);
-            (char::from_u32(v).unwrap_or('\u{FFFD}').to_string().into_bytes(), end + 1)
+            (v, end + 1, true)
         }
         other => one(other),
-    }
-}
-
-/// A character code in a byte string: below 256 a byte, above as UTF-8 (as
-/// perl does once the string is upgraded).
-fn encode_char(v: u32) -> Vec<u8> {
-    if v < 256 {
-        vec![v as u8]
-    } else {
-        char::from_u32(v).unwrap_or('\u{FFFD}').to_string().into_bytes()
     }
 }
 
@@ -2601,6 +2620,7 @@ fn interp_var_end(raw: &[u8], i: usize, regex: bool) -> Option<usize> {
             return Some(k);
         }
         b'&' | b'@' if !regex && raw[i] == b'$' => return Some(k + 1),
+        b'`' | b'\'' if !regex && raw[i] == b'$' && k == i + 1 => return Some(k + 1),
         // "$+{name}", "$-{name}", "$-[1]", "$+[0]": the named captures and
         // the match offsets (in a string, not in a pattern)
         b'+' | b'-' if !regex && raw[i] == b'$' && k == i + 1 && matches!(at(k + 1), b'{' | b'[') => {

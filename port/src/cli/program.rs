@@ -1166,7 +1166,7 @@ fn command_loop(it: &mut Interp, _scope: &Rc<Scope>) -> ER<()> {
                     // the substitution's match: the chain's last branch
                     // reads its $1 (the dash)
                     let n = if before.first() == Some(&b'-') { 1 } else { 3 };
-                    it.last_match = Some(crate::interp::eval::LastMatch { subject: Rc::from(before.as_slice()), spans: vec![Some((0, n)), Some((0, n))], names: Vec::new() });
+                    it.last_match = Some(Rc::new(crate::interp::eval::LastMatch { subject: Rc::from(before.as_slice()), spans: vec![Some((0, n)), Some((0, n))], names: Vec::new(), utf8: false }));
                     super::options::parse_option(it)?;
                     continue 'args;
                 }

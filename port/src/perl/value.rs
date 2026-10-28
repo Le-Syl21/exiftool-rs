@@ -4,7 +4,9 @@
 //! changes between them on use: `"12 34" + 0` is 12, `0.1 + 0.2` prints as
 //! `0.3`, `"0.0"` is true. ExifTool's output depends on all of it, so the
 //! conversions here follow perl's own (`sv_2pv`, `sv_2nv`, `grok_number`).
-//! Strings are bytes, as in ExifTool, which reads them from files.
+//! Strings are bytes, as in ExifTool, which reads them from files; a
+//! character string (perl's UTF-8 flag on) is a separate variant, so that
+//! byte strings cost nothing more for it.
 
 use std::cell::RefCell;
 use std::fmt;
@@ -23,6 +25,9 @@ pub enum Value {
     Num(f64),
     /// A string of bytes (perl's PV).
     Str(Rc<[u8]>),
+    /// A string of characters (perl's PV with the UTF-8 flag on), held as
+    /// perl holds it: in (perl's extended) UTF-8.
+    UStr(Rc<[u8]>),
     /// A reference to a scalar: `\$val`, how ExifTool marks binary data.
     ScalarRef(Rc<RefCell<Value>>),
     /// A reference to an array: list-type tags, `\@val`.
@@ -48,6 +53,54 @@ impl Value {
         Value::Str(Rc::from(b.as_ref()))
     }
 
+    /// A character string from its UTF-8 form.
+    pub fn chars(b: impl AsRef<[u8]>) -> Value {
+        Value::UStr(Rc::from(b.as_ref()))
+    }
+
+    /// A string from bytes that are a character string's UTF-8 form when
+    /// `utf8`, a byte string otherwise.
+    pub fn string(b: impl AsRef<[u8]>, utf8: bool) -> Value {
+        if utf8 {
+            Value::chars(b)
+        } else {
+            Value::bytes(b)
+        }
+    }
+
+    /// Whether the value is a character string (perl's `utf8::is_utf8`).
+    #[inline]
+    pub fn is_utf8(&self) -> bool {
+        matches!(self, Value::UStr(_))
+    }
+
+    /// Whether the value is a string, of bytes or of characters.
+    #[inline]
+    pub fn is_str(&self) -> bool {
+        matches!(self, Value::Str(_) | Value::UStr(_))
+    }
+
+    /// The UTF-8 form of the string value (a byte string upgraded): what
+    /// an operation that mixes it with a character string works on.
+    pub fn utf8_bytes(&self) -> Rc<[u8]> {
+        match self {
+            Value::UStr(s) => s.clone(),
+            Value::Str(s) if s.is_ascii() => s.clone(),
+            Value::Str(s) => Rc::from(crate::perl::utf8::upgrade(s)),
+            _ => self.to_bytes(),
+        }
+    }
+
+    /// The string's bytes in the form an operation works on: the UTF-8
+    /// form for a character string, the bytes for any other value; and
+    /// whether they are characters.
+    pub fn str_form(&self) -> (Rc<[u8]>, bool) {
+        match self {
+            Value::UStr(s) => (s.clone(), true),
+            _ => (self.to_bytes(), false),
+        }
+    }
+
     /// A string value from text.
     pub fn str(s: &str) -> Value {
         Value::bytes(s.as_bytes())
@@ -68,9 +121,23 @@ impl Value {
 
     /// The string form (perl's `sv_2pv`): undef is empty, integers in decimal,
     /// floats with `%.15g`, references as `SCALAR(0x...)`-like text.
+    ///
+    /// A character string gives its characters as bytes when they are all
+    /// below 256 (what print writes), its UTF-8 form otherwise.
     pub fn to_bytes(&self) -> Rc<[u8]> {
         match self {
             Value::Str(s) => s.clone(),
+            Value::UStr(s) => {
+                if crate::perl::utf8::is_downgradable(s) {
+                    if s.is_ascii() {
+                        s.clone()
+                    } else {
+                        Rc::from(crate::perl::utf8::downgrade(s).unwrap_or_default())
+                    }
+                } else {
+                    s.clone()
+                }
+            }
             _ => Rc::from(self.to_string().into_bytes()),
         }
     }
@@ -78,7 +145,7 @@ impl Value {
     /// The string form as text, invalid UTF-8 replaced (for messages only).
     pub fn to_text(&self) -> String {
         match self {
-            Value::Str(s) => String::from_utf8_lossy(s).into_owned(),
+            Value::Str(s) | Value::UStr(s) => String::from_utf8_lossy(s).into_owned(),
             _ => self.to_string(),
         }
     }
@@ -90,7 +157,7 @@ impl Value {
             Value::Int(i) => Number::Int(*i),
             Value::UInt(u) => Number::UInt(*u),
             Value::Num(n) => Number::Float(*n),
-            Value::Str(s) => grok_number(s).0,
+            Value::Str(s) | Value::UStr(s) => grok_number(s).0,
             // A reference numifies to its address; nothing in ExifTool uses it.
             Value::ScalarRef(r) => Number::Int(Rc::as_ptr(r) as i64),
             Value::ArrayRef(r) => Number::Int(Rc::as_ptr(r) as *const u8 as i64),
@@ -118,7 +185,7 @@ impl Value {
             Value::Int(i) => *i != 0,
             Value::UInt(u) => *u != 0,
             Value::Num(n) => *n != 0.0,
-            Value::Str(s) => !(s.is_empty() || &s[..] == b"0"),
+            Value::Str(s) | Value::UStr(s) => !(s.is_empty() || &s[..] == b"0"),
             _ => true,
         }
     }
@@ -128,7 +195,7 @@ impl Value {
     pub fn looks_like_number(&self) -> bool {
         match self {
             Value::Int(_) | Value::UInt(_) | Value::Num(_) => true,
-            Value::Str(s) => grok_number(s).1 == Grok::Whole,
+            Value::Str(s) | Value::UStr(s) => grok_number(s).1 == Grok::Whole,
             _ => false,
         }
     }
@@ -308,7 +375,7 @@ impl fmt::Display for Value {
             Value::Int(i) => write!(f, "{i}"),
             Value::UInt(u) => write!(f, "{u}"),
             Value::Num(n) => f.write_str(&format_nv(*n)),
-            Value::Str(s) => f.write_str(&String::from_utf8_lossy(s)),
+            Value::Str(s) | Value::UStr(s) => f.write_str(&String::from_utf8_lossy(s)),
             Value::ScalarRef(r) => {
                 let kind = if r.borrow().is_ref() { "REF" } else { "SCALAR" };
                 write!(f, "{kind}({:p})", Rc::as_ptr(r))
@@ -332,7 +399,7 @@ impl fmt::Debug for Value {
             Value::Int(i) => write!(f, "{i}"),
             Value::UInt(u) => write!(f, "{u}"),
             Value::Num(n) => write!(f, "{}", format_nv(*n)),
-            Value::Str(s) => write!(f, "{:?}", String::from_utf8_lossy(s)),
+            Value::Str(s) | Value::UStr(s) => write!(f, "{:?}", String::from_utf8_lossy(s)),
             Value::ScalarRef(r) => write!(f, "\\{:?}", r.borrow()),
             Value::ArrayRef(r) => write!(f, "{:?}", r.borrow()),
             Value::HashRef(r) => write!(f, "{:?}", r.borrow()),

@@ -148,6 +148,55 @@ pub fn tr(s: &[u8], search: &[u8], replace: &[u8], flags: &str) -> (Vec<u8>, usi
     Tr::new(search, replace, flags).apply(s, flags.contains('s'))
 }
 
+/// `tr///` on a character string (its UTF-8 form), with lists of
+/// characters below 256: those characters as for bytes; a character above
+/// 0xFF is kept, or, with `c` (it is in the complement), deleted with `d`
+/// or replaced by the last character of the replacement list.
+pub fn tr_chars(s: &[u8], search: &[u8], replace: &[u8], flags: &str) -> (Vec<u8>, usize) {
+    let t = Tr::new(search, replace, flags);
+    let squeeze = flags.contains('s');
+    let wide = if flags.contains('c') {
+        if flags.contains('d') {
+            Action::Delete
+        } else {
+            match expand(replace).last() {
+                Some(&r) => Action::Replace(r),
+                None => Action::Keep,
+            }
+        }
+    } else {
+        Action::Keep
+    };
+    let counted_wide = flags.contains('c');
+    let mut out = Vec::with_capacity(s.len());
+    let mut count = 0;
+    let mut last_replaced: Option<u8> = None;
+    let mut i = 0;
+    while i < s.len() {
+        let (cp, n) = crate::perl::utf8::decode_at(s, i);
+        let action = if cp < 256 { t.map[cp as usize] } else { wide };
+        match action {
+            Action::Keep => {
+                if cp >= 256 && counted_wide {
+                    count += 1;
+                }
+                out.extend_from_slice(&s[i..i + n]);
+                last_replaced = None;
+            }
+            Action::Delete => count += 1,
+            Action::Replace(r) => {
+                count += 1;
+                if !(squeeze && last_replaced == Some(r)) {
+                    crate::perl::utf8::push_cp(&mut out, r as u32);
+                    last_replaced = Some(r);
+                }
+            }
+        }
+        i += n;
+    }
+    (out, count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::tr;

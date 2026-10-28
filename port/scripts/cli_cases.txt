@@ -55,6 +55,24 @@ R|-charset iptc=latin -IPTC:all t/images/IPTC.jpg
 R|-lang fr t/images/Canon.jpg
 R|-lang de -G1 -a t/images/Nikon.jpg
 R|-lang ja -s t/images/Sony.jpg
+R|-lang de -G1 -a t/images/Canon.jpg
+R|-lang de -h t/images/Olympus.jpg
+R|-lang de -X t/images/Nikon.jpg
+R|-lang de -j t/images/Pentax.jpg
+R|-lang ja -G1 -a t/images/Canon.jpg
+R|-lang ja -h t/images/Nikon.jpg
+R|-lang ja -X t/images/Canon.jpg
+R|-lang ja -j t/images/FujiFilm.jpg
+R|-lang zh_cn -G1 -a t/images/Canon.jpg
+R|-lang zh_cn -h t/images/Sony.jpg
+R|-lang zh_cn -X t/images/Olympus.jpg
+R|-lang zh_cn -j t/images/Nikon.jpg
+R|-lang ru -G1 -a t/images/Canon.jpg
+R|-lang ru -h t/images/Pentax.jpg
+R|-lang ru -X t/images/FujiFilm.jpg
+R|-lang ru -j t/images/Canon.jpg
+R|-lang fr -h t/images/Nikon.jpg
+R|-lang fr -G1 -a -s t/images/Olympus.jpg
 R|-sep ', ' -Keywords -Subject t/images/XMP.jpg
 R|-d '%Y/%m/%d %H:%M' t/images/Canon.jpg
 R|-d %s -n -DateTimeOriginal t/images/Canon.jpg

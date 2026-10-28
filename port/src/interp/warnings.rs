@@ -238,7 +238,7 @@ impl Interp {
     pub(crate) fn use_num(&mut self, v: &Value, e: &Expr, scope: &Rc<Scope>, op: &str, many: bool) -> ER<()> {
         match v {
             Value::Undef => self.uninit_slow(e, scope, op, many),
-            Value::Str(s) => {
+            Value::Str(s) | Value::UStr(s) => {
                 if !numeric_string(s) {
                     self.not_numeric_slow(s, Some(e), scope, op)?;
                 }
@@ -302,7 +302,7 @@ impl Interp {
                 let c = self.scalar_cell(scope, n);
                 Some(((Rc::as_ptr(&c) as usize, Vec::new()), Keep::Cell(c)))
             }
-            Expr::Const(Value::Str(s)) => Some(((s.as_ptr() as usize, b"const".to_vec()), Keep::Const)),
+            Expr::Const(Value::Str(s) | Value::UStr(s)) => Some(((s.as_ptr() as usize, b"const".to_vec()), Keep::Const)),
             Expr::Elem(c, i) if pure(i) => {
                 let i = self.quiet_scalar(i, scope)?.to_i64();
                 let a = self.quiet_array(c, scope)?;
@@ -463,7 +463,7 @@ impl Interp {
             Some(a) => (self.scalar(a, scope)?, None),
             None => (self.read_scalar("_", scope), Some(Expr::Scalar(Rc::from("_")))),
         };
-        if matches!(v, Value::Undef | Value::Str(_)) {
+        if matches!(v, Value::Undef | Value::Str(_) | Value::UStr(_)) {
             let e = e.as_ref().unwrap_or_else(|| &args[0]);
             if num {
                 self.use_num(&v, e, scope, op, false)?;
@@ -529,7 +529,7 @@ impl Interp {
                     self.report_uninit(n, op)?;
                 }
             }
-            Value::Str(s) if num && !numeric_string(s) => {
+            Value::Str(s) | Value::UStr(s) if num && !numeric_string(s) => {
                 if !origin.is_empty() {
                     // a variable keeps its number, as for use_num
                     let i = origin.iter().rposition(|&st| st <= j).unwrap_or(0);
@@ -544,17 +544,17 @@ impl Interp {
 
     /// `sprintf` / `printf` on the values of their arguments (the format
     /// first), with perl's warnings for the arguments its conversions use.
-    pub(crate) fn sprintf_warned(&mut self, vals: &[Value], args: &[Expr], origin: &[usize], scope: &Rc<Scope>, op: &str) -> ER<Vec<u8>> {
-        let fmt = vals.first().map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
+    pub(crate) fn sprintf_warned(&mut self, vals: &[Value], args: &[Expr], origin: &[usize], scope: &Rc<Scope>, op: &str) -> ER<Value> {
+        let fmt = vals.first().cloned().unwrap_or_else(|| Value::str(""));
         let rest = &vals[1.min(vals.len())..];
         if origin.is_empty() {
-            return Ok(crate::perl::sprintf::sprintf(&fmt, rest));
+            return Ok(crate::perl::sprintf::sprintf_value(&fmt, rest, None));
         }
         if let Some(f) = vals.first() {
             self.list_use(f, 0, args, origin, scope, op, false)?;
         }
         let mut uses = Vec::new();
-        let out = crate::perl::sprintf::sprintf_traced(&fmt, rest, Some(&mut uses));
+        let out = crate::perl::sprintf::sprintf_value(&fmt, rest, Some(&mut uses));
         use crate::perl::sprintf::ArgUse;
         for u in uses {
             match u {
@@ -578,7 +578,7 @@ impl Interp {
         let v = self.scalar(i, scope)?;
         match &v {
             Value::Undef => self.uninit_slow(i, scope, op, false)?,
-            Value::Str(s) if !numeric_string(s) => {
+            Value::Str(s) | Value::UStr(s) if !numeric_string(s) => {
                 // a constant or variable subscript is part of perl's
                 // multideref op
                 let op = if simple_subscript(i) && op == "array element" { "array or hash lookup" } else { op };

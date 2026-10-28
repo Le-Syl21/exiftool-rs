@@ -75,7 +75,7 @@ fn set_option(it: &mut Interp, et: &Value, name: &str, v: Value) -> ER<Value> {
 
 /// `++$x` (perl's magic string increment for /^[a-zA-Z]*[0-9]*$/).
 fn incr(v: &Value) -> Value {
-    if let Value::Str(b) = v {
+    if let Value::Str(b) | Value::UStr(b) = v {
         let alnum = !b.is_empty() && {
             let i = b.iter().position(|c| !c.is_ascii_alphabetic()).unwrap_or(b.len());
             b[i..].iter().all(|c| c.is_ascii_digit())

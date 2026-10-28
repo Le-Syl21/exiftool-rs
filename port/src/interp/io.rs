@@ -111,6 +111,23 @@ pub struct FileHandle {
     pub class: Option<Rc<str>>,
     /// Its name in perl's messages ("FH", "$fh"), from the open.
     pub name: Option<Rc<str>>,
+    /// A `:utf8` (or `:encoding(UTF-8)`) layer: characters are written as
+    /// UTF-8.
+    pub utf8: bool,
+}
+
+/// Whether PerlIO layers (`:raw:utf8`, `:encoding(UTF-8)`) end in UTF-8.
+pub(crate) fn layers_utf8(layers: &str) -> Option<bool> {
+    let mut utf8 = None;
+    for l in layers.split(':').map(str::trim).filter(|l| !l.is_empty()) {
+        let l = l.to_ascii_lowercase();
+        if l == "utf8" || l.starts_with("encoding(utf") {
+            utf8 = Some(true);
+        } else if l == "raw" || l == "bytes" || l == "pop" {
+            utf8 = Some(false);
+        }
+    }
+    utf8
 }
 
 impl std::fmt::Debug for FileHandle {
@@ -164,7 +181,7 @@ impl Interp {
                 let inner = c.borrow().clone();
                 self.handle_of(&inner, create)
             }
-            Value::Str(s) => {
+            Value::Str(s) | Value::UStr(s) => {
                 let name = String::from_utf8_lossy(s).into_owned();
                 let name = name.trim_start_matches('*').to_string();
                 let name = name.strip_prefix("main::").unwrap_or(&name).to_string();
@@ -319,7 +336,27 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
                 None => false,
             })])
         }
-        "binmode" => Ok(vec![Value::Int(1)]),
+        "binmode" => {
+            // the layer: none (or :raw) is bytes, :utf8 characters
+            let h = match args.first() {
+                Some(a) => match it.scalar(a, scope) {
+                    Ok(v) => it.handle_of(&v, false),
+                    Err(e) => return Some(Err(e)),
+                },
+                None => None,
+            };
+            let layers = match args.get(1) {
+                Some(a) => match it.scalar(a, scope) {
+                    Ok(v) => v.to_text(),
+                    Err(e) => return Some(Err(e)),
+                },
+                None => ":raw".to_string(),
+            };
+            if let (Some(h), Some(u)) = (h, layers_utf8(&layers)) {
+                h.borrow_mut().utf8 = u;
+            }
+            Ok(vec![Value::Int(1)])
+        }
         "eof" => {
             let h = match args.first() {
                 Some(a) => match it.scalar(a, scope) {
@@ -506,7 +543,7 @@ pub(super) fn file_target(it: &mut Interp, e: &Expr, scope: &Rc<Scope>) -> ER<Ta
             return Ok(Target::Path(h.borrow().path.clone().unwrap_or_default()));
         }
     }
-    if let Value::Str(s) = &v {
+    if let Value::Str(s) | Value::UStr(s) = &v {
         if s.starts_with(b"*") {
             if let Some(h) = it.handle_of(&v, false) {
                 return Ok(Target::Path(h.borrow().path.clone().unwrap_or_default()));
@@ -637,6 +674,7 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     // 2), as perl does, so that child processes see it too
     let std_fd = std_fd_of(it, &h);
     let mut fh = h.borrow_mut();
+    fh.utf8 = layers_utf8(&mode[mode_base.len()..]).unwrap_or(false);
     fh.input = None;
     fh.output = None;
     fh.eof = false;

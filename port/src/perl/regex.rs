@@ -17,6 +17,23 @@ pub struct PerlRegex {
     pub groups: usize,
     /// Named groups and their index, for `%+`.
     pub names: Vec<Option<String>>,
+    /// Compiled in UTF mode, for a character string subject (given in its
+    /// UTF-8 form): offsets are still byte offsets in that form.
+    pub utf: bool,
+    /// The pattern and flags it was compiled from (to compile it again in
+    /// UTF mode for a character string).
+    pub source: Vec<u8>,
+    pub flags: String,
+}
+
+impl PerlRegex {
+    /// The same pattern for a character string subject: UTF mode.
+    pub fn for_chars(self: &Rc<Self>) -> Rc<PerlRegex> {
+        if self.utf {
+            return self.clone();
+        }
+        compile_utf(&self.source, false, &self.flags).unwrap_or_else(|_| self.clone())
+    }
 }
 
 /// The spans of a match: group 0 then each capture group (`None` when the
@@ -25,6 +42,9 @@ pub type Spans = Vec<Option<(usize, usize)>>;
 
 thread_local! {
     static CACHE: RefCell<HashMap<(Vec<u8>, String), Rc<PerlRegex>>> = RefCell::new(HashMap::default());
+    /// The patterns compiled in UTF mode, by pattern, whether the pattern is
+    /// a character string (its UTF-8 form), and flags.
+    static UTF_CACHE: RefCell<HashMap<(Vec<u8>, bool, String), Rc<PerlRegex>>> = RefCell::new(HashMap::default());
 }
 
 /// Compile `pattern` with Perl modifiers (`i`, `m`, `s`, `x`; others such as
@@ -34,6 +54,52 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
     if let Some(re) = CACHE.with(|c| c.borrow().get(&key).cloned()) {
         return Ok(re);
     }
+    let compiled = build(pattern, false, flags, false)?;
+    CACHE.with(|c| c.borrow_mut().insert(key, compiled.clone()));
+    Ok(compiled)
+}
+
+/// Compile a pattern for a character string subject (perl's matching on
+/// a string with the UTF-8 flag): UTF mode, with Unicode's classes and
+/// case folding, as perl's rules for such strings. `pat_utf8`: the
+/// pattern is itself a character string, given in its UTF-8 form.
+pub fn compile_utf(pattern: &[u8], pat_utf8: bool, flags: &str) -> Result<Rc<PerlRegex>, String> {
+    let key = (pattern.to_vec(), pat_utf8, flags.to_string());
+    if let Some(re) = UTF_CACHE.with(|c| c.borrow().get(&key).cloned()) {
+        return Ok(re);
+    }
+    let compiled = build(pattern, pat_utf8, flags, true)?;
+    UTF_CACHE.with(|c| c.borrow_mut().insert(key, compiled.clone()));
+    Ok(compiled)
+}
+
+/// Whether a pattern (bytes) names a character above 0xFF (`\x{100}`,
+/// `\N{U+...}`), which makes perl match in Unicode (the subject upgraded).
+pub fn needs_utf(pattern: &[u8]) -> bool {
+    let mut i = 0;
+    while i + 1 < pattern.len() {
+        if pattern[i] == b'\\' {
+            let e = pattern[i + 1];
+            if (e == b'x' || e == b'o') && pattern.get(i + 2) == Some(&b'{') {
+                if let Some(end) = pattern[i + 3..].iter().position(|&b| b == b'}') {
+                    let t = String::from_utf8_lossy(&pattern[i + 3..i + 3 + end]).replace('_', "");
+                    let v = u32::from_str_radix(t.trim(), if e == b'x' { 16 } else { 8 }).unwrap_or(0);
+                    if v > 0xFF {
+                        return true;
+                    }
+                }
+            } else if e == b'N' && pattern.get(i + 2) == Some(&b'{') {
+                return true;
+            }
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    false
+}
+
+fn build(pattern: &[u8], pat_utf8: bool, flags: &str, utf: bool) -> Result<Rc<PerlRegex>, String> {
     let fixed = class_range_escapes(&never_quantifiers(pattern));
     // what perl allows and PCRE2 only with an option the crate does not
     // expose, set inline: duplicate group names (perl accepts
@@ -45,21 +111,19 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
     if flags.matches('x').count() >= 2 {
         prefix.push_str("(?xx)");
     }
-    let text = format!("{prefix}{}", to_pcre_pattern(&fixed));
+    let text = format!("{prefix}{}", to_pcre_pattern(&fixed, pat_utf8));
     let mut b = pcre2::bytes::RegexBuilder::new();
     b.caseless(flags.contains('i'))
         .multi_line(flags.contains('m'))
         .dotall(flags.contains('s'))
         .extended(flags.contains('x'))
-        .utf(false)
-        .ucp(false)
+        .utf(utf)
+        .ucp(utf)
         .jit_if_available(true);
     let re = b.build(&text).map_err(|e| perl_message_at(pattern, &e, prefix.len()))?;
     let names = re.capture_names().to_vec();
     let groups = re.captures_len().saturating_sub(1);
-    let compiled = Rc::new(PerlRegex { re, groups, names });
-    CACHE.with(|c| c.borrow_mut().insert(key, compiled.clone()));
-    Ok(compiled)
+    Ok(Rc::new(PerlRegex { re, groups, names, utf, source: pattern.to_vec(), flags: flags.to_string() }))
 }
 
 /// In a character class, perl takes a `-` next to a class escape
@@ -298,8 +362,10 @@ fn perl_message_off(pattern: &[u8], e: &pcre2::Error, offset: Option<usize>) -> 
 
 /// PCRE2's builder takes text: bytes that are not valid UTF-8 (raw binary in
 /// magic numbers, Latin-1 in patterns) become `\x{hh}` escapes, which mean
-/// the same byte in non-UTF mode.
-fn to_pcre_pattern(pattern: &[u8]) -> String {
+/// the same byte in non-UTF mode (and the same character in UTF mode). The
+/// characters of a pattern that is a character string (`utf8`: its UTF-8
+/// form) become `\x{...}` escapes too.
+fn to_pcre_pattern(pattern: &[u8], utf8: bool) -> String {
     if let Ok(s) = std::str::from_utf8(pattern) {
         if !s.contains('\0') && s.is_ascii() {
             return s.to_string();
@@ -309,6 +375,18 @@ fn to_pcre_pattern(pattern: &[u8]) -> String {
     let mut i = 0;
     while i < pattern.len() {
         let b = pattern[i];
+        if utf8 && b >= 0x80 {
+            let (cp, n) = crate::perl::utf8::decode_at(pattern, i);
+            out.push_str(&format!("\\x{{{cp:x}}}"));
+            i += n;
+            continue;
+        }
+        if utf8 && b == b'\\' && i + 1 < pattern.len() && pattern[i + 1] >= 0x80 {
+            let (cp, n) = crate::perl::utf8::decode_at(pattern, i + 1);
+            out.push_str(&format!("\\x{{{cp:x}}}"));
+            i += 1 + n;
+            continue;
+        }
         // An escaped raw byte (quotemeta puts a backslash before NUL and
         // high bytes): the \x{hh} form replaces both.
         if b == b'\\' && i + 1 < pattern.len() && (pattern[i + 1] == 0 || pattern[i + 1] >= 0x80) {
@@ -366,7 +444,7 @@ impl PerlRegex {
             let (s, e) = spans[0].unwrap();
             if s == e && last_empty_at == Some(s) {
                 // perl does not return a second empty match at the same place.
-                start = s + 1;
+                start = s + crate::perl::utf8::step(subject, s, self.utf);
                 last_empty_at = None;
                 continue;
             }
@@ -377,7 +455,7 @@ impl PerlRegex {
                 if start >= subject.len() {
                     break;
                 }
-                start += 1;
+                start += crate::perl::utf8::step(subject, start, self.utf);
                 // Retry at e+1 is what perl does after an empty match only if
                 // no non-empty match starts at e; PCRE2 with NOTEMPTY_ATSTART
                 // would be exact. ExifTool's patterns never match empty in /g.
@@ -416,7 +494,7 @@ pub fn split(re: &PerlRegex, awk: bool, subject: &[u8], limit: i64) -> Result<Ve
                     if e > s {
                         break Some(sp);
                     }
-                    from += 1;
+                    from += crate::perl::utf8::step(subject, from, re.utf);
                     if from > len {
                         break None;
                     }
@@ -426,17 +504,17 @@ pub fn split(re: &PerlRegex, awk: bool, subject: &[u8], limit: i64) -> Result<Ve
         };
         let Some(spans) = spans else { break };
         let (ms, me) = spans[0].unwrap();
-        fields.push(Value::bytes(&subject[s..ms]));
+        fields.push(Value::string(&subject[s..ms], re.utf));
         for g in &spans[1..] {
             fields.push(match g {
-                Some((a, b)) => Value::bytes(&subject[*a..*b]),
+                Some((a, b)) => Value::string(&subject[*a..*b], re.utf),
                 None => Value::Undef,
             });
         }
         s = me;
     }
     if s < len || (!fields.is_empty() && limit != 0) {
-        fields.push(Value::bytes(&subject[s.min(len)..]));
+        fields.push(Value::string(&subject[s.min(len)..], re.utf));
     }
     if limit == 0 {
         while fields.last().is_some_and(|v| v.is_undef() || v.to_bytes().is_empty()) {
@@ -454,6 +532,35 @@ pub fn quotemeta(s: &[u8]) -> Vec<u8> {
             out.push(b'\\');
         }
         out.push(b);
+    }
+    out
+}
+
+/// `quotemeta` of a character string (its UTF-8 form): ASCII as for bytes;
+/// a character above 0x7F is quoted when it is pattern syntax, white
+/// space, a control or default-ignorable (perl's rule for UTF-8 strings).
+pub fn quotemeta_chars(s: &[u8]) -> Vec<u8> {
+    let quoted = |c: u32| {
+        matches!(c,
+            0x80..=0xA7 | 0xA9 | 0xAB | 0xAC | 0xAD | 0xAE | 0xB0 | 0xB1 | 0xB6 | 0xBB | 0xBF | 0xD7 | 0xF7
+            | 0x34F | 0x61C | 0x115F | 0x1160 | 0x1680 | 0x17B4 | 0x17B5 | 0x180B..=0x180F
+            | 0x2000..=0x203E | 0x2041..=0x2053 | 0x2055..=0x206F | 0x2190..=0x245F | 0x2500..=0x2775 | 0x2794..=0x2BFF
+            | 0x2E00..=0x2E7F | 0x3000..=0x3003 | 0x3008..=0x3020 | 0x3030 | 0x3164 | 0xFD3E | 0xFD3F
+            | 0xFE00..=0xFE0F | 0xFE45 | 0xFE46 | 0xFEFF | 0xFFA0 | 0xFFF0..=0xFFF8 | 0x1BCA0..=0x1BCA3 | 0x1D173..=0x1D17A | 0xE0000..=0xE0FFF)
+    };
+    let mut out = Vec::with_capacity(s.len() * 2);
+    let mut i = 0;
+    while i < s.len() {
+        let (c, n) = crate::perl::utf8::decode_at(s, i);
+        if c < 0x80 {
+            if !(s[i].is_ascii_alphanumeric() || s[i] == b'_') {
+                out.push(b'\\');
+            }
+        } else if quoted(c) {
+            out.push(b'\\');
+        }
+        out.extend_from_slice(&s[i..i + n]);
+        i += n;
     }
     out
 }

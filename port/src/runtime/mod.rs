@@ -390,7 +390,7 @@ fn install_core(it: &mut Interp) {
             Some(Value::ScalarRef(_)) => target == "SCALAR",
             Some(Value::Code(_)) => target == "CODE",
             Some(Value::Handle(_)) => target == "GLOB",
-            Some(v @ Value::Str(_)) => class_isa(it, &v.to_text(), &target),
+            Some(v @ (Value::Str(_) | Value::UStr(_))) => class_isa(it, &v.to_text(), &target),
             _ => false,
         };
         Ok(vec![Value::from(r)])

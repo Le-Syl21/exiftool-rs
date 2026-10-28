@@ -157,10 +157,7 @@ fn ret_sorted(v: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 /// leaves it unchanged).
 fn last_cap(it: &Interp, i: usize) -> Value {
     match &it.last_match {
-        Some(m) => match m.spans.get(i).copied().flatten() {
-            Some((s, e)) => Value::bytes(&m.subject[s..e]),
-            None => Value::Undef,
-        },
+        Some(m) => m.group(i),
         None => Value::Undef,
     }
 }

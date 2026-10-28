@@ -88,33 +88,34 @@ pub fn num_eq(a: &Value, b: &Value) -> bool {
 }
 
 pub fn str_eq(a: &Value, b: &str) -> bool {
-    &a.to_bytes()[..] == b.as_bytes()
+    match a {
+        Value::UStr(s) if !b.is_ascii() => &s[..] == crate::perl::utf8::upgrade(b.as_bytes()).as_slice(),
+        _ => &a.to_bytes()[..] == b.as_bytes(),
+    }
 }
 
 /// `$a . $b`
 pub fn concat(a: &Value, b: &Value) -> Value {
-    let mut v = a.to_bytes().to_vec();
-    v.extend_from_slice(&b.to_bytes());
-    Value::bytes(v)
+    ops::concat(a, b)
 }
 
-/// `length $x` (undef stays undef).
+/// `length $x` (undef stays undef; a character string counts characters).
 pub fn length(a: &Value) -> Value {
-    if a.is_undef() {
-        Value::Undef
-    } else {
-        Value::Int(a.to_bytes().len() as i64)
+    match a {
+        Value::Undef => Value::Undef,
+        Value::UStr(s) => Value::Int(crate::perl::utf8::count(s) as i64),
+        _ => Value::Int(a.to_bytes().len() as i64),
     }
 }
 
 /// `sprintf(FMT, LIST)`
 pub fn sprintf(fmt: &str, args: &[Value]) -> Value {
-    Value::bytes(crate::perl::sprintf::sprintf(fmt.as_bytes(), args))
+    crate::perl::sprintf::sprintf_value(&Value::str(fmt), args, None)
 }
 
 /// `sprintf` with a format held in a value.
 pub fn sprintf_v(fmt: &Value, args: &[Value]) -> Value {
-    Value::bytes(crate::perl::sprintf::sprintf(&fmt.to_bytes(), args))
+    crate::perl::sprintf::sprintf_value(fmt, args, None)
 }
 
 /// A compiled pattern (cached), for `=~`.
@@ -137,8 +138,8 @@ pub fn re_dyn(pat: &[u8], flags: &str) -> ER<Re> {
 /// that did not take part (undef).
 pub type Caps = Vec<Option<Value>>;
 
-fn caps(subject: &[u8], spans: &[Option<(usize, usize)>]) -> Caps {
-    spans.iter().map(|g| g.map(|(a, b)| Value::bytes(&subject[a..b]))).collect()
+fn caps(subject: &[u8], spans: &[Option<(usize, usize)>], utf8: bool) -> Caps {
+    spans.iter().map(|g| g.map(|(a, b)| Value::string(&subject[a..b], utf8))).collect()
 }
 
 /// A capture as a value (undef when the group did not match).
@@ -147,11 +148,21 @@ pub fn cap(c: &Caps, i: usize) -> Value {
 }
 
 impl Re {
+    /// The pattern for a subject, and the subject's form: a character
+    /// string matches in UTF mode, on its UTF-8 form (its captures are
+    /// character strings).
+    fn on(&self, subject: &Value) -> (Rc<PerlRegex>, Rc<[u8]>) {
+        match subject {
+            Value::UStr(s) => (self.0.for_chars(), s.clone()),
+            _ => (self.0.clone(), subject.to_bytes()),
+        }
+    }
+
     /// `$s =~ /re/`: the captures of the first match.
     pub fn m(&self, subject: &Value) -> Option<Caps> {
-        let b = subject.to_bytes();
-        match self.0.match_at(&b, 0) {
-            Ok(Some(sp)) => Some(caps(&b, &sp)),
+        let (re, b) = self.on(subject);
+        match re.match_at(&b, 0) {
+            Ok(Some(sp)) => Some(caps(&b, &sp, re.utf)),
             _ => None,
         }
     }
@@ -159,23 +170,24 @@ impl Re {
     /// Whether it matches (no captures made: a test, not a match that
     /// sets $1...).
     pub fn is_match(&self, subject: &Value) -> bool {
-        self.0.is_match(&subject.to_bytes())
+        let (re, b) = self.on(subject);
+        re.is_match(&b)
     }
 
     /// `($s =~ /re/g)` in list context: every match's captures (or the whole
     /// match when there are no groups), flattened, as perl returns them.
     pub fn all(&self, subject: &Value) -> Vec<Value> {
-        let b = subject.to_bytes();
+        let (re, b) = self.on(subject);
         let mut out = Vec::new();
-        if let Ok(all) = self.0.match_all(&b, 0) {
+        if let Ok(all) = re.match_all(&b, 0) {
             for sp in all {
                 if sp.len() == 1 {
                     let (s, e) = sp[0].unwrap();
-                    out.push(Value::bytes(&b[s..e]));
+                    out.push(Value::string(&b[s..e], re.utf));
                 } else {
                     for g in &sp[1..] {
                         out.push(match g {
-                            Some((s, e)) => Value::bytes(&b[*s..*e]),
+                            Some((s, e)) => Value::string(&b[*s..*e], re.utf),
                             None => Value::Undef,
                         });
                     }
@@ -187,25 +199,26 @@ impl Re {
 
     /// Every match with its captures (`while ($s =~ /re/g) { ... }`).
     pub fn each(&self, subject: &Value) -> Vec<Caps> {
-        let b = subject.to_bytes();
-        match self.0.match_all(&b, 0) {
-            Ok(all) => all.iter().map(|sp| caps(&b, sp)).collect(),
+        let (re, b) = self.on(subject);
+        match re.match_all(&b, 0) {
+            Ok(all) => all.iter().map(|sp| caps(&b, sp, re.utf)).collect(),
             Err(_) => Vec::new(),
         }
     }
 
     /// `$s =~ s/re/REPL/` (or `/g`): the replacement is computed from each
-    /// match's captures. Returns the number of substitutions; `$s` is
-    /// updated only when there was one.
+    /// match's captures (bytes: a byte string). Returns the number of
+    /// substitutions; `$s` is updated only when there was one.
     pub fn subst(&self, target: &mut Value, global: bool, mut repl: impl FnMut(&Caps) -> Vec<u8>) -> usize {
-        let b = target.to_bytes();
-        let mut out = Vec::with_capacity(b.len());
+        let (re, b) = self.on(target);
+        let utf = re.utf;
+        let mut out = crate::perl::utf8::StrBuf { buf: Vec::with_capacity(b.len()), utf8: utf };
         let (mut last, mut start, mut n) = (0, 0, 0);
         while start <= b.len() {
-            let Ok(Some(sp)) = self.0.match_at(&b, start) else { break };
+            let Ok(Some(sp)) = re.match_at(&b, start) else { break };
             let (s, e) = sp[0].unwrap();
-            out.extend_from_slice(&b[last..s]);
-            out.extend_from_slice(&repl(&caps(&b, &sp)));
+            out.push_form(&b[last..s], utf);
+            out.push_bytes(&repl(&caps(&b, &sp, utf)));
             n += 1;
             last = e;
             if !global {
@@ -215,16 +228,17 @@ impl Re {
                 if e >= b.len() {
                     break;
                 }
-                out.push(b[e]);
-                last = e + 1;
-                start = e + 1;
+                let k = crate::perl::utf8::step(&b, e, utf);
+                out.push_form(&b[e..e + k], utf);
+                last = e + k;
+                start = e + k;
             } else {
                 start = e;
             }
         }
         if n > 0 {
-            out.extend_from_slice(&b[last.min(b.len())..]);
-            *target = Value::bytes(out);
+            out.push_form(&b[last.min(b.len())..], utf);
+            *target = out.into_value();
         }
         n
     }
@@ -232,13 +246,14 @@ impl Re {
 
 /// `split ' ', $s`
 pub fn split_ws(subject: &Value) -> Vec<Value> {
-    let re = pre::compile(b"\\s+", "").unwrap();
-    pre::split(&re, true, &subject.to_bytes(), 0).unwrap_or_default()
+    let (re, b) = Re(pre::compile(b"\\s+", "").unwrap()).on(subject);
+    pre::split(&re, true, &b, 0).unwrap_or_default()
 }
 
 /// `split /re/, $s, $limit` (limit 0 for none).
 pub fn split(re: &Re, subject: &Value, limit: i64) -> Vec<Value> {
-    pre::split(&re.0, false, &subject.to_bytes(), limit).unwrap_or_default()
+    let (re, b) = re.on(subject);
+    pre::split(&re, false, &b, limit).unwrap_or_default()
 }
 
 /// `$obj->Method(ARGS)` in scalar context (the sub may be ported or still
@@ -294,7 +309,7 @@ pub fn warn_uninit(it: &mut Interp, v: &Value, name: &str, op: &str) -> ER<()> {
 pub fn warn_num(it: &mut Interp, v: &Value, name: &str, op: &str) -> ER<()> {
     match v {
         Value::Undef => warn_uninit(it, v, name, op),
-        Value::Str(s) if !crate::interp::eval::warnings::numeric_string(s) && it.warn_on() => it.report_not_numeric(s, op),
+        Value::Str(s) | Value::UStr(s) if !crate::interp::eval::warnings::numeric_string(s) && it.warn_on() => it.report_not_numeric(s, op),
         _ => Ok(()),
     }
 }
@@ -342,9 +357,8 @@ pub fn method_mut(it: &mut Interp, obj: &Value, name: &str, args: &mut [Value], 
 /// `substr(STR, OFF[, LEN])` (undef outside the string, as perl, without
 /// the warning: use the builtin through Perl when the warning matters).
 pub fn substr(s: &Value, off: i64, len: Option<i64>) -> Value {
-    let b = s.to_bytes();
-    match crate::interp::eval::substr_range(b.len(), off, len) {
-        Some((a, e)) => Value::bytes(&b[a..e]),
+    match crate::interp::eval::substr_of(s, off, len) {
+        Some((v, _, _)) => v,
         None => Value::Undef,
     }
 }
@@ -386,49 +400,62 @@ pub fn n(i: i64) -> Value {
 
 /// `join(SEP, LIST)`
 pub fn join(sep: &str, items: &[Value]) -> Value {
-    let parts: Vec<Vec<u8>> = items.iter().map(|v| v.to_bytes().to_vec()).collect();
-    Value::bytes(parts.join(sep.as_bytes()))
+    if !items.iter().any(Value::is_utf8) {
+        let parts: Vec<Vec<u8>> = items.iter().map(|v| v.to_bytes().to_vec()).collect();
+        return Value::bytes(parts.join(sep.as_bytes()));
+    }
+    let mut out = crate::perl::utf8::StrBuf::new();
+    for (k, v) in items.iter().enumerate() {
+        if k > 0 {
+            out.push_bytes(sep.as_bytes());
+        }
+        out.push_value(v);
+    }
+    out.into_value()
 }
 
-/// `lc`, `uc`, `ucfirst`, `lcfirst` (ASCII, as perl on byte strings).
+fn change_case(v: &Value, case: crate::perl::utf8::Case) -> Value {
+    let (b, utf8) = v.str_form();
+    Value::string(crate::perl::utf8::change_case(&b, utf8, case), utf8)
+}
+
+/// `lc`, `uc`, `ucfirst`, `lcfirst` (ASCII on byte strings, Unicode's rules
+/// on character strings, as perl).
 pub fn lc(v: &Value) -> Value {
-    Value::bytes(v.to_bytes().to_ascii_lowercase())
+    change_case(v, crate::perl::utf8::Case::Lower)
 }
 
 pub fn uc(v: &Value) -> Value {
-    Value::bytes(v.to_bytes().to_ascii_uppercase())
+    change_case(v, crate::perl::utf8::Case::Upper)
 }
 
 pub fn ucfirst(v: &Value) -> Value {
-    let mut b = v.to_bytes().to_vec();
-    if let Some(f) = b.first_mut() {
-        *f = f.to_ascii_uppercase();
-    }
-    Value::bytes(b)
+    change_case(v, crate::perl::utf8::Case::UpperFirst)
 }
 
 pub fn lcfirst(v: &Value) -> Value {
-    let mut b = v.to_bytes().to_vec();
-    if let Some(f) = b.first_mut() {
-        *f = f.to_ascii_lowercase();
-    }
-    Value::bytes(b)
+    change_case(v, crate::perl::utf8::Case::LowerFirst)
 }
 
 /// `$s =~ tr/SEARCH/REPL/FLAGS`: updates `s` (unless /r) and returns the
 /// count, or the new string with /r.
 pub fn tr(s: &mut Value, search: &str, repl: &str, flags: &str) -> Value {
-    let (out, count) = crate::perl::tr::tr(&s.to_bytes(), search.as_bytes(), repl.as_bytes(), flags);
+    let (b, utf8) = s.str_form();
+    let (out, count) = if utf8 { crate::perl::tr::tr_chars(&b, search.as_bytes(), repl.as_bytes(), flags) } else { crate::perl::tr::tr(&b, search.as_bytes(), repl.as_bytes(), flags) };
     if flags.contains('r') {
-        return Value::bytes(out);
+        return Value::string(out, utf8);
     }
-    *s = Value::bytes(out);
+    *s = Value::string(out, utf8);
     Value::Int(count as i64)
 }
 
 /// `unpack(TEMPLATE, DATA)` in list context (perl's error is a die).
 pub fn unpack(t: &str, data: &Value) -> ER<Vec<Value>> {
-    match crate::perl::pack::unpack(t.as_bytes(), &data.to_bytes()) {
+    let r = match data {
+        Value::UStr(s) => crate::perl::pack::unpack_chars(t.as_bytes(), s),
+        _ => crate::perl::pack::unpack(t.as_bytes(), &data.to_bytes()),
+    };
+    match r {
         Ok(v) => Ok(v),
         Err(e) => die(e),
     }
@@ -452,7 +479,8 @@ pub fn unpack1(t: &str, data: &Value) -> ER<Value> {
 /// `pack(TEMPLATE, LIST)`
 pub fn pack(t: &str, args: &[Value]) -> ER<Value> {
     match crate::perl::pack::pack(t.as_bytes(), args) {
-        Ok(b) => Ok(Value::bytes(b)),
+        // a template that starts with U packs a character string
+        Ok(b) => Ok(Value::string(b, crate::perl::pack::starts_with_u(t.as_bytes()))),
         Err(e) => die(e),
     }
 }

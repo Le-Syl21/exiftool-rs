@@ -12,7 +12,7 @@ use crate::pl::{self, arg, cap, n, re, ret};
 /// which would name its own location in the message).
 fn check_invocant(it: &mut Interp, raf: &Value, name: &str) -> ER<()> {
     match raf {
-        Value::Str(_) => Ok(()),
+        Value::Str(_) | Value::UStr(_) => Ok(()),
         Value::HashRef(h) if h.borrow().blessed.is_some() => Ok(()),
         _ => pl::method(it, raf, name, vec![]).map(|_| ()),
     }

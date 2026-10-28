@@ -74,45 +74,40 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             if v.is_undef() && name != "quotemeta" {
                 return one(Value::str(""));
             }
-            let b = v.to_bytes();
+            let (b, utf8) = v.str_form();
+            use crate::perl::utf8::{change_case, Case};
             let out: Vec<u8> = match name {
-                "lc" | "fc" => b.to_ascii_lowercase(),
-                "uc" => b.to_ascii_uppercase(),
-                "lcfirst" => {
-                    let mut o = b.to_vec();
-                    if let Some(f) = o.first_mut() {
-                        *f = f.to_ascii_lowercase();
-                    }
-                    o
-                }
-                "ucfirst" => {
-                    let mut o = b.to_vec();
-                    if let Some(f) = o.first_mut() {
-                        *f = f.to_ascii_uppercase();
-                    }
-                    o
-                }
+                "lc" => change_case(&b, utf8, Case::Lower),
+                "fc" => change_case(&b, utf8, Case::Fold),
+                "uc" => change_case(&b, utf8, Case::Upper),
+                "lcfirst" => change_case(&b, utf8, Case::LowerFirst),
+                "ucfirst" => change_case(&b, utf8, Case::UpperFirst),
+                _ if utf8 => crate::perl::regex::quotemeta_chars(&b),
                 _ => crate::perl::regex::quotemeta(&b),
             };
-            one(Value::bytes(out))
+            one(Value::string(out, utf8))
         }
         "length" => {
             let v = arg_or_topic(it, args, scope)?;
-            if v.is_undef() {
-                return one(Value::Undef);
-            }
-            one(Value::Int(v.to_bytes().len() as i64))
+            one(crate::pl::length(&v))
         }
         "chr" => {
             let v = it.arg_used(args, scope, "chr", true)?;
             let n = v.to_f64();
             let n = if n < 0.0 || n.is_nan() { 0xFFFD } else { n as u32 };
-            let out = if n < 256 { vec![n as u8] } else { char::from_u32(n).unwrap_or('\u{FFFD}').to_string().into_bytes() };
-            one(Value::bytes(out))
+            if n < 256 {
+                return one(Value::bytes([n as u8]));
+            }
+            let mut out = Vec::new();
+            crate::perl::utf8::push_cp(&mut out, n);
+            one(Value::chars(out))
         }
         "ord" => {
             let v = it.arg_used(args, scope, "ord", false)?;
-            one(Value::Int(v.to_bytes().first().copied().unwrap_or(0) as i64))
+            one(Value::Int(match &v {
+                Value::UStr(s) if !s.is_empty() => crate::perl::utf8::decode_at(s, 0).0 as i64,
+                _ => v.to_bytes().first().copied().unwrap_or(0) as i64,
+            }))
         }
         "hex" => {
             let v = it.arg_used(args, scope, "hex", false)?;
@@ -206,35 +201,37 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 }
             }
             let Some(sep) = vals.first() else { return one(Value::str("")) };
-            let sep = sep.to_bytes();
-            let mut out = Vec::new();
+            let mut out = crate::perl::utf8::StrBuf::new();
             for (k, v) in vals[1..].iter().enumerate() {
                 if k > 0 {
-                    out.extend_from_slice(&sep);
+                    out.push_value(sep);
                 }
-                out.extend_from_slice(&v.to_bytes());
+                out.push_value(v);
             }
-            one(Value::bytes(out))
+            one(out.into_value())
         }
         "sprintf" => {
             let (vals, origin) = it.values_traced(args, scope)?;
-            one(Value::bytes(it.sprintf_warned(&vals, args, &origin, scope, "sprintf")?))
+            one(it.sprintf_warned(&vals, args, &origin, scope, "sprintf")?)
         }
         "reverse" => {
             let vals = if args.is_empty() && want != Want::List { vec![it.read_scalar("_", scope)] } else { values(it, args, scope)? };
             if want == Want::List {
                 Ok(vals.into_iter().rev().collect())
             } else {
-                let mut s = Vec::new();
+                let mut s = crate::perl::utf8::StrBuf::new();
                 for v in &vals {
                     if v.is_undef() {
                         let e = args.first().cloned().unwrap_or_else(|| Expr::Scalar(Rc::from("_")));
                         it.use_str(v, &e, scope, "reverse", false)?;
                     }
-                    s.extend_from_slice(&v.to_bytes());
+                    s.push_value(v);
                 }
-                s.reverse();
-                one(Value::bytes(s))
+                if s.utf8 {
+                    return one(Value::chars(crate::perl::utf8::reverse_chars(&s.buf)));
+                }
+                s.buf.reverse();
+                one(Value::bytes(s.buf))
             }
         }
         "split" => split(it, args, scope, want),
@@ -249,7 +246,8 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             }
             let t = vals.first().map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
             match pack::pack(&t, &vals[1.min(vals.len())..]) {
-                Ok(b) => one(Value::bytes(b)),
+                // a template that starts with U packs a character string
+                Ok(b) => one(Value::string(b, pack::starts_with_u(&t))),
                 Err(e) => die(e),
             }
         }
@@ -258,8 +256,11 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 Some(a) => it.scalar(a, scope)?.to_bytes(),
                 None => return die("Not enough arguments for unpack"),
             };
-            let d = it.arg_used(&args[1..], scope, "unpack", false)?.to_bytes();
-            let r = pack::unpack(&t, &d);
+            let d = it.arg_used(&args[1..], scope, "unpack", false)?;
+            let r = match &d {
+                Value::UStr(s) => pack::unpack_chars(&t, s),
+                _ => pack::unpack(&t, &d.to_bytes()),
+            };
             for w in pack::take_warnings() {
                 crate::pl::warn(it, &w)?;
             }
@@ -278,9 +279,16 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                     it.list_use(v, j, args, &origin, scope, name, j == 2)?;
                 }
             }
-            let s = a.first().map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
-            let sub = a.get(1).map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
+            let (sv, subv) = (a.first().cloned().unwrap_or_default(), a.get(1).cloned().unwrap_or_default());
             let pos = a.get(2).map(|v| v.to_i64());
+            if sv.is_utf8() || subv.is_utf8() {
+                // on characters: the UTF-8 forms, offsets converted
+                let (s, sub) = (sv.utf8_bytes(), subv.utf8_bytes());
+                let pos = pos.map(|p| if p <= 0 { p } else { crate::perl::utf8::byte_offset(&s, p as usize) as i64 });
+                let r = if name == "index" { index_of(&s, &sub, pos) } else { rindex_of(&s, &sub, pos) };
+                return one(Value::Int(if r < 0 { r } else { crate::perl::utf8::char_offset(&s, r as usize) as i64 }));
+            }
+            let (s, sub) = (sv.to_bytes(), subv.to_bytes());
             one(Value::Int(if name == "index" { index_of(&s, &sub, pos) } else { rindex_of(&s, &sub, pos) }))
         }
         "keys" | "values" => {
@@ -408,25 +416,30 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                     }
                     continue;
                 }
-                let s = v.to_bytes();
+                let (s, utf8) = v.str_form();
                 if name == "chomp" {
                     if sep.is_undef() {
                         continue;
                     }
-                    let sp = sep.to_bytes();
+                    let sp = if utf8 { sep.utf8_bytes() } else { sep.to_bytes() };
                     if sp.is_empty() {
                         let n = s.iter().rev().take_while(|&&c| c == b'\n').count();
                         if n > 0 {
-                            lv.set(Value::bytes(&s[..s.len() - n]))?;
+                            lv.set(Value::string(&s[..s.len() - n], utf8))?;
                             count += n as i64;
                         }
                     } else if s.ends_with(&sp) {
-                        lv.set(Value::bytes(&s[..s.len() - sp.len()]))?;
-                        count += sp.len() as i64;
+                        lv.set(Value::string(&s[..s.len() - sp.len()], utf8))?;
+                        count += if utf8 { crate::perl::utf8::count(&sp) } else { sp.len() } as i64;
                     }
                 } else if !s.is_empty() {
-                    last = Value::bytes(&s[s.len() - 1..]);
-                    lv.set(Value::bytes(&s[..s.len() - 1]))?;
+                    // the last character
+                    let mut k = s.len() - 1;
+                    while utf8 && k > 0 && (s[k] & 0xC0) == 0x80 {
+                        k -= 1;
+                    }
+                    last = Value::string(&s[k..], utf8);
+                    lv.set(Value::string(&s[..k], utf8))?;
                 }
             }
             one(if name == "chomp" { Value::Int(count) } else { last })
@@ -450,7 +463,11 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 None => Lv::Scalar(it.scalar_cell(scope, "_")),
             };
             one(match pos_key(&lv).and_then(|k| it.pos_at(k, &lv)) {
-                Some(p) => Value::Int(p as i64),
+                // (kept as a byte offset in the string's form)
+                Some(p) => Value::Int(match lv.get() {
+                    Value::UStr(s) => crate::perl::utf8::char_offset(&s, p),
+                    _ => p,
+                } as i64),
                 None => Value::Undef,
             })
         }
@@ -470,14 +487,15 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
         }
         "warn" => {
             let vals = values(it, args, scope)?;
-            let mut msg: Vec<u8> = vals.iter().flat_map(|v| v.to_bytes().to_vec()).collect();
-            if msg.is_empty() {
-                msg = b"Warning: something's wrong".to_vec();
+            let mut msg = crate::perl::utf8::StrBuf::new();
+            vals.iter().for_each(|v| msg.push_value(v));
+            if msg.buf.is_empty() {
+                msg.push_bytes(b"Warning: something's wrong");
             }
-            if msg.last() != Some(&b'\n') {
-                msg.extend_from_slice(super::location_suffix().as_bytes());
+            if msg.buf.last() != Some(&b'\n') {
+                msg.push_bytes(super::location_suffix().as_bytes());
             }
-            warn(it, Value::bytes(msg))?;
+            warn(it, msg.into_value())?;
             one(Value::Int(1))
         }
         "bless" => {
@@ -749,13 +767,16 @@ pub(super) fn warn(it: &mut Interp, msg: Value) -> ER<()> {
             it.call(&c, vec![msg], Want::Void)?;
         }
         // ('IGNORE' does not apply to __WARN__: perl prints the warning)
-        Some(Value::Str(s)) if &s[..] != b"DEFAULT" && &s[..] != b"IGNORE" && !s.is_empty() => {
+        Some(Value::Str(s) | Value::UStr(s)) if &s[..] != b"DEFAULT" && &s[..] != b"IGNORE" && !s.is_empty() => {
             let n = String::from_utf8_lossy(&s).into_owned();
             it.call_named(&n, vec![msg], Want::Void)?;
         }
         _ => {
             let h = it.handle_of(&Value::str("*STDERR"), false).unwrap();
-            it.write_handle(&h, &msg.to_bytes());
+            let layer = h.borrow().utf8;
+            let mut out = Vec::new();
+            it.output_form(&mut out, &msg, layer, "warn")?;
+            it.write_handle(&h, &out);
         }
     }
     Ok(())
@@ -879,18 +900,13 @@ fn substr(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         let len = len.to_i64();
         let repl = it.scalar(&args[3], scope)?;
         it.use_str(&repl, &args[3], scope, "substr", false)?;
-        let s = lv.get().to_bytes();
-        let Some((a, b)) = substr_range(s.len(), off, Some(len)) else { return die("substr outside of string") };
-        let old = Value::bytes(&s[a..b]);
-        let mut n = s[..a].to_vec();
-        n.extend_from_slice(&repl.to_bytes());
-        n.extend_from_slice(&s[b..]);
-        lv.set(Value::bytes(n))?;
+        let cur = lv.get();
+        let Some((old, a, b)) = substr_of(&cur, off, Some(len)) else { return die("substr outside of string") };
+        lv.set(splice_str(&cur, a, b, &repl))?;
         return Ok(vec![old]);
     }
     let s = it.scalar(&args[0], scope)?;
     it.use_str(&s, &args[0], scope, "substr", false)?;
-    let s = s.to_bytes();
     let off = it.scalar(&args[1], scope)?;
     it.use_num(&off, &args[1], scope, "substr", false)?;
     let off = off.to_i64();
@@ -906,8 +922,8 @@ fn substr(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         }
         None => None,
     };
-    Ok(vec![match substr_range(s.len(), off, len) {
-        Some((a, b)) => Value::bytes(&s[a..b]),
+    Ok(vec![match substr_of(&s, off, len) {
+        Some((v, _, _)) => v,
         None => {
             // a warning only where warnings are enabled: -w here (the
             // interpreter does not track `use warnings` scopes, and
@@ -1061,7 +1077,8 @@ fn srand_seed(v: &Value) -> Option<u64> {
 /// must end past the current position, captures are returned, trailing
 /// empty fields are removed when there is no limit.
 fn split(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
-    let subject = it.arg_used(&args[1.min(args.len())..], scope, "split", false)?.to_bytes();
+    let subject_v = it.arg_used(&args[1.min(args.len())..], scope, "split", false)?;
+    let su = subject_v.is_utf8();
     let limit = match args.get(2) {
         Some(a) => it.scalar(a, scope)?.to_i64(),
         None => 0,
@@ -1070,29 +1087,27 @@ fn split(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Ve
     let (re, awk) = match args.first() {
         None => (crate::perl::regex::compile(b"\\s+", "").unwrap(), true),
         Some(Expr::Match { target: None, pat, .. }) => {
-            let bytes = it.pattern_bytes(pat, scope)?;
+            let (bytes, pu) = it.pattern_form(pat, scope)?;
             if bytes == b" " {
-                (crate::perl::regex::compile(b"\\s+", "").unwrap(), true)
+                (it.regex_for(b"\\s+", false, "", su)?, true)
             } else if bytes == b"^" {
-                (crate::perl::regex::compile(b"^", "m").unwrap(), false)
+                (it.regex_for(b"^", false, "m", su)?, false)
             } else {
-                (it.regex(pat, scope)?, false)
+                (it.regex_for(&bytes, pu, &pat.flags, su)?, false)
             }
         }
         Some(e) => {
             let p = it.scalar(e, scope)?;
             it.use_str(&p, e, scope, "regexp compilation", false)?;
-            let p = p.to_bytes();
+            let (p, pu) = p.str_form();
             if &p[..] == b" " {
-                (crate::perl::regex::compile(b"\\s+", "").unwrap(), true)
+                (it.regex_for(b"\\s+", false, "", su)?, true)
             } else {
-                match crate::perl::regex::compile(&p, "") {
-                    Ok(r) => (r, false),
-                    Err(e) => return die(e),
-                }
+                (it.regex_for(&p, pu, "", su)?, false)
             }
         }
     };
+    let (subject, _) = subject_form(&re, &subject_v);
     let fields = crate::perl::regex::split(&re, awk, &subject, limit).map_err(|e| Flow::Die(Value::from(e)))?;
     if want != Want::List {
         return Ok(vec![Value::Int(fields.len() as i64)]);

@@ -71,7 +71,11 @@ where the script's `if` is.
   use the interpreter's (`pl::print_to`, `pl::warn`...), never `println!` or
   `std::process::exit` (the script's `exit` ends the program through the
   interpreter, which runs the END blocks).
-- Strings stay byte strings (`Value`), never Rust `String`s for data.
+- Strings stay byte strings (`Value`), never Rust `String`s for data. A
+  character string (perl's UTF-8 flag, from `Encode::decode_utf8`,
+  `pack('U0C*')`, `chr(0x100)`...) is `Value::UStr`, held in UTF-8: the
+  `pl` helpers (`length`, `substr`, `lc`, `join`, `sprintf`, `re`...) count
+  and match its characters, as perl does.
 - The script runs with `$^W = 1`: where a statement of the script can warn
   in perl ("Use of uninitialized value...", "Argument ... isn't numeric"),
   the interpreter warns as perl does in Perl code; a native that must give
@@ -92,5 +96,5 @@ python3 -I scripts/compare_cli.py /home/sylvain/dev/exiftool   # no new differen
 `compare_cli.py` runs `scripts/cli_cases.txt` (`CLI_CASES=FILE` for one's
 own cases) with Perl's exiftool and with `run_t exiftool`, each in a copy of
 the images, and compares output, exit status and written files. Its known
-differences today (to keep, not to add to): `-lang fr` (character strings)
-and `-ver -v` (the Perl installation).
+difference today (to keep, not to add to): `-ver -v` (the Perl
+installation).

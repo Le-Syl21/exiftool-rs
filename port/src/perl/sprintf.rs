@@ -25,6 +25,35 @@ pub fn sprintf(fmt: &[u8], args: &[Value]) -> Vec<u8> {
     sprintf_traced(fmt, args, None)
 }
 
+thread_local! {
+    /// The sprintf running makes a character string: the format is its
+    /// UTF-8 form, `%s` and `%c` give characters, widths count them.
+    static UTF: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// A `%c` above 0xFF was met in a byte string (perl upgrades it).
+    static WIDE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// `sprintf` with perl's character strings: the result is a character
+/// string when the format or an argument is one (or a `%c` is above 0xFF).
+pub fn sprintf_value(fmt: &Value, args: &[Value], mut trace: Option<&mut Vec<ArgUse>>) -> Value {
+    let utf = fmt.is_utf8() || args.iter().any(Value::is_utf8);
+    if !utf {
+        WIDE.with(|w| w.set(false));
+        let out = sprintf_traced(&fmt.to_bytes(), args, trace.as_deref_mut());
+        if !WIDE.with(|w| w.get()) {
+            return Value::bytes(out);
+        }
+    }
+    UTF.with(|u| u.set(true));
+    let out = sprintf_traced(&fmt.utf8_bytes(), args, trace);
+    UTF.with(|u| u.set(false));
+    Value::chars(out)
+}
+
+fn utf_mode() -> bool {
+    UTF.with(|u| u.get())
+}
+
 /// `sprintf`, recording in `trace` how each conversion used its argument.
 pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>>) -> Vec<u8> {
     let mut out = Vec::with_capacity(fmt.len() + 16);
@@ -150,8 +179,8 @@ pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>
         if vector {
             let v = take(&mut next_arg, explicit);
             as_str();
-            let bytes = v.to_bytes();
-            let parts: Vec<Vec<u8>> = bytes
+            let ords: Vec<u32> = if utf_mode() { crate::perl::utf8::chars(&v.utf8_bytes()).collect() } else { v.to_bytes().iter().map(|&b| b as u32).collect() };
+            let parts: Vec<Vec<u8>> = ords
                 .iter()
                 .map(|&b| format_one(conv, &spec, &Value::Int(b as i64)).unwrap_or_default())
                 .collect();
@@ -198,10 +227,22 @@ fn format_one(conv: u8, spec: &Spec, v: &Value) -> Option<Vec<u8>> {
         b'c' => {
             let n = v.to_i64();
             let ch = if n < 0 { 0xFFFD } else { n as u32 };
-            if ch < 256 {
+            if utf_mode() {
+                let mut o = Vec::new();
+                crate::perl::utf8::push_cp(&mut o, ch);
+                o
+            } else if ch < 256 {
                 vec![ch as u8]
             } else {
+                WIDE.with(|w| w.set(true));
                 char::from_u32(ch).unwrap_or('\u{FFFD}').to_string().into_bytes()
+            }
+        }
+        b's' if utf_mode() => {
+            let s = v.utf8_bytes();
+            match spec.prec {
+                Some(p) => s[..crate::perl::utf8::byte_offset(&s, p)].to_vec(),
+                _ => s.to_vec(),
             }
         }
         b's' => {
@@ -429,10 +470,12 @@ fn pad_number(spec: &Spec, s: String, _signed: bool) -> Vec<u8> {
 
 fn pad(spec: &Spec, body: Vec<u8>, numeric: bool) -> Vec<u8> {
     let Some(w) = spec.width else { return body };
-    if body.len() >= w {
+    // (a character string's width counts characters)
+    let len = if utf_mode() { crate::perl::utf8::count(&body) } else { body.len() };
+    if len >= w {
         return body;
     }
-    let fill = w - body.len();
+    let fill = w - len;
     if spec.left {
         let mut b = body;
         b.extend(std::iter::repeat(b' ').take(fill));

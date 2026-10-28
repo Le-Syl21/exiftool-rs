@@ -137,17 +137,18 @@ pub fn pow(a: &Value, b: &Value) -> Value {
 /// Unary minus as perl does it on any value (S_negate_string): -"foo" is
 /// "-foo", -"+x" is "-x", -"-foo" is "+foo" when it is not a number.
 pub fn negate(v: &Value) -> Value {
-    if let Value::Str(s) = v {
+    if let Value::Str(s) | Value::UStr(s) = v {
+        let utf8 = v.is_utf8();
         if !s.is_empty() {
             if s[0].is_ascii_alphabetic() || s[0] == b'_' {
                 let mut o = b"-".to_vec();
                 o.extend_from_slice(s);
-                return Value::bytes(o);
+                return Value::string(o, utf8);
             }
             if s[0] == b'+' || (s[0] == b'-' && !v.looks_like_number()) {
                 let mut o = s.to_vec();
                 o[0] = if s[0] == b'-' { b'+' } else { b'-' };
-                return Value::bytes(o);
+                return Value::string(o, utf8);
             }
         }
     }
@@ -176,7 +177,32 @@ pub fn num_cmp(a: &Value, b: &Value) -> Option<std::cmp::Ordering> {
 }
 
 /// `cmp`: byte-wise string comparison.
+/// `$a . $b`: a character string when either is one (the other upgraded).
+pub fn concat(a: &Value, b: &Value) -> Value {
+    if a.is_utf8() || b.is_utf8() {
+        let mut s = a.utf8_bytes().to_vec();
+        s.extend_from_slice(&b.utf8_bytes());
+        return Value::chars(s);
+    }
+    let mut s = a.to_bytes().to_vec();
+    s.extend_from_slice(&b.to_bytes());
+    Value::bytes(s)
+}
+
+/// `$a x $n` for a scalar.
+pub fn repeat(a: &Value, n: usize) -> Value {
+    match a {
+        Value::UStr(s) => Value::chars(s.repeat(n)),
+        _ => Value::bytes(a.to_bytes().repeat(n)),
+    }
+}
+
 pub fn str_cmp(a: &Value, b: &Value) -> std::cmp::Ordering {
+    // a character string against a byte string: the bytes upgraded (the
+    // UTF-8 forms order as the code points do)
+    if a.is_utf8() || b.is_utf8() {
+        return a.utf8_bytes()[..].cmp(&b.utf8_bytes()[..]);
+    }
     a.to_bytes()[..].cmp(&b.to_bytes()[..])
 }
 

@@ -169,10 +169,7 @@ fn eval_require(it: &mut Interp, module: &str) -> ER<bool> {
 /// its own).
 fn caller_cap(it: &Interp, i: usize) -> Value {
     match &it.last_match {
-        Some(m) => match m.spans.get(i).copied().flatten() {
-            Some((a, b)) => Value::bytes(&m.subject[a..b]),
-            None => Value::Undef,
-        },
+        Some(m) => m.group(i),
         None => Value::Undef,
     }
 }
