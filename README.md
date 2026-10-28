@@ -339,3 +339,9 @@ GPL-3.0-or-later (same as the original Perl ExifTool)
 
 Based on [ExifTool](https://exiftool.org/) by Phil Harvey.
 Tag tables and print conversions are generated from the ExifTool Perl source.
+
+Thanks to [RAW-Samples.ch](https://rawsamples.ch/), whose RAW files (metadata
+only) make up our [`rawsamples` test corpus](tests/corpus/README.md), and to
+[julyx10](https://github.com/julyx10), author of
+[Lap](https://github.com/julyx10/lap), for many detailed reports and much
+testing.
