@@ -235,12 +235,18 @@ fn file_scope(it: &mut Interp) -> Rc<Scope> {
         (b'%', "isRational"),
         (b'%', "markerLenBytes"),
     ];
+    // (made once, then each eval site gets a scope of its own below it)
+    const KEY: &str = "Image::ExifTool <eval sites>";
+    if let Some(s) = it.scope_memo.get(KEY) {
+        return Scope::new(Some(s.clone()));
+    }
     let scope = Scope::new(None);
     for (sigil, name) in LEXICALS {
         let b = runtime::lexical(it, *sigil, ET, name);
         scope.declare(*sigil, name, b);
     }
-    scope
+    it.scope_memo.insert(KEY.to_string(), scope.clone());
+    Scope::new(Some(scope))
 }
 
 /// Bind a lexical scalar of the sub in an eval scope.

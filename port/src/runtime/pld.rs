@@ -99,7 +99,7 @@ impl Reader<'_> {
                 let n = self.varint()? as usize;
                 let rc = match into {
                     Some(Binding::Hash(h)) => h.clone(),
-                    _ => Rc::new(RefCell::new(Hash::default())),
+                    _ => Rc::new(RefCell::new(Hash::with_capacity(n))),
                 };
                 if !class.is_empty() {
                     rc.borrow_mut().blessed = Some(Rc::from(class.as_str()));

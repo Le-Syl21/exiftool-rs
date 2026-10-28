@@ -7,7 +7,7 @@
 //! cached, as perl caches a constant pattern.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+type HashMap<K, V> = rustc_hash::FxHashMap<K, V>;
 use std::rc::Rc;
 
 /// A compiled pattern.
@@ -24,7 +24,7 @@ pub struct PerlRegex {
 pub type Spans = Vec<Option<(usize, usize)>>;
 
 thread_local! {
-    static CACHE: RefCell<HashMap<(Vec<u8>, String), Rc<PerlRegex>>> = RefCell::new(HashMap::new());
+    static CACHE: RefCell<HashMap<(Vec<u8>, String), Rc<PerlRegex>>> = RefCell::new(HashMap::default());
 }
 
 /// Compile `pattern` with Perl modifiers (`i`, `m`, `s`, `x`; others such as

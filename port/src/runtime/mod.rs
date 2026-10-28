@@ -38,7 +38,12 @@ fn inc_key(module: &str) -> String {
 /// A file lexical of a module (`my %moduleName` in ExifTool.pm), kept by
 /// the loader in the unreachable package `MODULE::<my>`.
 pub fn lexical(it: &mut Interp, sigil: u8, module: &str, name: &str) -> Binding {
-    it.global(sigil, &format!("{module}::<my>::{name}"))
+    if let Some(b) = it.lex_memo.get(module).and_then(|m| m.get(name)).and_then(|v| v.iter().find(|(s, _)| *s == sigil)) {
+        return b.1.clone();
+    }
+    let b = it.global(sigil, &format!("{module}::<my>::{name}"));
+    it.lex_memo.entry(module.to_string()).or_default().entry(name.to_string()).or_default().push((sigil, b.clone()));
+    b
 }
 
 pub fn lex_hash(it: &mut Interp, module: &str, name: &str) -> crate::perl::Value {
@@ -64,13 +69,22 @@ pub fn lex_scalar(it: &mut Interp, module: &str, name: &str) -> crate::interp::e
 
 /// A scope holding a module's file lexicals (`my` variables at file level),
 /// for eval sites: table strings see them as perl's eval does.
-pub fn file_scope(it: &Interp, module: &str) -> std::rc::Rc<crate::interp::Scope> {
-    let scope = crate::interp::Scope::new(None);
-    let prefix = format!("{module}::<my>::");
-    for (sigil, name, b) in it.globals_with_prefix(&prefix) {
-        scope.declare(sigil, &name[prefix.len()..], b);
-    }
-    scope
+pub fn file_scope(it: &mut Interp, module: &str) -> std::rc::Rc<crate::interp::Scope> {
+    // (made once, then each eval gets a scope of its own below it, so that
+    // its `my` variables stay its own)
+    let file = match it.scope_memo.get(module) {
+        Some(s) => s.clone(),
+        None => {
+            let scope = crate::interp::Scope::new(None);
+            let prefix = format!("{module}::<my>::");
+            for (sigil, name, b) in it.globals_with_prefix(&prefix) {
+                scope.declare(sigil, &name[prefix.len()..], b);
+            }
+            it.scope_memo.insert(module.to_string(), scope.clone());
+            scope
+        }
+    };
+    crate::interp::Scope::new(Some(file))
 }
 
 /// A new interpreter with the runtime installed.

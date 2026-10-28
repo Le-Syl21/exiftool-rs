@@ -371,7 +371,7 @@ impl From<f64> for Value {
 /// crate in.
 pub mod indexmap_lite {
     use super::Value;
-    use std::collections::HashMap;
+    type HashMap<K, V> = rustc_hash::FxHashMap<K, V>;
     use std::rc::Rc;
 
     #[derive(Default, Clone, Debug)]
@@ -384,6 +384,13 @@ pub mod indexmap_lite {
     }
 
     impl IndexMap {
+        /// An empty hash with room for `n` keys (a dump's tables).
+        pub fn with_capacity(n: usize) -> Self {
+            let mut index = HashMap::default();
+            index.reserve(n);
+            IndexMap { keys: Vec::with_capacity(n), index, values: Vec::with_capacity(n), blessed: None }
+        }
+
         pub fn get(&self, k: &[u8]) -> Option<&Value> {
             self.index.get(k).map(|&i| &self.values[i])
         }

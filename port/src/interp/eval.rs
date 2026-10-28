@@ -7,7 +7,7 @@
 //! `$a[i]`, `my (...)`) are resolved to the storage they name.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+type HashMap<K, V> = rustc_hash::FxHashMap<K, V>;
 use std::rc::Rc;
 
 use super::ast::*;
@@ -428,7 +428,14 @@ pub struct Interp {
     sub_aliases: HashMap<Rc<str>, Rc<str>>,
     /// `@ISA` for method resolution, as registered by the runtime.
     pub isa: HashMap<Rc<str>, Vec<Rc<str>>>,
-    cache: HashMap<Vec<u8>, Rc<Block>>,
+    /// Compiled string evals, by package then code: the same text parses
+    /// differently in another package (prototypes, __PACKAGE__, names).
+    cache: HashMap<Rc<str>, HashMap<Vec<u8>, Rc<Block>>>,
+    /// The bindings of the modules' file lexicals (runtime::lexical) and
+    /// the scopes made of them (runtime::file_scope), kept between calls;
+    /// emptied when one of those variables is rebound (set_global).
+    pub lex_memo: HashMap<String, HashMap<String, Vec<(u8, Binding)>>>,
+    pub scope_memo: HashMap<String, Rc<Scope>>,
     pub package: Rc<str>,
     pub last_match: Option<LastMatch>,
     /// `pos()` of scalars, by cell address.
@@ -518,17 +525,19 @@ fn is_special_global(name: &str) -> bool {
 impl Interp {
     pub fn new() -> Interp {
         let mut i = Interp {
-            globals: HashMap::new(),
-            subs: HashMap::new(),
+            globals: HashMap::default(),
+            subs: HashMap::default(),
             program_scope: None,
             sticky_natives: Default::default(),
             end_subs: Vec::new(),
-            sub_aliases: HashMap::new(),
-            isa: HashMap::new(),
-            cache: HashMap::new(),
+            sub_aliases: HashMap::default(),
+            isa: HashMap::default(),
+            cache: HashMap::default(),
+            lex_memo: HashMap::default(),
+            scope_memo: HashMap::default(),
             package: Rc::from("main"),
             last_match: None,
-            pos: HashMap::new(),
+            pos: HashMap::default(),
             pos_inserts: 0,
             saved: Vec::new(),
             want_stack: Vec::new(),
@@ -538,11 +547,11 @@ impl Interp {
             stderr: Vec::new(),
             eval_count: 0,
             strict: true,
-            handles: HashMap::new(),
+            handles: HashMap::default(),
             passthrough: false,
             source_name: None,
-            sub_files: HashMap::new(),
-            native_locs: HashMap::new(),
+            sub_files: HashMap::default(),
+            native_locs: HashMap::default(),
             stdout_pending: Vec::new(),
             end_blocks: Vec::new(),
             exit_code: None,
@@ -550,13 +559,13 @@ impl Interp {
             alias_frames: Vec::new(),
             last_stat: Vec::new(),
             goto_target: None,
-            dir_handles: HashMap::new(),
-            sub_refs: HashMap::new(),
+            dir_handles: HashMap::default(),
+            sub_refs: HashMap::default(),
             trace: std::env::var("PORT_TRACE").ok().and_then(|p| std::fs::File::create(p).ok()).map(std::io::BufWriter::new),
             trace_depth: 0,
             w_key: (b'$', Rc::from("main::^W")),
             warn_quiet: false,
-            numified: HashMap::new(),
+            numified: HashMap::default(),
         };
         i.set_scalar("main::\"", Value::str(" "));
         i.set_scalar("main::/", Value::str("\n"));
@@ -659,6 +668,10 @@ impl Interp {
 
     pub fn set_global(&mut self, sigil: u8, name: &str, b: Binding) {
         let key = self.global_key(name);
+        if key.contains("::<my") {
+            self.lex_memo.clear();
+            self.scope_memo.clear();
+        }
         self.globals.insert((sigil, key), b);
     }
 
@@ -777,7 +790,7 @@ impl Interp {
     }
 
     pub fn compile(&mut self, code: &[u8]) -> Result<Rc<Block>, Value> {
-        if let Some(b) = self.cache.get(code) {
+        if let Some(b) = self.cache.get(&*self.package).and_then(|c| c.get(code)) {
             return Ok(b.clone());
         }
         let n = self.eval_count + 1;
@@ -796,7 +809,7 @@ impl Interp {
             }
         })?;
         let b = Rc::new(block);
-        self.cache.insert(code.to_vec(), b.clone());
+        self.cache.entry(self.package.clone()).or_default().insert(code.to_vec(), b.clone());
         Ok(b)
     }
 

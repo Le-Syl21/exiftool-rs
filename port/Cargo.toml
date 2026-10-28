@@ -14,6 +14,9 @@ name = "exiftool_port"
 path = "src/lib.rs"
 
 [dependencies]
+# FxHash: a fast hash for the interpreter's maps and the Perl hashes (whose
+# order is kept apart, so it changes no output); pure Rust
+rustc-hash = "2"
 # Perl-compatible regular expressions on bytes (backreferences, lookahead,
 # /s on binary data), as ExifTool's patterns and magic numbers need.
 pcre2 = "0.2"

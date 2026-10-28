@@ -1842,7 +1842,7 @@ pub fn set_geo_values(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
                     pl::local_sig_warn(it, handler, |it| {
                         it.set_scalar("Image::ExifTool::evalWarning", Value::Undef);
                         //### eval GeoHPosErr ($GPSDOP)
-                        let (r, _) = pl::eval_site_in(it, &hpos_err, MODULE, Some(runtime::file_scope(it, MODULE)), &[("GPSDOP", gpsdop)], Want::Scalar);
+                        let (r, _) = { let fs = runtime::file_scope(it, MODULE); pl::eval_site_in(it, &hpos_err, MODULE, Some(fs), &[("GPSDOP", gpsdop)], Want::Scalar) };
                         let hpe = r;
                         let mut e = pl::call(it, "Image::ExifTool::GetWarning", vec![])?;
                         if !e.truthy() {

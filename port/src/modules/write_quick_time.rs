@@ -2519,7 +2519,7 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                         if cond.truthy() {
                             if let Some(c) = re(r"=~\s*/\^(.*)/", "").m(&cond) {
                                 let code = cat!("\"", cap(&c, 1), "\"");
-                                let (p, _) = pl::eval_site_in(it, &code, PKG, Some(crate::runtime::file_scope(it, PKG)), &[("et", et.clone()), ("dirInfo", dir_info.clone()), ("tagInfo", tag_info.clone()), ("cond", cond.clone())], Want::Scalar);
+                                let (p, _) = { let fs = crate::runtime::file_scope(it, PKG); pl::eval_site_in(it, &code, PKG, Some(fs), &[("et", et.clone()), ("dirInfo", dir_info.clone()), ("tagInfo", tag_info.clone()), ("cond", cond.clone())], Want::Scalar) };
                                 prefix = p;
                             }
                         }

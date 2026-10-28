@@ -156,8 +156,10 @@ impl Re {
         }
     }
 
+    /// Whether it matches (no captures made: a test, not a match that
+    /// sets $1...).
     pub fn is_match(&self, subject: &Value) -> bool {
-        self.m(subject).is_some()
+        self.0.is_match(&subject.to_bytes())
     }
 
     /// `($s =~ /re/g)` in list context: every match's captures (or the whole
