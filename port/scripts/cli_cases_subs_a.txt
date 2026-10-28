@@ -1,0 +1,103 @@
+# Cases for the subs of src/cli/subs_a.rs (same format as cli_cases.txt).
+
+# --- Warn, Error, WarnOnce, Exit
+R|-badopt t/images/Canon.jpg
+R|-q -q -badopt t/images/Canon.jpg
+R|-q -q t/images/NoSuchFile.jpg
+R|-c
+R|-pause t/images/Canon.jpg
+R|-pause -badopt t/images/Canon.jpg
+W|-o images/x.mie -o images/y.xyz -all images/Canon.jpg
+W|-o %d%f.xyz -Artist=a images/Canon.jpg images/Nikon.jpg
+R|-if 'EndDir()' -FileName t/images/
+R|-if '$FileName eq "Canon.jpg" and End()' -FileName t/images/
+
+# --- XML: FormatXML, CleanXML, EncodeXML, AddGroups
+R|-X -a -G1 t/images/ExifTool.jpg
+R|-X -struct -a t/images/XMP3.xmp
+R|-X -struct -a t/images/XMP5.xmp
+R|-X -b -a t/images/Canon.jpg
+R|-X -E t/images/XMP.jpg
+R|-X -l -struct t/images/XMP2.xmp
+R|-X -j -struct t/images/XMP3.xmp
+R|-X -charset latin1 t/images/IPTC.jpg
+
+# --- JSON / PHP: EscapeJSON, FormatJSON, ConvertBinary
+R|-j -a -G1 t/images/ExifTool.jpg
+R|-j -struct -a t/images/XMP3.xmp
+R|-j -struct -sep '; ' t/images/XMP3.xmp
+R|-j -sep '; ' -Keywords -Subject t/images/XMP.jpg
+R|-j -H -G1 t/images/Canon.jpg
+R|-j -D -G1 t/images/Nikon.jpg
+R|-j -b -a t/images/Canon.jpg
+R|-j -b -struct t/images/XMP3.xmp
+R|-j -n t/images/Unknown.jpg
+R|-j -t t/images/Canon.jpg
+R|-j -l -G t/images/XMP.jpg
+R|-php -a -struct t/images/XMP3.xmp
+R|-php -b t/images/Canon.jpg
+R|-php -l t/images/Ricoh.jpg
+R|-j -charset latin1 t/images/IPTC.jpg
+R|-j --b t/images/Canon.jpg
+
+# --- CSV: FormatCSV, PrintCSV
+R|-csv -a -G1 t/images/ExifTool.jpg t/images/XMP.jpg
+R|-csv -b t/images/Canon.jpg
+R|-csv -f -Model -Artist -XYZ t/images/Canon.jpg t/images/Nikon.jpg
+R|-csv -f -Model -Artist t/images/
+R|-csv -csvDelim ';' -Model -ImageSize t/images/Canon.jpg t/images/Nikon.jpg
+R|-csv -csvDelim ' ' -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-csv -struct t/images/XMP3.xmp
+R|-csv -charset UTF8 -b t/images/IPTC.jpg
+R|-csv -charset latin1 t/images/IPTC.jpg
+R|-csv -n -Keywords t/images/XMP.jpg
+
+# --- diff: IsEqual, Printable, LengthUTF8
+R|-diff t/images/Canon.jpg t/images/Canon.jpg
+R|-diff t/images/XMP.jpg t/images/XMP2.xmp
+R|-diff t/images/XMP3.xmp t/images/XMP5.xmp -struct
+R|-diff t/images/ExifTool.jpg t/images/XMP.jpg -a -G1
+R|-diff t/images/ExifTool.jpg t/images/XMP.jpg -lang de
+R|-diff t/images/Canon.jpg t/images/Nikon.jpg -ec
+R|-diff t/images/Canon.jpg t/images/Nikon.jpg -b
+R|-diff t/images/Canon.jpg t/images/CanonRaw.cr2 -a -u
+R|-lang de -a t/images/Nikon.jpg
+R|-lang ja -a -G1 t/images/Canon.jpg
+R|-ec -a t/images/ExifTool.jpg
+
+# --- tags from files: AddSetTagsFile, DoSetFromFile, Infile, Warning
+W|-tagsFromFile images/Canon.jpg -tagsFromFile images/Nikon.jpg -Make -overwrite_original images/Sony.jpg
+W|-tagsFromFile images/Canon.jpg -Artist -tagsFromFile images/Canon.jpg -Model -overwrite_original images/Sony.jpg
+W|-tagsFromFile images/NoSuch.jpg -all -overwrite_original images/Sony.jpg
+W|-tagsFromFile images/Unknown.jpg -XMP:Title -overwrite_original images/Sony.jpg
+W|-v -tagsFromFile images/Canon.jpg -Make -overwrite_original images/Sony.jpg
+W|-tagsFromFile images/Canon.jpg -XYZ -overwrite_original images/Sony.jpg
+W|-api NoWarning=writable -tagsFromFile images/Canon.jpg -XYZ -overwrite_original images/Sony.jpg
+W|-api 'NoWarning=(' -tagsFromFile images/Canon.jpg -XYZ -overwrite_original images/Sony.jpg
+W|-api NoWarning=Error -tagsFromFile images/NoSuch.jpg -all -overwrite_original images/Sony.jpg
+W|-tagsFromFile images/Canon.jpg '-Comment<${Model}x' -overwrite_original images/Sony.jpg
+W|-tagsFromFile '%d%f.jpg' -Artist -overwrite_original images/Canon.jpg
+R|-tagsFromFile
+R|-
+R|-fileOrder FileName -
+
+# --- links: DoHardLink
+W|-HardLink=images/hard.jpg images/Canon.jpg
+W|-SymLink=images/sym.jpg images/Canon.jpg
+W|-TestName=images/test.jpg images/Canon.jpg
+W|-TestName=images/Nikon.jpg images/Canon.jpg
+W|-TestName=images/t.jpg images/Canon.jpg images/Nikon.jpg
+W|-HardLink=images/nodir/hard.jpg images/Canon.jpg
+W|-HardLink=images/h.jpg -SymLink=images/s.jpg -Artist=x images/Canon.jpg
+
+# --- window title, wildcards, file names
+R|-progress:abc -FileName t/images/Canon.jpg t/images/Nikon.jpg
+R|-progress: -FileName t/images/Canon.jpg
+R|-progress:%f%b -FileName t/images/Canon.jpg t/images/Nikon.jpg
+R|-FileName t/images/C*.jpg
+R|-FileName t/images/Nik?n.jpg
+R|-FileName 't/images/X*.zzz'
+W|-geotag 'images/Geo*.gpx' -overwrite_original images/Canon.jpg
+W|-geotag 'images/Nothing*.gpx' -overwrite_original images/Canon.jpg
+R|-diff
+R|-o
