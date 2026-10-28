@@ -274,6 +274,29 @@ pub fn warn(it: &mut Interp, msg: &str) -> ER<()> {
     it.warn(Value::from(m))
 }
 
+/// perl's "Use of uninitialized value NAME in OP" warning (with -w or
+/// `use warnings`) where a native uses `v` as a string or a number and it
+/// may be undef: `name` is how perl names the value (`"$lensModel"`, or ""
+/// when perl does not name it), `op` perl's description of the operator
+/// (`"pattern match (m//)"`, `"addition (+)"`...).
+pub fn warn_uninit(it: &mut Interp, v: &Value, name: &str, op: &str) -> ER<()> {
+    if v.is_undef() && it.warn_on() {
+        it.report_uninit(if name.is_empty() { None } else { Some(name.to_string()) }, op)?;
+    }
+    Ok(())
+}
+
+/// perl's warnings where a native uses `v` as a number: "Argument \"X\"
+/// isn't numeric in OP" for a string that is not a number, or the
+/// uninitialized-value warning (see `warn_uninit`) for undef.
+pub fn warn_num(it: &mut Interp, v: &Value, name: &str, op: &str) -> ER<()> {
+    match v {
+        Value::Undef => warn_uninit(it, v, name, op),
+        Value::Str(s) if !crate::interp::eval::warnings::numeric_string(s) && it.warn_on() => it.report_not_numeric(s, op),
+        _ => Ok(()),
+    }
+}
+
 /// Cells holding the arguments, and their aliases, for a call whose callee
 /// writes `$_[i]`.
 fn alias_cells(args: &[Value]) -> (Vec<crate::interp::eval::Cell>, Vec<Option<crate::interp::eval::Lv>>) {

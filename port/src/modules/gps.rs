@@ -13,11 +13,16 @@ fn n(i: i64) -> Value {
 /// Convert GPS timestamp value
 /// Inputs: 0) raw timestamp value string
 /// Returns: EXIF-formatted time string
-pub fn convert_time_stamp(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+pub fn convert_time_stamp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let val = arg(&a, 0);
     let p = pl::split_ws(&val);
     let (h, m, s) = (arg(&p, 0), arg(&p, 1), arg(&p, 2));
     let or0 = |v: &Value| if v.truthy() { v.clone() } else { n(0) };
+    // (perl's warnings for non-numeric parts, in its order of evaluation)
+    pl::at(463);
+    pl::warn_num(it, &or0(&h), "", "multiplication (*)")?;
+    pl::warn_num(it, &or0(&m), "", "addition (+)")?;
+    pl::warn_num(it, &or0(&s), "", "addition (+)")?;
     let mut f = pl::add(&pl::mul(&pl::add(&pl::mul(&or0(&h), &n(60)), &or0(&m)), &n(60)), &or0(&s));
     let mut h = pl::int(&pl::div(&f, &n(3600))?);
     f = pl::sub(&f, &pl::mul(&h, &n(3600)));

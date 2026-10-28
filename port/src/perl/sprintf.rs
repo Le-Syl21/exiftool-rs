@@ -7,21 +7,58 @@
 
 use crate::perl::value::{Number, Value};
 
+/// How a conversion of `sprintf` used an argument, for perl's warnings.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ArgUse {
+    /// The argument (its index) was read as a string.
+    Str(usize),
+    /// The argument was read as a number.
+    Num(usize),
+    /// A conversion had no argument left ("Missing argument").
+    Missing,
+    /// Arguments were left over ("Redundant argument").
+    Redundant,
+}
+
 /// `sprintf($fmt, @args)`.
 pub fn sprintf(fmt: &[u8], args: &[Value]) -> Vec<u8> {
+    sprintf_traced(fmt, args, None)
+}
+
+/// `sprintf`, recording in `trace` how each conversion used its argument.
+pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>>) -> Vec<u8> {
     let mut out = Vec::with_capacity(fmt.len() + 16);
     let mut next_arg = 0usize;
     let mut i = 0;
+    let tracing = trace.is_some();
+    let uses = std::cell::RefCell::new(Vec::new());
+    let explicit_used = std::cell::Cell::new(false);
+    // (the index taken is recorded; whether it is read as a number is
+    // set by the conversion)
     let take = |next: &mut usize, explicit: Option<usize>| -> Value {
         let idx = match explicit {
-            Some(n) => n.saturating_sub(1),
+            Some(n) => {
+                explicit_used.set(true);
+                n.saturating_sub(1)
+            }
             None => {
                 let n = *next;
                 *next += 1;
                 n
             }
         };
+        if tracing {
+            uses.borrow_mut().push(if idx < args.len() { ArgUse::Num(idx) } else { ArgUse::Missing });
+        }
         args.get(idx).cloned().unwrap_or(Value::Undef)
+    };
+    let as_str = || {
+        if tracing {
+            let last = uses.borrow().last().copied();
+            if let Some(ArgUse::Num(i)) = last {
+                *uses.borrow_mut().last_mut().unwrap() = ArgUse::Str(i);
+            }
+        }
     };
     while i < fmt.len() {
         let c = fmt[i];
@@ -112,6 +149,7 @@ pub fn sprintf(fmt: &[u8], args: &[Value]) -> Vec<u8> {
         i += 1;
         if vector {
             let v = take(&mut next_arg, explicit);
+            as_str();
             let bytes = v.to_bytes();
             let parts: Vec<Vec<u8>> = bytes
                 .iter()
@@ -126,10 +164,20 @@ pub fn sprintf(fmt: &[u8], args: &[Value]) -> Vec<u8> {
             continue;
         }
         let v = take(&mut next_arg, explicit);
+        if conv == b's' {
+            as_str();
+        }
         match format_one(conv, &spec, &v) {
             Some(s) => out.extend(s),
             None => out.extend_from_slice(&fmt[spec_start..i]),
         }
+    }
+    if let Some(t) = trace {
+        let mut u = uses.into_inner();
+        if !explicit_used.get() && next_arg < args.len() {
+            u.push(ArgUse::Redundant);
+        }
+        *t = u;
     }
     out
 }

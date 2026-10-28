@@ -73,8 +73,11 @@ where the script's `if` is.
   interpreter, which runs the END blocks).
 - Strings stay byte strings (`Value`), never Rust `String`s for data.
 - The script runs with `$^W = 1`: where a statement of the script can warn
-  in perl ("Use of uninitialized value..."), keep a comment `// (perl warns
-  here if X is undef)` when the port cannot warn yet.
+  in perl ("Use of uninitialized value...", "Argument ... isn't numeric"),
+  the interpreter warns as perl does in Perl code; a native that must give
+  the warning calls `pl::warn_uninit(it, &v, "$name", "op")` or
+  `pl::warn_num(it, &v, "", "addition (+)")` (with `pl::at(LINE)`), and
+  otherwise keeps a comment `// (perl warns here if X is undef)`.
 
 ## Judges
 
@@ -89,6 +92,5 @@ python3 -I scripts/compare_cli.py /home/sylvain/dev/exiftool   # no new differen
 `compare_cli.py` runs `scripts/cli_cases.txt` (`CLI_CASES=FILE` for one's
 own cases) with Perl's exiftool and with `run_t exiftool`, each in a copy of
 the images, and compares output, exit status and written files. Its known
-differences today (to keep, not to add to): `-lang fr` (character strings),
-`-p ... -q t/images/` ("Use of uninitialized value" warnings), `-ver -v`
-(the Perl installation).
+differences today (to keep, not to add to): `-lang fr` (character strings)
+and `-ver -v` (the Perl installation).

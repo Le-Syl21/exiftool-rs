@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::*;
-use crate::perl::{pack, sprintf, Number};
+use crate::perl::{pack, Number};
 
 type Out = Option<ER<Vec<Value>>>;
 
@@ -70,7 +70,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             None => die("Not enough arguments for scalar"),
         },
         "lc" | "uc" | "lcfirst" | "ucfirst" | "quotemeta" | "fc" => {
-            let v = arg_or_topic(it, args, scope)?;
+            let v = it.arg_used(args, scope, name, false)?;
             if v.is_undef() && name != "quotemeta" {
                 return one(Value::str(""));
             }
@@ -104,45 +104,48 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             one(Value::Int(v.to_bytes().len() as i64))
         }
         "chr" => {
-            let v = arg_or_topic(it, args, scope)?;
+            let v = it.arg_used(args, scope, "chr", true)?;
             let n = v.to_f64();
             let n = if n < 0.0 || n.is_nan() { 0xFFFD } else { n as u32 };
             let out = if n < 256 { vec![n as u8] } else { char::from_u32(n).unwrap_or('\u{FFFD}').to_string().into_bytes() };
             one(Value::bytes(out))
         }
         "ord" => {
-            let v = arg_or_topic(it, args, scope)?;
+            let v = it.arg_used(args, scope, "ord", false)?;
             one(Value::Int(v.to_bytes().first().copied().unwrap_or(0) as i64))
         }
         "hex" => {
-            let v = arg_or_topic(it, args, scope)?;
+            let v = it.arg_used(args, scope, "hex", false)?;
             one(parse_radix(&v.to_bytes(), 16))
         }
         "oct" => {
-            let v = arg_or_topic(it, args, scope)?;
+            let v = it.arg_used(args, scope, "oct", false)?;
             one(oct(&v.to_bytes()))
         }
-        "abs" => arg_or_topic(it, args, scope).map(|v| vec![crate::perl::ops::abs(&v)]),
-        "int" => arg_or_topic(it, args, scope).map(|v| vec![crate::perl::ops::int(&v)]),
+        "abs" => it.arg_used(args, scope, "abs", true).map(|v| vec![crate::perl::ops::abs(&v)]),
+        "int" => it.arg_used(args, scope, "int", true).map(|v| vec![crate::perl::ops::int(&v)]),
         "sqrt" => {
-            let v = arg_or_topic(it, args, scope)?.to_f64();
+            let v = it.arg_used(args, scope, "sqrt", true)?.to_f64();
             if v < 0.0 {
                 return die(format!("Can't take sqrt of {}", crate::perl::sprintf::format_g(v, 6, false, false)));
             }
             one(Value::Num(v.sqrt()))
         }
         "log" => {
-            let v = arg_or_topic(it, args, scope)?.to_f64();
+            let v = it.arg_used(args, scope, "log", true)?.to_f64();
             if v <= 0.0 {
                 return die(format!("Can't take log of {}", crate::perl::sprintf::format_g(v, 6, false, false)));
             }
             one(Value::Num(v.ln()))
         }
-        "exp" => arg_or_topic(it, args, scope).map(|v| vec![Value::Num(v.to_f64().exp())]),
-        "sin" => arg_or_topic(it, args, scope).map(|v| vec![Value::Num(v.to_f64().sin())]),
-        "cos" => arg_or_topic(it, args, scope).map(|v| vec![Value::Num(v.to_f64().cos())]),
+        "exp" => it.arg_used(args, scope, "exp", true).map(|v| vec![Value::Num(v.to_f64().exp())]),
+        "sin" => it.arg_used(args, scope, "sin", true).map(|v| vec![Value::Num(v.to_f64().sin())]),
+        "cos" => it.arg_used(args, scope, "cos", true).map(|v| vec![Value::Num(v.to_f64().cos())]),
         "atan2" => {
-            let a = values(it, args, scope)?;
+            let (a, origin) = it.values_traced(args, scope)?;
+            for (j, v) in a.iter().enumerate().take(2) {
+                it.list_use(v, j, args, &origin, scope, "atan2", true)?;
+            }
             let y = a.first().map(|v| v.to_f64()).unwrap_or(0.0);
             let x = a.get(1).map(|v| v.to_f64()).unwrap_or(0.0);
             one(Value::Num(y.atan2(x)))
@@ -193,7 +196,15 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             }
         }
         "join" => {
-            let vals = values(it, args, scope)?;
+            let (vals, origin) = it.values_traced(args, scope)?;
+            if !origin.is_empty() {
+                // the separator is read when it joins something, or alone
+                for (j, v) in vals.iter().enumerate() {
+                    if v.is_undef() && (j > 0 || vals.len() != 2) {
+                        it.list_use(v, j, args, &origin, scope, "join or string", false)?;
+                    }
+                }
+            }
             let Some(sep) = vals.first() else { return one(Value::str("")) };
             let sep = sep.to_bytes();
             let mut out = Vec::new();
@@ -206,9 +217,8 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             one(Value::bytes(out))
         }
         "sprintf" => {
-            let vals = values(it, args, scope)?;
-            let fmt = vals.first().map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
-            one(Value::bytes(sprintf::sprintf(&fmt, &vals[1.min(vals.len())..])))
+            let (vals, origin) = it.values_traced(args, scope)?;
+            one(Value::bytes(it.sprintf_warned(&vals, args, &origin, scope, "sprintf")?))
         }
         "reverse" => {
             let vals = if args.is_empty() && want != Want::List { vec![it.read_scalar("_", scope)] } else { values(it, args, scope)? };
@@ -217,6 +227,10 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             } else {
                 let mut s = Vec::new();
                 for v in &vals {
+                    if v.is_undef() {
+                        let e = args.first().cloned().unwrap_or_else(|| Expr::Scalar(Rc::from("_")));
+                        it.use_str(v, &e, scope, "reverse", false)?;
+                    }
                     s.extend_from_slice(&v.to_bytes());
                 }
                 s.reverse();
@@ -225,7 +239,14 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
         }
         "split" => split(it, args, scope, want),
         "pack" => {
-            let vals = values(it, args, scope)?;
+            let (vals, origin) = it.values_traced(args, scope)?;
+            if !origin.is_empty() {
+                for (j, v) in vals.iter().enumerate() {
+                    if v.is_undef() {
+                        it.list_use(v, j, args, &origin, scope, "pack", false)?;
+                    }
+                }
+            }
             let t = vals.first().map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
             match pack::pack(&t, &vals[1.min(vals.len())..]) {
                 Ok(b) => one(Value::bytes(b)),
@@ -237,10 +258,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 Some(a) => it.scalar(a, scope)?.to_bytes(),
                 None => return die("Not enough arguments for unpack"),
             };
-            let d = match args.get(1) {
-                Some(a) => it.scalar(a, scope)?.to_bytes(),
-                None => it.read_scalar("_", scope).to_bytes(),
-            };
+            let d = it.arg_used(&args[1..], scope, "unpack", false)?.to_bytes();
             let r = pack::unpack(&t, &d);
             for w in pack::take_warnings() {
                 crate::pl::warn(it, &w)?;
@@ -254,7 +272,12 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
         }
         "substr" => substr(it, args, scope),
         "index" | "rindex" => {
-            let a = values(it, args, scope)?;
+            let (a, origin) = it.values_traced(args, scope)?;
+            if !origin.is_empty() {
+                for (j, v) in a.iter().enumerate().take(3) {
+                    it.list_use(v, j, args, &origin, scope, name, j == 2)?;
+                }
+            }
             let s = a.first().map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
             let sub = a.get(1).map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
             let pos = a.get(2).map(|v| v.to_i64());
@@ -375,9 +398,14 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             let mut last = Value::str("");
             // chomp removes $/ (all trailing newlines in paragraph mode).
             let sep = it.get_scalar("main::/");
-            for lv in flatten_lv(targets) {
+            for (n, lv) in flatten_lv(targets).into_iter().enumerate() {
                 let v = lv.get();
                 if v.is_undef() {
+                    if it.warn_on() {
+                        let e = if args.len() == 1 && n == 0 { args[0].clone() } else if args.is_empty() { Expr::Scalar(Rc::from("_")) } else { Expr::Const(Value::Undef) };
+                        let nm = it.uninit_name(&e, scope, false);
+                        it.report_uninit(nm, if name == "chomp" { "scalar chomp" } else { "scalar chop" })?;
+                    }
                     continue;
                 }
                 let s = v.to_bytes();
@@ -720,11 +748,11 @@ pub(super) fn warn(it: &mut Interp, msg: Value) -> ER<()> {
         Some(Value::Code(c)) => {
             it.call(&c, vec![msg], Want::Void)?;
         }
+        // ('IGNORE' does not apply to __WARN__: perl prints the warning)
         Some(Value::Str(s)) if &s[..] != b"DEFAULT" && &s[..] != b"IGNORE" && !s.is_empty() => {
             let n = String::from_utf8_lossy(&s).into_owned();
             it.call_named(&n, vec![msg], Want::Void)?;
         }
-        Some(Value::Str(s)) if &s[..] == b"IGNORE" => {}
         _ => {
             let h = it.handle_of(&Value::str("*STDERR"), false).unwrap();
             it.write_handle(&h, &msg.to_bytes());
@@ -779,13 +807,13 @@ fn defined(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> 
 fn exists(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     let b = match args.first() {
         Some(Expr::HElem(c, k)) => {
-            let k = it.hash_key(k, scope)?;
+            let k = it.hash_key(k, scope, "exists")?;
             let h = it.hash_of(c, scope, true)?;
             let b = h.borrow().contains(&k);
             b
         }
         Some(Expr::Elem(c, i)) => {
-            let i = it.scalar(i, scope)?.to_i64();
+            let i = it.elem_index(i, scope, "exists")?;
             let a = it.array_of(c, scope, true)?;
             let len = a.borrow().len();
             index(len, i).is_some_and(|i| i < len)
@@ -802,7 +830,7 @@ fn exists(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
 fn delete(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     match args.first() {
         Some(Expr::HElem(c, k)) => {
-            let k = it.hash_key(k, scope)?;
+            let k = it.hash_key(k, scope, "delete")?;
             let h = it.hash_of(c, scope, true)?;
             let v = h.borrow_mut().remove(&k).unwrap_or_default();
             Ok(vec![v])
@@ -814,7 +842,7 @@ fn delete(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
             Ok(keys.iter().map(|k| h.remove(&k.to_bytes()).unwrap_or_default()).collect())
         }
         Some(Expr::Elem(c, i)) => {
-            let i = it.scalar(i, scope)?.to_i64();
+            let i = it.elem_index(i, scope, "delete")?;
             let a = it.array_of(c, scope, true)?;
             let mut a = a.borrow_mut();
             let len = a.len();
@@ -843,9 +871,14 @@ fn substr(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     }
     if args.len() == 4 {
         let lv = it.lvalue(&args[0], scope)?;
-        let off = it.scalar(&args[1], scope)?.to_i64();
-        let len = it.scalar(&args[2], scope)?.to_i64();
+        let off = it.scalar(&args[1], scope)?;
+        it.use_num(&off, &args[1], scope, "substr", false)?;
+        let off = off.to_i64();
+        let len = it.scalar(&args[2], scope)?;
+        it.use_num(&len, &args[2], scope, "substr", false)?;
+        let len = len.to_i64();
         let repl = it.scalar(&args[3], scope)?;
+        it.use_str(&repl, &args[3], scope, "substr", false)?;
         let s = lv.get().to_bytes();
         let Some((a, b)) = substr_range(s.len(), off, Some(len)) else { return die("substr outside of string") };
         let old = Value::bytes(&s[a..b]);
@@ -855,11 +888,16 @@ fn substr(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         lv.set(Value::bytes(n))?;
         return Ok(vec![old]);
     }
-    let s = it.scalar(&args[0], scope)?.to_bytes();
-    let off = it.scalar(&args[1], scope)?.to_i64();
+    let s = it.scalar(&args[0], scope)?;
+    it.use_str(&s, &args[0], scope, "substr", false)?;
+    let s = s.to_bytes();
+    let off = it.scalar(&args[1], scope)?;
+    it.use_num(&off, &args[1], scope, "substr", false)?;
+    let off = off.to_i64();
     let len = match args.get(2) {
         Some(l) => {
             let v = it.scalar(l, scope)?;
+            it.use_num(&v, l, scope, "substr", false)?;
             if v.is_undef() {
                 Some(0)
             } else {
@@ -1023,10 +1061,7 @@ fn srand_seed(v: &Value) -> Option<u64> {
 /// must end past the current position, captures are returned, trailing
 /// empty fields are removed when there is no limit.
 fn split(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
-    let subject = match args.get(1) {
-        Some(a) => it.scalar(a, scope)?.to_bytes(),
-        None => it.read_scalar("_", scope).to_bytes(),
-    };
+    let subject = it.arg_used(&args[1.min(args.len())..], scope, "split", false)?.to_bytes();
     let limit = match args.get(2) {
         Some(a) => it.scalar(a, scope)?.to_i64(),
         None => 0,
@@ -1045,7 +1080,9 @@ fn split(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Ve
             }
         }
         Some(e) => {
-            let p = it.scalar(e, scope)?.to_bytes();
+            let p = it.scalar(e, scope)?;
+            it.use_str(&p, e, scope, "regexp compilation", false)?;
+            let p = p.to_bytes();
             if &p[..] == b" " {
                 (crate::perl::regex::compile(b"\\s+", "").unwrap(), true)
             } else {

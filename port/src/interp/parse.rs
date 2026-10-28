@@ -35,7 +35,7 @@ type R<T> = Result<T, ParseError>;
 
 /// Parse a whole program (an eval string, a config file).
 pub fn parse_program(src: &[u8], package: &str) -> R<Block> {
-    let mut p = Parser { s: src, pos: 0, package: Rc::from(package), line_pos: 0, line: 1, warnings: false };
+    let mut p = Parser { s: src, pos: 0, package: Rc::from(package), line_pos: 0, line: 1, warnings: None };
     let block = p.statements()?;
     p.ws();
     if p.pos < p.s.len() {
@@ -97,7 +97,7 @@ fn apply_prototype(proto: &str, args: Vec<Expr>) -> Vec<Expr> {
 
 /// Parse the text of an interpolated string (the inside of `"..."`).
 pub fn parse_interpolated(raw: &[u8], package: &str) -> R<Vec<Part>> {
-    let mut p = Parser { s: raw, pos: 0, package: Rc::from(package), line_pos: 0, line: 1, warnings: false };
+    let mut p = Parser { s: raw, pos: 0, package: Rc::from(package), line_pos: 0, line: 1, warnings: None };
     p.interpolate(raw, false)
 }
 
@@ -109,7 +109,7 @@ struct Parser<'a> {
     line_pos: usize,
     line: u32,
     /// `use warnings` in effect (lexically).
-    warnings: bool,
+    warnings: Option<bool>,
 }
 
 /// Builtins that take one argument and bind tighter than comparisons.
@@ -287,8 +287,8 @@ impl<'a> Parser<'a> {
                     last = line;
                 }
                 let switch = match &st {
-                    Stmt::Use(n, _) if &**n == "warnings" => Some(true),
-                    Stmt::Use(n, _) if &**n == "no warnings" => Some(false),
+                    Stmt::Use(n, _) if &**n == "warnings" => Some(Some(true)),
+                    Stmt::Use(n, _) if &**n == "no warnings" => Some(Some(false)),
                     _ => None,
                 };
                 out.push(st);
@@ -1697,7 +1697,13 @@ impl<'a> Parser<'a> {
                     let pat = self.pattern(&first, Rc::from(flags.replace(['e', 'g', 'r'], "")))?;
                     let pat = Pat { parts: pat.parts, flags: flags.clone() };
                     let repl = if flags.contains('e') {
-                        SubstRepl::Code(Rc::new(parse_program(&second, &self.package)?))
+                    {
+                        // the code runs at the line of the s/// (its own
+                        // lines would count from 1)
+                        let mut code = parse_program(&second, &self.package)?;
+                        code.retain(|st| !matches!(st, Stmt::Line(_)));
+                        SubstRepl::Code(Rc::new(code))
+                    }
                     } else if open == b'\'' {
                         SubstRepl::Interp(vec![Part::Lit(second)])
                     } else {
@@ -2442,7 +2448,7 @@ impl<'a> Parser<'a> {
                 if let Some(end) = interp_var_end(raw, i, regex) {
                     flush(&mut lit, &mut parts);
                     let src = &raw[i..end];
-                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: false };
+                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: None };
                     let e = sub.postfix()?;
                     parts.push(Part::Scalar(e));
                     i = end;
@@ -2453,7 +2459,7 @@ impl<'a> Parser<'a> {
                 if let Some(end) = interp_var_end(raw, i, regex) {
                     flush(&mut lit, &mut parts);
                     let src = &raw[i..end];
-                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: false };
+                    let mut sub = Parser { s: src, pos: 0, package: self.package.clone(), line_pos: 0, line: 1, warnings: None };
                     let e = sub.postfix()?;
                     parts.push(Part::Array(e));
                     i = end;

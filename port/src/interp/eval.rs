@@ -19,6 +19,8 @@ mod builtins;
 pub mod glob;
 #[path = "io.rs"]
 pub mod io;
+#[path = "warnings.rs"]
+pub(crate) mod warnings;
 use crate::perl::ops;
 use crate::perl::value::Hash;
 use crate::perl::Value;
@@ -54,15 +56,16 @@ thread_local! {
 }
 
 thread_local! {
-    /// Whether `use warnings` is in effect for the running Perl code
-    /// (natives: no, as ExifTool's modules do not enable warnings).
-    static WARNINGS_ON: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// Whether `use warnings` (Some(true)) or `no warnings` (Some(false))
+    /// is in effect for the running Perl code; None: neither, and $^W
+    /// decides (natives: None, as ExifTool's modules have neither).
+    static WARNINGS_ON: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
 }
 
 /// Whether a warning that perl gives only with warnings enabled is due:
 /// `use warnings` in the running code's scope, or -w ($^W).
 pub fn warnings_enabled(it: &mut Interp) -> bool {
-    WARNINGS_ON.with(|w| w.get()) || it.get_scalar("main::^W").truthy()
+    it.warn_on()
 }
 
 pub(crate) fn set_last_read(h: &io::HandleRc, chunk: bool) {
@@ -479,6 +482,13 @@ pub struct Interp {
     /// PORT_TRACE: log ExifTool's sub calls, as scripts/trace_db.pl does.
     trace: Option<std::io::BufWriter<std::fs::File>>,
     trace_depth: usize,
+    /// The key of `$^W` in `globals`, built once.
+    w_key: (u8, Rc<str>),
+    /// Set while a warning's name is worked out (no warnings then).
+    warn_quiet: bool,
+    /// Variables whose string was numified (warned "isn't numeric"), by
+    /// storage, with the string they held: perl does not warn again.
+    numified: HashMap<(usize, Vec<u8>), (warnings::Keep, Rc<[u8]>)>,
 }
 
 impl Default for Interp {
@@ -544,6 +554,9 @@ impl Interp {
             sub_refs: HashMap::new(),
             trace: std::env::var("PORT_TRACE").ok().and_then(|p| std::fs::File::create(p).ok()).map(std::io::BufWriter::new),
             trace_depth: 0,
+            w_key: (b'$', Rc::from("main::^W")),
+            warn_quiet: false,
+            numified: HashMap::new(),
         };
         i.set_scalar("main::\"", Value::str(" "));
         i.set_scalar("main::/", Value::str("\n"));
@@ -743,7 +756,7 @@ impl Interp {
         self.want_stack.push(want);
         let saved_loc = location();
         // a file starts without warnings; a string eval has those of its site
-        let saved_warn = WARNINGS_ON.with(|w| if name.is_some() { w.replace(false) } else { w.get() });
+        let saved_warn = WARNINGS_ON.with(|w| if name.is_some() { w.replace(None) } else { w.get() });
         set_location((Some(name.unwrap_or_else(|| Rc::from(format!("(eval {})", self.eval_count)))), 1));
         let r = self.exec_block_in(&block, scope.clone(), want);
         set_location(saved_loc);
@@ -903,7 +916,7 @@ impl Interp {
                 if let Some((file, line)) = self.native_location(name) {
                     set_location((Some(file), line));
                 }
-                let saved_warn = WARNINGS_ON.with(|w| w.replace(false));
+                let saved_warn = WARNINGS_ON.with(|w| w.replace(None));
                 let r = f(self, args, want).map(|v| fit(v, want));
                 WARNINGS_ON.with(|w| w.set(saved_warn));
                 pop_caller();
@@ -1599,7 +1612,9 @@ impl Interp {
             }
             Expr::Bin(BinOp::Repeat, l, n) if matches!(**l, Expr::List(_)) => {
                 let items = self.list(l, scope)?;
-                let n = self.scalar(n, scope)?.to_i64().max(0) as usize;
+                let nv = self.scalar(n, scope)?;
+                self.use_num(&nv, n, scope, "repeat (x)", false)?;
+                let n = nv.to_i64().max(0) as usize;
                 let mut out = Vec::with_capacity(items.len() * n);
                 for _ in 0..n {
                     out.extend(items.iter().cloned());
@@ -1684,13 +1699,13 @@ impl Interp {
                 Ok(Value::Int(n as i64 - 1))
             }
             Expr::Elem(c, i) => {
-                let i = self.scalar(i, scope)?.to_i64();
+                let i = self.elem_index(i, scope, "array element")?;
                 let a = self.array_of(c, scope, true)?;
                 let a = a.borrow();
                 Ok(index(a.len(), i).and_then(|i| a.get(i).cloned()).unwrap_or_default())
             }
             Expr::HElem(c, k) => {
-                let k = self.hash_key(k, scope)?;
+                let k = self.hash_key(k, scope, "hash element")?;
                 let h = self.hash_of(c, scope, true)?;
                 let v = h.borrow().get(&k).cloned().unwrap_or_default();
                 Ok(v)
@@ -1763,7 +1778,18 @@ impl Interp {
                     Some(t) => self.lvalue(t, scope)?,
                     None => Lv::Scalar(self.scalar_cell(scope, "_")),
                 };
-                let s = lv.get().to_bytes();
+                let s = lv.get();
+                if s.is_undef() {
+                    match target {
+                        Some(t) => self.use_str(&s, t, scope, "transliteration (tr///)", false)?,
+                        None => {
+                            if self.warn_on() {
+                                self.report_uninit(Some("$_".into()), "transliteration (tr///)")?;
+                            }
+                        }
+                    }
+                }
+                let s = s.to_bytes();
                 let (out, count) = crate::perl::tr::tr(&s, search, repl, flags);
                 if flags.contains('r') {
                     return Ok(Value::bytes(out));
@@ -1858,22 +1884,23 @@ impl Interp {
                 _ => Value::Undef,
             }),
             Expr::Print { printf, fh, args } => {
-                let mut vals = Vec::new();
-                for a in args {
-                    vals.extend(self.list(a, scope)?);
-                }
-                if vals.is_empty() && !printf {
+                let (mut vals, origin) = self.values_traced(args, scope)?;
+                let topic = vals.is_empty() && !printf;
+                if topic {
                     vals.push(self.read_scalar("_", scope));
                 }
                 let out = if *printf {
-                    let fmt = vals.first().map(|v| v.to_bytes()).unwrap_or_else(|| Rc::from(&b""[..]));
-                    crate::perl::sprintf::sprintf(&fmt, &vals[1.min(vals.len())..])
+                    self.sprintf_warned(&vals, args, &origin, scope, "printf")?
                 } else {
                     let sep = self.get_scalar("main::,").to_bytes();
                     let mut o = Vec::new();
                     for (k, v) in vals.iter().enumerate() {
                         if k > 0 {
                             o.extend_from_slice(&sep);
+                        }
+                        if v.is_undef() && self.warn_on() {
+                            let n = if topic { Some("$_".to_string()) } else { self.list_name(k, args, &origin, scope) };
+                            self.report_uninit(n, "print")?;
                         }
                         o.extend_from_slice(&v.to_bytes());
                     }
@@ -2026,7 +2053,7 @@ impl Interp {
         }
     }
 
-    fn hash_key(&mut self, k: &Expr, scope: &Rc<Scope>) -> ER<Rc<[u8]>> {
+    fn hash_key(&mut self, k: &Expr, scope: &Rc<Scope>, op: &str) -> ER<Rc<[u8]>> {
         // $h{a,b} joins with $;
         if let Expr::List(items) = k {
             if items.len() > 1 {
@@ -2041,7 +2068,11 @@ impl Interp {
                 return Ok(Rc::from(out));
             }
         }
-        Ok(self.scalar(k, scope)?.to_bytes())
+        let v = self.scalar(k, scope)?;
+        if v.is_undef() {
+            self.uninit_slow(k, scope, op, false)?;
+        }
+        Ok(v.to_bytes())
     }
 
     // ---- containers ----
@@ -2165,7 +2196,7 @@ impl Interp {
                 }
             }
             Expr::Elem(c, i) => {
-                let i = self.scalar(i, scope)?.to_i64();
+                let i = self.elem_index(i, scope, "array element")?;
                 let a = self.array_of(c, scope, true)?;
                 // an element of @_ aliased to a literal is read-only
                 if let Some(f) = self.alias_frames.last() {
@@ -2181,7 +2212,7 @@ impl Interp {
                 Lv::AElem(a, i)
             }
             Expr::HElem(c, k) => {
-                let k = self.hash_key(k, scope)?;
+                let k = self.hash_key(k, scope, "hash element")?;
                 Lv::HElem(self.hash_of(c, scope, true)?, k)
             }
             Expr::Array(c) => Lv::Array(self.array_of(c, scope, true)?),
@@ -2336,7 +2367,7 @@ impl Interp {
                 })
             }
             Expr::HElem(c, k) => {
-                let k = self.hash_key(k, scope)?;
+                let k = self.hash_key(k, scope, "hash element")?;
                 let h = self.hash_of(c, scope, true)?;
                 let old = h.borrow().get(&k).cloned();
                 self.saved.push(Saved::HElem(h.clone(), k.clone(), old));
@@ -2344,7 +2375,7 @@ impl Interp {
                 Ok(Lv::HElem(h, k))
             }
             Expr::Elem(c, i) => {
-                let i = self.scalar(i, scope)?.to_i64();
+                let i = self.elem_index(i, scope, "array element")?;
                 let a = self.array_of(c, scope, true)?;
                 let len = a.borrow().len();
                 if let Some(idx) = index(len, i) {
@@ -2439,6 +2470,9 @@ impl Interp {
                     }
                     op => {
                         let rv = self.scalar(r, scope)?;
+                        if matches!(old, Value::Undef | Value::Str(_)) || matches!(rv, Value::Undef | Value::Str(_)) {
+                            self.bin_warnings(op, &old, &rv, l, r, scope, true)?;
+                        }
                         self.apply_bin(op, &old, &rv)?
                     }
                 };
@@ -2503,9 +2537,65 @@ impl Interp {
             _ => {
                 let a = self.scalar(l, scope)?;
                 let b = self.scalar(r, scope)?;
+                if matches!(a, Value::Undef | Value::Str(_)) || matches!(b, Value::Undef | Value::Str(_)) {
+                    self.bin_warnings(op, &a, &b, l, r, scope, false)?;
+                }
                 self.apply_bin(op, &a, &b)
             }
         }
+    }
+
+    /// The warnings of a binary operator on its operands (`assign`: the
+    /// `op=` form, whose left side is exempt for some operators).
+    #[allow(clippy::too_many_arguments)]
+    fn bin_warnings(&mut self, op: BinOp, a: &Value, b: &Value, l: &Expr, r: &Expr, scope: &Rc<Scope>, assign: bool) -> ER<()> {
+        let desc = warnings::bin_desc(op);
+        let many = Interp::many(&[l, r]);
+        // `$x += 1`, `$x .= "a"`, `$x |= 1`... on an undef $x do not warn
+        let lhs = !(assign && a.is_undef() && matches!(op, BinOp::Add | BinOp::Sub | BinOp::Concat | BinOp::BitOr | BinOp::BitXor));
+        match op {
+            BinOp::Concat | BinOp::StrEq | BinOp::StrNe | BinOp::StrLt | BinOp::StrGt | BinOp::StrLe | BinOp::StrGe | BinOp::StrCmp => {
+                if lhs {
+                    self.use_str(a, l, scope, desc, many)?;
+                }
+                self.use_str(b, r, scope, desc, many)?;
+            }
+            BinOp::Repeat => {
+                self.use_num(b, r, scope, desc, many)?;
+                if a.is_undef() {
+                    // the left side is a copy when the count can be undef too
+                    if many {
+                        if self.warn_on() {
+                            self.report_uninit(None, desc)?;
+                        }
+                    } else {
+                        self.use_str(a, l, scope, desc, many)?;
+                    }
+                }
+            }
+            BinOp::BitAnd | BinOp::BitOr | BinOp::BitXor => {
+                // both strings: a string operation, nothing numeric
+                if is_string_operand(a) && is_string_operand(b) {
+                    return Ok(());
+                }
+                if lhs {
+                    self.use_num(a, l, scope, desc, many)?;
+                }
+                self.use_num(b, r, scope, desc, many)?;
+            }
+            _ => {
+                if assign {
+                    if lhs {
+                        self.use_num(a, l, scope, desc, many)?;
+                    }
+                    self.use_num(b, r, scope, desc, many)?;
+                } else {
+                    self.use_num(b, r, scope, desc, many)?;
+                    self.use_num(a, l, scope, desc, many)?;
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn apply_bin(&mut self, op: BinOp, a: &Value, b: &Value) -> ER<Value> {
@@ -2581,10 +2671,25 @@ impl Interp {
     fn unary(&mut self, op: UnOp, e: &Expr, scope: &Rc<Scope>) -> ER<Value> {
         Ok(match op {
             UnOp::Not => boolean(!self.scalar(e, scope)?.truthy()),
-            UnOp::Neg => ops::negate(&self.scalar(e, scope)?),
+            UnOp::Neg => {
+                let v = self.scalar(e, scope)?;
+                match &v {
+                    Value::Undef => self.uninit_slow(e, scope, "negation (-)", false)?,
+                    // -"foo" and -"+x" are string operations (as in ops::negate)
+                    Value::Str(s) if !(s.is_empty() || s[0].is_ascii_alphabetic() || s[0] == b'_' || s[0] == b'+' || (s[0] == b'-' && !v.looks_like_number())) => {
+                        self.use_num(&v, e, scope, "negation (-)", false)?
+                    }
+                    Value::Str(s) if s.is_empty() => self.use_num(&v, e, scope, "negation (-)", false)?,
+                    _ => {}
+                }
+                ops::negate(&v)
+            }
             UnOp::Plus => self.scalar(e, scope)?,
             UnOp::BitNot => {
                 let v = self.scalar(e, scope)?;
+                if v.is_undef() {
+                    self.uninit_slow(e, scope, "1's complement (~)", false)?;
+                }
                 if is_string_operand(&v) {
                     Value::bytes(v.to_bytes().iter().map(|b| !b).collect::<Vec<u8>>())
                 } else {
@@ -2633,9 +2738,13 @@ impl Interp {
         })
     }
 
-    fn range(&mut self, a: &Expr, b: &Expr, scope: &Rc<Scope>) -> ER<Vec<Value>> {
-        let a = self.scalar(a, scope)?;
-        let b = self.scalar(b, scope)?;
+    fn range(&mut self, ae: &Expr, be: &Expr, scope: &Rc<Scope>) -> ER<Vec<Value>> {
+        let a = self.scalar(ae, scope)?;
+        let b = self.scalar(be, scope)?;
+        if !(matches!(a, Value::Str(_)) && !a.looks_like_number()) {
+            self.use_num(&a, ae, scope, "range (or flop)", false)?;
+            self.use_num(&b, be, scope, "range (or flop)", false)?;
+        }
         if let (Value::Str(s), false) = (&a, a.looks_like_number()) {
             // 'aa'..'ad'
             let mut out = Vec::new();
@@ -2672,7 +2781,24 @@ impl Interp {
     /// Build an interpolated string. In a pattern (`regex`), interpolated
     /// values are inserted as is (they are pattern text) unless under \Q.
     pub fn interpolate(&mut self, parts: &[Part], scope: &Rc<Scope>, regex: bool) -> ER<Vec<u8>> {
-        let _ = regex;
+        self.interpolate_in(parts, scope, regex, false)
+    }
+
+    /// perl's description of the operator that stringifies the values of
+    /// an interpolated string (`subst`: the replacement of a s///).
+    fn interp_desc(parts: &[Part], regex: bool, subst: bool) -> &'static str {
+        if regex {
+            return "regexp compilation";
+        }
+        let vals = parts.iter().filter(|p| matches!(p, Part::Scalar(_) | Part::Array(_))).count();
+        let lits = parts.iter().any(|p| matches!(p, Part::Lit(b) if !b.is_empty()));
+        if vals == 1 && !lits {
+            return if subst { "substitution (s///)" } else { "string" };
+        }
+        "concatenation (.) or string"
+    }
+
+    fn interpolate_in(&mut self, parts: &[Part], scope: &Rc<Scope>, regex: bool, subst: bool) -> ER<Vec<u8>> {
         let mut out = Vec::new();
         // Active modes: \U / \L / \Q, until \E; and a pending \u / \l.
         let mut modes: Vec<CaseOp> = Vec::new();
@@ -2688,7 +2814,28 @@ impl Interp {
                         b.clone()
                     }
                 }
-                Part::Scalar(e) => self.scalar(e, scope)?.to_bytes().to_vec(),
+                Part::Scalar(e) => {
+                    let v = self.scalar(e, scope)?;
+                    if v.is_undef() {
+                        let many = parts.iter().filter(|p| matches!(p, Part::Scalar(_) | Part::Array(_))).count() > 1;
+                        // under \U \L \Q \u \l, the value goes through uc, lc...
+                        let case = match (next, modes.last()) {
+                            (Some(CaseOp::UpperNext), _) => Some("ucfirst"),
+                            (Some(CaseOp::LowerNext), _) => Some("lcfirst"),
+                            (_, Some(CaseOp::Quote)) => Some("quotemeta"),
+                            (_, Some(CaseOp::Upper)) => Some("uc"),
+                            (_, Some(CaseOp::Lower)) => Some("lc"),
+                            _ => None,
+                        };
+                        let desc = match case {
+                            Some(c) if !many => c,
+                            Some(_) => "concatenation (.) or string",
+                            None => Interp::interp_desc(parts, regex, subst),
+                        };
+                        self.uninit_slow(e, scope, desc, many)?;
+                    }
+                    v.to_bytes().to_vec()
+                }
                 Part::Array(e) => {
                     let vals = self.list(e, scope)?;
                     let sep = self.get_scalar("main::\"").to_bytes();
@@ -2696,6 +2843,10 @@ impl Interp {
                     for (k, v) in vals.iter().enumerate() {
                         if k > 0 {
                             o.extend_from_slice(&sep);
+                        }
+                        if v.is_undef() && self.warn_on() {
+                            let n = self.elem_name(e, k, scope, false);
+                            self.report_uninit(n, "join or string")?;
                         }
                         o.extend_from_slice(&v.to_bytes());
                     }
@@ -2767,14 +2918,23 @@ impl Interp {
             Some(t) => match &**t {
                 Expr::Scalar(_) | Expr::ScalarDeref(_) | Expr::Elem(..) | Expr::HElem(..) => {
                     let lv = self.lvalue(t, scope)?;
-                    let b = lv.get().to_bytes();
-                    (b, pos_key(&lv).map(|k| (k, lv)))
+                    let v = lv.get();
+                    self.use_str(&v, t, scope, "pattern match (m//)", false)?;
+                    (v.to_bytes(), pos_key(&lv).map(|k| (k, lv)))
                 }
-                t => (self.scalar(t, scope)?.to_bytes(), None),
+                t => {
+                    let v = self.scalar(t, scope)?;
+                    self.use_str(&v, t, scope, "pattern match (m//)", false)?;
+                    (v.to_bytes(), None)
+                }
             },
             None => {
                 let lv = Lv::Scalar(self.scalar_cell(scope, "_"));
-                let s = lv.get().to_bytes();
+                let v = lv.get();
+                if v.is_undef() && self.warn_on() {
+                    self.report_uninit(Some("$_".into()), "pattern match (m//)")?;
+                }
+                let s = v.to_bytes();
                 (s, pos_key(&lv).map(|k| (k, lv)))
             }
         };
@@ -2848,7 +3008,18 @@ impl Interp {
             Some(t) => self.lvalue(t, scope)?,
             None => Lv::Scalar(self.scalar_cell(scope, "_")),
         };
-        let subject = lv.get().to_bytes();
+        let subject = lv.get();
+        if subject.is_undef() {
+            match target {
+                Some(t) => self.use_str(&subject, t, scope, "substitution (s///)", false)?,
+                None => {
+                    if self.warn_on() {
+                        self.report_uninit(Some("$_".into()), "substitution (s///)")?;
+                    }
+                }
+            }
+        }
+        let subject = subject.to_bytes();
         let global = pat.flags.contains('g');
         let mut out = Vec::with_capacity(subject.len());
         let mut last = 0;
@@ -2860,7 +3031,7 @@ impl Interp {
             self.set_last_match(&re, &subject, &spans);
             out.extend_from_slice(&subject[last..s]);
             let r = match repl {
-                SubstRepl::Interp(parts) => self.interpolate(parts, scope, false)?,
+                SubstRepl::Interp(parts) => self.interpolate_in(parts, scope, false, true)?,
                 SubstRepl::Code(block) => {
                     let mut v = self.run_block(block, scope, Want::Scalar)?;
                     if pat.flags.matches('e').count() > 1 {
@@ -2869,7 +3040,16 @@ impl Interp {
                         let pkg = self.package.clone();
                         v = self.eval_string(&code, &pkg, scope, Want::Scalar).unwrap_or_default();
                     }
-                    v.pop().unwrap_or_default().to_bytes().to_vec()
+                    let r = v.pop().unwrap_or_default();
+                    if r.is_undef() && self.warn_on() {
+                        // the value of the block's last expression
+                        let n = match block.iter().rev().find(|st| !matches!(st, Stmt::Line(_))) {
+                            Some(Stmt::Expr(e)) => self.uninit_name(e, scope, false),
+                            _ => None,
+                        };
+                        self.report_uninit(n, "substitution (s///)")?;
+                    }
+                    r.to_bytes().to_vec()
                 }
             };
             out.extend_from_slice(&r);

@@ -163,6 +163,8 @@ pub fn print_lens_id(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
             }
         }
         let mut tcs = vec![n(1), f(1.4), n(2), f(2.8)];
+        pl::at(10204);
+        pl::warn_uninit(it, &lens_model, "$lensModel", "pattern match (m//)")?;
         if let Some(m) = re(r" \+ ((EXTENDER )?RF)?(\d+(\.\d*)?)x\b", "").m(&lens_model) {
             tcs = vec![cap(&m, 3)];
         }

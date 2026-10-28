@@ -225,5 +225,5 @@ pub enum Stmt {
     Line(u32),
     /// `use warnings` / `no warnings` (lexical): whether warnings are on
     /// from here to the end of the block.
-    Warnings(bool),
+    Warnings(Option<bool>),
 }
