@@ -1,0 +1,127 @@
+# Command lines for the port of GetImageInfo (src/cli/get_image_info.rs),
+# same format as cli_cases.txt.
+
+# --- window title, source and alternate files, -z
+R|-progress:%f -FileName t/images/Canon.jpg t/images/Nikon.jpg
+R|-progress:%30b%p%%%r -FileName t/images/Canon.jpg t/images/Nikon.jpg
+R|-srcfile %d%f.xmp -srcfile @ -FileName -Title t/images/XMP.jpg t/images/Canon.jpg
+R|-v -srcfile %d%f.xyz -FileName t/images/Canon.jpg
+R|-file1 t/images/XMP.xmp -File1:Title -Model t/images/Canon.jpg
+R|-z -FileName 't/images/a b.gz'
+R|-z -FileName t/images/Canon.jpg
+R|''
+R|t/images/nonexistent.jpg t/images/Canon.jpg
+
+# --- conditions, @JSON
+R|-v -if '$Model +' -FileName t/images/Canon.jpg
+R|-v -if '$Make eq "Canon"' -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-fast -if '$Make' -Model t/images/Canon.jpg
+R|-if '$Make' -if '$Model =~ /REBEL/' -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-if 'warn "x\n"; 1' -Model t/images/Canon.jpg
+R|-v2 -if 'warn "x\n"; 1' -Model t/images/Canon.jpg
+R|-j '@JSON:{"Make":"A","Model":"B"}'
+R|-s '@JSON:{"Make":"A","Model":"B"}'
+
+# --- deleting and restoring originals
+W|-Artist=x images/Canon.jpg -execute -v -restore_original images/Canon.jpg
+W|-Artist=x images/Canon.jpg -execute -v -delete_original! images/Canon.jpg
+W|-v -restore_original images/Nikon.jpg
+
+# --- output files
+W|-api PrintCSV=1 -w %d%f.txt -Model -ISO images/Canon.jpg
+W|-v -w %d%f.txt images/nothere.jpg
+W|-w %d%f.txt -s -Model -FileName images/Canon.jpg images/Nikon.jpg
+W|-w+ %dall.txt -s -Model -FileName images/Canon.jpg images/Nikon.jpg
+W|-j -Model -w+ %dall.json images/Canon.jpg images/Nikon.jpg
+W|-j -Model -w+ %dall.json images/Canon.jpg -execute -j -Model -w+ %dall.json images/Nikon.jpg
+W|-X -Model -FileName -w %d%f.xml images/Canon.jpg images/Nikon.jpg
+W|-p fmt_files/gpx.fmt -w %d%f.gpx images/GPS.jpg
+W|-p fmt_files/gpx.fmt -w+ %dall.gpx images/GPS.jpg images/Canon.jpg
+W|-w %d%f.txt -XYZ images/Canon.jpg
+W|-b -W %d%f_%t.%s -ThumbnailImage -PreviewImage images/Canon.jpg
+W|-v2 -b -W %d%f_%t%c.%s -a -XMP:Subject images/XMP.jpg
+W|-b -W+ %dall.dat -Model images/Canon.jpg images/Nikon.jpg
+W|-v2 -b -W %d%f.%s -Wext jpg -ThumbnailImage -Model images/Canon.jpg
+W|-v -Artist=x -w %d%f.txt images/Canon.jpg
+
+# --- -diff
+R|-diff t/images/Canon.jpg t/images/Canon.jpg
+R|-diff t/images/nothere.jpg t/images/Canon.jpg
+R|-v -diff t/images/Nikon.jpg t/images/Canon.jpg
+R|-v2 -diff t/images/Nikon.jpg t/images/Canon.jpg
+R|-v3 -diff t/images/Nikon.jpg t/images/Canon.jpg
+R|-s -diff t/images/Nikon.jpg t/images/Canon.jpg
+R|-S -G0 -diff t/images/XMP.jpg t/images/Canon.jpg
+R|-g1 -diff t/images/Nikon.jpg t/images/Canon.jpg
+R|-a -G1 -diff t/images/QuickTime.mov t/images/Canon.jpg
+R|-EXIF:all -diff t/images/Canon1DmkIII.jpg t/images/Canon.jpg
+
+# --- -p
+R|-ee -p '$FileName $Doc1:Model $Model' t/images/QuickTime.mov
+R|-ee -p '${FileName} ${GPSLatitude}' t/images/GoPro.jpg
+R|-p fmt_files/kml_track.fmt t/images/GPS.jpg t/images/Canon.jpg
+R|-p '$Model' -p '$SetTags' t/images/Canon.jpg
+R|-plot -GPSLatitude -GPSLongitude t/images/GPS.jpg
+
+# --- XML
+R|-X -t t/images/Canon.jpg
+R|-X -D -l t/images/Nikon.jpg
+R|-X -H -l -t t/images/XMP.jpg
+R|-X -s t/images/XMP.jpg
+R|-X -s -E t/images/IPTC.jpg
+R|-X -f -Model -XYZ t/images/Canon.jpg
+R|-X -n -l t/images/GPS.jpg
+R|-X -b -a t/images/PNG.png
+
+# --- JSON and PHP
+R|-j -D -t t/images/Canon.jpg
+R|-j -H -l t/images/XMP.jpg
+R|-j -g1 t/images/Nikon.jpg
+R|-j -G1 -a t/images/Nikon.jpg
+R|-j -g4 -a t/images/Nikon.jpg
+R|-j -G4 -a t/images/Nikon.jpg
+R|-j -f -Model -XYZ -g t/images/Canon.jpg t/images/Nikon.jpg
+R|-j -l -b -ThumbnailImage -Model t/images/Canon.jpg
+R|-j -api StructFormat=JSONQ -struct t/images/XMP2.xmp
+R|-j -struct -g t/images/XMP3.xmp
+R|-php -G -a t/images/Ricoh.jpg
+R|-php -l t/images/Ricoh.jpg
+
+# --- HTML, tab, args, short, long, escapes
+R|-h -G -D t/images/Canon.jpg
+R|-h -g t/images/Canon.jpg
+R|-h -s -H t/images/Canon.jpg
+R|-h -s3 t/images/Canon.jpg
+R|-t -G -H t/images/Canon.jpg
+R|-t -s t/images/Canon.jpg
+R|-T -G t/images/Canon.jpg t/images/Nikon.jpg
+R|-l -H -G t/images/Canon.jpg
+R|-s -D -G t/images/Canon.jpg
+R|-s -s -G -H t/images/Canon.jpg
+R|-s3 -G t/images/Canon.jpg
+R|-args -G t/images/Canon.jpg
+R|-args -Copyright# -Model t/images/IPTC.jpg
+R|-ec -a t/images/IPTC.jpg
+R|-g -D t/images/Canon.jpg
+R|-G1 -H -a t/images/XMP.jpg
+
+# --- binary, lists
+R|-b -Keywords t/images/XMP.jpg
+R|-b -sep ', ' -Keywords t/images/XMP.jpg
+R|-listItem 1 -Keywords -Subject t/images/XMP.jpg
+R|-listItem -1 -s -Keywords t/images/XMP.jpg
+R|-b -Model -ISO -XYZ t/images/Canon.jpg
+R|-struct -s t/images/XMP3.xmp
+R|-List=0 -Keywords t/images/XMP.jpg
+
+# --- CSV
+R|-csv -f -Model -XYZ t/images/Canon.jpg t/images/Nikon.jpg
+R|-csv -G -f -Model -XYZ -ExifIFD:ISO t/images/Canon.jpg t/images/XMP.jpg
+R|-csv -a -G1 -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-csv -Copyright# -Copyright t/images/IPTC.jpg
+R|-j -l -api LimitLongValues=20 -ThumbnailImage -Model t/images/Canon.jpg
+R|-j -l -api SaveBin=1 -a t/images/Nikon.jpg
+R|-X -l -H -api SaveBin=1 t/images/Nikon.jpg
+R|-h -X t/images/Canon.jpg
+R|-j -G -struct t/images/XMP3.xmp t/images/XMP2.xmp
+R|-f -G -XYZ -Model t/images/Canon.jpg
