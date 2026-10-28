@@ -164,3 +164,11 @@ W|-ext jpg -r -Artist=all -overwrite_original images/
 W|-Artist=x -o images/new.xmp
 W|-tagsFromFile images/XMP.xmp -XMP:all -o images/copy.xmp images/Canon.jpg
 W|-v2 -Artist=v -overwrite_original images/Canon.jpg
+
+# --- compressed writes (the bytes written by brotli and zlib)
+W|-m -api Compress=1 -XMP:Title=brotli -XMP:Description='compressed with brotli' -o images/c1.jxl images/JXL.jxl
+W|-XMP:Title=again -o images/c2.jxl images/JXL2.jxl
+W|-m -api Compress=1 -Exif:Artist=brotli -o images/c3.jxl images/JXL.jxl
+W|-api Compress=1 -PNG:Comment='compressed text chunk, compressed text chunk, compressed text chunk' -XMP:Title=zlib -o images/c4.png images/PNG.png
+W|-api Compress=1 -XMP:Subject=a -XMP:Subject=b -o images/c5.mie images/MIE.mie
+W|-api Compress=1 -all= -XMP:Title=flif -o images/c6.flif images/FLIF.flif

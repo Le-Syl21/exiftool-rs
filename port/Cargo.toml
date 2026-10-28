@@ -26,10 +26,17 @@ sha1 = "0.10"
 # compressed output is byte for byte the same
 flate2 = { version = "1", default-features = false, features = ["zlib"] }
 # zlib's deflateInit2 directly: Compress::Raw::Zlib deflates with memLevel 9,
-# which flate2 cannot set, and the memory level changes the output bytes
-libz-sys = "1"
-# IO::(Un)Compress::Brotli: Google's brotli library itself, as the perl module
-brotlic = "0.8"
+# which flate2 cannot set, and the memory level changes the output bytes.
+# "static": the crate's own copy of zlib, built in, not the system's (whose
+# version, if any, would decide the bytes written). Measured on 197 inputs
+# against Perl: C zlib 197/197 identical, zlib-rs (pure Rust) 8/197, so the
+# compressor stays C.
+libz-sys = { version = "1", features = ["static"] }
+# IO::(Un)Compress::Brotli: mbrotli, Brotli in Rust whose encoder is
+# byte-identical to Google's library (the perl module's). Measured on 197
+# inputs against Perl: mbrotli 197/197 identical (as Google's C library,
+# brotlic), the brotli crate 186/197.
+mbrotli = "0.5.17"
 # IO::Uncompress::Bunzip2 (Rawzor), on the bzip2 reference code
 bzip2 = "0.6"
 

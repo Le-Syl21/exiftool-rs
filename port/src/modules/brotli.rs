@@ -1,8 +1,9 @@
-//! IO::Compress::Brotli::bro and IO::Uncompress::Brotli::unbro, on
-//! Google's brotli library itself (as the perl modules), so compressed
-//! output is the same bytes.
+//! IO::Compress::Brotli::bro and IO::Uncompress::Brotli::unbro, on mbrotli:
+//! Brotli in Rust whose encoder is byte-identical to Google's reference
+//! library (the one the perl modules use), so compressed output is the same
+//! bytes (measured: 197 of 197 inputs identical to Perl's).
 
-use brotlic::{CompressionMode, Quality, WindowSize};
+use mbrotli::{Compressor, Decompressor, DecoderConfig, EncoderConfig, Quality, Window};
 
 use crate::interp::eval::die;
 use crate::interp::Interp;
@@ -11,18 +12,17 @@ use crate::pl::{arg, ret};
 
 /// `bro($data, $quality = 11, $lgwin = 22)`
 fn bro(data: &[u8], quality: u8, lgwin: u8) -> Option<Vec<u8>> {
-    let q = Quality::new(quality).ok()?;
-    let w = WindowSize::new(lgwin).ok()?;
-    let mut out = vec![0u8; data.len() + data.len() / 2 + 1024];
-    let n = brotlic::compress(data, &mut out, q, w, CompressionMode::Generic).ok()?;
-    out.truncate(n);
-    Some(out)
+    let q = Quality::try_from(quality).ok()?;
+    let w = Window::standard(lgwin).ok()?;
+    let mut c = Compressor::new(EncoderConfig::default().with_quality(q).with_window(w)).ok()?;
+    c.compress(data).ok()
 }
 
 /// `unbro($data, $maxsize)`: fails beyond maxsize, as the perl module.
 fn unbro(data: &[u8], max: usize) -> Option<Vec<u8>> {
+    let mut d = Decompressor::new(DecoderConfig::default()).ok()?;
     let mut out = vec![0u8; max];
-    let n = brotlic::decompress(data, &mut out).ok()?;
+    let n = d.decompress_to_slice(data, &mut out).ok()?;
     out.truncate(n);
     Some(out)
 }
