@@ -112,6 +112,11 @@ fn io_autoflush(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 pub fn register(it: &mut Interp) {
     it.define_native("IO::Handle::autoflush", io_autoflush);
+    // $fh->flush: write out what the handle holds
+    it.define_native("IO::Handle::flush", |it, _a, _w| {
+        it.flush_handles();
+        Ok(vec![Value::Int(1)])
+    });
     it.set_global(b'@', "IO::File::ISA", crate::interp::Binding::Array(std::rc::Rc::new(std::cell::RefCell::new(vec![Value::str("IO::Handle")]))));
     it.set_global(b'@', "FileHandle::ISA", crate::interp::Binding::Array(std::rc::Rc::new(std::cell::RefCell::new(vec![Value::str("IO::File")]))));
     // Digest::MD5, functional and OO (the object keeps the data added).

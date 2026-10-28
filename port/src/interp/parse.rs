@@ -126,7 +126,7 @@ const LIST_OPS: &[&str] = &[
     "join", "push", "unshift", "splice", "sprintf", "die", "warn", "split", "pack", "unpack", "reverse", "bless",
     "substr", "index", "rindex", "atan2", "open", "binmode", "seek", "read", "sysread", "unlink", "mkdir",
     "chmod", "utime", "select", "sprintf", "wantarray", "time", "times", "local", "kill", "sysseek", "syswrite",
-    "tell", "truncate", "rename", "opendir", "readdir", "closedir", "system", "exec", "sprintf", "crypt",
+    "tell", "truncate", "rename", "link", "symlink", "opendir", "readdir", "closedir", "system", "exec", "sprintf", "crypt",
     "lcfirst", "vec", "formline", "waitpid", "stat", "lstat",
 ];
 

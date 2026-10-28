@@ -6,7 +6,8 @@ leave. Prints the cases that differ, then the totals and the timings.
     python3 scripts/compare_cli.py [EXIFTOOL_DIR] [FILTER]
 
 EXIFTOOL_DIR is ExifTool's source tree (default ../../exiftool); FILTER keeps
-the cases whose line contains it; CLI_CASES=FILE reads the cases from FILE.
+the cases whose line contains it; CLI_CASES=FILE reads the cases from FILE;
+PORT_BIN=PATH runs the port's own exiftool binary instead of run_t + script.
 Outputs go to target/cli/<n>/{perl,port}.
 """
 import hashlib
@@ -96,7 +97,7 @@ def run(cmd, cwd, env):
 
 
 def main():
-    subprocess.run(["cargo", "build", "--release", "--example", "run_t", "-j2"], cwd=here, capture_output=True)
+    subprocess.run(["cargo", "build", "--release", "--example", "run_t", "--example", "exiftool", "-j2"], cwd=here, capture_output=True)
     os.makedirs(work, exist_ok=True)
     env_perl = dict(os.environ)
     env_port = {k: v for k, v in os.environ.items() if k != "EXIFTOOL_LIB"}
@@ -107,7 +108,10 @@ def main():
     for n, (kind, args) in enumerate(cases(), 1):
         argv = shlex.split(args)
         res = {}
-        for side, cmd, env in (("perl", ["perl", script], env_perl), ("port", [port, script], env_port)):
+        # (PORT_BIN=path: the port's own exiftool binary, which reads no
+        # script, instead of run_t running ExifTool's script)
+        port_cmd = [os.environ["PORT_BIN"]] if os.environ.get("PORT_BIN") else [port, script]
+        for side, cmd, env in (("perl", ["perl", script], env_perl), ("port", port_cmd, env_port)):
             d = os.path.join(work, str(n), side)
             prepare(d)
             cwd = d

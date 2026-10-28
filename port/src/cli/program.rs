@@ -399,9 +399,12 @@ pub fn program(it: &mut Interp, _a: Vec<Value>, _want: Want) -> ER<Vec<Value>> {
     begin(it)?;
     // use Image::ExifTool qw{:Public};
     perl(it, "use Image::ExifTool qw{:Public}; 1", &[], Want::Void)?;
-    // the script's subs (and its END block, which calls Cleanup())
+    // (the script's subs are all natives)
     let scope = file_scope(it);
-    load_subs(it, &scope)?;
+    // END {
+    //     Cleanup();
+    // }
+    it.add_end_sub("main::Cleanup");
 
     // my $version = '13.59';
     set(it, "version", s("13.59"));
@@ -497,63 +500,6 @@ fn begin(it: &mut Interp) -> ER<()> {
     Ok(())
 }
 
-/// Define the script's subs that are not natives: its `sub` definitions
-/// (and its END block), from the script itself with every other line left
-/// empty, so that they keep their file and line numbers.
-fn load_subs(it: &mut Interp, scope: &Rc<Scope>) -> ER<()> {
-    let path = it.get_scalar("main::0").to_text();
-    let src = match std::fs::read(&path) {
-        Ok(b) => b,
-        Err(e) => return crate::interp::eval::die(format!("Can't open perl script \"{path}\": {e}\n")),
-    };
-    let code = sub_definitions(&src);
-    it.source_name = Some(Rc::from(path.as_str()));
-    match it.eval_string(&code, "main", scope, Want::Void) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(Flow::Die(e)),
-    }
-}
-
-/// The script's lines that define subs (a top-level `sub NAME ...` up to
-/// the `}` that ends it in the first column, or a one-line sub or
-/// prototype), its END block and its pragmas; the other lines are emptied.
-fn sub_definitions(src: &[u8]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(src.len());
-    let mut inside = false;
-    for line in src.split_inclusive(|&c| c == b'\n') {
-        let body = line.strip_suffix(b"\n").unwrap_or(line);
-        if !inside && body == b"__END__" {
-            break;
-        }
-        let keep = if inside {
-            if body.first() == Some(&b'}') {
-                inside = false;
-            }
-            true
-        } else if body.starts_with(b"sub ") || body.starts_with(b"END {") {
-            let code = match body.iter().position(|&c| c == b'#') {
-                Some(i) => &body[..i],
-                None => body,
-            };
-            let trimmed = code.trim_ascii_end();
-            let opens = code.iter().filter(|&&c| c == b'{').count();
-            let closes = code.iter().filter(|&&c| c == b'}').count();
-            // (a prototype, or a whole sub on its line)
-            if !(trimmed.ends_with(b";") && opens == 0 || opens > 0 && opens == closes) {
-                inside = true;
-            }
-            true
-        } else {
-            body == b"use strict;" || body == b"use warnings;"
-        };
-        if keep {
-            out.extend_from_slice(line);
-        } else if line.ends_with(b"\n") {
-            out.push(b'\n');
-        }
-    }
-    out
-}
 
 /// The file lexicals' initial values (lines 99-327).
 fn init_lexicals(it: &mut Interp) -> ER<()> {
@@ -774,7 +720,7 @@ fn undef_all(it: &mut Interp, arrays: &[&str], hashes: &[&str], scalars: &[&str]
 
 /// Loop over sets of command-line arguments separated by "-execute"
 /// (`Command: for (;;) {`, lines 400-2102).
-fn command_loop(it: &mut Interp, scope: &Rc<Scope>) -> ER<()> {
+fn command_loop(it: &mut Interp, _scope: &Rc<Scope>) -> ER<()> {
     let status = re(r"\$\{status\}", "i");
     'command: loop {
         for (echo, stderr) in [("echo3", false), ("echo4", true)] {
@@ -1214,11 +1160,14 @@ fn command_loop(it: &mut Interp, scope: &Rc<Scope>) -> ER<()> {
             // if (not $endOfOpts and s/^(-|\xe2\x88\x92)//) {
             if !t(it, "endOfOpts") {
                 let mut topic_v = topic(it);
+                let before = topic_v.to_bytes().to_vec();
                 if dash.subst(&mut topic_v, false, |_| Vec::new()) > 0 {
                     set_topic(it, topic_v);
-                    if parse_option(it, scope)? {
-                        continue 'args;
-                    }
+                    // the substitution's match: the chain's last branch
+                    // reads its $1 (the dash)
+                    let n = if before.first() == Some(&b'-') { 1 } else { 3 };
+                    it.last_match = Some(crate::interp::eval::LastMatch { subject: Rc::from(before.as_slice()), spans: vec![Some((0, n)), Some((0, n))] });
+                    super::options::parse_option(it)?;
                     continue 'args;
                 }
             }
@@ -1234,41 +1183,6 @@ fn command_loop(it: &mut Interp, scope: &Rc<Scope>) -> ER<()> {
 fn require_ok(it: &mut Interp, module: &str) -> ER<bool> {
     let r = pl::eval_block(it, |it| perl1(it, &format!("require {module}"), &[]))?;
     Ok(r.is_some_and(|v| v.truthy()))
-}
-
-/// The option chain of the argument loop (lines 690-1449), for an argument
-/// that starts with a dash (already removed from `$_`): true for its `next`.
-///
-/// (Until options.rs ports it, this runs the script's own lines 692-1448,
-/// in the scope of the file lexicals, keeping their line numbers.)
-fn parse_option(it: &mut Interp, scope: &Rc<Scope>) -> ER<bool> {
-    let path = it.get_scalar("main::0").to_text();
-    let src = match std::fs::read(&path) {
-        Ok(b) => b,
-        Err(e) => return crate::interp::eval::die(format!("Can't open perl script \"{path}\": {e}\n")),
-    };
-    let lines: Vec<&[u8]> = src.split_inclusive(|&c| c == b'\n').collect();
-    let mut code = Vec::new();
-    // (lines 1-690 empty, the chain's `if` replaced by a loop that its
-    //  `next` leaves)
-    code.extend(std::iter::repeat_n(b'\n', 690));
-    code.extend_from_slice(b"use warnings; my $__fell = 0; for my $__once (1) {\n");
-    for l in &lines[691..1448] {
-        code.extend_from_slice(l);
-    }
-    code.extend_from_slice(b"$__fell = 1; } !$__fell\n");
-    let inner = Scope::new(Some(scope.clone()));
-    let saved_err = it.get_scalar("main::@");
-    it.source_name = Some(Rc::from(path.as_str()));
-    let r = it.eval_string(&code, "main", &inner, Want::Scalar);
-    it.set_scalar("main::@", saved_err);
-    match r {
-        Ok(v) => Ok(v.last().is_some_and(|v| v.truthy())),
-        Err(e) => match it.exit_code {
-            Some(code) => Err(Flow::Exit(code)),
-            None => Err(Flow::Die(e)),
-        },
-    }
 }
 
 /// The end of the argument loop (lines 1449-1470): an argument that is not
@@ -2510,16 +2424,4 @@ fn database_keys(it: &mut Interp) -> ER<()> {
             Ok(())
         })
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::sub_definitions;
-
-    #[test]
-    fn keeps_only_subs() {
-        let src = b"use strict;\nmy $x = 1;\nsub A();\nsub B { 1 }\nsub C\n{\n    2;\n}\nprint 1;\nEND {\n    C();\n}\n__END__\npod\n";
-        let out = sub_definitions(src);
-        assert_eq!(out, b"use strict;\n\nsub A();\nsub B { 1 }\nsub C\n{\n    2;\n}\n\nEND {\n    C();\n}\n".to_vec());
-    }
 }

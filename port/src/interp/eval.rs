@@ -416,6 +416,8 @@ pub struct Interp {
     pub program_scope: Option<(*const Scope, Rc<str>)>,
     /// Natives that a program's own definition must not replace.
     pub sticky_natives: std::collections::HashSet<Rc<str>>,
+    /// Subs to call after the END blocks (see add_end_sub).
+    end_subs: Vec<Rc<str>>,
     /// Imports of subs not defined yet (perl's stub, which autoloads in
     /// the package of the sub it names): target -> source.
     sub_aliases: HashMap<Rc<str>, Rc<str>>,
@@ -508,6 +510,7 @@ impl Interp {
             subs: HashMap::new(),
             program_scope: None,
             sticky_natives: Default::default(),
+            end_subs: Vec::new(),
             sub_aliases: HashMap::new(),
             isa: HashMap::new(),
             cache: HashMap::new(),
@@ -787,7 +790,16 @@ impl Interp {
         while let Some((b, scope)) = self.end_blocks.pop() {
             self.run_block(&b, &scope, Want::Void)?;
         }
+        while let Some(name) = self.end_subs.pop() {
+            self.call_named(&name, vec![], Want::Void)?;
+        }
         Ok(())
+    }
+
+    /// An END block of a ported program: the sub to call at the end (the
+    /// exiftool script's `END { Cleanup(); }`).
+    pub fn add_end_sub(&mut self, name: &str) {
+        self.end_subs.push(Rc::from(name));
     }
 
     /// Flush every open output handle.
@@ -1792,12 +1804,15 @@ impl Interp {
                             });
                         }
                     }
+                    // (-l looks at the link itself)
+                    io::Target::Path(p) if *op == b'l' => std::fs::symlink_metadata(&p),
                     io::Target::Path(p) => std::fs::metadata(&p),
                 };
                 if let Ok(md) = &m {
                     self.last_stat = io::stat_list(md);
                 }
                 Ok(match op {
+                    b'l' => boolean(m.map(|m| m.file_type().is_symlink()).unwrap_or(false)),
                     b'e' => boolean(m.is_ok()),
                     b'f' => boolean(m.map(|m| m.is_file()).unwrap_or(false)),
                     b'd' => boolean(m.map(|m| m.is_dir()).unwrap_or(false)),

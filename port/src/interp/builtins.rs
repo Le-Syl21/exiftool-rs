@@ -25,7 +25,7 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
     Some(run(it, name, args, scope, want))
 }
 
-const BUILTINS: &[&str] = &["utime", "chmod", "readpipe", "getpwuid", "getgrgid", "defined", "ref", "scalar", "lc", "uc", "lcfirst", "ucfirst", "quotemeta", "fc", "length", "chr", "ord", "hex", "oct", "abs", "int", "sqrt", "log", "exp", "sin", "cos", "atan2", "rand", "srand", "time", "localtime", "gmtime", "join", "sprintf", "reverse", "split", "pack", "unpack", "substr", "index", "rindex", "keys", "values", "each", "exists", "delete", "shift", "pop", "push", "unshift", "splice", "chomp", "chop", "undef", "pos", "die", "warn", "bless", "require", "caller", "lock", "study", "exit", "sleep", "do", "open", "close", "binmode", "unlink", "mkdir", "rmdir", "opendir", "readdir", "closedir", "system", "exec", "select", "seek", "read", "sysread", "eof", "readline", "fileno", "chdir", "rename", "stat", "lstat", "glob"];
+const BUILTINS: &[&str] = &["utime", "chmod", "readpipe", "getpwuid", "getgrgid", "defined", "ref", "scalar", "lc", "uc", "lcfirst", "ucfirst", "quotemeta", "fc", "length", "chr", "ord", "hex", "oct", "abs", "int", "sqrt", "log", "exp", "sin", "cos", "atan2", "rand", "srand", "time", "localtime", "gmtime", "join", "sprintf", "reverse", "split", "pack", "unpack", "substr", "index", "rindex", "keys", "values", "each", "exists", "delete", "shift", "pop", "push", "unshift", "splice", "chomp", "chop", "undef", "pos", "die", "warn", "bless", "require", "caller", "lock", "study", "exit", "sleep", "do", "open", "close", "binmode", "unlink", "mkdir", "rmdir", "opendir", "readdir", "closedir", "system", "exec", "select", "seek", "read", "sysread", "eof", "readline", "fileno", "chdir", "rename", "link", "symlink", "stat", "lstat", "glob"];
 
 fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want) -> ER<Vec<Value>> {
     match name {
@@ -551,6 +551,23 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             let a = values(it, args, scope)?;
             let ok = std::fs::rename(arg_text(&a, 0), arg_text(&a, 1)).is_ok();
             one(Value::from(ok))
+        }
+        // link OLD, NEW and symlink OLD, NEW: true on success, with $! set
+        // otherwise
+        "link" | "symlink" => {
+            let a = values(it, args, scope)?;
+            let (old, new) = (arg_text(&a, 0), arg_text(&a, 1));
+            #[cfg(unix)]
+            let r = if name == "link" { std::fs::hard_link(&old, &new) } else { std::os::unix::fs::symlink(&old, &new) };
+            #[cfg(not(unix))]
+            let r = if name == "link" { std::fs::hard_link(&old, &new) } else { Err(std::io::Error::other("symlink not supported")) };
+            match r {
+                Ok(()) => one(Value::Int(1)),
+                Err(e) => {
+                    it.set_scalar("main::!", Value::from(e.to_string()));
+                    one(Value::Int(0))
+                }
+            }
         }
         "mkdir" => {
             let a = values(it, args, scope)?;
