@@ -557,15 +557,14 @@ pub fn local_topic<T>(it: &mut Interp, f: impl FnOnce(&mut Interp) -> ER<T>) -> 
 /// `local $Pkg::x` / `local @x` / `local %x` around `f`.
 pub fn local_global<T>(it: &mut Interp, sigil: u8, name: &str, f: impl FnOnce(&mut Interp) -> ER<T>) -> ER<T> {
     use crate::interp::Binding;
-    let old = it.global(sigil, name);
     let fresh = match sigil {
         b'$' => Binding::Scalar(Rc::new(std::cell::RefCell::new(Value::Undef))),
         b'@' => Binding::Array(Rc::new(std::cell::RefCell::new(Vec::new()))),
         _ => Binding::Hash(Rc::new(std::cell::RefCell::new(Default::default()))),
     };
-    it.set_global(sigil, name, fresh);
+    let old = it.swap_global(sigil, name, fresh);
     let r = f(it);
-    it.set_global(sigil, name, old);
+    it.swap_global(sigil, name, old);
     r
 }
 

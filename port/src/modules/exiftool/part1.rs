@@ -44,10 +44,9 @@ fn larray(it: &mut Interp, name: &str) -> Value {
 /// `local $_;` around the body of a sub: a new `$_`, the caller's back on
 /// every exit path.
 fn local_topic<T>(it: &mut Interp, f: impl FnOnce(&mut Interp) -> ER<T>) -> ER<T> {
-    let old = it.global(b'$', "main::_");
-    it.set_global(b'$', "main::_", Binding::Scalar(Rc::new(RefCell::new(Value::Undef))));
+    let old = it.swap_global(b'$', "main::_", Binding::Scalar(Rc::new(RefCell::new(Value::Undef))));
     let r = f(it);
-    it.set_global(b'$', "main::_", old);
+    it.swap_global(b'$', "main::_", old);
     r
 }
 

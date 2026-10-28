@@ -41,21 +41,23 @@ impl PerlRegex {
 pub type Spans = Vec<Option<(usize, usize)>>;
 
 thread_local! {
-    static CACHE: RefCell<HashMap<(Vec<u8>, String), Rc<PerlRegex>>> = RefCell::new(HashMap::default());
-    /// The patterns compiled in UTF mode, by pattern, whether the pattern is
-    /// a character string (its UTF-8 form), and flags.
-    static UTF_CACHE: RefCell<HashMap<(Vec<u8>, bool, String), Rc<PerlRegex>>> = RefCell::new(HashMap::default());
+    /// The compiled patterns, by pattern then flags (looked up without
+    /// copying the pattern).
+    static CACHE: RefCell<HashMap<Vec<u8>, Vec<(String, Rc<PerlRegex>)>>> = RefCell::new(HashMap::default());
+    /// The patterns compiled in UTF mode, by pattern, then whether the
+    /// pattern is a character string (its UTF-8 form) and flags.
+    static UTF_CACHE: RefCell<HashMap<Vec<u8>, Vec<(bool, String, Rc<PerlRegex>)>>> = RefCell::new(HashMap::default());
 }
 
 /// Compile `pattern` with Perl modifiers (`i`, `m`, `s`, `x`; others such as
 /// `g`, `e`, `o`, `r` are the caller's business and ignored here).
 pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
-    let key = (pattern.to_vec(), flags.to_string());
-    if let Some(re) = CACHE.with(|c| c.borrow().get(&key).cloned()) {
+    let hit = CACHE.with(|c| c.borrow().get(pattern).and_then(|v| v.iter().find(|(f, _)| f == flags).map(|(_, re)| re.clone())));
+    if let Some(re) = hit {
         return Ok(re);
     }
     let compiled = build(pattern, false, flags, false)?;
-    CACHE.with(|c| c.borrow_mut().insert(key, compiled.clone()));
+    CACHE.with(|c| c.borrow_mut().entry(pattern.to_vec()).or_default().push((flags.to_string(), compiled.clone())));
     Ok(compiled)
 }
 
@@ -64,12 +66,12 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
 /// case folding, as perl's rules for such strings. `pat_utf8`: the
 /// pattern is itself a character string, given in its UTF-8 form.
 pub fn compile_utf(pattern: &[u8], pat_utf8: bool, flags: &str) -> Result<Rc<PerlRegex>, String> {
-    let key = (pattern.to_vec(), pat_utf8, flags.to_string());
-    if let Some(re) = UTF_CACHE.with(|c| c.borrow().get(&key).cloned()) {
+    let hit = UTF_CACHE.with(|c| c.borrow().get(pattern).and_then(|v| v.iter().find(|(u, f, _)| *u == pat_utf8 && f == flags).map(|(_, _, re)| re.clone())));
+    if let Some(re) = hit {
         return Ok(re);
     }
     let compiled = build(pattern, pat_utf8, flags, true)?;
-    UTF_CACHE.with(|c| c.borrow_mut().insert(key, compiled.clone()));
+    UTF_CACHE.with(|c| c.borrow_mut().entry(pattern.to_vec()).or_default().push((pat_utf8, flags.to_string(), compiled.clone())));
     Ok(compiled)
 }
 

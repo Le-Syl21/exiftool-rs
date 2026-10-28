@@ -282,13 +282,11 @@ fn restore_sig_warn(saved: (Rc<RefCell<Hash>>, Option<Value>)) {
 
 /// `local $_;`: a new undefined `$_` until the guard is restored.
 fn local_topic(it: &mut Interp) -> Binding {
-    let old = it.global(b'$', "main::_");
-    it.set_global(b'$', "main::_", Binding::Scalar(cell(Value::Undef)));
-    old
+    it.swap_global(b'$', "main::_", Binding::Scalar(cell(Value::Undef)))
 }
 
 fn restore_topic(it: &mut Interp, old: Binding) {
-    it.set_global(b'$', "main::_", old);
+    it.swap_global(b'$', "main::_", old);
 }
 
 /// `$evalWarning` (a package variable of ExifTool.pm).

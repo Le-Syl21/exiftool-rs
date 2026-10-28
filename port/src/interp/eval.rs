@@ -806,6 +806,20 @@ impl Interp {
         self.globals.insert(key, b);
     }
 
+    /// Rebind a package variable to `b` and return its binding before
+    /// (what `local` does, and puts back): one lookup of the name.
+    pub fn swap_global(&mut self, sigil: u8, name: &str, b: Binding) -> Binding {
+        if !name.contains("::<my") && !matches!(name, "-" | "+" | "main::-" | "main::+" | "::-" | "::+") {
+            let globals = &mut self.globals;
+            if let Some(slot) = Self::with_gkey_in(&self.package, sigil, name, |k| globals.get_mut(k)) {
+                return std::mem::replace(slot, b);
+            }
+        }
+        let old = self.global(sigil, name);
+        self.set_global(sigil, name, b);
+        old
+    }
+
     pub fn set_scalar(&mut self, name: &str, v: Value) {
         match self.global(b'$', name) {
             Binding::Scalar(c) => *c.borrow_mut() = v,
@@ -3667,9 +3681,9 @@ impl Interp {
                 if t.is_empty() {
                     return die(format!("Can't call method \"{name}\" without a package or object reference"));
                 }
-                let prefix = format!("{t}::");
-                let is_pkg = self.subs.keys().any(|k| k.starts_with(&prefix));
-                if !is_pkg {
+                // (the subs are looked through only when a handle has the name)
+                let handle = matches!(t.as_str(), "STDIN" | "STDOUT" | "STDERR") || self.has_bareword_handle(&t);
+                if handle && !self.subs.keys().any(|k| k.starts_with(t.as_str()) && k[t.len()..].starts_with("::")) {
                     if let Some(h) = self.bareword_handle(&t) {
                         let mut args = args;
                         if let Some(first) = args.first_mut() {

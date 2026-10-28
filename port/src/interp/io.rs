@@ -165,6 +165,15 @@ impl Interp {
 
     /// The handle a bareword names, if there is one (STDIN, STDOUT, STDERR,
     /// or one the program opened).
+    /// Whether a bareword handle other than the standard ones has the name.
+    pub(crate) fn has_bareword_handle(&self, name: &str) -> bool {
+        if name.contains("::") {
+            self.handles.contains_key(name)
+        } else {
+            joined(&["main::", name], |k| self.handles.contains_key(k))
+        }
+    }
+
     pub(crate) fn bareword_handle(&mut self, name: &str) -> Option<HandleRc> {
         if matches!(name, "STDIN" | "STDOUT" | "STDERR") {
             return Some(self.std_handle(name));

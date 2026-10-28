@@ -1236,10 +1236,9 @@ pub fn get_descriptions(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 
 /// `local $_ = VALUE` around `f`; returns what `f` left in `$_` too.
 fn with_local_topic<T>(it: &mut Interp, v: Value, f: impl FnOnce(&mut Interp) -> ER<T>) -> ER<T> {
-    let old = it.global(b'$', "main::_");
-    it.set_global(b'$', "main::_", Binding::Scalar(Rc::new(std::cell::RefCell::new(v))));
+    let old = it.swap_global(b'$', "main::_", Binding::Scalar(Rc::new(std::cell::RefCell::new(v))));
     let r = f(it);
-    it.set_global(b'$', "main::_", old);
+    it.swap_global(b'$', "main::_", old);
     r
 }
 
