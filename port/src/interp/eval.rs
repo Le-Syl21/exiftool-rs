@@ -481,6 +481,66 @@ enum Saved {
     Handle(Rc<str>, Option<io::HandleRc>),
 }
 
+/// The package variables by key (see `Interp::globals`), with `$_` in a
+/// field of its own: the natives' `local $_` and the loops' aliasing of
+/// it rebind it all the time, without a hash lookup that way.
+struct Globals {
+    map: HashMap<Rc<str>, Binding>,
+    topic: Option<Binding>,
+    /// `$main::_`, the key `topic` stands for.
+    topic_key: Rc<str>,
+}
+
+impl Default for Globals {
+    fn default() -> Self {
+        Globals { map: HashMap::default(), topic: None, topic_key: Rc::from(TOPIC_KEY) }
+    }
+}
+
+const TOPIC_KEY: &str = "$main::_";
+
+impl Globals {
+    fn get(&self, k: &str) -> Option<&Binding> {
+        if k == TOPIC_KEY {
+            self.topic.as_ref()
+        } else {
+            self.map.get(k)
+        }
+    }
+
+    fn get_mut(&mut self, k: &str) -> Option<&mut Binding> {
+        if k == TOPIC_KEY {
+            self.topic.as_mut()
+        } else {
+            self.map.get_mut(k)
+        }
+    }
+
+    fn insert(&mut self, k: Rc<str>, b: Binding) -> Option<Binding> {
+        if &*k == TOPIC_KEY {
+            self.topic.replace(b)
+        } else {
+            self.map.insert(k, b)
+        }
+    }
+
+    fn remove(&mut self, k: &str) -> Option<Binding> {
+        if k == TOPIC_KEY {
+            self.topic.take()
+        } else {
+            self.map.remove(k)
+        }
+    }
+
+    fn iter(&self) -> impl Iterator<Item = (&Rc<str>, &Binding)> {
+        self.topic.iter().map(|b| (&self.topic_key, b)).chain(self.map.iter())
+    }
+
+    fn keys(&self) -> impl Iterator<Item = &Rc<str>> {
+        self.iter().map(|(k, _)| k)
+    }
+}
+
 pub type GlobalHook = Rc<dyn Fn(&mut Interp, u8, &str) -> Option<Binding>>;
 pub type RequireHook = Rc<dyn Fn(&mut Interp, &str) -> ER<()>>;
 
@@ -488,7 +548,7 @@ pub struct Interp {
     /// Package variables, by their sigil followed by the fully qualified
     /// name (`$main::_`), so that a name is looked up as a `&str` built on
     /// the stack, without allocating.
-    globals: HashMap<Rc<str>, Binding>,
+    globals: Globals,
     /// Named subs, fully qualified.
     subs: HashMap<Rc<str>, Rc<Code>>,
     /// The file scope of the program being run, whose `my` variables are
@@ -622,7 +682,7 @@ fn is_special_global(name: &str) -> bool {
 impl Interp {
     pub fn new() -> Interp {
         let mut i = Interp {
-            globals: HashMap::default(),
+            globals: Globals::default(),
             subs: HashMap::default(),
             program_scope: None,
             sticky_natives: Default::default(),
