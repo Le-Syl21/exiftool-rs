@@ -174,6 +174,27 @@ pub enum Binding {
     Hash(HashRc),
 }
 
+thread_local! {
+    /// The names given to Scope::declare as text, shared.
+    /// The name of `@_`.
+    static UNDERSCORE: Rc<str> = Rc::from("_");
+    static NAMES: RefCell<std::collections::HashSet<Rc<str>, rustc_hash::FxBuildHasher>> = RefCell::new(Default::default());
+}
+
+/// The shared copy of a variable name (a scope's names are not allocated
+/// at each declaration).
+pub fn intern(name: &str) -> Rc<str> {
+    NAMES.with(|n| {
+        let mut n = n.borrow_mut();
+        if let Some(r) = n.get(name) {
+            return r.clone();
+        }
+        let r: Rc<str> = Rc::from(name);
+        n.insert(r.clone());
+        r
+    })
+}
+
 /// A lexical scope.
 #[derive(Default, Debug)]
 pub struct Scope {
@@ -187,7 +208,12 @@ impl Scope {
     }
 
     pub fn declare(&self, sigil: u8, name: &str, b: Binding) {
-        self.vars.borrow_mut().push((sigil, Rc::from(name), b));
+        self.declare_rc(sigil, intern(name), b);
+    }
+
+    /// `declare` with the name already shared (the syntax tree's).
+    pub fn declare_rc(&self, sigil: u8, name: Rc<str>, b: Binding) {
+        self.vars.borrow_mut().push((sigil, name, b));
     }
 
     /// Bind a scalar cell (the caller keeps it to read the result back).
@@ -459,8 +485,10 @@ pub type GlobalHook = Rc<dyn Fn(&mut Interp, u8, &str) -> Option<Binding>>;
 pub type RequireHook = Rc<dyn Fn(&mut Interp, &str) -> ER<()>>;
 
 pub struct Interp {
-    /// Package variables: sigil + fully qualified name.
-    globals: HashMap<(u8, Rc<str>), Binding>,
+    /// Package variables, by their sigil followed by the fully qualified
+    /// name (`$main::_`), so that a name is looked up as a `&str` built on
+    /// the stack, without allocating.
+    globals: HashMap<Rc<str>, Binding>,
     /// Named subs, fully qualified.
     subs: HashMap<Rc<str>, Rc<Code>>,
     /// The file scope of the program being run, whose `my` variables are
@@ -541,7 +569,7 @@ pub struct Interp {
     trace: Option<std::io::BufWriter<std::fs::File>>,
     trace_depth: usize,
     /// The key of `$^W` in `globals`, built once.
-    w_key: (u8, Rc<str>),
+    w_key: Rc<str>,
     /// Set while a warning's name is worked out (no warnings then).
     warn_quiet: bool,
     /// Variables whose string was numified (warned "isn't numeric"), by
@@ -564,6 +592,24 @@ fn boolean(b: bool) -> Value {
     } else {
         NO()
     }
+}
+
+/// Run `f` on the concatenation of `parts`, made on the stack when it is
+/// short (a qualified name to look up, without allocating).
+pub(crate) fn joined<R>(parts: &[&str], f: impl FnOnce(&str) -> R) -> R {
+    const N: usize = 160;
+    let n: usize = parts.iter().map(|p| p.len()).sum();
+    if n > N {
+        return f(&parts.concat());
+    }
+    let mut buf = [0u8; N];
+    let mut i = 0;
+    for p in parts {
+        buf[i..i + p.len()].copy_from_slice(p.as_bytes());
+        i += p.len();
+    }
+    // (a concatenation of strs is UTF-8)
+    f(std::str::from_utf8(&buf[..n]).unwrap_or_default())
 }
 
 /// Names that always live in `main::`.
@@ -614,7 +660,7 @@ impl Interp {
             sub_refs: HashMap::default(),
             trace: std::env::var("PORT_TRACE").ok().and_then(|p| std::fs::File::create(p).ok()).map(std::io::BufWriter::new),
             trace_depth: 0,
-            w_key: (b'$', Rc::from("main::^W")),
+            w_key: Rc::from("$main::^W"),
             warn_quiet: false,
             numified: HashMap::default(),
         };
@@ -686,20 +732,47 @@ impl Interp {
         }
     }
 
+    /// Run `f` on the key of the package variable `name` in `globals`
+    /// (its sigil and qualified name), made without allocating.
+    fn with_gkey<R>(&self, sigil: u8, name: &str, f: impl FnOnce(&str) -> R) -> R {
+        Self::with_gkey_in(&self.package, sigil, name, f)
+    }
+
+    /// `with_gkey` with `package` as the current package.
+    fn with_gkey_in<R>(package: &str, sigil: u8, name: &str, f: impl FnOnce(&str) -> R) -> R {
+        let sg = [sigil];
+        let sg = std::str::from_utf8(&sg).unwrap_or("?");
+        if let Some(n) = name.strip_prefix("::") {
+            joined(&[sg, "main::", n], f)
+        } else if name.contains("::") {
+            joined(&[sg, name], f)
+        } else if is_special_global(name) {
+            joined(&[sg, "main::", name], f)
+        } else {
+            joined(&[sg, package, "::", name], f)
+        }
+    }
+
+    /// The key of the package variable `name` in `globals`.
+    fn gkey(&self, sigil: u8, name: &str) -> Rc<str> {
+        self.with_gkey(sigil, name, |k| Rc::from(k))
+    }
+
     /// A package variable, created on first use.
     pub fn global(&mut self, sigil: u8, name: &str) -> Binding {
-        let key = self.global_key(name);
-        if matches!(&*key, "main::-" | "main::+") {
+        if matches!(sigil, b'@' | b'%') && matches!(name, "-" | "+" | "main::-" | "main::+" | "::-" | "::+") {
+            let key = self.global_key(name);
             if let Some(b) = self.match_variable(sigil, &key) {
                 return b;
             }
         }
-        if let Some(b) = self.globals.get(&(sigil, key.clone())) {
-            return b.clone();
+        if let Some(b) = self.with_gkey(sigil, name, |k| self.globals.get(k).cloned()) {
+            return b;
         }
+        let key = self.gkey(sigil, name);
         if let Some(hook) = self.global_hook.clone() {
-            if let Some(b) = hook(self, sigil, &key) {
-                self.globals.insert((sigil, key), b.clone());
+            if let Some(b) = hook(self, sigil, &key[1..]) {
+                self.globals.insert(key, b.clone());
                 return b;
             }
         }
@@ -708,22 +781,29 @@ impl Interp {
             b'@' => Binding::Array(Rc::new(RefCell::new(Vec::new()))),
             _ => Binding::Hash(Rc::new(RefCell::new(Hash::default()))),
         };
-        self.globals.insert((sigil, key), b.clone());
+        self.globals.insert(key, b.clone());
         b
     }
 
     /// Package variables whose qualified name starts with `prefix`.
     pub fn globals_with_prefix(&self, prefix: &str) -> Vec<(u8, String, Binding)> {
-        self.globals.iter().filter(|((_, n), _)| n.starts_with(prefix)).map(|((s, n), b)| (*s, n.to_string(), b.clone())).collect()
+        self.globals.iter().filter(|(k, _)| k[1..].starts_with(prefix)).map(|(k, b)| (k.as_bytes()[0], k[1..].to_string(), b.clone())).collect()
     }
 
     pub fn set_global(&mut self, sigil: u8, name: &str, b: Binding) {
-        let key = self.global_key(name);
-        if key.contains("::<my") {
+        // (a package name has no `<`: the name says if it is a file lexical)
+        if name.contains("::<my") {
             self.lex_memo.clear();
             self.scope_memo.clear();
         }
-        self.globals.insert((sigil, key), b);
+        let globals = &mut self.globals;
+        // an existing variable is rebound in place, without a new key
+        if let Some(slot) = Self::with_gkey_in(&self.package, sigil, name, |k| globals.get_mut(k)) {
+            *slot = b;
+            return;
+        }
+        let key = self.gkey(sigil, name);
+        self.globals.insert(key, b);
     }
 
     pub fn set_scalar(&mut self, name: &str, v: Value) {
@@ -776,7 +856,8 @@ impl Interp {
     /// scope, as perl's `eval STRING` at an ExifTool eval site. Errors come
     /// back as `$@` would hold them, and `$@` is set.
     pub fn eval_string(&mut self, code: &[u8], package: &str, scope: &Rc<Scope>, want: Want) -> Result<Vec<Value>, Value> {
-        let saved_pkg = std::mem::replace(&mut self.package, Rc::from(package));
+        let pkg = if &*self.package == package { self.package.clone() } else { Rc::from(package) };
+        let saved_pkg = std::mem::replace(&mut self.package, pkg);
         // The capture variables of the code's own matches end with it (it
         // sees those of its caller).
         let saved_match = self.last_match.clone();
@@ -1097,7 +1178,7 @@ impl Interp {
     }
 
     fn call_perl(&mut self, sub: &Rc<Sub>, scope: Rc<Scope>, arr: ArrayRc, want: Want) -> ER<Vec<Value>> {
-        scope.declare(b'@', "_", Binding::Array(arr));
+        scope.declare_rc(b'@', UNDERSCORE.with(|u| u.clone()), Binding::Array(arr));
         let saved_pkg = std::mem::replace(&mut self.package, sub.package.clone());
         let saved_match = self.last_match.clone();
         let saved = self.saved.len();
@@ -1133,6 +1214,9 @@ impl Interp {
 
     /// Call a named sub (fully qualified, or in the current package).
     pub fn call_named(&mut self, name: &str, args: Vec<Value>, want: Want) -> ER<Vec<Value>> {
+        if let Some(c) = self.with_sub_key(name, |k| self.subs.get(k).cloned()) {
+            return self.call(&c, args, want);
+        }
         let full = self.sub_key(name);
         match self.subs.get(&*full).cloned() {
             Some(c) => self.call(&c, args, want),
@@ -1140,6 +1224,18 @@ impl Interp {
                 Some(c) => self.call(&c, args, want),
                 None => die(format!("Undefined subroutine &{full} called")),
             },
+        }
+    }
+
+    /// Run `f` on the qualified name of the sub `name`, made without
+    /// allocating.
+    fn with_sub_key<R>(&self, name: &str, f: impl FnOnce(&str) -> R) -> R {
+        if let Some(n) = name.strip_prefix("::") {
+            joined(&["main::", n], f)
+        } else if name.contains("::") {
+            f(name)
+        } else {
+            joined(&[&self.package, "::", name], f)
         }
     }
 
@@ -1158,8 +1254,7 @@ impl Interp {
     fn restore_locals(&mut self, to: usize) {
         while self.saved.len() > to {
             match self.saved.pop().unwrap() {
-                Saved::Global(key, b) => {
-                    let k = (key.as_bytes()[0], Rc::from(&key[1..]));
+                Saved::Global(k, b) => {
                     match b {
                         Some(b) => {
                             self.globals.insert(k, b);
@@ -1518,12 +1613,12 @@ impl Interp {
         let inner = Scope::new(Some(scope.clone()));
         let (global_key, saved) = match var {
             None => {
-                let key = (b'$', Rc::from("main::_"));
+                let key: Rc<str> = Rc::from("$main::_");
                 let old = self.globals.get(&key).cloned();
                 (Some(key), old)
             }
             Some((false, name)) if scope.lookup(b'$', name).is_none() => {
-                let key = (b'$', self.global_key(name));
+                let key = self.gkey(b'$', name);
                 let old = self.globals.get(&key).cloned();
                 (Some(key), old)
             }
@@ -1535,7 +1630,7 @@ impl Interp {
                 (Some(k), _) => {
                     self.globals.insert(k.clone(), Binding::Scalar(cell.clone()));
                 }
-                (None, Some((_, name))) => inner.declare(b'$', name, Binding::Scalar(cell.clone())),
+                (None, Some((_, name))) => inner.declare_rc(b'$', name.clone(), Binding::Scalar(cell.clone())),
                 _ => unreachable!(),
             }
             let r = self.run_body(body, &inner, Want::Void);
@@ -2450,21 +2545,21 @@ impl Interp {
                             let b = self.global(b'$', &format!("{prefix}::<my>::{n}"));
                             let Binding::Scalar(c) = b.clone() else { unreachable!() };
                             *c.borrow_mut() = Value::Undef;
-                            scope.declare(b'$', n, b);
+                            scope.declare_rc(b'$', n.clone(), b);
                             Lv::Scalar(c)
                         }
                         Expr::Array(Container::Named(n)) => {
                             let b = self.global(b'@', &format!("{prefix}::<my>::{n}"));
                             let Binding::Array(a) = b.clone() else { unreachable!() };
                             a.borrow_mut().clear();
-                            scope.declare(b'@', n, b);
+                            scope.declare_rc(b'@', n.clone(), b);
                             Lv::Array(a)
                         }
                         Expr::Hash(Container::Named(n)) => {
                             let b = self.global(b'%', &format!("{prefix}::<my>::{n}"));
                             let Binding::Hash(h) = b.clone() else { unreachable!() };
                             *h.borrow_mut() = Hash::default();
-                            scope.declare(b'%', n, b);
+                            scope.declare_rc(b'%', n.clone(), b);
                             Lv::Hash(h)
                         }
                         _ => Lv::Skip,
@@ -2478,17 +2573,17 @@ impl Interp {
             out.push(match v {
                 Expr::Scalar(n) => {
                     let c: Cell = Rc::new(RefCell::new(Value::Undef));
-                    scope.declare(b'$', n, Binding::Scalar(c.clone()));
+                    scope.declare_rc(b'$', n.clone(), Binding::Scalar(c.clone()));
                     Lv::Scalar(c)
                 }
                 Expr::Array(Container::Named(n)) => {
                     let a: ArrayRc = Rc::new(RefCell::new(Vec::new()));
-                    scope.declare(b'@', n, Binding::Array(a.clone()));
+                    scope.declare_rc(b'@', n.clone(), Binding::Array(a.clone()));
                     Lv::Array(a)
                 }
                 Expr::Hash(Container::Named(n)) => {
                     let h: HashRc = Rc::new(RefCell::new(Hash::default()));
-                    scope.declare(b'%', n, Binding::Hash(h.clone()));
+                    scope.declare_rc(b'%', n.clone(), Binding::Hash(h.clone()));
                     Lv::Hash(h)
                 }
                 _ => Lv::Skip,
@@ -2506,18 +2601,15 @@ impl Interp {
                     Expr::Array(_) => b'@',
                     _ => b'%',
                 };
-                let key = self.global_key(n);
-                let old = self.globals.get(&(sigil, key.clone())).cloned();
-                let mut k = String::with_capacity(key.len() + 1);
-                k.push(sigil as char);
-                k.push_str(&key);
-                self.saved.push(Saved::Global(Rc::from(k), old));
+                let key = self.gkey(sigil, n);
+                let old = self.globals.get(&key).cloned();
+                self.saved.push(Saved::Global(key.clone(), old));
                 let b = match sigil {
                     b'$' => Binding::Scalar(Rc::new(RefCell::new(Value::Undef))),
                     b'@' => Binding::Array(Rc::new(RefCell::new(Vec::new()))),
                     _ => Binding::Hash(Rc::new(RefCell::new(Hash::default()))),
                 };
-                self.globals.insert((sigil, key), b.clone());
+                self.globals.insert(key, b.clone());
                 Ok(match b {
                     Binding::Scalar(c) => Lv::Scalar(c),
                     Binding::Array(a) => Lv::Array(a),
@@ -3315,7 +3407,7 @@ impl Interp {
 
     fn map_grep(&mut self, cb: &Callback, l: &Expr, scope: &Rc<Scope>, map: bool) -> ER<Vec<Value>> {
         let items = self.alias_items(l, scope)?;
-        let key = (b'$', Rc::from("main::_"));
+        let key: Rc<str> = Rc::from("$main::_");
         let saved = self.globals.get(&key).cloned();
         let mut out = Vec::new();
         let mut result = Ok(());
@@ -3366,8 +3458,8 @@ impl Interp {
         };
         let a_cell: Cell = Rc::new(RefCell::new(Value::Undef));
         let b_cell: Cell = Rc::new(RefCell::new(Value::Undef));
-        let ka = (b'$', self.global_key("a"));
-        let kb = (b'$', self.global_key("b"));
+        let ka = self.gkey(b'$', "a");
+        let kb = self.gkey(b'$', "b");
         let sa = self.globals.insert(ka.clone(), Binding::Scalar(a_cell.clone()));
         let sb = self.globals.insert(kb.clone(), Binding::Scalar(b_cell.clone()));
         let code = match cb {
@@ -3443,8 +3535,7 @@ impl Interp {
                         return r;
                     }
                 }
-                let key = self.sub_key(name);
-                if *amp && args.is_empty() && !self.subs.contains_key(&*key) && !name.contains("::") {
+                if *amp && args.is_empty() && !name.contains("::") && !self.with_sub_key(name, |k| self.subs.contains_key(k)) {
                     // A bareword: its own name without strict.
                     if self.strict {
                         return die(format!("Bareword \"{name}\" not allowed while \"strict subs\" in use"));
@@ -3453,6 +3544,11 @@ impl Interp {
                 }
                 // perl evaluates the arguments before it looks the sub up.
                 let (a, al) = self.call_args(args, scope, None)?;
+                if let Some(c) = self.with_sub_key(name, |k| self.subs.get(k).cloned()) {
+                    self.pending_aliases = Some(al);
+                    return self.call(&c, a, want);
+                }
+                let key = self.sub_key(name);
                 match self.subs.get(&*key).cloned() {
                     Some(c) => {
                         self.pending_aliases = Some(al);
@@ -3631,7 +3727,7 @@ impl Interp {
     fn no_method_message(&self, name: &str, class: &str) -> String {
         let prefix = format!("{class}::");
         let exists = self.subs.keys().any(|k| k.starts_with(&prefix))
-            || self.globals.keys().any(|(_, k)| k.starts_with(&prefix))
+            || self.globals.keys().any(|k| k[1..].starts_with(&prefix))
             || self.isa.contains_key(class);
         if exists {
             format!("Can't locate object method \"{name}\" via package \"{class}\"")
@@ -3690,7 +3786,7 @@ impl Interp {
     /// runtime declares.
     fn parents_of(&self, class: &str) -> Vec<Rc<str>> {
         let mut out: Vec<Rc<str>> = Vec::new();
-        if let Some(Binding::Array(a)) = self.globals.get(&(b'@', Rc::from(format!("{class}::ISA")))) {
+        if let Some(Binding::Array(a)) = joined(&["@", class, "::ISA"], |k| self.globals.get(k)) {
             out.extend(a.borrow().iter().map(|p| Rc::from(p.to_text().as_str())));
         }
         for p in self.isa.get(class).map(|v| v.as_slice()).unwrap_or(&[]) {
@@ -3702,12 +3798,11 @@ impl Interp {
     }
 
     fn find_method(&self, class: &str, name: &str) -> Option<Rc<Code>> {
-        let key = format!("{class}::{name}");
-        if let Some(c) = self.subs.get(key.as_str()) {
-            return Some(c.clone());
+        if let Some(c) = joined(&[class, "::", name], |k| self.subs.get(k).cloned()) {
+            return Some(c);
         }
         // @ISA set by the program itself, then by the runtime.
-        if let Some(Binding::Array(a)) = self.globals.get(&(b'@', Rc::from(format!("{class}::ISA")))) {
+        if let Some(Binding::Array(a)) = joined(&["@", class, "::ISA"], |k| self.globals.get(k)) {
             for p in a.borrow().iter() {
                 if let Some(c) = self.find_method(&p.to_text(), name) {
                     return Some(c);
