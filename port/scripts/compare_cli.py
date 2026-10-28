@@ -7,7 +7,7 @@ leave. Prints the cases that differ, then the totals and the timings.
 
 EXIFTOOL_DIR is ExifTool's source tree (default ../../exiftool); FILTER keeps
 the cases whose line contains it; CLI_CASES=FILE reads the cases from FILE;
-PORT_BIN=PATH runs the port's own exiftool binary instead of run_t + script.
+PORT_BIN=PATH runs the port's own exiftool-rs binary instead of run_t + script.
 Outputs go to target/cli/<n>/{perl,port}.
 """
 import hashlib
@@ -97,7 +97,7 @@ def run(cmd, cwd, env):
 
 
 def main():
-    subprocess.run(["cargo", "build", "--release", "--example", "run_t", "--example", "exiftool", "-j2"], cwd=here, capture_output=True)
+    subprocess.run(["cargo", "build", "--release", "--example", "run_t", "--example", "exiftool-rs", "-j2"], cwd=here, capture_output=True)
     os.makedirs(work, exist_ok=True)
     env_perl = dict(os.environ)
     env_port = {k: v for k, v in os.environ.items() if k != "EXIFTOOL_LIB"}

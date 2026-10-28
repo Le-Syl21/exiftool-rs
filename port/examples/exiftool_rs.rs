@@ -1,4 +1,4 @@
-//! The exiftool application, all in Rust: the port of the script
+//! exiftool-rs, the exiftool application all in Rust: the port of the script
 //! `exiftool` (src/cli) on the built-in library. No Perl file is read
 //! (a config file, an argfile or a -if expression the user gives is still
 //! Perl, run by the port's interpreter, as ExifTool runs it).

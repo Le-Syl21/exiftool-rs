@@ -21,9 +21,12 @@ interpreter (no Perl needed: the library is built in). For that program:
 - A sub that is not ported yet is still the script's Perl, called with
   `pl::call(it, "main::Name", args)` like any other.
 
-Once every part is ported, `main::<program>` (the main program, below) runs
-in place of the script's top-level code (`EXIFTOOL_NATIVE_MAIN=1` while it
-is being checked), and the binary no longer needs the script at all.
+`main::<program>` (the main program, below) runs in place of the script's
+top-level code with `EXIFTOOL_NATIVE_MAIN=1`. The application itself is the
+binary `exiftool-rs` (`cargo build --release --example exiftool-rs`), named
+as the crate's binary on main so that it is never mistaken for Perl's
+`exiftool`: it reads no Perl file. `PORT_BIN=target/release/examples/exiftool-rs`
+makes the CLI judge run it.
 
 ## The parts
 

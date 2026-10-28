@@ -35,3 +35,9 @@ bzip2 = "0.6"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# The application, named as the crate's binary on main (exiftool-rs), so
+# that it can never be mistaken for Perl's exiftool.
+[[example]]
+name = "exiftool-rs"
+path = "examples/exiftool_rs.rs"
