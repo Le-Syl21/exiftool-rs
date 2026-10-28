@@ -315,10 +315,13 @@ impl<'a> Parser<'a> {
 
     fn block(&mut self) -> R<Block> {
         self.expect("{")?;
-        // `use warnings` is lexical: it ends with the block
+        // `use warnings` and `package NAME;` are lexical: they end with the
+        // block
         let saved = self.warnings;
+        let saved_pkg = self.package.clone();
         let b = self.statements();
         self.warnings = saved;
+        self.package = saved_pkg;
         let b = b?;
         self.expect("}")?;
         Ok(b)
