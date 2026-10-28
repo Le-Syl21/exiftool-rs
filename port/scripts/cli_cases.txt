@@ -1,0 +1,166 @@
+# Command lines run by scripts/compare_cli.sh with Perl's exiftool and with
+# the port. One case per line: KIND|ARGUMENTS.
+#   R  read-only: on t/images
+#   W  writes: on images/, whose files are compared too
+# Each case runs in a fresh copy of the images (as both t/images and images)
+# for each side.
+# Arguments are split on spaces, except inside '...' quotes.
+
+# --- output formats
+R|t/images/Canon.jpg
+R|-a -u -G1 t/images/Nikon.jpg
+R|-a -u -G0:1:2:3:4 t/images/XMP.jpg
+R|-s t/images/ExifTool.jpg
+R|-S t/images/ExifTool.jpg
+R|-s -s -s t/images/ExifTool.jpg
+R|-t t/images/Olympus.jpg
+R|-T -FileName -Model -ISO t/images/Canon.jpg t/images/Nikon.jpg t/images/Sony.jpg
+R|-n t/images/GPS.jpg
+R|-e t/images/Canon.jpg
+R|-E t/images/XMP.xmp
+R|-ex t/images/XMP.xmp
+R|-g t/images/Pentax.jpg
+R|-g1 -H t/images/Pentax.jpg
+R|-G -a -U t/images/Unknown.jpg
+R|-D -G t/images/ExifTool.jpg
+R|-l t/images/Canon.jpg
+R|-f -Model -LensID -XYZTag t/images/Canon.jpg
+R|-j t/images/XMP.jpg
+R|-j -n -G1 -struct t/images/XMP.xmp
+R|-j -b -a t/images/PNG.png
+R|-j -l t/images/Canon.jpg
+R|-X t/images/Sony.jpg
+R|-X -l -b t/images/FujiFilm.jpg
+R|-X -struct t/images/XMP2.xmp
+R|-csv t/images/Canon.jpg t/images/Nikon.jpg t/images/Olympus.jpg
+R|-csv -G t/images/GPS.jpg t/images/XMP.jpg
+R|-php t/images/Ricoh.jpg
+R|-php -n t/images/Ricoh.jpg
+R|-struct t/images/XMP3.xmp
+R|-sort t/images/Kodak.jpg
+R|-sort -G1 t/images/Kodak.jpg
+R|-b -ThumbnailImage t/images/Canon.jpg
+R|-b -XMP t/images/XMP.jpg
+R|-h t/images/Casio.jpg
+R|-v t/images/Minolta.jpg
+R|-v3 t/images/Canon.jpg
+R|-v5 t/images/PNG.png
+R|-htmlDump t/images/ExifTool.jpg
+R|-validate -warning -a t/images/ExifTool.jpg
+R|-ee -G3 t/images/QuickTime.mov
+R|-ee3 t/images/GoPro.jpg
+R|-L t/images/IPTC.jpg
+R|-charset latin1 t/images/IPTC.jpg
+R|-charset iptc=latin -IPTC:all t/images/IPTC.jpg
+R|-lang fr t/images/Canon.jpg
+R|-lang de -G1 -a t/images/Nikon.jpg
+R|-lang ja -s t/images/Sony.jpg
+R|-sep ', ' -Keywords -Subject t/images/XMP.jpg
+R|-d '%Y/%m/%d %H:%M' t/images/Canon.jpg
+R|-d %s -n -DateTimeOriginal t/images/Canon.jpg
+R|-c '%.6f' t/images/GPS.jpg
+R|-c '%d deg %d min %.2f sec' -GPSPosition t/images/GPS.jpg
+R|-p '$FileName: $Model, ISO $ISO' t/images/Canon.jpg t/images/Nikon.jpg
+R|-p '${Model;tr/a-z/A-Z/} ${ExposureTime#}' t/images/Canon.jpg
+R|-p '-- ${FileName;s/\..*//} --' -q t/images/
+R|-p fmt_files/gpx.fmt t/images/GPS.jpg
+R|-p fmt_files/kml.fmt t/images/GPS.jpg
+R|-p fmt_files/gpx_wpt.fmt t/images/GPS.jpg
+R|-w! %d%f.txt -o /dev/null t/images/Canon.jpg
+
+# --- tags, groups, exclusions
+R|-Model -Make -LensID t/images/Canon.jpg
+R|-EXIF:all t/images/Nikon.jpg
+R|-all -XMP:all t/images/XMP.jpg
+R|-MakerNotes:all -n t/images/Panasonic.jpg
+R|-*Date* t/images/Canon.jpg
+R|-time:all -G1 -a -s t/images/QuickTime.mov
+R|-composite:all t/images/GPS.jpg
+R|-xmp-dc:all t/images/XMP.jpg
+R|-file:all t/images/PDF.pdf
+R|--ExifIFD:all -G1 t/images/Canon.jpg
+R|-all --MakerNotes:all -s t/images/Canon.jpg
+R|-Copyright#  -Copyright t/images/IPTC.jpg
+
+# --- conditions and file selection
+R|-if '$Make eq "Canon"' -Model t/images/
+R|-if '$ISO > 100' -FileName -ISO t/images/
+R|-if 'not $GPSLatitude' -FileName t/images/
+R|-if '$jpg:all' -FileName t/images/
+R|-ext jpg -FileName t/images/
+R|-ext xmp -ext png -FileName -s t/images/
+R|--ext jpg -FileName -FileType t/images/
+R|-fast -FileName -ImageSize t/images/
+R|-fast2 -FileName -ImageSize t/images/
+R|-fast3 -FileType t/images/
+R|-fileOrder FileSize -FileName -FileSize t/images/
+R|-fileOrder -DateTimeOriginal -FileName t/images/
+R|-i SYMLINKS -FileName -r t/images
+R|-progress -FileName t/images/Canon.jpg t/images/Nikon.jpg
+R|-q -q t/images/Unknown.jpg
+R|-m -p '$XYZ' t/images/Canon.jpg
+
+# --- lists and help
+R|-ver
+R|-ver -v
+R|-list
+R|-listw
+R|-listf
+R|-listr
+R|-listwf
+R|-listg
+R|-listg1
+R|-listd
+R|-listx -EXIF:Main
+R|-listx -s -f -XMP-dc:All
+R|-listgeo
+R|-list -lang fr
+R|-listItem 0 -listx -EXIF:Main
+
+# --- argument files, config files, api
+R|-@ arg_files/exif2xmp.args -echo DONE t/images/Canon.jpg
+R|-config config_files/example.config -a -G1 t/images/ExifTool.jpg
+R|-config config_files/age.config -Age -DateTimeOriginal t/images/Canon.jpg
+R|-config config_files/gps2utm.config -UTMEasting -UTMNorthing t/images/GPS.jpg
+R|-config '' -a t/images/Canon.jpg
+R|-api QuickTimeUTC=1 -time:all t/images/QuickTime.mov
+R|-api Filter='tr/a-z/A-Z/' -Model t/images/Canon.jpg
+R|-api LargeFileSupport=1 -api RequestAll=3 t/images/Canon.jpg
+R|-userParam MyParam=xyz -p '$MyParam $Model' t/images/Canon.jpg
+R|-echo 'hello' -echo2 'err' -echo3 'end3' t/images/Canon.jpg
+R|-common_args -s t/images/Canon.jpg -execute -Model t/images/Nikon.jpg -execute -ISO t/images/Sony.jpg
+W|-geotag images/Geotag.gpx -GPS:all -overwrite_original images/Canon.jpg
+R|-diff t/images/Canon.jpg t/images/Nikon.jpg
+R|-a -u -G1 -s t/images/
+R|-j -a -u -G1 -n t/images/
+
+# --- writing (on copies)
+W|-overwrite_original -Artist='Sylvain' -XMP:Title=Test images/Canon.jpg
+W|-o images/out.jpg -all= images/Nikon.jpg
+W|-Keywords+=one -Keywords+=two -Keywords-=one -overwrite_original images/XMP.jpg
+W|-tagsFromFile images/Canon.jpg -all:all -overwrite_original images/Nikon.jpg
+W|-tagsFromFile @ '-XMP:CreateDate<DateTimeOriginal' -overwrite_original images/Canon.jpg
+W|-@ arg_files/exif2iptc.args -overwrite_original images/Canon.jpg
+W|-@ arg_files/iptc2xmp.args -overwrite_original images/IPTC.jpg
+W|-@ arg_files/gps2xmp.args -overwrite_original images/GPS.jpg
+W|-AllDates+=1:00 -overwrite_original images/Canon.jpg
+W|'-FileName<${Model}_%f.%e' images/Canon.jpg
+W|'-Directory<images/sub' images/Nikon.jpg
+W|-d %Y '-FileName<${DateTimeOriginal}_%c.%e' images/Canon.jpg images/Nikon.jpg
+W|-P -overwrite_original -Comment=x images/Sony.jpg
+W|-o images/%f.xmp images/Canon.jpg
+W|-o images/%f.mie -all images/XMP.jpg
+W|-geotag images/Geotag.gpx '-geotime<DateTimeOriginal' -overwrite_original images/Canon.jpg
+W|-csv=images/../csv_in.csv -overwrite_original images/Canon.jpg
+W|-json=images/../json_in.json -overwrite_original images/Nikon.jpg
+W|-config config_files/example.config -NewXMPxxxTag1=hello -overwrite_original images/XMP.jpg
+W|-ThumbnailImage<=images/Unknown.jpg -overwrite_original images/Canon.jpg
+W|-Orientation=6 -n -overwrite_original images/Canon.jpg
+W|-XMP-dc:Subject=a -XMP-dc:Subject=b -wm cg -overwrite_original images/XMP.xmp
+W|-delete_original! images/Canon.jpg
+W|-restore_original images/Canon.jpg
+W|-if '$Make eq "NIKON CORPORATION"' -Artist=N -overwrite_original images/
+W|-ext jpg -r -Artist=all -overwrite_original images/
+W|-Artist=x -o images/new.xmp
+W|-tagsFromFile images/XMP.xmp -XMP:all -o images/copy.xmp images/Canon.jpg
+W|-v2 -Artist=v -overwrite_original images/Canon.jpg

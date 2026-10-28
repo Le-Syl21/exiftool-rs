@@ -265,6 +265,18 @@ pub fn load_lexicals_as(it: &mut Interp, module: &str, data: &[u8], file: Option
                 }
             }
             _ => {
+                // an array or hash filled before the module loads (the
+                // exiftool script pushes -config files onto @configFiles
+                // first) is kept, as for a scalar: read past the dumped one
+                let filled = match &existing {
+                    Binding::Array(a) => !a.borrow().is_empty(),
+                    Binding::Hash(h) => !h.borrow().is_empty(),
+                    _ => false,
+                };
+                if filled {
+                    r.node(it, None)?;
+                    continue;
+                }
                 // A variable referenced earlier in the dump comes back as a
                 // back reference: bind the name to that storage.
                 match (r.node(it, Some(&existing))?, &existing) {
