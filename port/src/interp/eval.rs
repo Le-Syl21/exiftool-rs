@@ -1649,7 +1649,7 @@ impl Interp {
                 let h = h.borrow();
                 let mut out = Vec::with_capacity(h.len() * 2);
                 for (k, v) in h.iter() {
-                    out.push(Value::Str(k.clone()));
+                    out.push(h.key_value(k));
                     out.push(v.clone());
                 }
                 Ok(out)
@@ -2186,6 +2186,20 @@ impl Interp {
         }
     }
 
+    /// A hash key, and whether it is a character string with a character
+    /// above 0xFF (perl keeps such a key in UTF-8, flagged).
+    fn hash_key_wide(&mut self, k: &Expr, scope: &Rc<Scope>, op: &str) -> ER<(Rc<[u8]>, bool)> {
+        if !matches!(k, Expr::List(_)) {
+            let v = self.scalar(k, scope)?;
+            if v.is_undef() {
+                self.uninit_slow(k, scope, op, false)?;
+            }
+            let wide = matches!(&v, Value::UStr(s) if !crate::perl::utf8::is_downgradable(s));
+            return Ok((v.to_bytes(), wide));
+        }
+        Ok((self.hash_key(k, scope, op)?, false))
+    }
+
     fn hash_key(&mut self, k: &Expr, scope: &Rc<Scope>, op: &str) -> ER<Rc<[u8]>> {
         // $h{a,b} joins with $;
         if let Expr::List(items) = k {
@@ -2345,8 +2359,12 @@ impl Interp {
                 Lv::AElem(a, i)
             }
             Expr::HElem(c, k) => {
-                let k = self.hash_key(k, scope, "hash element")?;
-                Lv::HElem(self.hash_of(c, scope, true)?, k)
+                let (k, wide) = self.hash_key_wide(k, scope, "hash element")?;
+                let h = self.hash_of(c, scope, true)?;
+                if wide {
+                    h.borrow_mut().mark_utf8(&k);
+                }
+                Lv::HElem(h, k)
             }
             Expr::Array(c) => Lv::Array(self.array_of(c, scope, true)?),
             Expr::Hash(c) => Lv::Hash(self.hash_of(c, scope, true)?),
@@ -2372,6 +2390,13 @@ impl Interp {
             Expr::HSlice(c, keys) => {
                 let keys = self.list(keys, scope)?;
                 let h = self.hash_of(c, scope, true)?;
+                for k in &keys {
+                    if let Value::UStr(s) = k {
+                        if !crate::perl::utf8::is_downgradable(s) {
+                            h.borrow_mut().mark_utf8(s);
+                        }
+                    }
+                }
                 Lv::List(keys.iter().map(|k| Lv::HElem(h.clone(), k.to_bytes())).collect())
             }
             Expr::Cond(c, a, b) => {
@@ -3850,7 +3875,10 @@ fn assign_values(lv: &Lv, vals: Vec<Value>) -> ER<()> {
 fn lv_values(lv: &Lv) -> Vec<Value> {
     match lv {
         Lv::Array(a) => a.borrow().clone(),
-        Lv::Hash(h) => h.borrow().iter().flat_map(|(k, v)| [Value::Str(k.clone()), v.clone()]).collect(),
+        Lv::Hash(h) => {
+            let h = h.borrow();
+            h.iter().flat_map(|(k, v)| [h.key_value(k), v.clone()]).collect()
+        }
         Lv::List(items) => items.iter().flat_map(lv_values).collect(),
         Lv::Skip => vec![],
         other => vec![other.get()],
@@ -3862,7 +3890,11 @@ pub fn pairs_to_hash(vals: Vec<Value>) -> Hash {
     let mut it = vals.into_iter();
     while let Some(k) = it.next() {
         let v = it.next().unwrap_or_default();
-        h.insert(&k.to_bytes(), v);
+        let key = k.to_bytes();
+        if matches!(&k, Value::UStr(s) if !crate::perl::utf8::is_downgradable(s)) {
+            h.mark_utf8(&key);
+        }
+        h.insert(&key, v);
     }
     h
 }

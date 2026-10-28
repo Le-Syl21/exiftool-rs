@@ -297,7 +297,7 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                 Expr::Hash(c) => {
                     let h = it.hash_of(c, scope, true)?;
                     let h = h.borrow();
-                    h.iter().map(|(k, v)| (Value::Str(k.clone()), v.clone())).collect()
+                    h.iter().map(|(k, v)| (h.key_value(k), v.clone())).collect()
                 }
                 Expr::Array(c) => {
                     let ar = it.array_of(c, scope, true)?;
@@ -305,7 +305,10 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
                     ar.iter().enumerate().map(|(i, v)| (Value::Int(i as i64), v.clone())).collect()
                 }
                 e => match it.scalar(e, scope)? {
-                    Value::HashRef(h) => h.borrow().iter().map(|(k, v)| (Value::Str(k.clone()), v.clone())).collect(),
+                    Value::HashRef(h) => {
+                        let h = h.borrow();
+                        h.iter().map(|(k, v)| (h.key_value(k), v.clone())).collect()
+                    }
                     Value::ArrayRef(ar) => ar.borrow().iter().enumerate().map(|(i, v)| (Value::Int(i as i64), v.clone())).collect(),
                     _ => return die(format!("Type of argument to {name} must be hash or array")),
                 },

@@ -290,9 +290,16 @@ impl Interp {
             };
             match rec {
                 Some(b) => {
-                    let n = h.borrow().lines;
+                    let (n, utf8) = (h.borrow().lines, h.borrow().utf8);
                     self.set_scalar("main::.", Value::Int(n));
-                    out.push(Value::bytes(b));
+                    // a :utf8 layer reads characters
+                    out.push(if !utf8 {
+                        Value::bytes(b)
+                    } else if crate::perl::utf8::is_lax_utf8(&b) {
+                        Value::chars(b)
+                    } else {
+                        Value::chars(crate::perl::utf8::decode_strict(&b))
+                    });
                     if want != Want::List {
                         break;
                     }

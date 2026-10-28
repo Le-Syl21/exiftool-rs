@@ -448,6 +448,10 @@ pub mod indexmap_lite {
         values: Vec<Value>,
         /// The package this hash is blessed into (`bless`).
         pub blessed: Option<Rc<str>>,
+        /// The keys that are character strings with a character above
+        /// 0xFF (held in UTF-8; perl's UTF-8 keys): `keys` gives them back
+        /// as character strings. None for almost every hash.
+        utf8_keys: Option<Box<rustc_hash::FxHashSet<Rc<[u8]>>>>,
     }
 
     impl IndexMap {
@@ -455,7 +459,21 @@ pub mod indexmap_lite {
         pub fn with_capacity(n: usize) -> Self {
             let mut index = HashMap::default();
             index.reserve(n);
-            IndexMap { keys: Vec::with_capacity(n), index, values: Vec::with_capacity(n), blessed: None }
+            IndexMap { keys: Vec::with_capacity(n), index, values: Vec::with_capacity(n), blessed: None, utf8_keys: None }
+        }
+
+        /// Note that key `k` (the UTF-8 form) is a character string's.
+        pub fn mark_utf8(&mut self, k: &[u8]) {
+            self.utf8_keys.get_or_insert_with(Default::default).insert(Rc::from(k));
+        }
+
+        /// A key as a value: a character string for a key noted so, bytes
+        /// otherwise.
+        pub fn key_value(&self, k: &Rc<[u8]>) -> Value {
+            match &self.utf8_keys {
+                Some(u) if u.contains(k) => Value::UStr(k.clone()),
+                _ => Value::Str(k.clone()),
+            }
         }
 
         pub fn get(&self, k: &[u8]) -> Option<&Value> {
@@ -488,6 +506,7 @@ pub mod indexmap_lite {
             self.keys.clear();
             self.index.clear();
             self.values.clear();
+            self.utf8_keys = None;
         }
 
         pub fn contains(&self, k: &[u8]) -> bool {
