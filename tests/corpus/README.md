@@ -13,8 +13,11 @@ Large corpora are not stored in the repository: each one is a
 
 RAW files from nearly every camera brand (Canon, Nikon, Sony, Fujifilm,
 Panasonic, Olympus, Pentax, Sigma, Leica, Kodak, Hasselblad, phones...),
-taken from the archive of RAW-Samples.ch (October 2019), nested archives
-unpacked.
+taken from the "All Files" archive of RAW-Samples.ch, nested archives
+unpacked. That archive (fixed on October 20th, 2019, the site's last
+change to its files) holds every file the site's pages link today (367,
+checked on 2026-10-28, none newer than February 2016) and 11 more that
+the pages no longer link.
 
 Only the metadata is kept: every byte that ExifTool 13.59 does not read was
 set to zero (the image data), and the scan data of embedded JPEG images was
