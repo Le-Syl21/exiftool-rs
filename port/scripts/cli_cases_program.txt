@@ -1,0 +1,136 @@
+# Command lines for the main program (src/cli/program.rs): the BEGIN block,
+# the command loop, the end of the argument loop and the processing of each
+# command. Same format as cli_cases.txt (KIND|ARGUMENTS).
+
+# --- BEGIN block, help, version
+R|
+R|-xpath -ver
+R|-config config_files/age.config -config '' -ver
+R|-execute
+R|-q
+
+# --- the command loop: -execute, -common_args, echo3/echo4 with ${status}
+R|-Model t/images/Canon.jpg -execute -Make t/images/Nikon.jpg
+R|-Model t/images/Canon.jpg -execute3 -Make t/images/Nikon.jpg -execute
+R|-echo3 'status ${status}' -echo4 'err ${STATUS}' t/images/Nonexistent.jpg -execute -echo3 'again ${status}' t/images/Canon.jpg
+R|-Model -common_args -s t/images/Canon.jpg
+R|-execute -Model t/images/Canon.jpg -common_args -S
+R|-Model t/images/Canon.jpg -execute -common_args -s3
+R|-badoption -Model t/images/Canon.jpg -execute -Make t/images/Nikon.jpg
+R|-- -Model
+R|-Model -- t/images/Canon.jpg
+
+# --- command checks
+R|-delete_original -Model t/images/Canon.jpg
+R|-delete_original -Model=x t/images/Canon.jpg
+R|-restore_original -Model=x t/images/Canon.jpg
+R|-overwrite_original_in_place -o out.jpg -Model=x t/images/Canon.jpg
+R|-o out.jpg
+R|-W %d%f.txt -csv t/images/Canon.jpg
+R|-diff t/images/Nikon.jpg -j t/images/Canon.jpg
+R|-csv -p '$Model' t/images/Canon.jpg
+R|-csv -b -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-csv -charset Latin -Model t/images/Canon.jpg
+R|--all t/images/Canon.jpg
+R|-x all t/images/Canon.jpg
+R|-Model=x -diff t/images/Nikon.jpg t/images/Canon.jpg
+R|-Model=x -plot t/images/Canon.jpg
+R|-Model=x -o out.txt t/images/Canon.jpg
+R|-Model=x -o out.zzz t/images/Canon.jpg
+R|-Model
+R|-tagsFromFile t/images/NoSuchFile.jpg t/images/Canon.jpg
+R|-NoSuchTag<Model t/images/Canon.jpg
+R|-FileSize<Model t/images/Canon.jpg
+R|-NoSuchTag=1 t/images/Canon.jpg
+R|-ext xyz -FileName t/images/
+
+# --- output formats set up by the program
+R|-X t/images/Canon.jpg
+R|-X -s t/images/Canon.jpg
+R|-X -t t/images/Canon.jpg
+R|-X -b -ThumbnailImage t/images/Canon.jpg
+R|-X -charset Latin -Model t/images/Canon.jpg
+R|-X -charset Cyrillic -Model t/images/Canon.jpg
+R|-X -charset ShiftJIS -Model t/images/Canon.jpg
+R|-php -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-php -b -ThumbnailImage t/images/Canon.jpg
+R|-j -b -ThumbnailImage t/images/Canon.jpg
+R|-j -t -Model t/images/Canon.jpg
+R|-struct -XMP:all t/images/XMP.jpg
+R|-api struct=1 -XMP:all t/images/XMP.jpg
+R|-args -Model t/images/Canon.jpg
+R|-args -G -Model t/images/Canon.jpg
+R|-sort -s t/images/Canon.jpg
+R|-sort -X t/images/Canon.jpg
+R|-G -s t/images/Canon.jpg
+R|-G1 -sort -Model -Make t/images/Canon.jpg
+R|-E -Model t/images/Canon.jpg
+R|-E -X -Model t/images/Canon.jpg
+R|-ex -j -Comment t/images/Canon.jpg
+R|-b -Model t/images/Canon.jpg
+R|-b -v -Model t/images/Canon.jpg
+R|-v0 -Model t/images/Canon.jpg
+R|-v t/images/Canon.jpg
+R|-v -Model t/images/Canon.jpg
+R|-htmlDump t/images/Canon.jpg
+R|-mwg:Description -mwg:Creator t/images/XMP.jpg
+R|-use MWG -Description t/images/XMP.jpg
+R|-f -m -Model -NoSuchTag t/images/Canon.jpg
+R|-api missingtagvalue=NONE -f -Model -NoSuchTag t/images/Canon.jpg
+R|-lang de -Model -Flash t/images/Canon.jpg
+
+# --- file order, progress, summaries
+R|-fileOrder FileSize -FileName t/images/Canon.jpg t/images/Nikon.jpg t/images/Sony.jpg t/images/XMP.xmp
+R|-fileOrder -FileSize -FileName t/images/Canon.jpg t/images/Nikon.jpg t/images/Sony.jpg
+R|-fileOrder Model -fileOrder -ISO -FileName t/images/Canon.jpg t/images/Nikon.jpg t/images/Sony.jpg t/images/Pentax.jpg
+R|-fileOrder5 FileName -FileName t/images/Canon.jpg t/images/Nikon.jpg
+R|-progress -FileName t/images/
+R|-progress: -FileName t/images/Canon.jpg
+R|-r -FileName t/images
+R|-if '$Model eq "x"' -Model t/images/Canon.jpg
+R|-if '$Model eq "x"' -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-q -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-Model t/images/Canon.jpg t/images/NoSuchFile.jpg
+R|-csv=csv_in.csv -v2 -Artist -Title t/images/Canon.jpg
+R|-json=json_in.json -v3 -Artist images/Nikon.jpg
+
+# --- writing
+W|-Artist=me -overwrite_original images/Canon.jpg images/Nikon.jpg
+W|-Artist= -overwrite_original images/Canon.jpg
+W|-Artist^= -overwrite_original images/Canon.jpg
+W|-XMP:Subject+=a -XMP:Subject+=b -overwrite_original images/XMP.jpg
+W|-XMP:Subject-=nothing -overwrite_original images/XMP.jpg
+W|-XMP:Subject- -overwrite_original images/XMP.jpg
+W|-all= -overwrite_original images/Canon.jpg
+W|-All:all= -Model=x images/Canon.jpg
+W|-ec -Comment='a\tb\x41\\c\n' -overwrite_original images/Canon.jpg
+W|-Artist=x -Model -overwrite_original images/Canon.jpg
+W|-Artist=x -Model -Make -overwrite_original images/Canon.jpg
+W|-Artist=x -x Make -overwrite_original images/Canon.jpg
+W|-Comment<=csv_in.csv -overwrite_original images/Canon.jpg
+W|-Comment<=nosuchfile.txt -overwrite_original images/Canon.jpg
+W|'-Comment<Model' '-Artist+<Make' -overwrite_original images/Canon.jpg
+W|-tagsFromFile images/Nikon.jpg -Model -tagsFromFile images/Sony.jpg -Make -overwrite_original images/Canon.jpg
+W|-tagsFromFile images/Nikon.jpg -Model -tagsFromFile images/Nikon.jpg -Make -overwrite_original images/Canon.jpg
+W|-tagsFromFile %d%f.xmp -XMP:all -overwrite_original images/XMP.jpg
+W|-geotag images/Geotag.gpx -overwrite_original images/Canon.jpg
+W|-geotag images/Geotag.gpx -v -overwrite_original images/Canon.jpg
+W|-o images/new.xmp -Artist=me
+W|-o images/copy.jpg images/Canon.jpg
+W|-o images/sub/ -Artist=x images/Canon.jpg images/Nikon.jpg
+W|-Artist=x images/Canon.jpg
+W|-delete_original images/
+W|-restore_original images/Canon.jpg
+W|-w txt -Model images/Canon.jpg images/Nikon.jpg
+W|-w! %d%f.out -Model images/Canon.jpg
+W|-w+ %d%f.txt -Model images/Canon.jpg -execute -w+ %d%f.txt -Make images/Canon.jpg
+W|-W %d%f_%t.%s -Model -Make images/Canon.jpg
+W|-csv -w csv -Model images/Canon.jpg images/Nikon.jpg
+W|-csv -w+ csv -Model images/Canon.jpg
+W|-X -w xml -Model images/Canon.jpg
+W|-p '#[HEAD]head' -p '$Model' -p '#[TAIL]tail' -w %d%f.txt images/Canon.jpg images/Nikon.jpg
+W|-p '#[SECT]sect $Directory' -p '$Model' -p '#[ENDS]ends' images/Canon.jpg images/Nikon.jpg
+W|-FileName=%f_new.%e images/Canon.jpg
+W|-if '$Model eq "x"' -Artist=x -overwrite_original images/Canon.jpg
+W|-Artist=x -overwrite_original images/Unknown.jpg images/Canon.jpg
+W|-Artist=x -overwrite_original images/NoSuchFile.jpg
