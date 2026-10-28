@@ -370,6 +370,8 @@ pub fn substr_range(len: usize, off: i64, l: Option<i64>) -> Option<(usize, usiz
 pub struct LastMatch {
     pub subject: Rc<[u8]>,
     pub spans: Vec<Option<(usize, usize)>>,
+    /// The pattern's group names, when it has any (for %+ and %-).
+    pub names: Vec<Option<String>>,
 }
 
 /// The aliases of one call's `@_`: where each element came from, and its
@@ -614,6 +616,11 @@ impl Interp {
     /// A package variable, created on first use.
     pub fn global(&mut self, sigil: u8, name: &str) -> Binding {
         let key = self.global_key(name);
+        if matches!(&*key, "main::-" | "main::+") {
+            if let Some(b) = self.match_variable(sigil, &key) {
+                return b;
+            }
+        }
         if let Some(b) = self.globals.get(&(sigil, key.clone())) {
             return b.clone();
         }
@@ -1953,6 +1960,62 @@ impl Interp {
         self.scalar_cell(scope, name).borrow().clone()
     }
 
+    /// A successful match: what `$1`, `$&`, `@-`, `@+`, `%+` and `%-` read.
+    fn set_last_match(&mut self, re: &crate::perl::regex::PerlRegex, subject: &Rc<[u8]>, spans: &crate::perl::regex::Spans) {
+        let names = if re.names.iter().any(|n| n.is_some()) { re.names.clone() } else { Vec::new() };
+        self.last_match = Some(LastMatch { subject: subject.clone(), spans: spans.clone(), names });
+    }
+
+    /// `@-`, `@+`, `%+` and `%-`: made from the last successful match when
+    /// they are read (`$-[1]`, `$+{name}`...), so that a match costs nothing
+    /// more for them.
+    fn match_variable(&self, sigil: u8, key: &str) -> Option<Binding> {
+        let m = self.last_match.as_ref();
+        match (sigil, key) {
+            (b'@', "main::-") | (b'@', "main::+") => {
+                let start = key == "main::-";
+                let mut v = Vec::new();
+                if let Some(m) = m {
+                    // @- stops at the last group that matched, @+ has every group
+                    let last = if start { m.spans.iter().rposition(|s| s.is_some()).unwrap_or(0) } else { m.spans.len() - 1 };
+                    for sp in &m.spans[..=last] {
+                        v.push(match sp {
+                            Some((a, b)) => Value::Int(if start { *a } else { *b } as i64),
+                            None => Value::Undef,
+                        });
+                    }
+                }
+                Some(Binding::Array(Rc::new(RefCell::new(v))))
+            }
+            (b'%', "main::+") | (b'%', "main::-") => {
+                let mut h = Hash::default();
+                if let Some(m) = m {
+                    for (i, name) in m.names.iter().enumerate() {
+                        let Some(name) = name else { continue };
+                        let v = match m.spans.get(i).copied().flatten() {
+                            Some((a, b)) => Value::bytes(&m.subject[a..b]),
+                            None => Value::Undef,
+                        };
+                        if key == "main::+" {
+                            // the leftmost group of that name that took part
+                            if !v.is_undef() && h.get(name.as_bytes()).is_none() {
+                                h.insert(name.as_bytes(), v);
+                            }
+                        } else {
+                            // every group of that name
+                            match h.get(name.as_bytes()) {
+                                Some(Value::ArrayRef(a)) => a.borrow_mut().push(v),
+                                _ => h.insert(name.as_bytes(), Value::ArrayRef(Rc::new(RefCell::new(vec![v])))),
+                            }
+                        }
+                    }
+                }
+                Some(Binding::Hash(Rc::new(RefCell::new(h))))
+            }
+            _ => None,
+        }
+    }
+
     fn capture(&self, n: usize) -> Value {
         match &self.last_match {
             Some(m) => match m.spans.get(n).copied().flatten() {
@@ -2734,7 +2797,7 @@ impl Interp {
                 }
             }
             if let Some(last) = all.last() {
-                self.last_match = Some(LastMatch { subject: subject.clone(), spans: last.clone() });
+                self.set_last_match(&re, &subject, last);
             }
             if let Some((k, _)) = &cell {
                 self.pos.remove(k);
@@ -2752,7 +2815,7 @@ impl Interp {
                     self.pos_set(*k, e, tag);
                 }
             }
-            self.last_match = Some(LastMatch { subject: subject.clone(), spans: spans.clone() });
+            self.set_last_match(&re, &subject, &spans);
         } else if global {
             if let Some((k, _)) = &cell {
                 if !pat.flags.contains('c') {
@@ -2794,7 +2857,7 @@ impl Interp {
         loop {
             let Some(spans) = re.match_at(&subject, start).map_err(|e| Flow::Die(Value::from(e)))? else { break };
             let (s, e) = spans[0].unwrap();
-            self.last_match = Some(LastMatch { subject: subject.clone(), spans: spans.clone() });
+            self.set_last_match(&re, &subject, &spans);
             out.extend_from_slice(&subject[last..s]);
             let r = match repl {
                 SubstRepl::Interp(parts) => self.interpolate(parts, scope, false)?,

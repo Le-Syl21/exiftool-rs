@@ -2227,6 +2227,11 @@ impl<'a> Parser<'a> {
             self.pos += 2;
             return Some(Rc::from(name));
         }
+        // $-{name}, $-[N], %-, @-: the named captures, the match offsets
+        if c == b'-' && !self.at(1).is_ascii_alphanumeric() && self.at(1) != b'$' {
+            self.pos += 1;
+            return Some(Rc::from("-"));
+        }
         if b"&`'+/\\,;!@0<>]$.|\"?".contains(&c) && c != 0 {
             self.pos += 1;
             return Some(Rc::from((c as char).to_string()));
@@ -2297,6 +2302,12 @@ impl<'a> Parser<'a> {
 
     fn scalar_term(&mut self) -> R<Expr> {
         self.pos += 1;
+        // $#- / $#+: the last index of @- / @+
+        if self.at(0) == b'#' && matches!(self.at(1), b'-' | b'+') && !self.at(2).is_ascii_alphanumeric() && self.at(2) != b'$' {
+            let name: Rc<str> = Rc::from(if self.at(1) == b'-' { "-" } else { "+" });
+            self.pos += 2;
+            return Ok(Expr::LastIndex(Container::Named(name)));
+        }
         // $#array / $#{expr} / $#$ref
         if self.at(0) == b'#' && (self.at(1) == b'{' || self.at(1) == b'$' || ident_start(self.at(1))) {
             self.pos += 1;
@@ -2584,6 +2595,25 @@ fn interp_var_end(raw: &[u8], i: usize, regex: bool) -> Option<usize> {
             return Some(k);
         }
         b'&' | b'@' if !regex && raw[i] == b'$' => return Some(k + 1),
+        // "$+{name}", "$-{name}", "$-[1]", "$+[0]": the named captures and
+        // the match offsets (in a string, not in a pattern)
+        b'+' | b'-' if !regex && raw[i] == b'$' && k == i + 1 && matches!(at(k + 1), b'{' | b'[') => {
+            k += 1;
+        }
+        // "$#array", "$#-", "$#+": the last index
+        b'#' if !regex && raw[i] == b'$' && k == i + 1 => {
+            if matches!(at(k + 1), b'-' | b'+') {
+                return Some(k + 2);
+            }
+            if !ident_start(at(k + 1)) {
+                return None;
+            }
+            k += 1;
+            while ident_char(at(k)) {
+                k += 1;
+            }
+            return Some(k);
+        }
         // Punctuation variables a string interpolates ("line$/"); in a
         // pattern `$/` is an anchor followed by a slash.
         b'/' | b',' | b';' | b'!' if !regex && raw[i] == b'$' && k == i + 1 => return Some(k + 1),

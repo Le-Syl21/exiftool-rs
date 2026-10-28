@@ -34,8 +34,18 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
     if let Some(re) = CACHE.with(|c| c.borrow().get(&key).cloned()) {
         return Ok(re);
     }
-    let fixed = never_quantifiers(pattern);
-    let text = to_pcre_pattern(&fixed);
+    let fixed = class_range_escapes(&never_quantifiers(pattern));
+    // what perl allows and PCRE2 only with an option the crate does not
+    // expose, set inline: duplicate group names (perl accepts
+    // (?<n>a)|(?<n>b)) and /xx (spaces and tabs ignored in classes too)
+    let mut prefix = String::new();
+    if [&b"(?<"[..], b"(?'", b"(?P<"].iter().any(|n| fixed.windows(n.len()).any(|w| w == *n)) {
+        prefix.push_str("(?J)");
+    }
+    if flags.matches('x').count() >= 2 {
+        prefix.push_str("(?xx)");
+    }
+    let text = format!("{prefix}{}", to_pcre_pattern(&fixed));
     let mut b = pcre2::bytes::RegexBuilder::new();
     b.caseless(flags.contains('i'))
         .multi_line(flags.contains('m'))
@@ -44,12 +54,86 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
         .utf(false)
         .ucp(false)
         .jit_if_available(true);
-    let re = b.build(&text).map_err(|e| perl_message(pattern, &e))?;
+    let re = b.build(&text).map_err(|e| perl_message_at(pattern, &e, prefix.len()))?;
     let names = re.capture_names().to_vec();
     let groups = re.captures_len().saturating_sub(1);
     let compiled = Rc::new(PerlRegex { re, groups, names });
     CACHE.with(|c| c.borrow_mut().insert(key, compiled.clone()));
     Ok(compiled)
+}
+
+/// In a character class, perl takes a `-` next to a class escape
+/// (`[a-\d]`, `[\d-z]`, `[\w-\s]`) as a literal hyphen (warning under
+/// -w); PCRE2 refuses the range: the hyphen is escaped.
+fn class_range_escapes(p: &[u8]) -> Vec<u8> {
+    // a class escape: \d \D \w \W \s \S \h \H \v \V, or [:name:]
+    let is_class_escape = |p: &[u8], i: usize| -> Option<usize> {
+        match (p.get(i), p.get(i + 1)) {
+            (Some(b'\\'), Some(c)) if b"dDwWsShHvV".contains(c) => Some(2),
+            (Some(b'['), Some(b':')) => p[i + 2..].windows(2).position(|w| w == b":]").map(|k| k + 4),
+            _ => None,
+        }
+    };
+    let mut out = Vec::with_capacity(p.len() + 4);
+    let (mut i, mut class) = (0, false);
+    // the previous item in the class was a class escape
+    let mut after_escape = false;
+    while i < p.len() {
+        let c = p[i];
+        if !class {
+            if c == b'\\' && i + 1 < p.len() {
+                out.extend_from_slice(&p[i..i + 2]);
+                i += 2;
+                continue;
+            }
+            if c == b'[' {
+                class = true;
+                after_escape = false;
+                out.push(c);
+                i += 1;
+                // a ] (or ^]) first is literal
+                if p.get(i) == Some(&b'^') {
+                    out.push(b'^');
+                    i += 1;
+                }
+                if p.get(i) == Some(&b']') {
+                    out.push(b']');
+                    i += 1;
+                }
+                continue;
+            }
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if c == b']' {
+            class = false;
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if let Some(n) = is_class_escape(p, i) {
+            out.extend_from_slice(&p[i..i + n]);
+            i += n;
+            after_escape = true;
+            continue;
+        }
+        if c == b'-' && p.get(i + 1) != Some(&b']') && (after_escape || is_class_escape(p, i + 1).is_some()) {
+            out.extend_from_slice(b"\\-");
+            i += 1;
+            after_escape = false;
+            continue;
+        }
+        if c == b'\\' && i + 1 < p.len() {
+            out.extend_from_slice(&p[i..i + 2]);
+            i += 2;
+        } else {
+            out.push(c);
+            i += 1;
+        }
+        after_escape = false;
+    }
+    out
 }
 
 /// perl accepts `X{n,m}` with n > m (a quantifier that cannot match, a
@@ -101,17 +185,27 @@ fn never_quantifiers(p: &[u8]) -> Vec<u8> {
     out
 }
 
+/// `perl_message` for a pattern compiled with `shift` bytes of inline
+/// options before it.
+fn perl_message_at(pattern: &[u8], e: &pcre2::Error, shift: usize) -> String {
+    perl_message_off(pattern, e, e.offset().map(|o| o.saturating_sub(shift)))
+}
+
 /// perl's message for a pattern PCRE2 refuses: perl's wording and its
 /// "<-- HERE" mark where perl puts it, for the common errors; PCRE2's
 /// wording at PCRE2's position otherwise.
 pub fn perl_message(pattern: &[u8], e: &pcre2::Error) -> String {
+    perl_message_off(pattern, e, e.offset())
+}
+
+fn perl_message_off(pattern: &[u8], e: &pcre2::Error, offset: Option<usize>) -> String {
     let pat = String::from_utf8_lossy(pattern).into_owned();
     let len = pattern.len();
     // the PCRE2 message, from the Display text ("PCRE2: error compiling
     // pattern at offset N: MESSAGE")
     let full = e.to_string();
     let msg = full.splitn(2, ": ").nth(1).map(|r| r.split_once(": ").map(|(_, m)| m.to_string()).unwrap_or_else(|| r.to_string())).unwrap_or(full.clone());
-    let off = e.offset().unwrap_or(len).min(len);
+    let off = offset.unwrap_or(len).min(len);
     let here = |at: usize, what: &str| {
         let at = at.min(len);
         format!("{what} in regex; marked by <-- HERE in m/{} <-- HERE {}/", String::from_utf8_lossy(&pattern[..at]), String::from_utf8_lossy(&pattern[at..]))
