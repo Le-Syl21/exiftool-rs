@@ -20,6 +20,9 @@ pub struct ParseError {
     /// A fatal compile error with its own message (perl's "Search pattern
     /// not terminated"), rather than a "syntax error".
     pub fatal: bool,
+    /// A fatal error that also shows perl's `near "..."` (the prototype
+    /// argument counts).
+    pub near_fatal: bool,
 }
 
 impl std::fmt::Display for ParseError {
@@ -155,7 +158,7 @@ impl<'a> Parser<'a> {
     fn err(&self, msg: &str) -> ParseError {
         let line = 1 + self.s[..self.pos.min(self.s.len())].iter().filter(|&&b| b == b'\n').count();
         let near: String = String::from_utf8_lossy(&self.s[self.pos.min(self.s.len())..(self.pos + 20).min(self.s.len())]).into();
-        ParseError { msg: msg.to_string(), line, near, fatal: false }
+        ParseError { msg: msg.to_string(), line, near, fatal: false, near_fatal: false }
     }
 
     fn fatal(&self, msg: &str) -> ParseError {
@@ -670,6 +673,94 @@ impl<'a> Parser<'a> {
             None => format!("{}::{id}", self.package),
         };
         prototype_of(&full)
+    }
+
+    /// perl's compile-time check of a parenthesized call against the
+    /// sub's prototype: "Not enough arguments for main::f" or "Too many
+    /// arguments", near the last argument (`open` is the call's `(`; the
+    /// parser stands after its `)`).
+    fn check_arg_count(&self, id: &str, proto: &str, count: usize, open: usize) -> R<()> {
+        let (mut min, mut max, mut optional) = (0usize, Some(0usize), false);
+        let mut chars = proto.chars().peekable();
+        while let Some(c) = chars.next() {
+            match c {
+                ';' => {
+                    optional = true;
+                    continue;
+                }
+                ' ' => continue,
+                '@' | '%' => {
+                    max = None;
+                    continue;
+                }
+                '\\' => {
+                    // one slot: \X or \[...]
+                    if chars.next() == Some('[') {
+                        for d in chars.by_ref() {
+                            if d == ']' {
+                                break;
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+            if !optional {
+                min += 1;
+            }
+            max = max.map(|m| m + 1);
+        }
+        let msg = if count < min {
+            "Not enough"
+        } else if max.is_some_and(|m| count > m) {
+            "Too many"
+        } else {
+            return Ok(());
+        };
+        let full = match id.strip_prefix("::") {
+            Some(n) => format!("main::{n}"),
+            None if id.contains("::") => id.to_string(),
+            None => format!("{}::{id}", self.package),
+        };
+        // near: from the start of the last argument (the "(" when there is
+        // none) to the next token after the ")"
+        let close = self.pos;
+        let mut start = open;
+        let (mut depth, mut i, mut quote) = (0i32, open + 1, 0u8);
+        while i + 1 < close {
+            let c = self.s[i];
+            if quote != 0 {
+                if c == b'\\' {
+                    i += 1;
+                } else if c == quote {
+                    quote = 0;
+                }
+            } else {
+                match c {
+                    b'\'' | b'"' => quote = c,
+                    b'(' | b'[' | b'{' => depth += 1,
+                    b')' | b']' | b'}' => depth -= 1,
+                    b',' if depth == 0 => start = i + 1,
+                    _ => {}
+                }
+            }
+            i += 1;
+        }
+        if count > 0 {
+            if start == open {
+                start += 1;
+            }
+            while start < close && self.s[start].is_ascii_whitespace() {
+                start += 1;
+            }
+        }
+        let mut end = close;
+        while end < self.s.len() && self.s[end].is_ascii_whitespace() {
+            end += 1;
+        }
+        let near = String::from_utf8_lossy(&self.s[start..end]).into_owned();
+        let line = 1 + self.s[..close].iter().filter(|&&b| b == b'\n').count();
+        Err(ParseError { msg: format!("{msg} arguments for {full}"), line, near, fatal: true, near_fatal: true })
     }
 
     fn skip_prototype(&mut self) {
@@ -1810,9 +1901,11 @@ impl<'a> Parser<'a> {
         let is_unary = NAMED_UNARY.contains(&id);
         let is_list = LIST_OPS.contains(&id);
         if self.starts("(") {
+            let open = self.pos;
             let mut args = self.paren_args()?;
             if !is_unary && !is_list {
                 if let Some(p) = self.sub_prototype(id) {
+                    self.check_arg_count(id, &p, args.len(), open)?;
                     args = apply_prototype(&p, args);
                 }
             }

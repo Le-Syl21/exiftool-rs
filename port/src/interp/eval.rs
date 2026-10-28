@@ -95,6 +95,48 @@ pub fn set_line(line: u32) {
     LOCATION.with(|l| l.borrow_mut().1 = line);
 }
 
+thread_local! {
+    /// perl's call stack for `caller`: per sub call, the caller's package,
+    /// file and line, and the sub's name.
+    static CALLERS: RefCell<Vec<(Rc<str>, Option<Rc<str>>, u32, Rc<str>)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// `caller(level)`: the caller's package, file, line and the sub's name.
+pub fn caller_frame(level: usize) -> Option<(Rc<str>, Option<Rc<str>>, u32, Rc<str>)> {
+    CALLERS.with(|c| {
+        let c = c.borrow();
+        c.len().checked_sub(level + 1).map(|i| c[i].clone())
+    })
+}
+
+/// " at FILE line N\n" for `caller(level)`, as ExifTool's AUTOLOADs print
+/// it; the current location when there is no such frame.
+pub fn caller_at(level: usize) -> String {
+    let (file, line) = match caller_frame(level) {
+        Some((_, f, l, _)) => (f, l),
+        None => location(),
+    };
+    format!(" at {} line {line}\n", file.as_deref().unwrap_or("-"))
+}
+
+/// " at FILE line N\n" for the current statement (a native's own
+/// `caller(0)` seen from a sub it calls directly in Rust).
+pub fn here_at() -> String {
+    let (file, line) = location();
+    format!(" at {} line {line}\n", file.as_deref().unwrap_or("-"))
+}
+
+fn push_caller(package: &Rc<str>, sub: Rc<str>) {
+    let (file, line) = location();
+    CALLERS.with(|c| c.borrow_mut().push((package.clone(), file, line, sub)));
+}
+
+fn pop_caller() {
+    CALLERS.with(|c| {
+        c.borrow_mut().pop();
+    });
+}
+
 fn location() -> (Option<Rc<str>>, u32) {
     LOCATION.with(|l| l.borrow().clone())
 }
@@ -660,8 +702,12 @@ impl Interp {
             Ok(b) => b,
             // a syntax error in a file names the file
             Err(e) => {
+                // a string eval that does not compile still takes its number
+                if name.is_none() {
+                    self.eval_count += 1;
+                }
                 return Err(match &name {
-                    Some(f) => Value::from(e.to_text().replacen(&format!("(eval {})", self.eval_count + 1), f, 1)),
+                    Some(f) => Value::from(e.to_text().replace(&format!("(eval {})", self.eval_count + 1), f)),
                     None => e,
                 })
             }
@@ -700,10 +746,17 @@ impl Interp {
         }
         let n = self.eval_count + 1;
         let block = parse::parse_program(code, &self.package).map_err(|e| {
-            if e.fatal {
+            if e.near_fatal {
+                // perl ends a string eval's code with a newline, which shows
+                // in a near text that reaches the end
+                let nl = if code.ends_with(e.near.as_bytes()) { "\n" } else { "" };
+                Value::from(format!("{} at (eval {n}) line {}, near \"{}{nl}\"\n", e.msg, e.line, e.near))
+            } else if e.fatal {
                 Value::from(format!("{} at (eval {n}) line {}.\n", e.msg, e.line))
             } else {
-                Value::from(format!("syntax error at (eval {n}) line {}, near \"{}\"\n", e.line, e.near))
+                // perl stops the compilation after a syntax error and says so
+                let near = if e.near.trim().is_empty() { ", at EOF".to_string() } else { format!(", near \"{}\"", e.near) };
+                Value::from(format!("syntax error at (eval {n}) line {}{near}\nExecution of (eval {n}) aborted due to compilation errors.\n", e.line))
             }
         })?;
         let b = Rc::new(block);
@@ -814,12 +867,14 @@ impl Interp {
                 // sub's location (pl::at moves the line); others (perl's own
                 // modules) keep their caller's, as XS and Carp report it
                 let saved_loc = location();
+                push_caller(&self.package, name.clone());
                 if let Some((file, line)) = self.native_location(name) {
                     set_location((Some(file), line));
                 }
                 let saved_warn = WARNINGS_ON.with(|w| w.replace(false));
                 let r = f(self, args, want).map(|v| fit(v, want));
                 WARNINGS_ON.with(|w| w.set(saved_warn));
+                pop_caller();
                 set_location(saved_loc);
                 self.alias_frames.pop();
                 if traced {
@@ -850,9 +905,11 @@ impl Interp {
                     self.trace_depth += 1;
                 }
                 let saved_loc = location();
+                push_caller(&self.package, sub.name.clone().unwrap_or_else(|| Rc::from("main::__ANON__")));
                 let file = self.sub_files.get(&(Rc::as_ptr(sub) as usize)).cloned().or_else(|| saved_loc.0.clone());
                 set_location((file, saved_loc.1));
                 let r = self.call_perl(sub, scope, arr, want);
+                pop_caller();
                 set_location(saved_loc);
                 if traced {
                     self.trace_depth -= 1;
@@ -2568,7 +2625,7 @@ impl Interp {
         }
         match crate::perl::regex::compile(&bytes, &pat.flags) {
             Ok(r) => Ok(r),
-            Err(e) => die(format!("{e} in regex; marked by <-- HERE in m/{}/", String::from_utf8_lossy(&bytes))),
+            Err(e) => die(e),
         }
     }
 
@@ -2989,8 +3046,18 @@ impl Interp {
                 Some(c) => c.clone(),
                 None => return die(format!("Can't call method \"{name}\" on unblessed reference")),
             },
-            Value::Str(s) => Rc::from(String::from_utf8_lossy(s).as_ref()),
             Value::Undef => return die(format!("Can't call method \"{name}\" on an undefined value")),
+            // any other plain value names a class
+            v if !v.is_ref() => {
+                let t = v.to_text();
+                if t.is_empty() {
+                    return die(format!("Can't call method \"{name}\" without a package or object reference"));
+                }
+                Rc::from(t.as_str())
+            }
+            // a handle is an IO::File unless blessed otherwise (perl loads
+            // IO::File for methods on handles)
+            Value::Handle(h) => h.borrow().class.clone().unwrap_or_else(|| Rc::from("IO::File")),
             _ => return die(format!("Can't call method \"{name}\" on unblessed reference")),
         };
         if let Some(qualified) = name.strip_prefix("SUPER::") {
@@ -3000,7 +3067,7 @@ impl Interp {
                     return self.call(&c, args, want);
                 }
             }
-            return die(format!("Can't locate object method \"{qualified}\" via package \"{class}\""));
+            return die(self.no_method_message(qualified, &class));
         }
         if name.contains("::") {
             return self.call_named(name, args, want);
@@ -3020,8 +3087,22 @@ impl Interp {
                         None => NO(),
                     }]);
                 }
-                die(format!("Can't locate object method \"{name}\" via package \"{class}\""))
+                die(self.no_method_message(name, &class))
             }
+        }
+    }
+
+    /// perl's message for a method a class does not have, with its hint
+    /// when nothing of that package exists.
+    fn no_method_message(&self, name: &str, class: &str) -> String {
+        let prefix = format!("{class}::");
+        let exists = self.subs.keys().any(|k| k.starts_with(&prefix))
+            || self.globals.keys().any(|(_, k)| k.starts_with(&prefix))
+            || self.isa.contains_key(class);
+        if exists {
+            format!("Can't locate object method \"{name}\" via package \"{class}\"")
+        } else {
+            format!("Can't locate object method \"{name}\" via package \"{class}\" (perhaps you forgot to load \"{class}\"?)")
         }
     }
 

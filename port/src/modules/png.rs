@@ -87,6 +87,7 @@ pub fn autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let name = it.get_scalar("Image::ExifTool::PNG::AUTOLOAD");
     let mut args = vec![name];
     args.extend(a);
+    pl::at(789);
     it.call_named("Image::ExifTool::DoAutoLoad", args, want)
 }
 

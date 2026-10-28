@@ -483,10 +483,24 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
             one(Value::Int(1))
         }
         "caller" => {
-            if want == Want::List {
-                Ok(vec![Value::str(&it.package.clone()), Value::str("(eval)"), Value::Int(1)])
-            } else {
-                one(Value::str(&it.package.clone()))
+            // caller(N) adds the sub's name; outside any sub, nothing
+            let level = match args.first() {
+                Some(e) => Some(it.scalar(e, scope)?.to_i64().max(0) as usize),
+                None => None,
+            };
+            match crate::interp::eval::caller_frame(level.unwrap_or(0)) {
+                None => Ok(if want == Want::List { vec![] } else { vec![Value::Undef] }),
+                Some((pkg, file, line, sub)) => {
+                    if want != Want::List {
+                        return one(Value::str(&pkg));
+                    }
+                    let file = file.map(|f| f.to_string()).unwrap_or_else(|| "-".to_string());
+                    let mut v = vec![Value::str(&pkg), Value::str(&file), Value::Int(line as i64)];
+                    if level.is_some() {
+                        v.push(Value::str(&sub));
+                    }
+                    Ok(v)
+                }
             }
         }
         "lock" | "study" => one(Value::Int(1)),

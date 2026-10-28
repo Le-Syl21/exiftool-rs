@@ -150,6 +150,7 @@ pub fn autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     } else {
         let mut args = vec![autoload];
         args.extend(a.iter().cloned());
+        pl::at(8757);
         call_aliased(it, "Image::ExifTool::DoAutoLoad", args, &a, 1, want)
     }
 }
@@ -2800,9 +2801,8 @@ pub fn ligo_gps_autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<V
     runtime::require(it, "Image::ExifTool::LigoGPS")?;
     let name = autoload.to_text();
     if it.sub(&name).is_none() {
-        // (caller(0) as the interpreter gives it)
         // reproduce Perl's standard 'undefined subroutine' message:
-        return crate::interp::eval::die(format!("Undefined subroutine {name} called{}", crate::interp::eval::location_suffix()));
+        return Err(crate::interp::Flow::Die(Value::from(format!("Undefined subroutine {name} called{}", crate::interp::eval::caller_at(0)))));
     }
     call_aliased(it, &name, a.clone(), &a, 0, want) // call the function
 }

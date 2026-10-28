@@ -3646,7 +3646,8 @@ pub fn get_file_time(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
 
 /// DoAutoLoad: the result, and the final values of the arguments (written
 /// back to the caller's variables, as @_ aliases them).
-fn do_auto_load_v(it: &mut Interp, autoload: &Value, args: Vec<Value>, want: Want) -> ER<(Vec<Value>, Vec<Value>)> {
+/// (`caller` is " at FILE line N\n" of DoAutoLoad's call, for caller(0))
+fn do_auto_load_v(it: &mut Interp, autoload: &Value, args: Vec<Value>, want: Want, caller: String) -> ER<(Vec<Value>, Vec<Value>)> {
     let call_info = pl::split(&re("::", ""), autoload, 0);
     let mut file = pl::s("Image/ExifTool/Write");
 
@@ -3669,11 +3670,8 @@ fn do_auto_load_v(it: &mut Interp, autoload: &Value, args: Vec<Value>, want: Wan
     }
     let name = autoload.to_text();
     if it.sub(&name).is_none() {
-        // (caller(0) as the interpreter gives it)
-        let caller = it.package.to_string();
-        let _ = caller;
         // reproduce Perl's standard 'undefined subroutine' message:
-        return Err(Flow::Die(Value::from(format!("Undefined subroutine {name} called{}", crate::interp::eval::location_suffix()))));
+        return Err(Flow::Die(Value::from(format!("Undefined subroutine {name} called{caller}"))));
     }
     // call the function (with @_ aliased to our arguments)
     let (r, _, after) = perl_op(it, "no strict 'refs'; &$f(@a)", &[("f", autoload.clone())], Some(args), want)?;
@@ -3696,7 +3694,8 @@ fn write_back(it: &mut Interp, before: &[Value], after: &[Value], offset: usize)
 pub fn do_auto_load(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let mut a = a;
     let autoload = if a.is_empty() { Value::Undef } else { a.remove(0) };
-    let (r, after) = do_auto_load_v(it, &autoload, a.clone(), want)?;
+    let caller = crate::interp::eval::caller_at(0);
+    let (r, after) = do_auto_load_v(it, &autoload, a.clone(), want, caller)?;
     write_back(it, &a, &after, 1)?;
     Ok(r)
 }
@@ -3704,7 +3703,9 @@ pub fn do_auto_load(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
 /// AutoLoad our writer routines when necessary
 pub fn autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let name = pkg_scalar(it, "AUTOLOAD").borrow().clone();
-    let (r, after) = do_auto_load_v(it, &name, a.clone(), want)?;
+    // (DoAutoLoad's caller is this sub's statement)
+    pl::at(5596);
+    let (r, after) = do_auto_load_v(it, &name, a.clone(), want, crate::interp::eval::here_at())?;
     write_back(it, &a, &after, 0)?;
     Ok(r)
 }

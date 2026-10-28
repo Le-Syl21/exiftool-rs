@@ -2199,12 +2199,7 @@ fn re_interp(pat: &Value, flags: &str) -> ER<pl::Re> {
     }
     match pl::re_dyn(&bytes, flags) {
         Ok(r) => Ok(r),
-        Err(Flow::Die(e)) => {
-            let e = e.to_text();
-            let suffix = crate::interp::eval::location_suffix();
-            let e = e.strip_suffix(suffix.as_str()).unwrap_or(&e).to_string();
-            crate::interp::eval::die(format!("{e} in regex; marked by <-- HERE in m/{}/", String::from_utf8_lossy(&bytes)))
-        }
+        // (the message is perl's already: see regex::perl_message)
         Err(e) => Err(e),
     }
 }

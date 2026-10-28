@@ -34,7 +34,8 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
     if let Some(re) = CACHE.with(|c| c.borrow().get(&key).cloned()) {
         return Ok(re);
     }
-    let text = to_pcre_pattern(pattern);
+    let fixed = never_quantifiers(pattern);
+    let text = to_pcre_pattern(&fixed);
     let mut b = pcre2::bytes::RegexBuilder::new();
     b.caseless(flags.contains('i'))
         .multi_line(flags.contains('m'))
@@ -43,12 +44,162 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
         .utf(false)
         .ucp(false)
         .jit_if_available(true);
-    let re = b.build(&text).map_err(|e| format!("{e}"))?;
+    let re = b.build(&text).map_err(|e| perl_message(pattern, &e))?;
     let names = re.capture_names().to_vec();
     let groups = re.captures_len().saturating_sub(1);
     let compiled = Rc::new(PerlRegex { re, groups, names });
     CACHE.with(|c| c.borrow_mut().insert(key, compiled.clone()));
     Ok(compiled)
+}
+
+/// perl accepts `X{n,m}` with n > m (a quantifier that cannot match, a
+/// warning under -w); PCRE2 refuses it: it becomes `X{0}(?!)`.
+fn never_quantifiers(p: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(p.len());
+    let (mut i, mut class) = (0, false);
+    while i < p.len() {
+        let c = p[i];
+        if c == b'\\' && i + 1 < p.len() {
+            out.extend_from_slice(&p[i..i + 2]);
+            i += 2;
+            continue;
+        }
+        if class {
+            if c == b']' {
+                class = false;
+            }
+        } else if c == b'[' {
+            class = true;
+            if p.get(i + 1) == Some(&b']') || (p.get(i + 1) == Some(&b'^') && p.get(i + 2) == Some(&b']')) {
+                // a ] first in the class is literal
+                let skip = if p[i + 1] == b'^' { 3 } else { 2 };
+                out.extend_from_slice(&p[i..i + skip]);
+                i += skip;
+                continue;
+            }
+        } else if c == b'{' {
+            let rest = &p[i + 1..];
+            let close = rest.iter().position(|&b| b == b'}');
+            if let Some(e) = close {
+                let inner = &rest[..e];
+                if let Some(k) = inner.iter().position(|&b| b == b',') {
+                    let (a, b) = (&inner[..k], &inner[k + 1..]);
+                    let num = |x: &[u8]| (!x.is_empty() && x.iter().all(u8::is_ascii_digit)).then(|| String::from_utf8_lossy(x).parse::<u64>().ok()).flatten();
+                    if let (Some(n), Some(m)) = (num(a), num(b)) {
+                        if n > m {
+                            out.extend_from_slice(b"{0}(?!)");
+                            i += e + 2;
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        out.push(c);
+        i += 1;
+    }
+    out
+}
+
+/// perl's message for a pattern PCRE2 refuses: perl's wording and its
+/// "<-- HERE" mark where perl puts it, for the common errors; PCRE2's
+/// wording at PCRE2's position otherwise.
+pub fn perl_message(pattern: &[u8], e: &pcre2::Error) -> String {
+    let pat = String::from_utf8_lossy(pattern).into_owned();
+    let len = pattern.len();
+    // the PCRE2 message, from the Display text ("PCRE2: error compiling
+    // pattern at offset N: MESSAGE")
+    let full = e.to_string();
+    let msg = full.splitn(2, ": ").nth(1).map(|r| r.split_once(": ").map(|(_, m)| m.to_string()).unwrap_or_else(|| r.to_string())).unwrap_or(full.clone());
+    let off = e.offset().unwrap_or(len).min(len);
+    let here = |at: usize, what: &str| {
+        let at = at.min(len);
+        format!("{what} in regex; marked by <-- HERE in m/{} <-- HERE {}/", String::from_utf8_lossy(&pattern[..at]), String::from_utf8_lossy(&pattern[at..]))
+    };
+    // the first group or class left open, scanning as perl's parser does
+    let unclosed = |open: u8| -> Option<usize> {
+        let (mut i, mut class, mut stack) = (0, None::<usize>, Vec::new());
+        while i < len {
+            let c = pattern[i];
+            if c == b'\\' {
+                i += 2;
+                continue;
+            }
+            match class {
+                Some(_) if c == b']' => class = None,
+                Some(_) => {}
+                None if c == b'[' => {
+                    class = Some(i);
+                    if matches!(pattern.get(i + 1), Some(b']')) {
+                        i += 1;
+                    }
+                }
+                None if c == b'(' => stack.push(i),
+                None if c == b')' => {
+                    stack.pop();
+                }
+                None => {}
+            }
+            i += 1;
+        }
+        if open == b'[' { class } else { stack.first().copied() }
+    };
+    let prev_quant = off > 0 && matches!(pattern.get(off - 1), Some(b'*' | b'+' | b'?' | b'}'));
+    if msg.contains("missing closing parenthesis") {
+        return here(unclosed(b'(').map(|p| p + 1).unwrap_or(off), "Unmatched (");
+    }
+    if msg.contains("unmatched closing parenthesis") {
+        return here(off + 1, "Unmatched )");
+    }
+    if msg.contains("missing terminating ] for character class") {
+        return here(unclosed(b'[').map(|p| p + 1).unwrap_or(off), "Unmatched [");
+    }
+    if msg.contains("quantifier does not follow a repeatable item") {
+        return here(off + 1, if prev_quant { "Nested quantifiers" } else { "Quantifier follows nothing" });
+    }
+    if msg.contains("\\ at end of pattern") {
+        return format!("Trailing \\ in regex m/{pat}/");
+    }
+    if msg.contains("range out of order in character class") {
+        let a = off.saturating_sub(2);
+        return here(off + 1, &format!("Invalid [] range \"{}\"", String::from_utf8_lossy(&pattern[a..(off + 1).min(len)])));
+    }
+    if msg.contains("unrecognized character after (? or (?-") {
+        let ch = pattern.get(off).map(|&c| c as char).unwrap_or(' ');
+        return here(off + 1, &format!("Sequence (?{ch}...) not recognized"));
+    }
+    if msg.contains("missing ) after (?# comment") {
+        return format!("Sequence (?#... not terminated in regex m/{pat}/");
+    }
+    if msg.contains("subpattern name") && msg.contains("terminator") {
+        return here(len, "Sequence (?<... not terminated");
+    }
+    if msg.contains("reference to non-existent subpattern") {
+        let named = pat.contains("\\k");
+        if named {
+            // perl marks the end of the name
+            let end = pattern[off..].iter().position(|c| matches!(c, b'>' | b'}' | b'\'')).map(|k| off + k).unwrap_or(len);
+            return here(end, "Reference to nonexistent named group");
+        }
+        // perl marks the end of the group number
+        let mut end = off;
+        while end < len && !pattern[end].is_ascii_digit() {
+            end += 1;
+        }
+        while end < len && pattern[end].is_ascii_digit() {
+            end += 1;
+        }
+        return here(end, "Reference to nonexistent group");
+    }
+    if msg.contains("unknown POSIX class name") {
+        let end = pattern[off..].windows(2).position(|w| w == b":]").map(|k| off + k + 2).unwrap_or(off);
+        let start = pattern[..end.saturating_sub(2)].windows(2).rposition(|w| w == b"[:").unwrap_or(off);
+        return here(end, &format!("POSIX class {} unknown", String::from_utf8_lossy(&pattern[start..end])));
+    }
+    if msg.contains("lookbehind assertion is not fixed length") {
+        return format!("Lookbehind longer than 255 not implemented in regex m/{pat}/");
+    }
+    here(off, &msg)
 }
 
 /// PCRE2's builder takes text: bytes that are not valid UTF-8 (raw binary in
