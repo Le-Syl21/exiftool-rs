@@ -1,0 +1,207 @@
+# Command lines for the option chain of the argument loop (src/cli/options.rs),
+# in the format of cli_cases.txt: KIND|ARGUMENTS (R on t/images, W on images/).
+# Until program.rs calls parse_option, these exercise the native chain only
+# when run on a copy of the script whose option chain calls
+# main::<parse_option> (and whose command-loop locals are file lexicals).
+# Known differences that are not the chain's: -k/-pause (the prompt),
+# -lang zh-CN (character strings), "-" (reading an empty STDIN).
+
+# --- end of options, funny dashes
+R|-s -- t/images/Canon.jpg
+R|−s −Model t/images/Canon.jpg
+R|-s -−Model -Make t/images/Canon.jpg
+R|−− -s t/images/Canon.jpg
+
+# --- lists
+R|-list -EXIF:all
+R|-listw -XMP-dc:all
+R|-list -IFD0:all
+R|-listw -all:all
+R|-list -mwg:all
+R|-listx -GPS:all
+R|-listx -l -IPTC:all
+R|-listg2
+R|-listG5
+R|-listgeo -api GeolocMinPop=5000000
+R|-api GeolocFeature=PPLC -listgeo
+R|-api GeolocFeature=-PPL,PPLA -api GeolocMinPop=3000000 -sort -listgeo
+R|-api GeolocAltNames=1 -api GeolocMinPop=8000000 -listgeo
+R|-lang de -api GeolocMinPop=8000000 -listgeo
+R|-q -api GeolocMinPop=8000000 -listgeo
+R|-ver -s
+
+# --- tagsFromFile, argfiles
+R|-tagsFromFile
+W|-tagsFromFile=images/Canon.jpg -Model -overwrite_original images/Nikon.jpg
+W|-addTagsFromFile images/Canon.jpg -Make -allTagsFromFile images/Sony.jpg -Model -overwrite_original images/Nikon.jpg
+W|-tagsFromFile images/Canon.jpg -x Model -all:all -overwrite_original images/Nikon.jpg
+W|-tagsFromFile @ '-Comment>XMP:Title' '-FileName<Model' images/Canon.jpg
+W|'-XMP:Title<Model' '-Comment>XMP:Description' -overwrite_original images/Canon.jpg
+W|'-Model>FileName' images/Canon.jpg
+W|'-Model>Geotime' images/Canon.jpg
+W|'-mwg:Description<Model' -overwrite_original images/Canon.jpg
+W|-tagsFromFile @ '-Description<${mwg:Description}' -overwrite_original images/Canon.jpg
+R|-@
+R|-@ no_such.args t/images/Canon.jpg
+R|-@ t/images/Text3.txt -Model t/images/Canon.jpg
+R|-@ arg_files/xmp2exif.args -@ arg_files/iptcCore.args -s t/images/XMP.jpg
+
+# --- simple options
+R|-a -s -FileName t/images/Canon.jpg
+R|--a -s -Make t/images/Canon.jpg
+R|-duplicates --duplicates -s -Make t/images/Canon.jpg
+R|-api
+R|-api QuickTimeUTC -api Foo= -api Bar^= -api '' -s -Model t/images/Canon.jpg
+R|-args t/images/Canon.jpg
+R|-argFormat -Model t/images/Canon.jpg
+R|--b -s t/images/Canon.jpg
+R|-binary -Make t/images/Canon.jpg
+R|-c
+R|-coordFormat '%.3f' -GPSLatitude t/images/GPS.jpg
+R|-charset
+R|-charset exiftool=latin1 -Model t/images/Canon.jpg
+R|-charset bogus -Model t/images/Canon.jpg
+R|-charset foo=latin -Model t/images/Canon.jpg
+R|-charset filename=utf8 -charset id3=latin -charset exif=latin -charset photoshop=latin -charset quicktime=latin -charset riff=latin -Model t/images/Canon.jpg
+R|-charset -Model t/images/Canon.jpg
+R|-Model -config config_files/example.config t/images/Canon.jpg
+R|-csv -json -Model t/images/Canon.jpg
+R|-Model -csv=t/images/Text.csv -s t/images/Canon.jpg
+R|-csv=no_such.csv -s -Model t/images/Canon.jpg
+R|-v -json=no_such.json -s -Model t/images/Canon.jpg
+W|-csv+=csv_in.csv -Model --Artist -overwrite_original images/Canon.jpg
+W|-csv=csv_in.csv -x Artist -overwrite_original images/Canon.jpg
+R|-csvDelim ';' -csv -Model -Make t/images/Canon.jpg
+R|-csvDelim '\t\x' -csv -Model -Make t/images/Canon.jpg
+R|-csvDelim '"' -csv t/images/Canon.jpg
+R|-csvDelim
+R|-d
+R|-dateFormat %Y -DateTimeOriginal t/images/Canon.jpg
+R|-decimal -s -Model t/images/Canon.jpg
+R|-diff
+R|-list_dir -FileName t/images
+R|--composite -s t/images/GPS.jpg
+R|--e -composite -GPSPosition t/images/GPS.jpg
+R|-escapeHTML -eh -Comment t/images/Canon.jpg
+R|-ec -escapeC -ex -escapeXML -Comment t/images/Canon.jpg
+R|-echo4 four -echo5 five -echo1 one -Model t/images/Canon.jpg
+R|-Model t/images/Canon.jpg -echo
+R|-extractEmbedded2 -s -FileName t/images/Canon.jpg
+W|-efile images/err.txt -efile3 images/same.txt -efile! images/err2.txt -efile8 images/upd.txt -efile16 images/cr.txt -Artist=e -overwrite_original images/Canon.jpg images/nofile.jpg
+R|-efile
+R|-ext
+R|-extension+ jpg --ext+ png -FileName t/images/
+R|--extension .jpg -FileName t/images/
+R|-forcePrint -XYZ t/images/Canon.jpg
+R|-F -fixBase -F+12 -Model t/images/Canon.jpg
+R|-fast1 -s -Model t/images/Canon.jpg
+R|-file1 t/images/Nikon.jpg -s -file1:Model -Model t/images/Canon.jpg
+R|-file1
+R|-fileOrder5 FileName -fileOrder2 -FileSize -fileOrder -FileName t/images/
+R|-globalTimeShift 1 -DateTimeOriginal t/images/Canon.jpg
+R|-groupHeadings -Model t/images/Canon.jpg
+R|-groupNames1 -Model t/images/Canon.jpg
+R|-G5 -Model t/images/Canon.jpg
+R|-G6 -Model t/images/Canon.jpg
+R|-g1:2 -Model t/images/Canon.jpg
+R|-geotag
+W|-geotag 'images/Geotag*.gpx' -GPS:all -overwrite_original images/Canon.jpg
+W|-geotag 'images/Geotag*.log' '-geotime=2003:05:24 17:09:31Z' -overwrite_original images/Canon.jpg
+R|-geotag 'images/nomatch*.gpx' t/images/Canon.jpg
+W|-geotag images/Geotag.gpx -geosync=+1 -overwrite_original images/Canon.jpg
+W|-XMP:geotag=images/Geotag.gpx -overwrite_original images/Canon.jpg
+W|-geotag= -overwrite_original images/Canon.jpg
+R|-htmlFormat -Model t/images/Canon.jpg
+R|-hex -s -Model t/images/Canon.jpg
+R|-htmlDump+100 t/images/ExifTool.jpg
+R|-i
+R|-ignore HIDDEN -ignore SYMLINKS -r -FileName t/images
+R|-if
+R|-if3 '$Make' -if '$Model' -if2 '$ISO' -Model t/images/
+R|-if 'not $ok' -Model t/images/Canon.jpg
+R|-if '$ok' -Model t/images/Canon.jpg
+R|-if '${EXIF:Make} and $Model' -Model t/images/
+R|-k -Model t/images/Canon.jpg
+R|-pause -Model t/images/Canon.jpg
+R|-long -Model t/images/Canon.jpg
+R|-latin -Model t/images/Canon.jpg
+R|-lang
+R|-lang xx
+R|-lang en -Model t/images/Canon.jpg
+R|-lang zh-CN -Model t/images/Canon.jpg
+R|-E -lang
+R|-q -lang
+R|-listItem x -Keywords t/images/XMP.jpg
+R|-listItem 1 -Keywords t/images/XMP.jpg
+R|-ignoreMinorErrors --printConv -Orientation t/images/Canon.jpg
+R|-n -printConv --n -Orientation t/images/Canon.jpg
+R|-nop
+R|-o
+W|-out images/out.xmp images/Canon.jpg
+W|-overwrite_original_in_place -Artist=x images/Canon.jpg
+R|-plot -GPSLatitude t/images/GPS.jpg
+R|-p- '$Model' -b t/images/Canon.jpg
+R|-printFormat '$Model' t/images/Canon.jpg
+R|-printFormat- '$mwg:Description' t/images/Canon.jpg
+R|-preserve -password x -Model t/images/Canon.jpg
+R|-progress:title -Model t/images/Canon.jpg
+R|-progress2: -Model t/images/Canon.jpg t/images/Nikon.jpg
+R|-progress:%b -Model t/images/Canon.jpg
+R|-purge -Model t/images/Canon.jpg
+R|-quiet -recurse. -FileName t/images
+R|-r. -FileName t/images
+R|-require 1.0 -Model t/images/Canon.jpg
+R|-require 99 -Model t/images/Canon.jpg
+R|-require x -Model t/images/Canon.jpg
+R|-veryshort -short2 -Model t/images/Canon.jpg
+R|-short3 -Model t/images/Canon.jpg
+R|-scanForXMP -Model t/images/Canon.jpg
+R|-sep
+R|-separator '\t\n' -Keywords t/images/XMP.jpg
+R|-sep ' ' -Keywords t/images/XMP.jpg
+R|-b -sep '\x' -sep b -Keywords t/images/XMP.jpg
+W|-sep ' , ' '-Keywords=a ,  b,c' -overwrite_original images/XMP.jpg
+R|--sort -Model t/images/Canon.jpg
+R|-srcfile
+R|-srcfile %d%f.xmp -srcfile @ -Title t/images/XMP.jpg
+R|-stay_open
+R|-stay_open 0 -Model t/images/Canon.jpg
+R|-stay_open x -Model t/images/Canon.jpg
+R|-stay_open True -stay_open 1 -stay_open false -Model t/images/Canon.jpg
+R|--struct -XMP:all t/images/XMP3.xmp
+R|-tab -Model t/images/Canon.jpg
+R|-table -Model -Make t/images/Canon.jpg
+R|-u -U -unknown2 -s t/images/Canon.jpg
+R|-use
+R|-use MWG -Model t/images/Canon.jpg
+R|-use 'bad name!' -Model t/images/Canon.jpg
+R|-use NoSuchModule -Model t/images/Canon.jpg
+R|-use XMP -use Image::ExifTool::GPS -Model t/images/Canon.jpg
+R|-userParam
+R|-userParam foo -userParam bar=x -p '$foo $bar' t/images/Canon.jpg
+R|-verbose2 -v0 t/images/Canon.jpg
+R|-w
+W|-W images/%d%f_%t%-c.%s -b -ThumbnailImage images/Canon.jpg
+W|-W+! images/%f.txt -Model -Make images/Canon.jpg
+W|-tagOut+ images/all.txt -Model -Make images/Canon.jpg images/Nikon.jpg
+W|-textOut+ txt -Model images/Canon.jpg
+R|-wext
+W|--wext jpg -W images/%f_%t.%s -b -ThumbnailImage -wext .jpg images/Canon.jpg
+R|-wm
+R|-writeMode z -Model t/images/Canon.jpg
+W|-writeMode cg -Artist=y -overwrite_original images/Canon.jpg
+R|-x
+R|-exclude all -exclude EXIF:all -s t/images/Canon.jpg
+R|-xmlFormat -Model t/images/Canon.jpg
+R|-php -Model t/images/Canon.jpg
+R|-z -zip -Model t/images/Canon.jpg
+R|- -Model
+R|-Y t/images/Canon.jpg
+R|-* -s t/images/Canon.jpg
+R|'-Bad?Tag!' 'BadTag' t/images/Canon.jpg
+R|-EXIF:Model# -s t/images/Canon.jpg
+W|'-ThumbnailImage<=images/%f.jpg' -overwrite_original images/Canon.jpg
+W|'-Comment<=@' -overwrite_original images/Canon.jpg
+W|-TestName=images/new.jpg images/Canon.jpg
+W|-Directory=images/sub images/Canon.jpg
+W|-Geolocate=Paris -overwrite_original images/Canon.jpg
