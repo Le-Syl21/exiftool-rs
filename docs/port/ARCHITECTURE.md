@@ -184,7 +184,10 @@ The high-level Rust API (`ExifTool`, `Options`, `Tag`, `extract_info`,
    stripped and metadata kept. It is compared with Perl tag by tag, in print
    mode, `-n` and `-a -u -G1`.
 4. **Speed**: every gate run times Rust against Perl on the corpus, per
-   format, and a slowdown fails the gate.
+   format, and a slowdown fails the gate. The comparison page that the CI
+   publishes at each release (`pages.yml`, `scripts/parity_report.py`)
+   shows these timings: Perl time, Rust time and the gain in percent, per
+   format and in total.
 5. **Engine coverage**: the 3,420 table strings, as described in section 3.
 
 ## 7. Order
