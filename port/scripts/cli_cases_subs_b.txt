@@ -1,0 +1,102 @@
+# Command lines for the subs of script lines 4234-5075 (src/cli/subs_b.rs:
+# ProcessFiles ... PrintErrors), run by scripts/compare_cli.py with
+# CLI_CASES=scripts/cli_cases_subs_b.txt. Same format as cli_cases.txt.
+
+# --- ProcessFiles, ScanDir, AcceptFile, FileNotFound, Progress
+R|-FileName t/images/nofile.jpg DIR FILE
+R|-ext jpg -FileName t/images/XMP.xmp t/images/nofile.xmp t/images/Canon.jpg
+R|-v -ext jpg -FileName t/images/XMP.xmp t/images/Canon.jpg
+R|-ext '*' --ext jpg -FileName -s t/images/
+R|--ext '*' -ext png -FileName -s t/images/
+R|-ext+ txt -FileName -s t/images/
+R|-progress -v0 -FileName t/images/
+R|-progress: -FileName t/images/Canon.jpg t/images/Nikon.jpg
+R|-progress3 -v -ext xmp -FileName t/images/
+R|-r -FileName -s .
+R|-r -i SYMLINKS -FileName -s .
+R|-r. -ext fmt -FileName -s .
+R|-r -i images -i fmt_files -ext fmt -ext args -FileName -s .
+R|-i t/images -FileName t/images
+R|-i HIDDEN -r -FileName -s t
+R|-list_dir -FileName -FileType t/images
+R|-if '$FileName eq "Canon.jpg" and EndDir()' -FileName t/images/
+R|-if '$FileName eq "Canon.jpg" and End()' -FileName t/images/
+R|-if 'EndDir()' -FileName t/images/Canon.jpg t/images/Nikon.jpg t/images/
+R|-if 'End()' -FileName t/images/Canon.jpg t/images/Nikon.jpg
+R|-purge -FileName t/images/Canon.jpg t/images/
+R|-z --ext gz -FileName -s t/images/
+R|-fileOrder FileName -ext jpg -FileName -s t/images/ t/images/Canon.jpg
+
+# --- writing to directories (scanWritable, CanWrite, GetFileType)
+W|-Artist=x -overwrite_original images/
+W|-o images/xmp/%f.xmp -v images/
+W|-o images/mie/ -ext jpg -Artist=y images/
+
+# --- PrintErrors (warnings, errors, duplicates)
+R|-a -Warning -Error t/images/Unknown.jpg arg_files/exif2xmp.args
+R|-FileName csv_in.csv json_in.json
+R|-a -validate -warning t/images/Canon.jpg t/images/Nikon.jpg
+W|-Artist=x -overwrite_original csv_in.csv images/Canon.jpg
+
+# --- LoadPrintFormat, AddPrintFormat
+R|-p
+R|-p fmt_files/kml_track.fmt t/images/GPS.jpg
+R|-p '#[HEAD]head $FileName' -p '#[BODY]body $FileName' -p '#[TAIL]tail' -p '# comment' t/images/Canon.jpg t/images/Nikon.jpg
+R|-p '#[SECT]sect $Make' -p '#[ENDS]ends' -p '#[IF]$Make' -p '${Directory:FileName} $exif:model ${0:1:2:Make?}' t/images/Canon.jpg t/images/Nikon.jpg
+R|-p '$FileName' -p '$Model' t/images/Canon.jpg
+
+# --- OpenOutputFile, FilenameSPrintf, NextUnusedFilename, CreateDirectory
+W|-FileName -Model -w txt images/Canon.jpg images/Nikon.jpg
+W|-FileName -Model -w .out -w! .out images/Canon.jpg
+W|-FileName -Model -w %d%f_%e.txt images/Canon.jpg images/XMP.xmp
+W|-FileName -Model -w images/out/%-.3f%+2c.txt images/Canon.jpg images/Nikon.jpg
+W|-FileName -Model -w images/o/%2f_%-2f_%.2f_%2:3f_%uf_%le_%uE_%F.txt images/Canon.jpg
+W|-FileName -Model -w images/o/%:1d/%-:1D/%f.txt images/Canon.jpg
+W|-FileName -Model -w+ images/all.txt images/Canon.jpg images/Nikon.jpg
+W|-FileName -Model -w! images/all.txt -w+! images/all.txt images/Canon.jpg images/Nikon.jpg
+W|-FileName -Model -w images/same.txt images/Canon.jpg images/Nikon.jpg
+W|-W images/w/%f_%t%-c.%s -b -ThumbnailImage -PreviewImage -ICC_Profile -XMP -EXIF -IPTC images/Canon.jpg images/ExifTool.jpg images/XMP.jpg
+W|-W images/w/%f_%g1_%t.%s -G1 -b -JpgFromRaw -ThumbnailImage images/Nikon.jpg images/CanonRaw.cr2 images/FujiFilm.raf
+W|-W+ images/w/%f.%s -b -ThumbnailImage images/Canon.jpg
+W|-W images/w/%f_%t.%s -Model -Make images/Canon.jpg
+W|-W images/w/%t_%o.%s -b -OriginalRawImage -OriginalRawFileName images/DNG.dng
+W|-W images/w/%f_%t.%s -b -XMP -ICC_Profile -ThumbnailImage -PreviewImage -JUMBF -C2PA -Comment images/PNG.png images/GIF.gif images/JP2.jp2 images/MIE.mie
+W|-o images/c/%f%c.jpg -Artist=c images/Canon.jpg images/Canon.jpg images/Canon.jpg
+W|-o images/c/%f%.2c.jpg -o images/c/%f%.2c.jpg -Artist=c images/Canon.jpg
+W|-o images/c/%f-%.1lc.jpg -Artist=c images/Canon.jpg images/Nikon.jpg
+W|-o images/c/%f%.uc.jpg -Artist=c images/Canon.jpg images/Canon.jpg
+W|-o images/c/%f%.nc.jpg -Artist=c images/Canon.jpg images/Canon.jpg
+W|-o images/c/%3C_%f.jpg -Artist=c images/Canon.jpg images/Nikon.jpg
+W|-o images/c/%-2C_%f.jpg -Artist=c images/Canon.jpg images/Nikon.jpg
+W|-o images/c/%:C_%f.jpg -o images/c/%:C_%f.jpg -Artist=c images/Canon.jpg
+W|-o images/c/%lC%uC%.3lC.jpg -Artist=c images/Canon.jpg images/Nikon.jpg
+W|-o images/d/%-:3C/%f.jpg -Artist=c images/Canon.jpg images/Nikon.jpg
+W|-d %Y '-FileName<${DateTimeOriginal}%-c.%e' images/Canon.jpg images/Nikon.jpg images/Sony.jpg
+W|'-TestName<%f_new%+c.%e' images/Canon.jpg images/Nikon.jpg
+W|'-FileName<%f.%e' images/Canon.jpg
+
+# --- EFile
+W|-efile images/err.txt -FileName csv_in.csv images/nofile.jpg
+W|-efile15 images/ef.txt -if '$Make eq "Canon"' -Artist=e -overwrite_original images/Canon.jpg images/Nikon.jpg images/Sony.jpg
+W|-efile2! images/same.txt -Artist= -overwrite_original images/Canon.jpg
+W|-efile images/sub/err.txt -v -Artist=x images/Unknown.jpg
+
+# --- SlurpFile
+W|-ThumbnailImage<=images/Unknown.jpg -overwrite_original images/Canon.jpg
+W|-ThumbnailImage<=images/nofile.jpg -overwrite_original images/Canon.jpg
+W|-XMP<=images/XMP.xmp -overwrite_original images/Canon.jpg
+
+# --- FilterArgfileLine, ReadStayOpen (argfiles written by a first command)
+W|-p '-echo$/x$/#[CSTR]-echo$/#[CSTR]a\tb\q"$$x\\$/  -Model  $/-Make =  x$/#[CSTR]-echo$/#[CSTR]tab\\$/# comment$/$/-FileName' -w images/%f.args images/Canon.jpg -execute -@ images/Canon.args images/Nikon.jpg
+# (-stay_open: the port cannot run it yet, STDERR->flush at script line 432)
+
+# --- PrintTagList
+R|-listf -v
+R|-listwf -v
+R|-listf -q
+R|-list -q
+R|-listd -q
+R|-listg2
+R|-list -EXIF:Main
+R|-listw -XMP-dc:all
+R|-charset
