@@ -409,6 +409,9 @@ pub struct Interp {
     globals: HashMap<(u8, Rc<str>), Binding>,
     /// Named subs, fully qualified.
     subs: HashMap<Rc<str>, Rc<Code>>,
+    /// Imports of subs not defined yet (perl's stub, which autoloads in
+    /// the package of the sub it names): target -> source.
+    sub_aliases: HashMap<Rc<str>, Rc<str>>,
     /// `@ISA` for method resolution, as registered by the runtime.
     pub isa: HashMap<Rc<str>, Vec<Rc<str>>>,
     cache: HashMap<Vec<u8>, Rc<Block>>,
@@ -496,6 +499,7 @@ impl Interp {
         let mut i = Interp {
             globals: HashMap::new(),
             subs: HashMap::new(),
+            sub_aliases: HashMap::new(),
             isa: HashMap::new(),
             cache: HashMap::new(),
             package: Rc::from("main"),
@@ -3072,7 +3076,12 @@ impl Interp {
         if name.contains("::") {
             return self.call_named(name, args, want);
         }
-        let found = self.find_method(&class, name).or_else(|| self.find_autoload(&class, name));
+        // UNIVERSAL's isa and can come before any AUTOLOAD, as in perl's
+        // method resolution
+        let mut found = self.find_method(&class, name);
+        if found.is_none() && !matches!(name, "isa" | "can") {
+            found = self.find_autoload(&class, name);
+        }
         match found {
             Some(c) => self.call(&c, args, want),
             None => {
@@ -3108,7 +3117,26 @@ impl Interp {
 
     /// perl's AUTOLOAD: a missing `Pkg::name` calls `Pkg::AUTOLOAD` with
     /// `$Pkg::AUTOLOAD` set to the full name.
+    /// Make `target` the sub `source` is, now or once it is defined.
+    pub fn import_sub(&mut self, target: &str, source: &str) {
+        match self.subs.get(source).cloned() {
+            Some(c) => {
+                self.subs.insert(Rc::from(target), c);
+            }
+            None => {
+                self.sub_aliases.insert(Rc::from(target), Rc::from(source));
+            }
+        }
+    }
+
     fn autoload(&mut self, full: &str) -> Option<Rc<Code>> {
+        // an imported stub: the sub it names, or that package's AUTOLOAD
+        if let Some(source) = self.sub_aliases.get(full).cloned() {
+            if let Some(c) = self.subs.get(&*source).cloned() {
+                return Some(c);
+            }
+            return self.autoload(&source);
+        }
         let (pkg, _) = full.rsplit_once("::")?;
         let code = self.subs.get(format!("{pkg}::AUTOLOAD").as_str()).cloned()?;
         self.set_scalar(&format!("{pkg}::AUTOLOAD"), Value::str(full));

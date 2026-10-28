@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::interp::eval::{die, Binding, Code, ER};
-use crate::interp::{Interp, Scope, Want};
+use crate::interp::{Interp, Want};
 use crate::perl::value::Hash;
 use crate::perl::Value;
 
@@ -177,7 +177,9 @@ fn anon_sub(it: &mut Interp, name: &str, src: &[u8]) -> Value {
             let code = match existing {
                 Some(c) => c,
                 None => {
-                    let scope = Scope::new(None);
+                    // (it sees the module's file lexicals, as the closure
+                    // it was in perl: ASF's RawConv reads `my %streamType`)
+                    let scope = crate::runtime::file_scope(i, &package);
                     let saved = i.strict;
                     i.strict = false;
                     let r = i.eval_string(&src, &package, &scope, Want::Scalar);
@@ -215,6 +217,14 @@ pub fn requires(data: &[u8]) -> Result<Vec<String>, String> {
 
 /// Load a module dump into the interpreter's package variables.
 pub fn load(it: &mut Interp, module: &str, data: &[u8]) -> Result<ModuleData, String> {
+    load_lexicals_as(it, module, data, None)
+}
+
+/// `load`, for a .pl file of package `pkg` (Writer.pl, WriteExif.pl...):
+/// its `my` variables go under `PKG::<my>::name` unless the package's
+/// module has one of that name, and always under `PKG::<my:FILE>::name`,
+/// as when the file runs from its source.
+pub fn load_lexicals_as(it: &mut Interp, module: &str, data: &[u8], file: Option<(&str, &str)>) -> Result<ModuleData, String> {
     if !data.starts_with(b"PLD1") {
         return Err("not a module dump".into());
     }
@@ -245,8 +255,13 @@ pub fn load(it: &mut Interp, module: &str, data: &[u8]) -> Result<ModuleData, St
         match sigil {
             b'$' => {
                 let v = r.node(it, None)?;
+                // a variable set before the module loads (by a config file
+                // or a script, as $Image::ExifTool::Geolocation::geoDir) is
+                // kept: the module only declares it
                 if let Binding::Scalar(c) = &existing {
-                    *c.borrow_mut() = v;
+                    if c.borrow().is_undef() {
+                        *c.borrow_mut() = v;
+                    }
                 }
             }
             _ => {
@@ -265,7 +280,11 @@ pub fn load(it: &mut Interp, module: &str, data: &[u8]) -> Result<ModuleData, St
     let nlex = r.varint()?;
     for _ in 0..nlex {
         let sigil = r.byte()?;
-        let name = format!("{}::<my>::{}", module, r.string()?);
+        let var = r.string()?;
+        let name = match file {
+            Some((pkg, f)) => format!("{pkg}::<my:{f}>::{var}"),
+            None => format!("{}::<my>::{}", module, var),
+        };
         let existing = it.global(sigil, &name);
         match sigil {
             b'$' => {
@@ -279,6 +298,16 @@ pub fn load(it: &mut Interp, module: &str, data: &[u8]) -> Result<ModuleData, St
                 (Value::ArrayRef(a), Binding::Array(e)) if !Rc::ptr_eq(&a, e) => it.set_global(sigil, &name, Binding::Array(a)),
                 _ => {}
             },
+        }
+    }
+    // a .pl file's lexicals are also the package's own unless it has them
+    if let Some((pkg, f)) = file {
+        let own = format!("{pkg}::<my:{f}>::");
+        for (sigil, name, b) in it.globals_with_prefix(&own) {
+            let shared = format!("{pkg}::<my>::{}", &name[own.len()..]);
+            if it.globals_with_prefix(&shared).iter().all(|(s, n, _)| *s != sigil || n != &shared) {
+                it.set_global(sigil, &shared, b);
+            }
         }
     }
     Ok(ModuleData { requires, calls: calls_raw })

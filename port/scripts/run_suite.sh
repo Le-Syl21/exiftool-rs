@@ -15,7 +15,7 @@ cd "$work"
 : > results.txt
 for t in t/*.t; do
     n=$(basename "$t" .t)
-    EXIFTOOL_LIB="$src/lib" timeout 300 "$bin" "$t" > "out/$n.txt" 2> "out/$n.err" && code=0 || code=$?
+    env -u EXIFTOOL_LIB timeout 300 "$bin" "$t" > "out/$n.txt" 2> "out/$n.err" && code=0 || code=$?
     plan=$(head -1 "out/$n.txt" | sed -n 's/^1\.\.//p')
     ok=$(grep -c '^ok ' "out/$n.txt" || true)
     nok=$(grep -c '^not ok' "out/$n.txt" || true)

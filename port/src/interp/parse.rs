@@ -1938,7 +1938,10 @@ impl<'a> Parser<'a> {
             let w = self.peek_ident().unwrap().len();
             matches!(self.at(w), b'(' | b'{' | b'[' | b'/' | b'<' | b'!' | b'|')
         };
-        if (matches!(self.at(0), b'$' | b'"' | b'\'' | b'@') && !self.starts("$)")) || quote_arg {
+        // (a sub declared with a prototype takes any term as a list
+        // operator, as B::Deparse writes `Name shift(), \%h`)
+        let declared = self.sub_prototype(id).is_some_and(|p| !p.is_empty()) && self.term_follows() && !self.starts("=") && !self.starts(",");
+        if (matches!(self.at(0), b'$' | b'"' | b'\'' | b'@') && !self.starts("$)")) || quote_arg || declared {
             let mut args = flatten_list(self.comma()?);
             if let Some(p) = self.sub_prototype(id) {
                 args = apply_prototype(&p, args);

@@ -87,6 +87,17 @@ pub fn new_interp() -> Interp {
     it
 }
 
+/// `require $file`: a file by its name, whatever it looks like (a config
+/// file such as `.ExifTool_config`).
+pub fn require_path(it: &mut Interp, path: &str) -> ER<()> {
+    if let Binding::Hash(inc) = it.global(b'%', "main::INC") {
+        if inc.borrow().contains(path.as_bytes()) {
+            return Ok(());
+        }
+    }
+    require_file(it, path, path)
+}
+
 /// `require MODULE` (or a file).
 pub fn require(it: &mut Interp, what: &str) -> ER<()> {
     let is_file = what.contains('/') || what.ends_with(".pm") || what.ends_with(".pl");
@@ -106,9 +117,11 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
         inc.borrow_mut().insert(key.as_bytes(), Value::str(&key));
         return Ok(());
     }
-    // A module not ported yet runs from its Perl source; the subs ported so
-    // far replace their Perl versions once it is loaded.
-    if !crate::modules::is_ported(what) {
+    // A module loads from its dump, built into the binary; only one that
+    // has none (not ExifTool's) runs from its Perl source, if there is one.
+    // (EXIFTOOL_FROM_SOURCE=1 with EXIFTOOL_LIB: every module from the
+    // source, to compare the two when debugging the dumps)
+    if module_data(what).is_none() || std::env::var_os("EXIFTOOL_FROM_SOURCE").is_some() {
         if let Some(path) = source_path(&key) {
             inc.borrow_mut().insert(key.as_bytes(), Value::str(&path));
             run_source(it, &path)?;
@@ -125,6 +138,10 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
     // Every module was dumped with Image::ExifTool loaded first.
     if what != "Image::ExifTool" {
         require(it, "Image::ExifTool")?;
+    } else {
+        // ExifTool.pm's `use File::RandomAccess;` (its dump records only
+        // the Image::ExifTool modules it loads)
+        require(it, "File::RandomAccess")?;
     }
     // As perl compiles a module: its `use`d modules and its subs first, then
     // its top-level code (the variables, then the calls it made).
@@ -145,14 +162,15 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
     Ok(())
 }
 
-/// Where ExifTool's Perl source is, for the modules not ported yet
-/// (`EXIFTOOL_LIB`, or the checkout next to this repository).
-pub fn perl_lib() -> String {
-    std::env::var("EXIFTOOL_LIB").unwrap_or_else(|_| format!("{}/../../exiftool/lib", env!("CARGO_MANIFEST_DIR")))
+/// Where a Perl source library is, only when `EXIFTOOL_LIB` names one:
+/// ExifTool itself is built in, so this only serves modules it does not
+/// have (or debugging against a source tree).
+pub fn perl_lib() -> Option<String> {
+    std::env::var("EXIFTOOL_LIB").ok()
 }
 
 fn source_path(key: &str) -> Option<String> {
-    let p = format!("{}/{key}", perl_lib());
+    let p = format!("{}/{key}", perl_lib()?);
     std::path::Path::new(&p).exists().then_some(p)
 }
 
@@ -195,6 +213,22 @@ fn module_of_path(path: &str) -> String {
 
 /// `require "file.pl"` / `do FILE`: run a Perl source file.
 fn require_file(it: &mut Interp, path: &str, key: &str) -> ER<()> {
+    let from_source = std::env::var_os("EXIFTOOL_FROM_SOURCE").is_some();
+    // one of ExifTool's modules required by file name
+    // (`require "Image/ExifTool/$module.pm"`): from its dump
+    if let Some(r) = key.strip_suffix(".pm") {
+        let module = r.replace('/', "::");
+        if module_data(&module).is_some() && !from_source {
+            return require(it, &module);
+        }
+    }
+    // one of ExifTool's own .pl files: from its dump, as the modules
+    if let Some(r) = key.strip_prefix("Image/ExifTool/").and_then(|r| r.strip_suffix(".pl")) {
+        let module = format!("Image::ExifTool::{}", r.replace('/', "::"));
+        if let Some(data) = module_data(&module).filter(|_| !from_source) {
+            return require_pl_dump(it, &module, key, data);
+        }
+    }
     let path = if std::path::Path::new(path).exists() { path.to_string() } else { source_path(path).unwrap_or_else(|| path.to_string()) };
     let path = path.as_str();
     let src = match std::fs::read(path) {
@@ -237,6 +271,35 @@ fn require_file(it: &mut Interp, path: &str, key: &str) -> ER<()> {
     }
 }
 
+/// Load a .pl file of ExifTool from its dump: its package's module first
+/// (the dump's first requirement), then the ported subs, the variables it
+/// creates, its `my` variables, and the calls its top-level code made.
+fn require_pl_dump(it: &mut Interp, module: &str, key: &str, data: &[u8]) -> ER<()> {
+    if let Binding::Hash(inc) = it.global(b'%', "main::INC") {
+        inc.borrow_mut().insert(key.as_bytes(), Value::str(key));
+    }
+    let deps = pld::requires(data).map_err(|e| crate::interp::Flow::Die(Value::from(format!("loading {key}: {e}\n"))))?;
+    for dep in &deps {
+        require(it, dep)?;
+    }
+    if let Some(r) = registrar(module) {
+        r(it);
+    }
+    crate::interp::parse::module_loaded(module);
+    // where the file's `my` variables go: as when it runs from its source
+    // (a Write*.pl file's are its module's, the others' their own)
+    let pkg = module_of_path(key);
+    let file = key.rsplit('/').next().unwrap_or(key).to_string();
+    let md = match pld::load_lexicals_as(it, module, data, Some((&pkg, &file))) {
+        Ok(m) => m,
+        Err(e) => return die(format!("loading {key}: {e}")),
+    };
+    for (name, args) in md.calls {
+        it.call_named(&name, args, Want::Void)?;
+    }
+    Ok(())
+}
+
 /// The registrar key of a library file: its path as a package name
 /// (Image/ExifTool/XMPStruct.pl is Image::ExifTool::XMPStruct).
 fn file_key(path: &str) -> String {
@@ -246,6 +309,16 @@ fn file_key(path: &str) -> String {
 
 /// Subs perl itself provides that ExifTool and its tests use.
 fn install_core(it: &mut Interp) {
+    // a dump's imports (`use Image::ExifTool qw(:Utils)`): TARGET, SOURCE
+    // pairs, each TARGET becoming the sub SOURCE is
+    it.define_native("Internals::PldImport", |it, a, _| {
+        for pair in a.chunks(2) {
+            if let [target, source] = pair {
+                it.import_sub(&target.to_text(), &source.to_text());
+            }
+        }
+        Ok(vec![])
+    });
     // Exporter::import: alias the requested (or default) symbols into the
     // caller's package.
     it.define_native("Exporter::import", |it, args, _| {

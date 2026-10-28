@@ -369,7 +369,32 @@ fn eval_require(it: &mut Interp, module: &Value) -> ER<bool> {
     Ok(v.truthy())
 }
 
+/// TagLookup.pm's module-level code that depends on the run: insert any
+/// user-defined tags into our tag lookup, then any other queued tags from
+/// plug-in modules. The module's dump calls it once loaded.
+fn init_tag_lookup(it: &mut Interp, _a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    if let crate::interp::Binding::Hash(h) = it.global(b'%', "Image::ExifTool::UserDefined") {
+        let user = Value::HashRef(h);
+        let mut tables = user.keys();
+        tables.sort();
+        for table in tables {
+            let t = user.get(&table);
+            pl::call(it, "Image::ExifTool::TagLookup::AddTags", vec![t, Value::Str(table)])?;
+        }
+    }
+    if let crate::interp::Binding::Array(a) = it.global(b'@', "Image::ExifTool::pluginTags") {
+        let queued: Vec<Value> = a.borrow().clone();
+        for args in queued {
+            let a = args.items();
+            pl::call(it, "Image::ExifTool::TagLookup::AddTags", vec![a.first().cloned().unwrap_or_default(), a.get(1).cloned().unwrap_or_default()])?;
+        }
+        a.borrow_mut().clear();
+    }
+    Ok(vec![])
+}
+
 pub fn register(it: &mut Interp) {
+    it.define_native("Image::ExifTool::TagLookup::InitTagLookup", init_tag_lookup);
     it.define_native("Image::ExifTool::TagLookup::AddFields", add_fields);
     it.define_native("Image::ExifTool::TagLookup::AddTags", add_tags);
     it.define_native("Image::ExifTool::TagLookup::TagExists", tag_exists);

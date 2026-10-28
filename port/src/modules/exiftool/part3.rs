@@ -4660,7 +4660,171 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
 }
 
 /// Register the subs ported so far; the others still run from the Perl.
+/// ExifTool.pm's module-level code that depends on the run, not on the
+/// module: load the .ExifTool_config file (`$configFile`, `@configFiles`,
+/// `$noConfig`, EXIFTOOL_HOME/HOME), then the user-defined lenses and file
+/// types it may define. The module's dump calls it once loaded.
+fn init_config(it: &mut Interp, _a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    // Load .ExifTool_config file from user's home directory
+    // (use of noConfig is now deprecated, use configFile = '' instead)
+    let config_files = pkg_array(it, "configFiles");
+    let config_file = it.get_scalar(&format!("{ET}::configFile"));
+    if !config_file.is_undef() {
+        config_files.push(config_file);
+    }
+    while !it.get_scalar(&format!("{ET}::noConfig")).truthy() {
+        let config = match &config_files {
+            Value::ArrayRef(a) if !a.borrow().is_empty() => a.borrow_mut().remove(0),
+            _ => Value::Undef,
+        };
+        let (file, was_config);
+        let config_name;
+        if config.is_undef() {
+            config_name = ".ExifTool_config".to_string();
+            // get our home directory (HOMEDRIVE and HOMEPATH are used in Windows cmd shell)
+            let env = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
+            let home = env("EXIFTOOL_HOME").or_else(|| env("HOME")).or_else(|| {
+                let h = format!("{}{}", env("HOMEDRIVE").unwrap_or_default(), env("HOMEPATH").unwrap_or_default());
+                (!h.is_empty()).then_some(h)
+            });
+            let home = home.unwrap_or_else(|| ".".to_string());
+            // look for the config file in 1) the home directory, 2) the program dir
+            file = format!("{home}/{config_name}");
+            was_config = false;
+        } else {
+            config_name = config.to_text();
+            if config_name.is_empty() {
+                break; // filename of "" disables configuration
+            }
+            file = config_name.clone();
+            was_config = true;
+        }
+        let r = if file == "-" {
+            let mut buff = Vec::new();
+            use std::io::Read;
+            match std::io::stdin().take(100_000_000).read_to_end(&mut buff) {
+                Ok(100_000_000) => {
+                    pl::warn(it, "Piped config file is too large\n")?;
+                    Ok(())
+                }
+                Ok(n) if n > 0 => {
+                    let scope = crate::interp::Scope::new(None);
+                    it.eval_string(&buff, ET, &scope, Want::Void).map(|_| ())
+                }
+                _ => {
+                    it.set_scalar("main::@", Value::Undef);
+                    Ok(())
+                }
+            }
+        } else {
+            // also check executable directory unless path is absolute
+            let exe_dir = format!("{ET}::exeDir");
+            if it.get_scalar(&exe_dir).is_undef() {
+                let zero = it.get_scalar("main::0").to_text();
+                let dir = zero.rfind(['\\', '/']).map(|i| zero[..i].to_string()).unwrap_or_else(|| ".".to_string());
+                it.set_scalar(&exe_dir, Value::str(&dir));
+            }
+            let readable = |f: &str| std::fs::File::open(f).is_ok();
+            let mut file = file;
+            if !readable(&file) && !config_name.starts_with('/') {
+                file = format!("{}/{config_name}", it.get_scalar(&exe_dir).to_text());
+            }
+            if !readable(&file) {
+                if was_config {
+                    pl::warn(it, "Config file not found\n")?;
+                }
+                break;
+            }
+            // load the config file (perl looks in the current directory
+            // first, as a relative name is opened here)
+            match crate::runtime::require_path(it, &file) {
+                Ok(()) => {
+                    it.set_scalar("main::@", Value::str(""));
+                    Ok(())
+                }
+                Err(crate::interp::Flow::Die(e)) => Err(e),
+                Err(e) => return Err(e),
+            }
+        };
+        // print warning (minus "Compilation failed" part)
+        if let Err(e) = r {
+            it.set_scalar("main::@", e);
+        }
+        let err = it.get_scalar("main::@");
+        if err.truthy() {
+            let t = err.to_text();
+            let t = t.split("Compilation failed").next().unwrap_or("").to_string();
+            pl::warn(it, &t)?;
+        }
+        if config_files.items().is_empty() {
+            break;
+        }
+    }
+    // read user-defined lenses (may have been defined by script instead of config file)
+    if let Binding::Array(lenses) = it.global(b'@', "Image::ExifTool::UserDefined::Lenses") {
+        let user_lens = pkg_hash(it, "userLens");
+        for l in lenses.borrow().iter() {
+            user_lens.set(l.to_bytes(), n(1));
+        }
+    }
+    // add user-defined file types
+    if let Binding::Hash(ft) = it.global(b'%', "Image::ExifTool::UserDefined::FileTypes") {
+        let file_types = Value::HashRef(ft);
+        let lookup = pkg_hash(it, "fileTypeLookup");
+        let no_write = pkg_hash(it, "noWriteFile");
+        let module_name = pkg_hash(it, "moduleName");
+        let magic = pkg_hash(it, "magicNumber");
+        let types = pkg_array(it, "fileTypes");
+        let mime = pkg_hash(it, "mimeType");
+        let mut keys = file_types.keys();
+        keys.sort();
+        for k in keys {
+            let file_info = file_types.get(&k);
+            let ty = String::from_utf8_lossy(&k).to_uppercase();
+            if !file_info.is_hash() {
+                lookup.set(&ty, file_info);
+                continue;
+            }
+            let mut base = file_info.get("BaseType");
+            if base.truthy() {
+                if file_info.get("Description").truthy() {
+                    lookup.set(&ty, Value::new_array(vec![base.clone(), file_info.get("Description")]));
+                } else {
+                    lookup.set(&ty, base.clone());
+                }
+                let w = file_info.get("Writable");
+                if !w.is_undef() && !w.truthy() {
+                    // first make sure we are using an actual base type and not a derived type
+                    while base.truthy() && !lookup.get(base.to_bytes()).is_ref() {
+                        base = lookup.get(base.to_bytes());
+                    }
+                    // mark this type as not writable
+                    if !no_write.get(base.to_bytes()).truthy() {
+                        no_write.set(base.to_bytes(), Value::new_array(vec![]));
+                    }
+                    no_write.get(base.to_bytes()).push(Value::str(&ty));
+                }
+            } else {
+                let desc = file_info.get("Description");
+                lookup.set(&ty, Value::new_array(vec![Value::str(&ty), if desc.truthy() { desc } else { Value::str(&ty) }]));
+                module_name.set(&ty, n(0)); // not supported
+                if file_info.get("Magic").truthy() {
+                    magic.set(&ty, file_info.get("Magic"));
+                    if !types.items().iter().any(|t| t.to_text() == ty) {
+                        types.push(Value::str(&ty));
+                    }
+                }
+            }
+            if !file_info.get("MIMEType").is_undef() {
+                mime.set(&ty, file_info.get("MIMEType"));
+            }
+        }
+    }
+    ret(Value::Undef)
+}
+
 pub fn register(it: &mut Interp) {
+    it.define_native("Image::ExifTool::InitConfig", init_config);
     it.define_native("Image::ExifTool::DirStart", dir_start);
     it.define_native("Image::ExifTool::ProcessEXV", process_exv);
     it.define_native("Image::ExifTool::ProcessEXIF", process_exif);

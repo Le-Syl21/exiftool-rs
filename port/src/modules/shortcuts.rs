@@ -26,6 +26,23 @@ pub fn load_shortcuts(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
     pl::ret_nothing(want)
 }
 
+/// Shortcuts.pm's module-level code: load the user-defined shortcuts
+/// (`%Image::ExifTool::UserDefined::Shortcuts`, or the old name
+/// `%Image::ExifTool::Shortcuts::UserDefined`). Called once the module's
+/// dump is loaded.
+fn init_shortcuts(it: &mut Interp, _a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    // (for backward compatibility, renamed in ExifTool 7.75)
+    for name in ["Image::ExifTool::Shortcuts::UserDefined", "Image::ExifTool::UserDefined::Shortcuts"] {
+        if let crate::interp::Binding::Hash(h) = it.global(b'%', name) {
+            if !h.borrow().is_empty() {
+                pl::call(it, "Image::ExifTool::Shortcuts::LoadShortcuts", vec![Value::HashRef(h)])?;
+            }
+        }
+    }
+    Ok(vec![])
+}
+
 pub fn register(it: &mut Interp) {
+    it.define_native("Image::ExifTool::Shortcuts::InitShortcuts", init_shortcuts);
     it.define_native("Image::ExifTool::Shortcuts::LoadShortcuts", load_shortcuts);
 }

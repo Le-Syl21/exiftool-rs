@@ -1112,7 +1112,96 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     }
 }
 
+/// The file lexicals ReadDatabase fills: saved before reading a database
+/// of the user's, to come back to the built-in one if that read fails.
+const DB_ARRAYS: &[&str] = &["cityList", "countryList", "regionList", "subregionList", "timezoneList", "altNames", "featureCodes"];
+const DB_HASHES: &[&str] = &["countryNum", "regionNum", "subregionNum", "timezoneNum", "featureTypes", "featureCodes"];
+const DB_SCALARS: &[&str] = &["dbVer", "nCity"];
+
+/// Geolocation.pm's module-level code that depends on the run (the module's
+/// dump calls it once loaded). The dump holds the database the module read
+/// from lib/Image/ExifTool/Geolocation.dat, which stands for that default
+/// one here: $geoDir set to "" means no database, and a database in the
+/// $geoDir directory replaces it (as perl reads that one first). Then the
+/// alternate names directory and the user-defined entries.
+fn init_geolocation(it: &mut Interp, _a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let geo_var = format!("{MODULE}::geoDir");
+    let geo_dir = it.get_scalar(&geo_var);
+    // read the Geolocation database unless $geoDir set to empty string
+    if !geo_dir.is_undef() && !geo_dir.truthy() {
+        for a in DB_ARRAYS {
+            if let Value::ArrayRef(r) = runtime::lex_array(it, MODULE, a) {
+                r.borrow_mut().clear();
+            }
+        }
+        for h in DB_HASHES {
+            let v = runtime::lex_hash(it, MODULE, h);
+            for k in v.keys() {
+                v.delete(&k);
+            }
+        }
+        *runtime::lex_scalar(it, MODULE, "nCity").borrow_mut() = Value::Undef;
+        it.set_scalar(&format!("{MODULE}::dbInfo"), Value::Undef);
+    } else if geo_dir.truthy() {
+        let arrays: Vec<Vec<Value>> = DB_ARRAYS.iter().map(|a| runtime::lex_array(it, MODULE, a).items()).collect();
+        let hashes: Vec<Vec<(std::rc::Rc<[u8]>, Value)>> = DB_HASHES
+            .iter()
+            .map(|h| {
+                let v = runtime::lex_hash(it, MODULE, h);
+                v.keys().into_iter().map(|k| (k.clone(), v.get(&k))).collect()
+            })
+            .collect();
+        let scalars: Vec<Value> = DB_SCALARS.iter().map(|s| runtime::lex_scalar(it, MODULE, s).borrow().clone()).collect();
+        let db_info = it.get_scalar(&format!("{MODULE}::dbInfo"));
+        // (ReadDatabase starts from empty lists, as the module loading)
+        for a in DB_ARRAYS {
+            if let Value::ArrayRef(r) = runtime::lex_array(it, MODULE, a) {
+                r.borrow_mut().clear();
+            }
+        }
+        let file = format!("{}/Geolocation.dat", geo_dir.to_text());
+        let ok = pl::call(it, &format!("{MODULE}::ReadDatabase"), vec![Value::str(&file)])?.truthy();
+        if !ok {
+            // back to the default database
+            for (a, items) in DB_ARRAYS.iter().zip(arrays) {
+                if let Value::ArrayRef(r) = runtime::lex_array(it, MODULE, a) {
+                    *r.borrow_mut() = items;
+                }
+            }
+            for (h, pairs) in DB_HASHES.iter().zip(hashes) {
+                let v = runtime::lex_hash(it, MODULE, h);
+                for k in v.keys() {
+                    v.delete(&k);
+                }
+                for (k, x) in pairs {
+                    v.set(&k, x);
+                }
+            }
+            for (s, x) in DB_SCALARS.iter().zip(scalars) {
+                *runtime::lex_scalar(it, MODULE, s).borrow_mut() = x;
+            }
+            it.set_scalar(&format!("{MODULE}::dbInfo"), db_info);
+        }
+    }
+    // set directory for language files and alternate names (the built-in
+    // database has no directory: $geoDir stays as the user set it)
+    let alt_var = format!("{MODULE}::altDir");
+    let geo_dir = it.get_scalar(&geo_var);
+    if it.get_scalar(&alt_var).is_undef() && geo_dir.truthy() && std::path::Path::new(&format!("{}/AltNames.dat", geo_dir.to_text())).exists() {
+        it.set_scalar(&alt_var, geo_dir);
+    }
+    // add user-defined entries to the database
+    if let crate::interp::Binding::Array(a) = it.global(b'@', "Image::ExifTool::UserDefined::Geolocation") {
+        let entries: Vec<Value> = a.borrow().clone();
+        for e in entries {
+            pl::call(it, &format!("{MODULE}::AddEntry"), e.items())?;
+        }
+    }
+    Ok(vec![])
+}
+
 pub fn register(it: &mut Interp) {
+    it.define_native("Image::ExifTool::Geolocation::InitGeolocation", init_geolocation);
     it.define_native("Image::ExifTool::Geolocation::ReadDatabase", read_database);
     it.define_native("Image::ExifTool::Geolocation::ReadAltNames", read_alt_names);
     it.define_native("Image::ExifTool::Geolocation::ClearLastMatches", clear_last_matches);

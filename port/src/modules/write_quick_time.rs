@@ -4,7 +4,8 @@
 //! file is autoloaded in package Image::ExifTool::QuickTime; its `my`
 //! variables (`%dirMap`, `%qtFormat`, `$undLang`...) live under
 //! `Image::ExifTool::QuickTime::<my:WriteQuickTime.pl>::NAME`. Its
-//! module-level code (marking the Preferred tags) stays Perl.
+//! module-level code (marking the Preferred tags) is
+//! `init_write_quick_time`, which the module's dump calls once loaded.
 //!
 //! The lists ExifTool keeps of chunk offsets and mdat chunks are Perl arrays
 //! here too (WriteItemInfo's edit list is shared through `$$et{mdatEdit}`).
@@ -3079,7 +3080,74 @@ pub fn write_mov(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     ret(n(if r.truthy() { 1 } else { -1 }))
 }
 
+/// WriteQuickTime.pl's module-level code:
+/// mark UserData tags that don't have ItemList counterparts as Preferred
+/// - and set Preferred to 0 for any Avoid-ed tag
+/// - also, for now, set Writable to 0 for any tag with a RawConv and no RawConvInv
+fn init_write_quick_time(it: &mut Interp, _a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let item_list = match it.global(b'%', &format!("{PKG}::ItemList")) {
+        Binding::Hash(h) => Value::HashRef(h),
+        _ => return ret(Value::Undef),
+    };
+    let user_data = match it.global(b'%', &format!("{PKG}::UserData")) {
+        Binding::Hash(h) => Value::HashRef(h),
+        _ => return ret(Value::Undef),
+    };
+    let mut pref = std::collections::HashSet::new();
+    for tag in pl::call_list(it, "Image::ExifTool::TagTableKeys", vec![item_list.clone()])? {
+        let mut tag_info = item_list.get(tag.to_bytes());
+        if !tag_info.is_hash() {
+            if tag_info.is_ref() {
+                continue;
+            }
+            let h = Value::new_hash();
+            h.set("Name", tag_info);
+            item_list.set(tag.to_bytes(), h.clone());
+            tag_info = h;
+        } else {
+            if tag_info.get("RawConv").truthy() && !tag_info.get("RawConvInv").truthy() {
+                tag_info.set("Writable", n(0));
+            }
+            if tag_info.get("Avoid").truthy() {
+                tag_info.set("Preferred", n(0));
+                continue;
+            }
+            let p = tag_info.get("Preferred");
+            if !p.is_undef() && !p.truthy() {
+                continue;
+            }
+        }
+        pref.insert(tag_info.get("Name").to_bytes().to_vec());
+    }
+    for tag in pl::call_list(it, "Image::ExifTool::TagTableKeys", vec![user_data.clone()])? {
+        let mut tag_info = user_data.get(tag.to_bytes());
+        if !tag_info.is_hash() {
+            if tag_info.is_ref() {
+                continue;
+            }
+            let h = Value::new_hash();
+            h.set("Name", tag_info);
+            user_data.set(tag.to_bytes(), h.clone());
+            tag_info = h;
+        } else {
+            if tag_info.get("RawConv").truthy() && !tag_info.get("RawConvInv").truthy() {
+                tag_info.set("Writable", n(0));
+            }
+            if tag_info.get("Avoid").truthy() {
+                tag_info.set("Preferred", n(0));
+                continue;
+            }
+            if !tag_info.get("Preferred").is_undef() || pref.contains(&tag_info.get("Name").to_bytes().to_vec()) {
+                continue;
+            }
+        }
+        tag_info.set("Preferred", n(1));
+    }
+    ret(Value::Undef)
+}
+
 pub fn register(it: &mut Interp) {
+    it.define_native("Image::ExifTool::QuickTime::InitWriteQuickTime", init_write_quick_time);
     it.define_native("Image::ExifTool::QuickTime::PrintInvGPSCoordinates", print_inv_gps_coordinates);
     it.define_native("Image::ExifTool::QuickTime::ConvInvISO6709", conv_inv_iso6709);
     it.define_native("Image::ExifTool::QuickTime::Handle_iloc", handle_iloc);

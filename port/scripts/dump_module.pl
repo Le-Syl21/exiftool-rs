@@ -34,28 +34,157 @@ my ($lib, $module, $out) = @ARGV;
 die "usage: $0 EXIFTOOL_LIB MODULE OUTFILE\n" unless defined $out;
 unshift @INC, $lib;
 $Image::ExifTool::configFile = '';
+# the variables before the module is loaded: those it creates in other
+# packages (ExifTool.pm's %Image::ExifTool::JFIF::Main...) are its too
+my %varsBefore;
+%varsBefore = var_names() if $module eq 'Image::ExifTool';
 require Image::ExifTool;
 
+# A .pl file (Writer.pl, WriteExif.pl, XMP2.pl...) is code of another
+# package that its module loads on demand: load that module first, as
+# perl does, then dump what the file adds (the variables it creates).
+my ($plFile, $pkg) = (undef, $module);
+{
+    (my $file = $module) =~ s{::}{/}g;
+    if ($module ne 'Image::ExifTool' and not -e "$lib/$file.pm" and -e "$lib/$file.pl") {
+        $plFile = "$file.pl";
+        open my $src, '<', "$lib/$plFile" or die "$plFile: $!\n";
+        while (<$src>) { if (/^package\s+([\w:]+)\s*;/) { $pkg = $1; last } }
+        close $src;
+        (my $parent = $pkg) =~ s{::}{/}g;
+        require "$parent.pm" if $pkg ne 'Image::ExifTool' and -e "$lib/$parent.pm";
+    }
+}
+sub var_names {
+    no strict 'refs';
+    my %v;
+    foreach my $p (all_packages('Image::ExifTool')) {
+        foreach my $name (keys %{"${p}::"}) {
+            next if $name =~ /::$/;
+            my $glob = ${"${p}::"}{$name};
+            next unless ref(\$glob) eq 'GLOB';
+            $v{"*${p}::$name"} = 1;
+            $v{"\$${p}::$name"} = 1 if defined ${*{$glob}{SCALAR}};
+            # (an array or hash counts once it has content: a mention of
+            # %Image::ExifTool::JPEG::Main elsewhere creates it empty)
+            $v{"\@${p}::$name"} = 1 if *{$glob}{ARRAY} and @{*{$glob}{ARRAY}};
+            $v{"%${p}::$name"} = 1 if *{$glob}{HASH} and %{*{$glob}{HASH}};
+        }
+    }
+    return %v;
+}
+%varsBefore = var_names() unless $module eq 'Image::ExifTool';
+# the subs before the module is loaded: those it imports (`use Image::ExifTool
+# qw(:Utils)`, Writer.pl's FindTagInfo...) are replayed as aliases
+my %codeBefore;
+sub code_names {
+    no strict 'refs';
+    my %c;
+    foreach my $p (all_packages('Image::ExifTool')) {
+        foreach my $name (keys %{"${p}::"}) {
+            next if $name =~ /::$/;
+            my $glob = ${"${p}::"}{$name};
+            next unless ref(\$glob) eq 'GLOB' and *{$glob}{CODE};
+            $c{"${p}::$name"} = *{$glob}{CODE};
+        }
+    }
+    return %c;
+}
+%codeBefore = code_names();
 my %before = %INC;
 my @calls;
 if ($module ne 'Image::ExifTool') {
     no strict 'refs';
     no warnings 'redefine';
-    *Image::ExifTool::AddCompositeTags = sub ($;$) { push @calls, ['Image::ExifTool::AddCompositeTags', [@_]] };
+    # (only the module's own calls: those of the modules it loads are in
+    # their own dumps)
+    (my $own = $module) =~ s{::}{/}g;
+    *Image::ExifTool::AddCompositeTags = sub ($;$) {
+        push @calls, ['Image::ExifTool::AddCompositeTags', [@_]] if (caller(0))[1] =~ m{\Q$own\E\.p[lm]$};
+    };
+    # a tag the module adds to another module's table (Validate.pm adds
+    # Validate to ExifTool's Extra table): replayed too, and done here
+    my $addTag = \&Image::ExifTool::AddTagToTable;
+    *Image::ExifTool::AddTagToTable = sub ($$;$$) {
+        push @calls, ['Image::ExifTool::AddTagToTable', [@_]] if (caller(0))[1] =~ m{\Q$own\E\.p[lm]$};
+        return $addTag->(@_);
+    };
     my $file = $module;
     $file =~ s{::}{/}g;
     require "$file.pm" if -e "$lib/$file.pm";
     require "$file.pl" if -e "$lib/$file.pl";
 }
 my @requires;
+push @requires, $pkg if $plFile and $pkg ne 'Image::ExifTool';
 foreach my $f (sort keys %INC) {
     next if exists $before{$f};
     next unless $f =~ m{^Image/ExifTool/(.*)\.p[lm]$};
     my $m = "Image::ExifTool::$1";
     $m =~ s{/}{::}g;
-    push @requires, $m unless $m eq $module;
+    push @requires, $m unless $m eq $module or $m eq $pkg;
+}
+# the subs this load imported: a sub whose own name is another one
+{
+    my %after = code_names();
+    my @pairs;
+    foreach my $target (sort keys %after) {
+        next if $codeBefore{$target};
+        my $gv = B::svref_2object($after{$target})->GV;
+        next unless $gv and $gv->can('STASH');
+        my $source = $gv->STASH->NAME . '::' . $gv->NAME;
+        next if $source eq $target or $source =~ /__ANON__/;
+        push @pairs, $target, $source;
+    }
+    push @calls, ['Internals::PldImport', \@pairs] if @pairs;
+}
+# module-level code that depends on the run (config file, user-defined
+# tags, queued plug-in tags...): the port runs it once the dump is loaded
+my %initCall = (
+    'Image::ExifTool'              => 'Image::ExifTool::InitConfig',
+    'Image::ExifTool::TagLookup'   => 'Image::ExifTool::TagLookup::InitTagLookup',
+    'Image::ExifTool::Shortcuts'   => 'Image::ExifTool::Shortcuts::InitShortcuts',
+    'Image::ExifTool::Geolocation' => 'Image::ExifTool::Geolocation::InitGeolocation',
+);
+# the variables a .pl file created (not those of the modules it loaded,
+# which have their own dumps)
+my %plVars;
+{
+    my %after = var_names();
+    my %others = map { $_ => 1 } @requires;
+    foreach my $v (keys %after) {
+        next if $varsBefore{$v} or $v =~ /^\*/;
+        # a scalar is the file's only if its name is new (an existing
+        # variable that was still undefined, like $swapBytes, is not)
+        next if $v =~ /^\$/ and $varsBefore{'*' . substr($v, 1)};
+        (my $p = substr($v, 1)) =~ s/::\w+$//;
+        next if $others{$p} and $p ne $pkg;
+        # a .pm module's own package is dumped whole below
+        next if not $plFile and $p eq $module;
+        $plVars{$v} = 1;
+    }
 }
 
+# File lexicals: the file-scope `my` variables the module's code uses,
+# found in the pads of its subs (flagged OUTER) and of the anonymous subs
+# in its tables (ASF's RawConv sub reads `my %streamType`)
+my (%lex, @lexOrder);
+sub pad_outer {
+    my $cv = shift;
+    my $padl = $cv->PADLIST;
+    return unless $padl and $padl->can('ARRAY');
+    my @pl = $padl->ARRAY;
+    return unless @pl > 1 and $pl[0]->can('ARRAY') and $pl[1]->can('ARRAY');
+    my @n = $pl[0]->ARRAY;
+    my @v = $pl[1]->ARRAY;
+    for my $i (0..$#n) {
+        my $nm = $n[$i];
+        next unless $nm->can('PV') and defined $nm->PV and $nm->PV =~ /^[\$\@%]\w+$/;
+        next unless $nm->FLAGS & B::PADNAMEf_OUTER();
+        next if $lex{$nm->PV};
+        $lex{$nm->PV} = $v[$i]->object_2svref;
+        push @lexOrder, $nm->PV;
+    }
+}
 my $deparse = B::Deparse->new('-sC');
 my %id;        # refaddr -> node id
 my $next = 0;
@@ -90,6 +219,13 @@ sub all_packages {
 }
 foreach my $p (all_packages('Image::ExifTool')) {
     index_package($p, $p eq $module);
+}
+# a .pl file's own variables are dumped, not referred to
+foreach my $v (keys %plVars) {
+    no strict 'refs';
+    my ($sigil, $full) = (substr($v, 0, 1), substr($v, 1));
+    delete $global{0 + \%{$full}} if $sigil eq '%';
+    delete $global{0 + \@{$full}} if $sigil eq '@';
 }
 
 sub varint {
@@ -126,6 +262,10 @@ sub node {
                 $buf .= chr(8) . str($name);
                 return;
             }
+            # (only the module's own subs: another file's lexicals are not
+            # this module's)
+            (my $own = $plFile // "$module.pm") =~ s{::}{/}g;
+            pad_outer($cv) if $cv->FILE =~ m{\Q$own\E$};
             my $src = eval { $deparse->coderef2text($v) };
             $src = "{ die 'deparse failed' }" unless defined $src;
             $id{$addr} = $next++;
@@ -177,18 +317,42 @@ require Scalar::Util;
 my @vars;
 {
     no strict 'refs';
+    foreach my $v (sort keys %plVars) {
+        my ($sigil, $full) = (substr($v, 0, 1), substr($v, 1));
+        push @vars, ['$', $full, ${$full}] if $sigil eq '$';
+        push @vars, ['@', $full, \@{$full}] if $sigil eq '@';
+        push @vars, ['%', $full, \%{$full}] if $sigil eq '%';
+    }
+    # WriteQuickTime.pl's top-level code changes QuickTime's own tables
+    # (marks the Preferred tags): the port replays it after loading
+    push @calls, ['Image::ExifTool::QuickTime::InitWriteQuickTime', []] if $module eq 'Image::ExifTool::WriteQuickTime';
+}
+unless ($plFile) {
+    no strict 'refs';
     my $stash = \%{"${module}::"};
     foreach my $name (sort keys %$stash) {
-        next if $name =~ /::$/ or $name =~ /^(BEGIN|END|INIT|CHECK|UNITCHECK|__ANON__|EXPORT|EXPORT_OK|EXPORT_TAGS|ISA|VERSION|AUTOLOAD|DESTROY|import)$/ and $name ne 'ISA';
+        # (the directories the dump found are this machine's: InitGeolocation
+        # sets them at run time)
+        next if $module eq 'Image::ExifTool::Geolocation' and $name =~ /^(geoDir|altDir)$/;
+        next if $name =~ /::$/ or $name =~ /^(BEGIN|END|INIT|CHECK|UNITCHECK|__ANON__|ISA|AUTOLOAD|DESTROY|import)$/ and $name ne 'ISA';
         my $glob = $$stash{$name};
         next unless ref(\$glob) eq 'GLOB';
         my $full = "${module}::$name";
-        push @vars, ['$', $full, ${*{$glob}{SCALAR}}] if defined ${*{$glob}{SCALAR}};
-        push @vars, ['@', $full, *{$glob}{ARRAY}] if *{$glob}{ARRAY};
-        push @vars, ['%', $full, *{$glob}{HASH}] if *{$glob}{HASH};
+        # (not what another module put in this package before it loaded,
+        # as ExifTool.pm's %Image::ExifTool::JPEG::SOF: that one's dump has it)
+        push @vars, ['$', $full, ${*{$glob}{SCALAR}}] if defined ${*{$glob}{SCALAR}} and not $varsBefore{"\$$full"};
+        push @vars, ['@', $full, *{$glob}{ARRAY}] if *{$glob}{ARRAY} and not $varsBefore{"\@$full"};
+        push @vars, ['%', $full, *{$glob}{HASH}] if *{$glob}{HASH} and not $varsBefore{"%$full"};
+    }
+    # a Charset module defines its table in the parent package:
+    # %Image::ExifTool::Charset::Latin in Charset/Latin.pm
+    if ($module =~ /^(Image::ExifTool::Charset)::(\w+)$/) {
+        my $full = "$1::$2";
+        push @vars, ['%', $full, \%{$full}] if %{$full};
     }
 }
 
+push @calls, [$initCall{$module}, []] if $initCall{$module};
 $buf = 'PLD1' . varint(scalar @requires);
 $buf .= str($_) foreach @requires;
 $buf .= varint(scalar @calls);
@@ -209,30 +373,21 @@ foreach my $v (@vars) {
 }
 # File lexicals: each named sub of the module keeps the file-scope `my`
 # variables it uses in its pad, flagged OUTER.
-my (%lex, @lexOrder);
 {
     no strict 'refs';
     (my $path = $module) =~ s{::}{/}g;
-    my $stash = \%{"${module}::"};
+    # (a .pl file's subs are in the package it declares)
+    my $stash = \%{"${pkg}::"};
     foreach my $name (sort keys %$stash) {
         my $glob = $$stash{$name};
         next unless ref(\$glob) eq 'GLOB' and *{$glob}{CODE};
         my $cv = B::svref_2object(*{$glob}{CODE});
-        next unless $cv->FILE =~ m{\Q$path\E\.p[lm]$} or $cv->FILE =~ m{/Write\w*\.pl$};
-        my $padl = $cv->PADLIST;
-        next unless $padl and $padl->can('ARRAY');
-        my @pl = $padl->ARRAY;
-        next unless @pl > 1 and $pl[0]->can('ARRAY') and $pl[1]->can('ARRAY');
-        my @n = $pl[0]->ARRAY;
-        my @v = $pl[1]->ARRAY;
-        for my $i (0..$#n) {
-            my $nm = $n[$i];
-            next unless $nm->can('PV') and defined $nm->PV and $nm->PV =~ /^[\$\@%]\w+$/;
-            next unless $nm->FLAGS & B::PADNAMEf_OUTER();
-            next if $lex{$nm->PV};
-            $lex{$nm->PV} = $v[$i]->object_2svref;
-            push @lexOrder, $nm->PV;
+        if ($plFile) {
+            next unless $cv->FILE =~ m{\Q$plFile\E$};
+        } else {
+            next unless $cv->FILE =~ m{\Q$path\E\.p[lm]$} or $cv->FILE =~ m{/Write\w*\.pl$};
         }
+        pad_outer($cv);
     }
 }
 $buf .= varint(scalar @lexOrder);
