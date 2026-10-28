@@ -1,0 +1,86 @@
+# Command lines for SetImageInfo (script lines 3131-3681), the writing of
+# one file. Same format as cli_cases.txt.
+
+# --- -o: stdout, file types, directories, existing files
+W|-o - -Artist=x images/Canon.jpg
+W|-o -.xmp images/Canon.jpg
+W|-o images/sub/ -Artist=x images/Canon.jpg
+W|-o images/ -Artist=x images/Canon.jpg
+W|-o images/Nikon.jpg -Artist=x images/Canon.jpg
+W|-o images/out.gif -Artist=x images/Canon.jpg
+W|-o images/%f.icc images/ExifTool.jpg
+W|-o images/%f.vrd images/Canon.jpg
+W|-o images/%f.xmp -Model -Artist=x images/Canon.jpg
+W|-tagsFromFile @ -Artist -o images/%f.xmp images/Canon.jpg
+W|-Model -tagsFromFile @ -Artist -o images/%f.xmp images/Canon.jpg
+W|-x Make -o images/%f.xmp images/Canon.jpg
+W|-o %.0f -Artist=x images/Canon.jpg
+W|-o images/%f_%c.jpg -Artist=x images/Canon.jpg images/Nikon.jpg
+W|-v -o images/o.jpg -Artist=x images/Canon.jpg
+W|-o images/o.jpg -XMP:Title= images/Canon.jpg
+W|-o images/o.jpg -XMP:Title= -overwrite_original images/Canon.jpg
+W|-o images/o.jpg -P -XMP:Title= images/Canon.jpg
+W|-o images/o.jpg '-FileName<%f_x.%e' images/Canon.jpg
+W|-o images/o.jpg -Directory=images/d2 images/Canon.jpg
+W|-o images/o.jpg -FileName=n.jpg -Artist=x images/Canon.jpg
+
+# --- FileName, Directory, TestName, links
+W|-FileName= images/Canon.jpg
+W|-FileName=Nikon.jpg images/Canon.jpg
+W|-FileName=Canon.jpg images/Canon.jpg
+W|-v -FileName=new.jpg images/Canon.jpg
+W|-FileName=new.jpg -Artist=x images/Canon.jpg
+W|-Directory=images/d1 -v images/Canon.jpg
+W|-Directory=images/d1 -FileName=%f_n.%e images/Canon.jpg
+W|-TestName=images/t.jpg images/Canon.jpg
+W|-TestName=images/t.jpg -Artist=x images/Canon.jpg
+W|-TestName=t.jpg -o images/o.jpg images/Canon.jpg
+W|-TestName=t.jpg -FileName=y.jpg images/Canon.jpg
+# (DoHardLink: the interpreter has no link/symlink builtins yet, so
+# Image::ExifTool::SetFileName fails there; to enable once it has them)
+#W|-HardLink=images/hl.jpg images/Canon.jpg
+#W|-HardLink=images/hl.jpg -Artist=x -overwrite_original images/Canon.jpg
+#W|-SymLink=images/sl.jpg images/Canon.jpg
+W|-FileName=x.xmp images/new.xmp
+W|-Artist=x images/nofile.jpg
+W|-efile images/err.txt -Artist=x images/nofile.jpg
+W|-efile2 images/same.txt -XMP:Title= images/Canon.jpg
+
+# --- writing in place: temporary file, _original, in place, preserve
+W|-XMP:Title= images/Canon.jpg
+W|-v -XMP:Title= images/Canon.jpg
+W|-v -XMP:Title= -overwrite_original images/Canon.jpg
+W|-Artist=a images/Canon.jpg -execute -Artist=b images/Canon.jpg
+W|-overwrite_original_in_place -Artist=x images/Canon.jpg
+W|-overwrite_original_in_place -P -Artist=x images/Canon.jpg
+W|-overwrite_original_in_place -XMP:Title= images/Canon.jpg
+W|-P -Artist=x images/Canon.jpg
+W|-P -Artist=x -overwrite_original images/Nikon.jpg
+W|-P -FileModifyDate=2020:01:01 -Artist=x images/Canon.jpg
+W|-FileModifyDate=2020:01:02 images/Canon.jpg
+W|-v -FileModifyDate=2020:01:02 images/Canon.jpg
+W|-Artist=x -Comment=y -v images/XMP.jpg images/Canon.jpg
+W|-Artist=x images/Unknown.jpg images/Text.txt
+
+# --- dynamic files: -TAG<=FILE, -tagsFromFile with a format
+W|'-Comment<=images/%f.xmp' -overwrite_original images/XMP.jpg
+W|-v '-Comment<=images/%f.none' -overwrite_original images/XMP.jpg
+W|-v '-Comment<=images/%f.xmp' -overwrite_original images/XMP.jpg
+W|-tagsFromFile images/%f.xmp -XMP:all -overwrite_original images/XMP.jpg
+W|-tagsFromFile images/%f.none -XMP:all -overwrite_original images/XMP.jpg
+W|-tagsFromFile images/%f.xmp -Title -tagsFromFile images/%f.xmp -Creator -overwrite_original images/XMP.jpg
+W|-tagsFromFile @ -Artist -tagsFromFile @ -Copyright -overwrite_original images/Canon.jpg
+
+# --- CSV and JSON databases
+W|-csv=csv_in.csv -v -overwrite_original images/Canon.jpg
+W|-csv=csv_in.csv -overwrite_original images/Nikon.jpg
+W|-csv=csv_in.csv -Artist -overwrite_original images/Canon.jpg
+W|-csv=csv_in.csv -v -XMP:Title -overwrite_original images/Canon.jpg
+W|-csv=csv_in.csv --Artist -overwrite_original images/Canon.jpg
+W|-csv=csv_in.csv -v --XMP:Title -overwrite_original images/Canon.jpg
+W|-csv=csv_in.csv --all:Tit? -overwrite_original images/Canon.jpg
+W|-csv=csv_in.csv --EXIF:Title -overwrite_original images/Canon.jpg
+W|-csv=csv_in.csv --XMP-dc:Title -overwrite_original images/Canon.jpg
+W|-json=json_in.json -v -overwrite_original images/Nikon.jpg
+W|-json=json_in.json -Subject -overwrite_original images/Nikon.jpg
+W|-json=json_in.json -overwrite_original images/Canon.jpg
