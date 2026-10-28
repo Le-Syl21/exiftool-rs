@@ -588,7 +588,11 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
             None => return die("1-argument open is not supported"),
         };
         let spec = spec.trim_start().to_string();
-        let (m, rest) = if let Some(r) = spec.strip_prefix(">>") {
+        // a dup: ">&NAME", ">&=NAME", "<&NAME" (mode keeps the "&")
+        let dup = ["<&=", ">>&=", ">&=", "<&", ">>&", ">&"].iter().find(|m| spec.starts_with(**m));
+        let (m, rest) = if let Some(m) = dup {
+            (*m, &spec[m.len()..])
+        } else if let Some(r) = spec.strip_prefix(">>") {
             (">>", r)
         } else if let Some(r) = spec.strip_prefix("+<") {
             ("+<", r)
@@ -610,6 +614,12 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         (m.to_string(), Value::str(rest))
     };
     let mode_base: String = mode.chars().take_while(|c| !c.is_whitespace() && *c != ':').collect();
+    if mode_base.contains('&') {
+        return open_dup(it, &h, &mode_base, &target);
+    }
+    // reopening STDOUT or STDERR changes the process's own stream (fd 1 or
+    // 2), as perl does, so that child processes see it too
+    let std_fd = std_fd_of(it, &h);
     let mut fh = h.borrow_mut();
     fh.input = None;
     fh.output = None;
@@ -667,7 +677,137 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         }
         _ => return die(format!("Unknown open() mode '{mode}'")),
     };
+    drop(fh);
+    if ok {
+        if let Some(fd) = std_fd {
+            redirect_std(it, &h, fd);
+        }
+    }
     Ok(vec![Value::from(ok)])
+}
+
+/// 1 or 2 when `h` is STDOUT or STDERR and the interpreter owns the
+/// process's streams (passthrough).
+fn std_fd_of(it: &mut Interp, h: &HandleRc) -> Option<i32> {
+    if !it.passthrough {
+        return None;
+    }
+    for (name, fd) in [("STDOUT", 1), ("STDERR", 2)] {
+        if Rc::ptr_eq(&it.std_handle(name), h) {
+            return Some(fd);
+        }
+    }
+    None
+}
+
+/// After STDOUT/STDERR was opened on a file: make that file the process's
+/// fd 1 or 2 (dup2), and write to the handle through the stream again.
+#[cfg(unix)]
+fn redirect_std(it: &mut Interp, h: &HandleRc, fd: i32) {
+    use std::os::fd::AsRawFd;
+    it.flush_stdout();
+    let _ = std::io::stderr().flush();
+    let mut fh = h.borrow_mut();
+    if let Some(Output::File(f)) = &mut fh.output {
+        let _ = f.flush();
+        // SAFETY: both descriptors are open; dup2 replaces fd atomically
+        if unsafe { libc::dup2(f.get_ref().as_raw_fd(), fd) } >= 0 {
+            fh.output = Some(if fd == 1 { Output::Stdout } else { Output::Stderr });
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn redirect_std(_it: &mut Interp, _h: &HandleRc, _fd: i32) {}
+
+/// `open(FH, ">&OTHER")`, `">&=OTHER"`, `"<&OTHER"` or the 3-argument
+/// forms with a handle: FH writes (or reads) where OTHER does. A standard
+/// stream is duplicated at the descriptor level, as perl's dup does, so
+/// that it survives a later redirection of that stream.
+fn open_dup(it: &mut Interp, h: &HandleRc, mode: &str, target: &Value) -> ER<Vec<Value>> {
+    let src = if target.is_ref() || matches!(target, Value::Handle(_)) {
+        it.handle_of(target, false)
+    } else {
+        let name = target.to_text();
+        let name = name.trim_start_matches('=').trim();
+        match name {
+            "0" => Some(it.std_handle("STDIN")),
+            "1" => Some(it.std_handle("STDOUT")),
+            "2" => Some(it.std_handle("STDERR")),
+            n => it.handle_of(&Value::str(n), false),
+        }
+    };
+    let Some(src) = src else {
+        it.set_scalar("main::!", Value::str("Bad file descriptor"));
+        return Ok(vec![Value::from(false)]);
+    };
+    if Rc::ptr_eq(&src, h) {
+        return Ok(vec![Value::from(true)]);
+    }
+    let std_fd = std_fd_of(it, h);
+    let reading = mode.starts_with('<');
+    // a standard stream is duplicated only when the process's streams are
+    // the interpreter's (passthrough); captured, the handle shares it
+    let pt = it.passthrough;
+    let dup_file = |f: &File| f.try_clone().ok();
+    let new_input = if reading {
+        let s = src.borrow();
+        match &s.input {
+            Some(Input::File(f)) => dup_file(f.get_ref()).map(|f| Input::File(BufReader::new(f))),
+            Some(Input::Memory(m)) => Some(Input::Memory(m.clone())),
+            _ if pt => std_stream_file(0).map(|f| Input::File(BufReader::new(f))),
+            _ => None,
+        }
+    } else {
+        None
+    };
+    let new_output = if reading {
+        None
+    } else {
+        it.flush_stdout();
+        let mut s = src.borrow_mut();
+        match &mut s.output {
+            Some(Output::Stdout) => Some(if pt { std_stream_file(1).map(|f| Output::File(std::io::BufWriter::new(f))).unwrap_or(Output::Stdout) } else { Output::Stdout }),
+            Some(Output::Stderr) => Some(if pt { std_stream_file(2).map(|f| Output::File(std::io::BufWriter::new(f))).unwrap_or(Output::Stderr) } else { Output::Stderr }),
+            Some(Output::File(f)) => {
+                let _ = f.flush();
+                dup_file(f.get_ref()).map(|f| Output::File(std::io::BufWriter::new(f)))
+            }
+            Some(Output::Scalar(c)) => Some(Output::Scalar(c.clone())),
+            _ => None,
+        }
+    };
+    if new_input.is_none() && new_output.is_none() {
+        it.set_scalar("main::!", Value::str("Bad file descriptor"));
+        return Ok(vec![Value::from(false)]);
+    }
+    {
+        let mut fh = h.borrow_mut();
+        fh.input = new_input;
+        fh.output = new_output;
+        fh.eof = false;
+        fh.lines = 0;
+        fh.path = None;
+    }
+    if let Some(fd) = std_fd {
+        redirect_std(it, h, fd);
+    }
+    Ok(vec![Value::from(true)])
+}
+
+/// A new descriptor on the process's stdin, stdout or stderr (only when the
+/// interpreter owns them: otherwise the caller keeps the stream itself).
+#[cfg(unix)]
+fn std_stream_file(fd: i32) -> Option<File> {
+    use std::os::fd::FromRawFd;
+    // SAFETY: dup returns a fresh descriptor that the File then owns
+    let d = unsafe { libc::dup(fd) };
+    (d >= 0).then(|| unsafe { File::from_raw_fd(d) })
+}
+
+#[cfg(not(unix))]
+fn std_stream_file(_fd: i32) -> Option<File> {
+    None
 }
 
 fn os_error_text(e: &std::io::Error) -> String {
