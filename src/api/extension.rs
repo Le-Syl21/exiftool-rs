@@ -20,8 +20,8 @@ use super::exiftool::NewValue;
 /// A writer for file types ExifTool reads but does not write.
 ///
 /// ```no_run
-/// use exiftool_port::extension::FormatExtension;
-/// use exiftool_port::exiftool::NewValue;
+/// use exiftool_rs::extension::FormatExtension;
+/// use exiftool_rs::exiftool::NewValue;
 ///
 /// /// Text files: a request for `Text:Title` sets the first line.
 /// struct TitleLine;
@@ -33,7 +33,7 @@ use super::exiftool::NewValue;
 ///     fn file_types(&self) -> &[&str] {
 ///         &["TXT"]
 ///     }
-///     fn write(&self, input: &[u8], _file_type: &str, edits: &[NewValue]) -> exiftool_port::Result<Vec<u8>> {
+///     fn write(&self, input: &[u8], _file_type: &str, edits: &[NewValue]) -> exiftool_rs::Result<Vec<u8>> {
 ///         let Some(title) = edits.iter().rev().find(|e| e.tag == "Title").and_then(|e| e.value.clone()) else {
 ///             return Ok(input.to_vec());
 ///         };
@@ -42,7 +42,7 @@ use super::exiftool::NewValue;
 ///     }
 /// }
 ///
-/// let mut et = exiftool_port::ExifTool::new();
+/// let mut et = exiftool_rs::ExifTool::new();
 /// et.register_extension(TitleLine);
 /// ```
 pub trait FormatExtension: Send + Sync {

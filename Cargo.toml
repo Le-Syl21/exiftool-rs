@@ -1,16 +1,39 @@
 [package]
-name = "exiftool-port"
-version = "0.0.0"
+name = "exiftool-rs"
+version = "1.0.0"
 edition = "2021"
-description = "Faithful Rust port of Perl ExifTool 13.60 (work in progress)"
+description = "Read, write, and edit metadata in every format ExifTool handles — a faithful Rust port of Perl ExifTool 13.60, its own Perl engine running ExifTool's code, with a CLI, a GUI and a Rust API"
+# As the port declares: ExifTool itself is free software under the same terms
+# as Perl (GPL or Artistic), and this port, a derived work, takes the GPL.
 license = "GPL-3.0-or-later"
-publish = false
-
-# Standalone while the port grows next to the current crate.
-[workspace]
+repository = "https://github.com/Le-Syl21/exiftool-rs"
+homepage = "https://github.com/Le-Syl21/exiftool-rs"
+documentation = "https://docs.rs/exiftool-rs"
+readme = "README.md"
+keywords = ["exif", "metadata", "jpeg", "tiff", "xmp"]
+categories = ["multimedia::images", "parser-implementations"]
+# Only what a build needs: the library, the binaries and the examples, the
+# embedded dumps (data/, 12 MB raw: the .crate is about 6 MB, under the
+# 10 MB crates.io takes) and the GUI's icon. The tests, the judges' scripts
+# and their fixtures need an ExifTool checkout and stay in the repository.
+include = [
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/build.rs",
+    "/src/**/*",
+    "/data/*.pld",
+    "/data/*.rs",
+    "/data/*.tsv",
+    "/examples/*.rs",
+    "/assets/icon.png",
+    "/assets/icon.ico",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+]
 
 [lib]
-name = "exiftool_port"
+name = "exiftool_rs"
 path = "src/lib.rs"
 
 [dependencies]
@@ -67,6 +90,16 @@ image = { version = "0.25", optional = true, default-features = false, features 
 rfd = { version = "0.17", optional = true }
 noto-fonts-dl = { version = "0.1.10", optional = true, features = ["ar", "bn", "hi", "ja", "ko", "zh", "zh_tw"] }
 
+# The binaries' global allocator (exiftool-rs, exiftool-rs-gui and the
+# run_t judge): rusty_alloc, a pure-Rust remake of mimalloc. The
+# interpreter allocates many small values; measured over the test images
+# and 120 RAW files (CPU time, pinned, best of 8): system malloc 0 %,
+# mimalloc (C) -11 / -12 %, rusty_alloc -10 / -13 %, dlmalloc +18 / +14 %,
+# with the same output for all. The library never sets it: a program using
+# the crate keeps its own allocator, and can leave this one out of its
+# build with default-features = false (feature rusty-alloc).
+rusty_alloc-api = { version = "2.2.7", optional = true }
+
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
@@ -81,9 +114,11 @@ winres = { version = "0.1", optional = true }
 
 [features]
 # The built-in format extensions: writers for the types ExifTool reads and
-# does not write (ID3, Vorbis comments, Matroska; src/api/extra_writers/)
-default = ["extra-writers"]
+# does not write (ID3, Vorbis comments, Matroska; src/api/extra_writers/),
+# and rusty_alloc as the binaries' allocator
+default = ["extra-writers", "rusty-alloc"]
 extra-writers = []
+rusty-alloc = ["dep:rusty_alloc-api"]
 # The GUI, exiftool-rs-gui (none of its dependencies in the default build)
 gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
 # The Windows icon/version resource in the executables (build.rs)
@@ -91,25 +126,26 @@ win-icon = ["winres"]
 # Lets the `egui-mcp` server attach to a running GUI, to drive and screenshot
 # it (`EGUI_INSPECTION=1`, served on 127.0.0.1:5719). Development only.
 inspection = ["gui", "eframe/inspection"]
+# The live parity auditor (src/bin/parity), which the release's parity
+# report is made with. No dependency: it shells out to curl, tar and perl.
+parity = []
 
-# The application, named as the crate's binary on main (exiftool-rs), so
-# that it can never be mistaken for Perl's exiftool.
-[[example]]
+# The application, named exiftool-rs so that it can never be mistaken for
+# Perl's exiftool.
+[[bin]]
 name = "exiftool-rs"
-path = "examples/exiftool_rs.rs"
+path = "src/main.rs"
 
-# The GUI, a binary as on main (exiftool-rs-gui), built by `cargo build
-# --features gui`. Its tests (the model, with no window) run with `cargo
-# test --features gui`.
+# The GUI, built by `cargo build --features gui`. Its tests (the model, with
+# no window) run with `cargo test --features gui`.
 [[bin]]
 name = "exiftool-rs-gui"
 path = "src/bin/exiftool_rs_gui/main.rs"
 required-features = ["gui"]
 
-[dev-dependencies]
-# The examples' global allocator: rusty_alloc, a pure-Rust remake of
-# mimalloc. The interpreter allocates many small values; measured over the
-# test images and 120 RAW files (CPU time, pinned, best of 8): system malloc
-# 0 %, mimalloc (C) -11 / -12 %, rusty_alloc -10 / -13 %, dlmalloc +18 / +14 %,
-# with the same output for all.
-rusty_alloc-api = "2.2.7"
+# Live differential parity auditor against a pinned Perl ExifTool release.
+# Dev-only (needs perl and the network).
+[[bin]]
+name = "parity"
+path = "src/bin/parity/main.rs"
+required-features = ["parity"]

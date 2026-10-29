@@ -8,7 +8,7 @@
 
 #![no_main]
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
 use libfuzzer_sys::fuzz_target;
 use std::path::PathBuf;
 

@@ -14,6 +14,11 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+// See the rusty_alloc-api entry in Cargo.toml.
+#[cfg(feature = "rusty-alloc")]
+#[global_allocator]
+static GLOBAL: rusty_alloc_api::RustyAlloc = rusty_alloc_api::RustyAlloc;
+
 #[cfg(feature = "gui")]
 mod i18n;
 #[cfg(feature = "gui")]
@@ -46,7 +51,7 @@ fn main() {
     }
 
     // Load window icon from embedded PNG
-    let icon_data = include_bytes!("../../../../assets/icon.png");
+    let icon_data = include_bytes!("../../../assets/icon.png");
     let icon = image::load_from_memory(icon_data)
         .map(|img| {
             let rgba = img.to_rgba8();
@@ -96,7 +101,7 @@ use eframe::egui;
 use egui::{Align, Layout, RichText, Role, WidgetInfo};
 
 #[cfg(feature = "gui")]
-use exiftool_port::{ExifTool, Options, Tag};
+use exiftool_rs::{ExifTool, Options, Tag};
 
 #[cfg(feature = "gui")]
 use theme::Palette;
@@ -345,7 +350,7 @@ impl App {
 
         // Detect file type for writable tags
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-        self.writable_tags = if let Some(ft) = exiftool_port::file_type::detect_from_extension(ext) {
+        self.writable_tags = if let Some(ft) = exiftool_rs::file_type::detect_from_extension(ext) {
             Some(ExifTool::writable_tags(ft))
         } else {
             Some(Some(std::collections::HashSet::new()))
@@ -1077,7 +1082,7 @@ impl App {
                 self.logo(ui, 64.0);
                 ui.add_space(8.0);
                 ui.label(RichText::new("exiftool-rs").size(20.0).strong());
-                ui.label(format!("v{}", exiftool_port::VERSION));
+                ui.label(format!("v{}", exiftool_rs::VERSION));
                 ui.add_space(8.0);
                 ui.label("A pure Rust reimplementation of ExifTool");
                 ui.add_space(8.0);
@@ -1165,7 +1170,7 @@ impl App {
 
         // Load icon texture once
         if self.icon_texture.is_none() {
-            let icon_data = include_bytes!("../../../../assets/icon.png");
+            let icon_data = include_bytes!("../../../assets/icon.png");
             if let Ok(img) = image::load_from_memory(icon_data) {
                 let rgba = img.to_rgba8();
                 let (w, h) = rgba.dimensions();
@@ -1210,7 +1215,7 @@ impl eframe::App for App {
 mod tests {
     use super::*;
 
-    const CANON: &str = "../tests/images/Canon.jpg";
+    const CANON: &str = "tests/images/Canon.jpg";
 
     /// The description and the value the panel shows for a tag.
     fn shown(app: &App, name: &str) -> Option<(String, String)> {

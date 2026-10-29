@@ -44,14 +44,14 @@ const PROGRAMS: &[&str] = &[
 /// Run an input in a new interpreter. Returns `$@` as the program left it
 /// (empty when it ended normally).
 pub fn run_interp_input(data: &[u8]) -> Vec<u8> {
-    use exiftool_port::interp::{Scope, Want};
-    use exiftool_port::perl::Value;
+    use exiftool_rs::interp::{Scope, Want};
+    use exiftool_rs::perl::Value;
     let Some((&pick, body)) = data.split_first() else {
         return Vec::new();
     };
     let program = PROGRAMS[pick as usize % PROGRAMS.len()];
     let mut parts = body.splitn(3, |&b| b == 0xff);
-    let mut it = exiftool_port::runtime::new_interp();
+    let mut it = exiftool_rs::runtime::new_interp();
     it.strict = false;
     let scope = Scope::new(None);
     for name in ["a", "b", "c"] {

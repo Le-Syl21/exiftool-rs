@@ -4,7 +4,7 @@
 //! answered by Image::ExifTool itself (see `docs/port/API.md`).
 //!
 //! ```no_run
-//! use exiftool_port::ExifTool;
+//! use exiftool_rs::ExifTool;
 //!
 //! let et = ExifTool::new();
 //! let tags = et.extract_info("photo.jpg").unwrap();

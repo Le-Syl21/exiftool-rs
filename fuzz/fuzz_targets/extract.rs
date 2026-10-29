@@ -11,7 +11,7 @@
 
 #![no_main]
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 use libfuzzer_sys::fuzz_target;
 use std::path::PathBuf;
 

@@ -28,6 +28,15 @@ use std::process::Command;
 
 mod write;
 
+/// Perl's output as text: UTF-8 when it is, else Latin-1 (one byte, one
+/// character), so that no line is lost to an invalid sequence.
+fn decode_utf8_or_latin1(bytes: &[u8]) -> String {
+    match std::str::from_utf8(bytes) {
+        Ok(s) => s.to_string(),
+        Err(_) => bytes.iter().map(|&b| b as char).collect(),
+    }
+}
+
 /// `Group1:Tag` keys whose values are machine/tool state, not metadata parity.
 const EXCLUDE: &[&str] = &[
     "ExifToolVersion",
@@ -525,7 +534,7 @@ fn read_perl(script: &Path, file: &Path) -> BTreeMap<String, String> {
     // each line UTF-8-or-Latin-1: a stray high byte falls back to Latin-1 (the
     // rest of the line is ASCII), while genuinely UTF-8 lines stay intact.
     for raw in out.stdout.split(|&b| b == b'\n') {
-        let line = exiftool_rs::encoding::decode_utf8_or_latin1(raw);
+        let line = crate::decode_utf8_or_latin1(raw);
         // `[Group1]        TagName             : Value`. Split on the `": "`
         // separator (not just `:`) and keep the value verbatim — trimming it
         // would drop a leading space that ExifTool preserves (e.g. the ASF

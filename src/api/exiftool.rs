@@ -218,7 +218,7 @@ enum Request {
 ///
 /// # Reading metadata
 /// ```no_run
-/// use exiftool_port::ExifTool;
+/// use exiftool_rs::ExifTool;
 ///
 /// let et = ExifTool::new();
 ///
@@ -235,7 +235,7 @@ enum Request {
 ///
 /// # Writing metadata
 /// ```no_run
-/// use exiftool_port::ExifTool;
+/// use exiftool_rs::ExifTool;
 ///
 /// let mut et = ExifTool::new();
 /// et.set_new_value("Artist", Some("John Doe"));

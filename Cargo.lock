@@ -1079,8 +1079,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "exiftool-port"
-version = "0.0.0"
+name = "exiftool-rs"
+version = "1.0.0"
 dependencies = [
  "bzip2",
  "eframe",

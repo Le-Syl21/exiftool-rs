@@ -166,7 +166,7 @@ fn read_perl_many(script: &Path, files: &[PathBuf]) -> BTreeMap<PathBuf, TagMap>
     };
     for raw in out.stdout.split(|&b| b == b'\n') {
         // Same per-line UTF-8-or-Latin-1 decoding as the read comparison.
-        let line = exiftool_rs::encoding::decode_utf8_or_latin1(raw);
+        let line = crate::decode_utf8_or_latin1(raw);
         if let Some(name) = line.strip_prefix("======== ") {
             let p = PathBuf::from(name.trim_end());
             res.entry(p.clone()).or_default();

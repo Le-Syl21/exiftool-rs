@@ -701,7 +701,7 @@ fn new_engine(mwg: bool) -> Interp {
     it.strict = false;
     let scope = Scope::new(None);
     if let Err(e) = it.eval_string(API_PL.as_bytes(), "main", &scope, Want::Void) {
-        panic!("exiftool-port: loading the API: {}", e.to_text());
+        panic!("exiftool-rs: loading the API: {}", e.to_text());
     }
     if mwg {
         load_mwg(&mut it);
@@ -713,7 +713,7 @@ fn load_mwg(it: &mut Interp) {
     let scope = Scope::new(None);
     let code = b"require Image::ExifTool::MWG; Image::ExifTool::MWG::Load(); 1;";
     if let Err(e) = it.eval_string(code, "main", &scope, Want::Void) {
-        panic!("exiftool-port: loading MWG: {}", e.to_text());
+        panic!("exiftool-rs: loading MWG: {}", e.to_text());
     }
 }
 
@@ -796,7 +796,7 @@ impl Engine {
             Ok(Err(panic)) => std::panic::resume_unwind(panic),
             Err(_) => {
                 *worker = None;
-                panic!("exiftool-port: the interpreter's thread has ended");
+                panic!("exiftool-rs: the interpreter's thread has ended");
             }
         }
     }
@@ -806,7 +806,7 @@ impl Worker {
     fn spawn() -> Worker {
         let (jobs, rx) = std::sync::mpsc::channel::<Job>();
         std::thread::Builder::new()
-            .name("exiftool-port".into())
+            .name("exiftool-rs".into())
             .stack_size(WORKER_STACK)
             .spawn(move || {
                 let mut state = WorkerState::default();
@@ -815,7 +815,7 @@ impl Worker {
                     job(&mut state);
                 }
             })
-            .expect("exiftool-port: starting the interpreter's thread");
+            .expect("exiftool-rs: starting the interpreter's thread");
         Worker { jobs }
     }
 }
