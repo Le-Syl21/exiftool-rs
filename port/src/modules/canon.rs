@@ -55,6 +55,38 @@ fn get32u(it: &mut Interp, data_pt: &Value, pos: Value) -> ER<Value> {
 }
 
 //------------------------------------------------------------------------------
+/// Recognize various firmware versions in Canon CameraInfo
+/// Inputs: 0) ExifTool ref, 1) CameraInfo ref, 2) lookup ref for firmware index
+/// Returns: firmware and MPU version numbers and their offset in CameraInfo
+///          and sets CanonFirm and CanonFirmVer ExifTool member variables
+pub fn find_firm_ver(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
+    let (et, val_pt, lkup) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
+    let mut val = Value::Undef;
+    // (scalar //g from pos($$valPt), never set on the fresh $val of the
+    // RawConv that calls this)
+    pl::at(10796);
+    let data = pl::sderef(&val_pt)?;
+    let b = data.to_bytes();
+    let rx = crate::perl::regex::compile(br"(\d+\.\d+\.\d+)[ \0]([0-9A-F]{2}([.(][.)a-zA-Z0-9]+)?)", "").expect("pattern");
+    if let Ok(Some(sp)) = rx.match_at(&b, 0) {
+        let span = |g: usize| sp[g].map(|(s, e)| Value::bytes(&b[s..e])).unwrap_or_default();
+        let (c1, c2) = (span(1), span(2));
+        let pos = sp[0].map(|(_, e)| e).unwrap_or(0);
+        let off = n(pos as i64 - c1.to_bytes().len() as i64 - c2.to_bytes().len() as i64 - 1);
+        val = pl::sprintf("%s %s at offset 0x%x", &[c1.clone(), c2, off.clone()]);
+        if lkup.truthy() {
+            et.set("CanonFirmVer", c1);
+            et.set("CanonFirm", lkup.get(off.to_bytes()));
+            if !et.get("CanonFirm").truthy() {
+                pl::method(it, &et, "Warn", vec![pl::s("Unrecognized CameraInfo firmware version")])?;
+                et.set("CanonFirm", n(0));
+            }
+        }
+    }
+    ret(val)
+}
+
+//------------------------------------------------------------------------------
 /// Return lens name with teleconverter if applicable
 /// Inputs: 0) lens name string, 1) short focal length
 /// Returns: lens string with tc if appropriate
@@ -163,10 +195,16 @@ pub fn print_lens_id(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
             }
         }
         let mut tcs = vec![n(1), f(1.4), n(2), f(2.8)];
-        pl::at(10204);
+        let (mut model_tc, mut model_tc_name) = (Value::Undef, Value::Undef);
+        pl::at(10900);
         pl::warn_uninit(it, &lens_model, "$lensModel", "pattern match (m//)")?;
         if let Some(m) = re(r" \+ ((EXTENDER )?RF)?(\d+(\.\d*)?)x\b", "").m(&lens_model) {
-            tcs = vec![cap(&m, 3)];
+            // the EOS R5m2 doesn't scale FocalLength or MaxAperture for some adapted
+            // 3rd-party EF lenses with an RF extender (eg. Sigma 85mm F1.4 DG HSM | Art
+            // + RF1.4x reports 85 mm f/1.4), so also try without scaling (github488)
+            model_tc = cap(&m, 3);
+            model_tc_name = pl::concat(&pl::s(if cap(&m, 1).truthy() { "RF" } else { "" }), &pl::concat(&cap(&m, 3), &pl::s("x"))); // (Canon RF extender)
+            tcs = vec![model_tc.clone(), n(1)];
         }
         // attempt to determine actual lens
         for tc in &tcs {
@@ -202,21 +240,23 @@ pub fn print_lens_id(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
                     let mut p = b"^".to_vec();
                     p.extend_from_slice(&cap(&m, 1).to_bytes());
                     // (the pattern is compiled only when the list is not empty)
-                    pl::at(10225);
+                    pl::at(10928);
                     if !maybe.is_empty() && pl::re_dyn(&p, "")?.is_match(maybe.last().unwrap()) {
                         maybe.pop();
                     }
-                    pl::at(10226);
+                    pl::at(10929);
                     if !likely.is_empty() && pl::re_dyn(&p, "")?.is_match(likely.last().unwrap()) {
                         likely.pop();
                     }
-                    pl::at(10227);
+                    pl::at(10930);
                     if !matches.is_empty() && pl::re_dyn(&p, "")?.is_match(matches.last().unwrap()) {
                         matches.pop();
 
                     }
                 } else if pl::gt(tc, &n(1)) {
                     tclens = pl::concat(&tclens, &pl::concat(&pl::concat(&pl::s(" + "), tc), &pl::s("x")));
+                } else if model_tc.truthy() {
+                    tclens = pl::concat(&tclens, &pl::concat(&pl::s(" + "), &model_tc_name));
                 }
                 maybe.push(tclens.clone());
                 if pl::gt(&pl::abs(&pl::sub(&long_focal, &pl::mul(&lf, tc))), &f(0.9)) {
@@ -861,7 +901,7 @@ pub fn process_serial_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
                     et.get_or_new_hash("TAG_EXTRA").get_or_new_hash(key.to_bytes()).set("G6", format.clone());
                 }
                 if opts.get("SaveBin").truthy() {
-                    pl::at(10592);
+                    pl::at(11297);
                     let bin = substr(&pl::sderef(&data_pt)?, pl::add(&pos, &offset).to_i64(), Some(len.to_i64()));
                     et.get_or_new_hash("TAG_EXTRA").get_or_new_hash(key.to_bytes()).set("BinVal", bin);
                 }
@@ -894,7 +934,7 @@ pub fn process_cmt3(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
         // remove old (unused) trailer
         // (s/// on $$dataPt autovivifies an undefined $dataPt, but a string
         //  or another kind of reference dies)
-        pl::at(10717);
+        pl::at(11422);
         if !data_pt.is_undef() {
             pl::sderef(&data_pt)?;
         }
@@ -921,7 +961,7 @@ pub fn process_exif_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     let start = dir_info.get("DirStart");
     let start = if start.truthy() { start } else { n(0) };
     let dir_len = dir_info.get("DirLen");
-    pl::at(10735);
+    pl::at(11440);
     let dir_len = if dir_len.truthy() { dir_len } else { pl::sub(&pl::length(&pl::sderef(&data_pt)?), &start) };
     let dir_end = pl::add(&start, &dir_len);
     // loop through TIFF-format EXIF/MakerNote records
@@ -970,7 +1010,7 @@ pub fn process_ctmd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let verbose = pl::method(it, &et, "Options", vec![pl::s("Verbose")])?;
-    pl::at(10765);
+    pl::at(11470);
     let dir_len = pl::length(&pl::sderef(&data_pt)?);
     let mut pos = n(0);
 
@@ -1169,6 +1209,7 @@ pub fn write_canon(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 /// Register the subs ported so far; the others still run from the Perl.
 pub fn register(it: &mut Interp) {
+    it.define_native("Image::ExifTool::Canon::FindFirmVer", find_firm_ver);
     it.define_native("Image::ExifTool::Canon::LensWithTC", lens_with_tc);
     it.define_native("Image::ExifTool::Canon::CalcSensorDiag", calc_sensor_diag);
     it.define_native("Image::ExifTool::Canon::PrintLensID", print_lens_id);

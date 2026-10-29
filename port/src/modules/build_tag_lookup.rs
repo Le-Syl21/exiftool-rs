@@ -554,7 +554,9 @@ fn new_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                                 pl::warn(it, &format!("Warning: Unknown ID ({}) used in Format - {} {}\n", idv.to_text(), short.to_text(), name.to_text()))?;
                             }
                         }
-                    } else if tag_info.get("Hook").truthy() || (tag_info.get("RawConv").truthy() && re(r"\$self(->)?\{\w+\}\s*=(?!~)", "").is_match(&tag_info.get("RawConv"))) {
+                    } else if tag_info.get("Hook").truthy() || (tag_info.get("RawConv").truthy() &&
+                        // (special case for Canon::FindFirmVer() function when a $lkup is used)
+                        re(r"\$self(->)?\{\w+\}\s*=(?!~)|FindFirmVer.*\$lkup", "").is_match(&tag_info.get("RawConv"))) {
                         datamember.set(tag_id.to_bytes(), name.clone());
                     }
                     if format.truthy() && re(r"\$val\{", "").is_match(&format) && (tag_info.get("Writable").truthy() || tag_info.get("Writable").is_undef()) {
@@ -1053,7 +1055,7 @@ fn new_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                         if writable.truthy() && format.truthy() && !eq(&writable, &format) && !pl::str_eq(&writable, "string") && !pl::str_eq(&format, "string") && format_number.get(writable.to_bytes()).truthy() && format_number.get(format.to_bytes()).truthy() {
                             let n1 = format_number.get(format.to_bytes());
                             let n2 = format_number.get(writable.to_bytes());
-                            pl::at(1404);
+                            pl::at(1405);
                             count = pl::mul(&count, &pl::div(&format_size.at(n1.to_i64()), &format_size.at(n2.to_i64()))?);
                         }
                         if !pl::num_eq(&count, &n(1)) {
@@ -1752,7 +1754,7 @@ fn tweak_order_rs(_it: &mut Interp, sorted_tables: &Value, tweak_order: &Value) 
             continue;
         }
         let Some(c) = re(r"^Image::ExifTool::(\w+)::(\w+)", "").m(&entry.at(0)) else {
-            pl::at(1913);
+            pl::at(1914);
             return die("Internal error");
         };
         let m1 = cap(&c, 1);
