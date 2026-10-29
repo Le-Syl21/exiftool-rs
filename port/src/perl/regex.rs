@@ -24,6 +24,10 @@ pub struct PerlRegex {
     /// UTF mode for a character string).
     pub source: Vec<u8>,
     pub flags: String,
+    /// The match data of the last `match_at`, kept for the next one: PCRE2
+    /// match data (and its match context) made for each match were a
+    /// malloc and a free each.
+    locs: RefCell<Option<pcre2::bytes::CaptureLocations>>,
 }
 
 impl PerlRegex {
@@ -125,7 +129,7 @@ fn build(pattern: &[u8], pat_utf8: bool, flags: &str, utf: bool) -> Result<Rc<Pe
     let re = b.build(&text).map_err(|e| perl_message_at(pattern, &e, prefix.len()))?;
     let names = re.capture_names().to_vec();
     let groups = re.captures_len().saturating_sub(1);
-    Ok(Rc::new(PerlRegex { re, groups, names, utf, source: pattern.to_vec(), flags: flags.to_string() }))
+    Ok(Rc::new(PerlRegex { re, groups, names, utf, source: pattern.to_vec(), flags: flags.to_string(), locs: RefCell::new(None) }))
 }
 
 /// In a character class, perl takes a `-` next to a class escape
@@ -419,8 +423,8 @@ impl PerlRegex {
         if start > subject.len() {
             return Ok(None);
         }
-        let mut locs = self.re.capture_locations();
-        match self.re.captures_read_at(&mut locs, subject, start) {
+        let mut locs = self.locs.take().unwrap_or_else(|| self.re.capture_locations());
+        let r = match self.re.captures_read_at(&mut locs, subject, start) {
             Ok(Some(_)) => {
                 let spans = (0..=self.groups).map(|g| locs.get(g)).collect();
                 Ok(Some(spans))
@@ -429,7 +433,9 @@ impl PerlRegex {
             // A match limit is reached on a pathological pattern; perl would
             // keep going, PCRE2 gives up. Report no match, as the safest.
             Err(e) => Err(format!("{e}")),
-        }
+        };
+        self.locs.replace(Some(locs));
+        r
     }
 
     pub fn is_match(&self, subject: &[u8]) -> bool {
