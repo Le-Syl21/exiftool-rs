@@ -355,6 +355,17 @@ fn mini_mktime(tm: &mut Tm) {
     tm.yday = bd[7];
 }
 
+/// The fields this strptime sets in a struct tm that starts as `init`
+/// (sec, min, hour, mday, mon, year, wday, yday), whether it matched or
+/// not: POSIX::strptime's parser where the C library has no strptime
+/// (Windows).
+pub fn strptime_fields(s: &[u8], fmt: &[u8], init: [i64; 8]) -> [i64; 8] {
+    let [sec, min, hour, mday, mon, year, wday, yday] = init;
+    let mut tm = Tm { sec, min, hour, mday, mon, year, wday, yday, isdst: -1 };
+    let _ = strptime(s, 0, fmt, &mut tm, &mut false);
+    [tm.sec, tm.min, tm.hour, tm.mday, tm.mon, tm.year, tm.wday, tm.yday]
+}
+
 /// The object: a hash blessed into Time::Piece holding perl's 11 fields
 /// (the port blesses hashes only).
 fn piece(tm: &Tm) -> Value {

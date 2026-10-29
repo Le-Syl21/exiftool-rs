@@ -128,6 +128,7 @@ pub mod plist;
 pub mod plot;
 pub mod plus;
 pub mod png;
+pub mod posix_strptime;
 pub mod post_script;
 pub mod ppm;
 pub mod print_im;
