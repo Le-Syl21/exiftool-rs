@@ -111,6 +111,7 @@ pub fn new_interp() -> Interp {
     crate::modules::lzma::register(&mut it);
     crate::modules::gcstring::register(&mut it);
     crate::modules::time_piece::register(&mut it);
+    crate::modules::time_hires::register(&mut it);
     it
 }
 
