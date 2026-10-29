@@ -660,7 +660,7 @@ fn suggested_extension(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<Va
     let raw;
     pl::at(4568);
     let val = pl::sderef(&val_pt)?;
-    let m = |p: &str, f: &str| re(p, f).is_match(&val);
+    let m = |p: &'static str, f: &'static str| re(p, f).is_match(&val);
     if m(r"^\xff\xd8\xff", "") {
         ext = s("jpg");
     } else if m(r"^(\0\0\0\x0cjP(  |\x1a\x1a)\x0d\x0a\x87\x0a|\xff\x4f\xff\x51\0)", "") {

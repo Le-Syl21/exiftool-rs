@@ -87,12 +87,12 @@ fn chomp(it: &mut Interp, v: &mut Value) {
 }
 
 /// `$x =~ /PAT/FLAGS`: the captures.
-fn m(pat: &str, flags: &str, x: &Value) -> Option<Caps> {
+fn m(pat: &'static str, flags: &'static str, x: &Value) -> Option<Caps> {
     re(pat, flags).m(x)
 }
 
 /// `$x =~ s/PAT//` (first match removed): true when it matched.
-fn s_del(pat: &str, x: &mut Value) -> bool {
+fn s_del(pat: &'static str, x: &mut Value) -> bool {
     re(pat, "").subst(x, false, |_| Vec::new()) > 0
 }
 
@@ -367,7 +367,7 @@ fn load_track_log_body(it: &mut Interp, et: Value, val: Value) -> ER<Value> {
                     let mut xtra = s("");
                     s_del(r"^GPS ?", hd); // remove leading "GPS" to simplify regex patterns
                     let h = hd.clone();
-                    let mi = |p: &str| m(p, "i", &h).is_some();
+                    let mi = |p: &'static str| m(p, "i", &h).is_some();
                     if mi(r"^Time ?\(seconds\)$") {
                         // DJI
                         // DJI CSV log files have a column "Time(seconds)" which is seconds since

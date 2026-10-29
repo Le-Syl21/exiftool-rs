@@ -24,7 +24,7 @@ fn call(it: &mut Interp, name: &str, args: Vec<Value>) -> ER<Value> {
 pub fn shorten_tag_names(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     // (local $_: the substitutions work on a copy of the argument)
     let mut v = arg(&a, 0);
-    let sub = |v: &mut Value, pat: &str, rep: &str, g: bool| {
+    let sub = |v: &mut Value, pat: &'static str, rep: &str, g: bool| {
         re(pat, "").subst(v, g, |_| rep.as_bytes().to_vec());
     };
     sub(&mut v, r"DescriptionDimensionsDimensionDescription", "Dimensions", false);

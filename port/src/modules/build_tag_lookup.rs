@@ -106,7 +106,7 @@ fn dyn_re(parts: &[&[u8]], flags: &str) -> ER<pl::Re> {
 }
 
 /// `$s =~ s/RE//` (first match, removed)
-fn strip(v: &mut Value, pat: &str, flags: &str) -> usize {
+fn strip(v: &mut Value, pat: &'static str, flags: &'static str) -> usize {
     re(pat, flags).subst(v, false, |_| Vec::new())
 }
 

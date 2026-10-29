@@ -211,7 +211,7 @@ pub(crate) fn join_sp(v: &[Value]) -> Value {
 }
 
 /// `$s =~ /PAT/` captures.
-pub(crate) fn mt(pat: &str, flags: &str, subject: &Value) -> Option<Caps> {
+pub(crate) fn mt(pat: &'static str, flags: &'static str, subject: &Value) -> Option<Caps> {
     re(pat, flags).m(subject)
 }
 

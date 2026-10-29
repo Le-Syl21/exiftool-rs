@@ -3961,7 +3961,7 @@ fn identify_trailer_v(it: &mut Interp, slf: &Value, raf: &Value, offset: &Value)
         if !pl::num_eq(&got, &len) {
             break;
         }
-        let m = |p: &str| re(p, "s").is_match(&buff);
+        let m = |p: &'static str| re(p, "s").is_match(&buff);
         let t = if re(r"AXS(!|\*).{8}$", "s").is_match(&buff) {
             "AFCP"
         } else if re(r"\xa1\xb2\xc3\xd4$", "").is_match(&buff) {

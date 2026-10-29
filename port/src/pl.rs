@@ -122,8 +122,19 @@ pub fn sprintf_v(fmt: &Value, args: &[Value]) -> Value {
 pub struct Re(Rc<PerlRegex>);
 
 /// `qr/PAT/FLAGS`: dies like perl on a bad pattern.
-pub fn re(pat: &str, flags: &str) -> Re {
-    Re(pre::compile(pat.as_bytes(), flags).unwrap_or_else(|e| panic!("bad pattern /{pat}/: {e}")))
+pub fn re(pat: &'static str, flags: &'static str) -> Re {
+    thread_local! {
+        /// The patterns of `re`, by the address of their text: a literal
+        /// in the code, found without hashing the pattern itself.
+        static BY_ADDR: std::cell::RefCell<rustc_hash::FxHashMap<(usize, usize, usize, usize), Rc<PerlRegex>>> = Default::default();
+    }
+    let key = (pat.as_ptr() as usize, pat.len(), flags.as_ptr() as usize, flags.len());
+    if let Some(r) = BY_ADDR.with(|c| c.borrow().get(&key).cloned()) {
+        return Re(r);
+    }
+    let r = pre::compile(pat.as_bytes(), flags).unwrap_or_else(|e| panic!("bad pattern /{pat}/: {e}"));
+    BY_ADDR.with(|c| c.borrow_mut().insert(key, r.clone()));
+    Re(r)
 }
 
 /// A pattern built at run time (interpolated); errors are perl's die.

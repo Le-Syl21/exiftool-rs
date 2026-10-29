@@ -1234,9 +1234,9 @@ pub fn process_fpxr(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 
 /// `($tag =~ /RE1/s and $$tagTablePtr{$1}) or ($tag =~ /RE2/s and $$tagTablePtr{$1}) ...`:
 /// the `$1` of the first alternative that holds.
-fn base_id(tag_table_ptr: &Value, tag: &Value, pats: &[&str]) -> Option<Value> {
+fn base_id(tag_table_ptr: &Value, tag: &Value, pats: &[&'static str]) -> Option<Value> {
     for pat in pats {
-        if let Some(m) = re(pat, "s").m(tag) {
+        if let Some(m) = re(*pat, "s").m(tag) {
             let id = cap(&m, 1);
             if tag_table_ptr.get(id.to_bytes()).truthy() {
                 return Some(id);

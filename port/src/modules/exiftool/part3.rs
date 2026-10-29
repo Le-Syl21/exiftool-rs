@@ -3717,7 +3717,7 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
         dinfo.set("DirLen", length.clone());
         dinfo.set("Base", n(0));
         let seg = seg_data_pt.deref();
-        let is = |p: &str, f: &str| re(p, f).is_match(&seg);
+        let is = |p: &'static str, f: &'static str| re(p, f).is_match(&seg);
         let dir_start = |it: &mut Interp, args: Vec<Value>| -> ER<()> {
             let mut a = vec![dinfo.clone()];
             a.extend(args);

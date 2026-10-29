@@ -119,7 +119,7 @@ impl Lines {
 }
 
 /// `$x =~ s/PAT//` capturing `$1`: the capture when it matched.
-fn s_cap1(pat: &str, x: &mut Value) -> Option<Value> {
+fn s_cap1(pat: &'static str, x: &mut Value) -> Option<Value> {
     let mut c1 = None;
     if re(pat, "").subst(x, false, |c| {
         c1 = Some(cap(c, 1));

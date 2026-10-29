@@ -229,7 +229,7 @@ fn ret_sorted(v: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 }
 
 /// `split /RE/, $s` with a pattern given as text.
-fn split_on(pat: &str, v: &Value) -> Vec<Value> {
+fn split_on(pat: &'static str, v: &Value) -> Vec<Value> {
     pl::split(&re(pat, ""), v, 0)
 }
 

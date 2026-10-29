@@ -40,7 +40,7 @@ fn read_eq(it: &mut Interp, raf: &Value, buff: &Cell, len: &Value) -> ER<bool> {
 
 /// `s/PAT/REPL/` where REPL interpolates the captures given as `$N` in
 /// `parts` (bytes) and capture numbers.
-fn subst_caps(val: &mut Value, pat: &str, flags: &str, parts: &[Result<&str, usize>]) -> bool {
+fn subst_caps(val: &mut Value, pat: &'static str, flags: &'static str, parts: &[Result<&str, usize>]) -> bool {
     re(pat, flags).subst(val, false, |c| {
         let mut r = Vec::new();
         for p in parts {
@@ -268,7 +268,7 @@ pub fn process_dicom(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
         if !tag_info.truthy() {
             // accept tag ID's with "x" for a wildcard in the following patterns:
             // '60xx,1203', '0020,31xx', '0028,04x2', '1000,xxx0', '1010,xxxx'
-            let try_xx = |pat: &str, parts: &[Result<&str, usize>]| -> Option<Value> {
+            let try_xx = |pat: &'static str, parts: &[Result<&str, usize>]| -> Option<Value> {
                 let mut xx = tag.clone();
                 if subst_caps(&mut xx, pat, "", parts) && tag_table_ptr.get(xx.to_bytes()).truthy() {
                     Some(xx)
