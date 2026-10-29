@@ -839,7 +839,7 @@ fn extract(it: &mut Interp, st: &mut St) -> ER<bool> {
     // print warnings to stderr if using binary output
     // (because we are likely ignoring them and piping stdout to file)
     // or if there is none of the requested information available
-    pl::at(2383);
+    pl::at(2385);
     if sv(it, "binaryOutput").truthy() || pl::hderef(&st.info)?.is_empty() {
         let errs = pl::method(it, &et, "GetInfo", vec![s("Warning"), s("Error")])?;
         if call(it, "PrintErrors", vec![et.clone(), errs, st.file.clone()])?.truthy() {
@@ -1249,7 +1249,7 @@ fn plot(it: &mut Interp, st: &mut St) -> ER<()> {
     let tag_extra = et.get_or_new_hash("TAG_EXTRA");
     let doc_num = Value::new_hash();
     let get_num = helper(it, 6)?;
-    pl::at(2624);
+    pl::at(2626);
     for tag in pl::hderef(&st.info)?.keys() {
         let ex = tag_extra.get(&tag[..]);
         if !(ex.truthy() && ex.get("G3").truthy()) {

@@ -16,7 +16,7 @@ fn n(i: i64) -> Value {
 pub fn process_ocad(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    pl::at(772);
+    pl::at(775);
     let len = pl::length(&pl::sderef(&data_pt)?);
     pl::method(it, &et, "VerboseDir", vec![pl::s("APP0 Ocad"), Value::Undef, len])?;
     let dp = cell(data_pt.clone());
@@ -46,7 +46,7 @@ pub fn process_jpeg_hdr(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let data_pt = dir_info.get("DataPt");
     let dp = cell(data_pt.clone());
     // $$dataPt =~ /~\0/g (pos($$dataPt) is left set, as in the Perl)
-    pl::at(791);
+    pl::at(794);
     pl::sderef(&data_pt)?;
     let pos = perl_eval1(it, r"$$dataPt =~ /~\0/g ? pos($$dataPt) : undef", "Image::ExifTool::JPEG", &[("dataPt", &dp)])?;
     if pos.is_undef() {

@@ -425,7 +425,7 @@ pub fn clear_options(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
 /// Returns: List of requested tag keys
 pub fn get_requested_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     local_topic(it, |_it| {
-        pl::at(3427);
+        pl::at(3428);
         ret_count(pl::aderef(&arg(&a, 0).get("REQUESTED_TAGS"))?, want)
     })
 }
@@ -730,12 +730,12 @@ pub fn ordered_keys(_it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
     // ($$hash{...} autovivifies an undefined $hash, but dies on anything
     // else that is not a HASH reference)
     if !hash.is_undef() {
-        pl::at(4319);
+        pl::at(4320);
         pl::hderef(&hash)?;
     }
     let ok = hash.get("_ordered_keys_");
     if ok.truthy() {
-        pl::at(4319);
+        pl::at(4320);
         ret_count(pl::aderef(&ok)?, want)
     } else {
         ret_sorted(sort_str(keys(&hash)), want)
@@ -1440,7 +1440,7 @@ fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
         let (gp, mut tg) = (cap(&c, 1), cap(&c, 2));
         let mut keys_: Vec<Value> = Vec::new();
         if raw_value.get(tg.to_bytes()).is_undef() {
-            pl::at(3452);
+            pl::at(3453);
             let m = grep_first_ci(&tg, &keys(&raw_value))?;
             if m.truthy() {
                 tg = m;
@@ -1470,7 +1470,7 @@ fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
     } else if raw_value.get(tag.to_bytes()).is_undef() && !re(r" ", "").is_match(&tag) {
         // fix case of tag name
         if raw_value.get(tag.to_bytes()).is_undef() {
-            pl::at(3469);
+            pl::at(3470);
             let m = grep_first_ci(&tag, &keys(&raw_value))?;
             if m.truthy() {
                 tag = m;
@@ -1686,7 +1686,7 @@ fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
                                 let h = set_warning_ref(it);
                                 value = local_sig_warn(it, h, |it| {
                                     it.set_scalar(EVAL_WARNING, Value::Undef);
-                                    pl::at(3624);
+                                    pl::at(3625);
                                     let v = call_code(it, &conv.get("OTHER"), vec![val.clone(), Value::Undef, conv.clone()], Want::Scalar)?.pop().unwrap_or_default();
                                     if it.get_scalar(EVAL_WARNING).truthy() {
                                         let cw = clean_warning(it, vec![], Want::Scalar)?.pop().unwrap_or_default();
@@ -2235,7 +2235,7 @@ fn options_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         // fix parameter case if necessary
         if !options.exists(param.to_bytes()) {
             plus = re(r"\+$", "").subst(&mut param, false, |_| Vec::new()) > 0;
-            pl::at(2437);
+            pl::at(2438);
             let fixed = grep_first_ci(&param, &keys(&options))?;
             if fixed.truthy() {
                 param = fixed;
@@ -3332,9 +3332,9 @@ fn extract_info_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         // call cleanup routines if necessary
         let cleanup = self_.get("Cleanup");
         if cleanup.truthy() {
-            pl::at(3215);
+            pl::at(3216);
             for f in pl::aderef(&cleanup)? {
-                pl::at(3215);
+                pl::at(3216);
                 call_code(it, &f, vec![self_.clone()], Want::Void)?;
             }
             self_.delete("Cleanup");

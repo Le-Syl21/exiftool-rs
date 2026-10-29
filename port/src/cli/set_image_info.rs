@@ -220,7 +220,7 @@ pub fn set_image_info(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<Val
                         }
                     } else if !set_tags.is_empty() {
                         // add orphaned tags to existing "-tagsFromFile @" for this file only
-                        pl::at(3203);
+                        pl::at(3205);
                         set_tags.extend(pl::aderef(&set_tags_h.get("@"))?);
                         tags_from_src = Value::new_array(set_tags);
                     }
@@ -292,7 +292,7 @@ pub fn set_image_info(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<Val
                     if get(it, "verbose").truthy() {
                         print_vout(it, &[cat(&[s("Reading "), dy_file.at(0), s(" from "), fname.clone(), s("\n")])])?;
                     }
-                    pl::at(3255);
+                    pl::at(3257);
                     let mut args = vec![dy_file.at(0), buff.borrow().clone()];
                     args.extend(hash_pairs(&pl::hderef(&opts)?));
                     let r = pl::method_list(it, &et, "SetNewValue", args)?;
