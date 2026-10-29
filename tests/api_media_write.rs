@@ -17,7 +17,9 @@
 //! lines (not `XMPToolkit`, which names the writing tool) as
 //! `Group1:Tag=Value`.
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
+
+mod common;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -29,13 +31,13 @@ fn tmp(name: &str) -> PathBuf {
     dir.join(name)
 }
 
-fn write(src: &str, out: &str, ops: &[Op]) -> (PathBuf, exiftool_port::Result<u32>) {
+fn write(src: &str, out: &str, ops: &[Op]) -> (PathBuf, exiftool_rs::Result<u32>) {
     let mut et = ExifTool::new();
     for (tag, v) in ops {
         et.set_new_value(tag, *v);
     }
     let out = tmp(out);
-    let r = et.write_info(Path::new("../tests/images").join(src), &out);
+    let r = et.write_info(Path::new("tests/images").join(src), &out);
     (out, r)
 }
 
@@ -71,7 +73,7 @@ fn quicktime_groups(g0: &str, g1: &str) -> bool {
 }
 
 fn expected(case: &str) -> BTreeMap<String, usize> {
-    let text = std::fs::read_to_string(format!("../tests/expected_media/{case}.txt")).unwrap();
+    let text = std::fs::read_to_string(format!("tests/expected_media/{case}.txt")).unwrap();
     let mut m = BTreeMap::new();
     for l in text.lines().filter(|l| !l.is_empty()) {
         *m.entry(l.to_string()).or_default() += 1;
@@ -101,7 +103,7 @@ fn check_quicktime(case: &str, src: &str, ops: &[Op]) {
     // The movie data that follows the metadata is still where the file
     // says it is: the mdat box is intact and reads the same.
     let data = std::fs::read(&out).unwrap();
-    let srcd = std::fs::read(Path::new("../tests/images").join(src)).unwrap();
+    let srcd = std::fs::read(Path::new("tests/images").join(src)).unwrap();
     let mdat = |d: &[u8]| {
         d.windows(4)
             .position(|w| w == b"mdat")
@@ -169,11 +171,10 @@ fn quicktime_m4a_matches_exiftool() {
 }
 
 /// Perl ExifTool, to read a written file back: `$EXIFTOOL_DIR/exiftool`
-/// (default `../../exiftool`, next to the exiftool-rs checkout). `None`
+/// (default `../exiftool`, next to the repository: tests/common/mod.rs). `None`
 /// when it is not there or perl is missing.
 fn perl_exiftool() -> Option<PathBuf> {
-    let dir = std::env::var_os("EXIFTOOL_DIR").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("../../exiftool"));
-    let script = dir.join("exiftool");
+    let script = common::exiftool_dir("reading the written files back with Perl ExifTool")?.join("exiftool");
     let perl = std::process::Command::new("perl").arg("-e").arg("1").output().map(|o| o.status.success()).unwrap_or(false);
     (perl && script.is_file()).then_some(script)
 }
@@ -227,7 +228,7 @@ fn check_extension(src: &str, g0: &str, ops: &[Op], changed: &[(&str, Option<&st
     let (out, r) = write(src, &name, ops);
     let n = r.unwrap_or_else(|e| panic!("{src} {ops:?}: {e}"));
     assert_eq!(n as usize, ops.len(), "{src} {ops:?}: applied count");
-    let input = Path::new("../tests/images").join(src);
+    let input = Path::new("tests/images").join(src);
     let keep = |a: &str, _: &str| a == g0;
     assert_eq!(read(&out, keep), edited(read(&input, keep), changed), "{src} {ops:?}: read by the port");
     match perl_exiftool() {
@@ -278,7 +279,7 @@ fn unwritable_requests_are_skipped() {
         let mut et = ExifTool::new();
         et.set_new_value(op.0, op.1);
         let out = tmp(&format!("skip_{src}"));
-        let input = Path::new("../tests/images").join(src);
+        let input = Path::new("tests/images").join(src);
         assert_eq!(et.write_info(&input, &out).unwrap(), 0, "{src}");
         assert_eq!(std::fs::read(&out).unwrap(), std::fs::read(&input).unwrap(), "{src}");
         assert_eq!(et.write_warnings(), Vec::<String>::new(), "{src}");
@@ -304,8 +305,8 @@ fn without_extensions_these_formats_are_refused() {
         let ext = src.rsplit('.').next().unwrap();
         let out = tmp(&format!("refused_{}.{ext}", src.replace('.', "_")));
         let _ = std::fs::remove_file(&out);
-        match et.write_info(Path::new("../tests/images").join(src), &out) {
-            Err(exiftool_port::Error::UnsupportedFileType(msg)) => assert_eq!(msg, format!("Can't write {kind} files"), "{src}"),
+        match et.write_info(Path::new("tests/images").join(src), &out) {
+            Err(exiftool_rs::Error::UnsupportedFileType(msg)) => assert_eq!(msg, format!("Can't write {kind} files"), "{src}"),
             other => panic!("{src}: {other:?}"),
         }
         assert!(!out.exists(), "{src}: output written");
@@ -315,14 +316,14 @@ fn without_extensions_these_formats_are_refused() {
 /// An extension that counts its calls and writes the input unchanged.
 struct Counting(std::sync::Arc<std::sync::atomic::AtomicUsize>, &'static [&'static str]);
 
-impl exiftool_port::FormatExtension for Counting {
+impl exiftool_rs::FormatExtension for Counting {
     fn name(&self) -> &str {
         "counting"
     }
     fn file_types(&self) -> &[&str] {
         self.1
     }
-    fn write(&self, input: &[u8], _file_type: &str, _edits: &[exiftool_port::NewValue]) -> exiftool_port::Result<Vec<u8>> {
+    fn write(&self, input: &[u8], _file_type: &str, _edits: &[exiftool_rs::NewValue]) -> exiftool_rs::Result<Vec<u8>> {
         self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Ok(input.to_vec())
     }
@@ -336,7 +337,7 @@ fn extensions_are_called_only_for_what_exiftool_cannot_write() {
     let mut et = ExifTool::new();
     et.register_extension(Counting(calls.clone(), &["JPEG"]));
     et.set_new_value("EXIF:Artist", Some("Someone"));
-    assert_eq!(et.write_info(Path::new("../tests/images/Canon.jpg"), tmp("ext_canon.jpg")).unwrap(), 1);
+    assert_eq!(et.write_info(Path::new("tests/images/Canon.jpg"), tmp("ext_canon.jpg")).unwrap(), 1);
     assert_eq!(calls.load(Ordering::SeqCst), 0);
     // The last registered for a type writes it (here, in place of the
     // built-in ID3 writer: the copy is unchanged, so nothing is counted).
@@ -344,13 +345,13 @@ fn extensions_are_called_only_for_what_exiftool_cannot_write() {
     et.register_extension(Counting(calls.clone(), &["MP3"]));
     et.set_new_value("ID3:Title", Some("x"));
     let out = tmp("ext_counting.mp3");
-    let input = Path::new("../tests/images/MP3.mp3");
+    let input = Path::new("tests/images/MP3.mp3");
     assert_eq!(et.write_info(input, &out).unwrap(), 0);
     assert_eq!(calls.load(Ordering::SeqCst), 1);
     assert_eq!(std::fs::read(&out).unwrap(), std::fs::read(input).unwrap());
     // A destination ExifTool names another type is refused, as ExifTool
     // refuses it.
     let r = et.write_info(input, tmp("ext_counting.flac"));
-    assert!(matches!(&r, Err(exiftool_port::Error::UnsupportedFileType(m)) if m == "Can't write FLAC files"), "{r:?}");
+    assert!(matches!(&r, Err(exiftool_rs::Error::UnsupportedFileType(m)) if m == "Can't write FLAC files"), "{r:?}");
     assert_eq!(calls.load(Ordering::SeqCst), 1);
 }

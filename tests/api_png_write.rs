@@ -10,7 +10,7 @@
 //! keeps must come out byte for byte the same. The fixtures stay out of the
 //! parity corpus: the matrix there picks its own edits.
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
 use std::path::{Path, PathBuf};
 
 /// Cases where we knowingly differ from ExifTool 13.59, with the reason.
@@ -41,7 +41,7 @@ struct Expected {
 }
 
 fn cases() -> Vec<Case> {
-    let text = std::fs::read_to_string("../tests/issue22/cases.txt").unwrap();
+    let text = std::fs::read_to_string("tests/issue22/cases.txt").unwrap();
     text.lines()
         .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
         .map(|l| {
@@ -60,7 +60,7 @@ fn cases() -> Vec<Case> {
 }
 
 fn expected() -> Vec<Expected> {
-    let text = std::fs::read_to_string("../tests/issue22/expected.txt").unwrap();
+    let text = std::fs::read_to_string("tests/issue22/expected.txt").unwrap();
     text.lines()
         .map(|l| {
             let f: Vec<&str> = l.split('\t').collect();
@@ -102,13 +102,13 @@ fn chunks(data: &[u8]) -> Vec<String> {
 }
 
 fn tmp(name: &str) -> PathBuf {
-    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("exiftool_port_png_{}", std::process::id()));
+    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("exiftool_rs_png_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     dir.join(name)
 }
 
 fn fixture(name: &str) -> PathBuf {
-    Path::new("../tests/issue22").join(format!("issue22_{name}.png"))
+    Path::new("tests/issue22").join(format!("issue22_{name}.png"))
 }
 
 #[test]

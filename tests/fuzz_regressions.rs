@@ -11,7 +11,7 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
 
 include!("../fuzz/interp_programs.rs");
 
@@ -56,8 +56,8 @@ fn sprintf_limits() {
 
 #[test]
 fn sprintf_values() {
-    use exiftool_port::perl::sprintf::sprintf;
-    use exiftool_port::perl::Value;
+    use exiftool_rs::perl::sprintf::sprintf;
+    use exiftool_rs::perl::Value;
     let f = |fmt: &str, v: Value| String::from_utf8(sprintf(fmt.as_bytes(), &[v])).unwrap();
     let long = f("%.70000f", Value::Num(0.1));
     assert_eq!(long.len(), 70002);
@@ -93,8 +93,8 @@ fn pack_limits() {
 
 #[test]
 fn pack_values() {
-    use exiftool_port::perl::pack::{pack, unpack};
-    use exiftool_port::perl::Value;
+    use exiftool_rs::perl::pack::{pack, unpack};
+    use exiftool_rs::perl::Value;
     let p = |t: &str, v: &[Value]| pack(t.as_bytes(), v).unwrap();
     assert_eq!(p("H5", &[Value::str("abc")]), [0xab, 0xc0, 0x00]);
     assert_eq!(p("h3", &[Value::str("abcd")]), [0xba, 0x0c]);
@@ -114,8 +114,8 @@ fn pack_values() {
 
 /// The value of a Perl expression, run in the port's interpreter.
 fn perl(code: &str) -> String {
-    use exiftool_port::interp::{Scope, Want};
-    let mut it = exiftool_port::runtime::new_interp();
+    use exiftool_rs::interp::{Scope, Want};
+    let mut it = exiftool_rs::runtime::new_interp();
     let r = it.eval_string(code.as_bytes(), "main", &Scope::new(None), Want::Scalar);
     r.map(|v| v[0].to_text()).unwrap_or_else(|e| e.to_text())
 }
@@ -147,10 +147,10 @@ fn rss_kb() -> Option<u64> {
 fn interpreters_are_freed() {
     let _serial = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
     let et = ExifTool::new();
-    let _ = et.extract_info("../tests/images/Canon.jpg");
+    let _ = et.extract_info("tests/images/Canon.jpg");
     let Some(before) = rss_kb() else { return };
     for _ in 0..20 {
-        let _ = et.extract_info("../tests/images/Canon.jpg");
+        let _ = et.extract_info("tests/images/Canon.jpg");
     }
     let after = rss_kb().unwrap();
     assert!(after < before + 10_000, "{before} kB -> {after} kB");

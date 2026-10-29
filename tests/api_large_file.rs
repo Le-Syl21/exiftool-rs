@@ -1,6 +1,6 @@
 //! Scalability guard for the memory-mapped reader (issue #5).
 //!
-//! Builds — at run time, in the OS temp dir — a multi-gigabyte MP4 whose `mdat`
+//! Builds — at run time, in the target directory — a multi-gigabyte MP4 whose `mdat`
 //! payload is a *sparse hole* (instant to create, ~0 bytes on disk) with the real
 //! `moov` from `Android.mp4` placed at the very end, exactly like Android camera
 //! output. We then parse it and assert the device metadata is still extracted.
@@ -56,7 +56,7 @@ fn parses_metadata_from_a_multi_gb_file_without_reading_it_whole() {
     // regression to a full read would OOM rather than merely slow down.
     const HOLE: u64 = 4 * 1024 * 1024 * 1024;
 
-    let path = std::env::temp_dir().join("exiftool_rs_large_sparse.mp4");
+    let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("exiftool_rs_large_sparse.mp4");
     {
         let mut f = std::fs::File::create(&path).unwrap();
         f.write_all(&data[..mdat_off]).unwrap(); // ftyp + free + free

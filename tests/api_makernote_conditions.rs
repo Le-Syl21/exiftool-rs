@@ -10,7 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
-use exiftool_port::{ExifTool, Options, Tag};
+use exiftool_rs::{ExifTool, Options, Tag};
 
 fn edited(case: &str, src: &str, ops: &[(&str, Option<&str>)]) -> Vec<Tag> {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("makernote_conditions");
@@ -21,7 +21,7 @@ fn edited(case: &str, src: &str, ops: &[(&str, Option<&str>)]) -> Vec<Tag> {
     for (tag, value) in ops {
         et.set_new_value(tag, *value);
     }
-    et.write_info(Path::new("../tests/images").join(src), &dst)
+    et.write_info(Path::new("tests/images").join(src), &dst)
         .unwrap_or_else(|e| panic!("{case}: write failed: {e}"));
     ExifTool::with_options(Options {
         duplicates: true,
@@ -138,7 +138,7 @@ fn sony_arw_is_not_written() {
         let mut et = ExifTool::new();
         et.set_new_value(tag, value);
         let err = et
-            .write_info(Path::new("../tests/images/SonyILCE9.arw"), &dst)
+            .write_info(Path::new("tests/images/SonyILCE9.arw"), &dst)
             .expect_err(case);
         assert!(err.to_string().contains("Error reading PreviewImage data in IFD1"), "{case}: {err}");
         assert!(!dst.exists(), "{case}");

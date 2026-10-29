@@ -15,6 +15,7 @@ import subprocess
 import sys
 
 here = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(os.path.dirname(here), "src") + os.sep
 target = sys.argv[1]
 arts = sys.argv[2] if len(sys.argv) > 2 else os.path.join(here, "artifacts", target)
 binary = os.path.join(here, "target", "x86_64-unknown-linux-gnu", "release", target)
@@ -47,8 +48,10 @@ def cause(path):
     addrs = frame_re.findall(err)
     frames = []
     for fn, loc in symbolize(addrs[:200]):
-        if "/port/src/" in loc:
-            frames.append(loc.split("/port/")[-1].split(" ")[0] + " " + fn.split("(")[0][-60:])
+        # (a frame of the crate's own sources, as src/...: the repository
+        # is fuzz/'s parent)
+        if loc.startswith(src_dir):
+            frames.append(loc[len(src_dir) - 4:].split(" ")[0] + " " + fn.split("(")[0][-60:])
         if len(frames) >= 3:
             break
     m = re.search(r"Executed .* in (\d+) ms", err)

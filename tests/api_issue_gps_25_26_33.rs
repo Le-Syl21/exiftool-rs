@@ -14,7 +14,7 @@
 //! The expected values are ExifTool's `-j -G1` output, with and without
 //! `-n`, for the tags these issues are about.
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -171,7 +171,7 @@ fn read(name: &str, numeric: bool) -> HashMap<String, String> {
     });
     let mut out = HashMap::new();
     for t in et
-        .extract_info(Path::new("../tests/issues/gps").join(name))
+        .extract_info(Path::new("tests/issues/gps").join(name))
         .unwrap()
     {
         out.entry(format!("{}:{}", t.group.family1, t.name))
@@ -225,7 +225,7 @@ fn image_info_numeric_coordinates() {
         ("camera.exr", Some("10")),
     ] {
         let info = et
-            .image_info(Path::new("../tests/issues/gps").join(fixture))
+            .image_info(Path::new("tests/issues/gps").join(fixture))
             .unwrap();
         let get = |name: &str| info.get(name).map(String::as_str);
         assert_eq!(get("GPSLatitude"), Some("12.5"), "{fixture}");

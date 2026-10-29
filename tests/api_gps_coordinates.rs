@@ -11,7 +11,7 @@
 //! seconds; the time stamp (`GPSTimeStamp`) covers the fraction PrintConv
 //! rounds to the microsecond.
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -27,7 +27,7 @@ struct Expected {
 }
 
 fn expected() -> Vec<Expected> {
-    let text = std::fs::read_to_string("../tests/gps/expected.txt").unwrap();
+    let text = std::fs::read_to_string("tests/gps/expected.txt").unwrap();
     text.lines()
         .map(|l| {
             let f: Vec<&str> = l.split('\t').collect();
@@ -43,9 +43,9 @@ fn expected() -> Vec<Expected> {
 
 fn fixture(name: &str) -> std::path::PathBuf {
     if name == "GPS.jpg" {
-        Path::new("../tests/images").join(name)
+        Path::new("tests/images").join(name)
     } else {
-        Path::new("../tests/gps").join(name)
+        Path::new("tests/gps").join(name)
     }
 }
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build the starting corpora.
 #
-# extract and write: each file of ExifTool's t/images, of the root crate's
+# extract and write: each file of ExifTool's t/images, of the repository's
 # tests/images and tests/malformed, and the first 64 KiB of a sample of RAW
 # files (RAW_DIR, one in eight), prefixed with the byte that makes the
 # targets pick its own extension back.
@@ -26,10 +26,10 @@ seed() { # FILE NAME [BYTES]
 for f in "$exiftool"/t/images/*.*; do
     if [ -f "$f" ]; then seed "$f" "pl-$(basename "$f")"; fi
 done
-for f in ../../tests/images/*.*; do
+for f in ../tests/images/*.*; do
     if [ -f "$f" ]; then seed "$f" "rs-$(basename "$f")"; fi
 done
-for f in ../../tests/malformed/*.*; do
+for f in ../tests/malformed/*.*; do
     if [ -f "$f" ]; then seed "$f" "malformed-$(basename "$f")"; fi
 done
 if [ -n "$raw" ]; then

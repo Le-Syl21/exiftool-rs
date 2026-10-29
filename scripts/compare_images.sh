@@ -3,7 +3,7 @@
 # (scripts/dump_info.pl under both). Prints the files that differ.
 #   sh scripts/compare_images.sh [EXIFTOOL_DIR] [GLOB]
 here=$(cd "$(dirname "$0")/.." && pwd)
-src=$(cd "${1:-$here/../../exiftool}" && pwd)
+src=$(cd "${1:-${EXIFTOOL_DIR:-$here/../exiftool}}" && pwd)
 glob=${2:-*}
 work="$here/target/images"
 mkdir -p "$work/perl" "$work/port"

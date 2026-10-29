@@ -6,7 +6,7 @@ Prints the files that differ, then the totals and the timings.
 
     python3 scripts/compare_corpus.py [CORPUS] [EXIFTOOL_DIR]
 
-CORPUS defaults to rawsamples; EXIFTOOL_DIR to ../../exiftool. Outputs go to
+CORPUS defaults to rawsamples; EXIFTOOL_DIR to ../exiftool (next to the repository). Outputs go to
 target/corpus_cmp/<corpus>/{perl,port}/<file>.<mode>.json.
 """
 import json
@@ -17,10 +17,10 @@ import time
 
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 name = sys.argv[1] if len(sys.argv) > 1 else "rawsamples"
-src = os.path.abspath(sys.argv[2] if len(sys.argv) > 2 else os.path.join(here, "..", "..", "exiftool"))
-corpus = os.path.join(here, "..", "target", "corpus", name)
+src = os.path.abspath(sys.argv[2] if len(sys.argv) > 2 else os.path.join(here, "..", "exiftool"))
+corpus = os.path.join(here, "target", "corpus", name)
 work = os.path.join(here, "target", "corpus_cmp", name)
-port = os.path.join(here, "target", "release", "examples", "exiftool-rs")
+port = os.path.join(here, "target", "release", "exiftool-rs")
 limit = ["prlimit", "--as=4000000000", "--", "timeout", "3600"]
 # tags that differ between two reads of the same file
 VOLATILE = {"FileAccessDate", "FileInodeChangeDate", "FileModifyDate", "FileInodeNumber"}
@@ -48,7 +48,7 @@ def run(cmd):
 def main():
     if not os.path.isdir(corpus):
         sys.exit(f"no corpus at {corpus}: run scripts/fetch_corpus.sh {name}")
-    subprocess.run(["cargo", "build", "--release", "--example", "exiftool-rs", "-j2"], cwd=here, capture_output=True)
+    subprocess.run(["cargo", "build", "--release", "--bin", "exiftool-rs", "-j2"], cwd=here, capture_output=True)
     env_note = {}
     files = set()
     bad = {}

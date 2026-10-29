@@ -24,7 +24,7 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 
 type Op = (&'static str, Option<&'static str>);
 
@@ -48,7 +48,7 @@ fn write(case: &str, src: &str, ops: &[Op]) -> PathBuf {
     }
     let dst = out_dir().join(format!("{case}.jpg"));
     let n = et
-        .write_info(Path::new("../tests/images").join(src), &dst)
+        .write_info(Path::new("tests/images").join(src), &dst)
         .unwrap_or_else(|e| panic!("{case}: write failed: {e}"));
     assert_eq!(n as usize, ops.len(), "{case}: every request is applied");
     dst
@@ -85,7 +85,7 @@ fn snapshot(path: &Path) -> String {
 
 fn check(case: &str, src: &str, ops: &[Op]) {
     let out = write(case, src, ops);
-    let expected = std::fs::read_to_string(format!("../tests/expected_jpeg_exif/{case}.txt")).unwrap();
+    let expected = std::fs::read_to_string(format!("tests/expected_jpeg_exif/{case}.txt")).unwrap();
     let got = snapshot(&out);
     if got != expected {
         let e: BTreeSet<&str> = expected.lines().collect();

@@ -6,7 +6,7 @@ src/modules/).
 import os, re, sys
 
 here = os.path.dirname(os.path.abspath(__file__))
-lib = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, '../../../exiftool/lib')
+lib = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, '../../exiftool/lib')
 only = sys.argv[2:]
 native = set()
 for root, _, files in os.walk(os.path.join(here, '../src/modules')):

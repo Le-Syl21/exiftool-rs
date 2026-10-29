@@ -1,8 +1,11 @@
 //! Every Perl file of ExifTool parses (the interpreter runs the modules not
 //! ported yet).
+mod common;
+
 #[test]
 fn exiftool_sources_parse() {
-    let root = format!("{}/../../exiftool", env!("CARGO_MANIFEST_DIR"));
+    let Some(root) = common::exiftool_dir("parsing ExifTool's sources") else { return };
+    let root = root.display().to_string();
     let mut files = vec![format!("{root}/lib/Image/ExifTool.pm"), format!("{root}/lib/File/RandomAccess.pm"), format!("{root}/exiftool")];
     for dir in ["lib/Image/ExifTool", "lib/Image/ExifTool/Lang", "lib/Image/ExifTool/Charset"] {
         let mut v: Vec<_> = std::fs::read_dir(format!("{root}/{dir}")).unwrap().filter_map(|e| e.ok()).map(|e| e.path().to_string_lossy().into_owned()).filter(|p| p.ends_with(".pm") || p.ends_with(".pl")).collect();
@@ -18,7 +21,7 @@ fn exiftool_sources_parse() {
     let mut failures = Vec::new();
     for f in &files {
         let src = std::fs::read(f).unwrap();
-        if let Err(e) = exiftool_port::interp::parse::parse_program(&src, "main") {
+        if let Err(e) = exiftool_rs::interp::parse::parse_program(&src, "main") {
             failures.push(format!("{}: {e}", f.trim_start_matches(&root)));
         }
     }

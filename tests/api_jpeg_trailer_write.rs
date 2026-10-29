@@ -23,7 +23,7 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 
 const LEFT_OUT: &[&str] = &[
     "ThumbnailOffset",
@@ -40,7 +40,7 @@ fn write(case: &str, tag: &str, value: Option<&str>) -> PathBuf {
     et.set_new_value(tag, value);
     let dst = d.join(format!("{case}.jpg"));
     let n = et
-        .write_info("../tests/images/ExifTool.jpg", &dst)
+        .write_info("tests/images/ExifTool.jpg", &dst)
         .unwrap_or_else(|e| panic!("{case}: write failed: {e}"));
     assert_eq!(n, 1, "{case}: the request is applied");
     dst
@@ -80,7 +80,7 @@ fn snapshot(path: &Path) -> String {
 fn check(case: &str, tag: &str, value: Option<&str>) {
     let out = write(case, tag, value);
     let expected: String =
-        std::fs::read_to_string(format!("../tests/expected_jpeg_trailers/{case}.txt"))
+        std::fs::read_to_string(format!("tests/expected_jpeg_trailers/{case}.txt"))
             .unwrap()
             .lines()
             .filter(|l| !LEFT_OUT.iter().any(|n| l.contains(&format!(":{n}\t"))))

@@ -8,7 +8,9 @@
 //! their equivalents. Each output is read back by the port and, when found
 //! at `$EXIFTOOL_DIR`, by Perl ExifTool 13.59.
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
+
+mod common;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
@@ -19,7 +21,7 @@ fn tmp(name: &str) -> PathBuf {
 }
 
 fn image(name: &str) -> PathBuf {
-    Path::new("../tests/images").join(name)
+    Path::new("tests/images").join(name)
 }
 
 /// The six formats: test image, extension, family 0 group of its metadata.
@@ -55,10 +57,9 @@ fn read_port(path: &Path, g0: &str) -> BTreeSet<(String, String, String)> {
 }
 
 /// Perl ExifTool, to read a written file back: `$EXIFTOOL_DIR/exiftool`
-/// (default `../../exiftool`, next to the exiftool-rs checkout).
+/// (default `../exiftool`, next to the repository: tests/common/mod.rs).
 fn perl_exiftool() -> Option<PathBuf> {
-    let dir = std::env::var_os("EXIFTOOL_DIR").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("../../exiftool"));
-    let script = dir.join("exiftool");
+    let script = common::exiftool_dir("reading the copies back with Perl ExifTool")?.join("exiftool");
     let perl = std::process::Command::new("perl").arg("-e").arg("1").output().map(|o| o.status.success()).unwrap_or(false);
     (perl && script.is_file()).then_some(script)
 }
@@ -347,14 +348,14 @@ fn a_group_the_tag_list_names_is_kept() {
 /// An extension that counts its calls and writes the input unchanged.
 struct Counting(std::sync::Arc<std::sync::atomic::AtomicUsize>);
 
-impl exiftool_port::FormatExtension for Counting {
+impl exiftool_rs::FormatExtension for Counting {
     fn name(&self) -> &str {
         "counting"
     }
     fn file_types(&self) -> &[&str] {
         &["MP4", "M4A", "JPEG"]
     }
-    fn write(&self, input: &[u8], _file_type: &str, _edits: &[exiftool_port::NewValue]) -> exiftool_port::Result<Vec<u8>> {
+    fn write(&self, input: &[u8], _file_type: &str, _edits: &[exiftool_rs::NewValue]) -> exiftool_rs::Result<Vec<u8>> {
         self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Ok(input.to_vec())
     }

@@ -17,7 +17,7 @@
 //! `HEIF_plain.avif` were encoded with libheif/aom for these tests, with and
 //! without the same metadata.
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
 use std::path::{Path, PathBuf};
 
 type Op = (&'static str, Option<&'static str>);
@@ -117,7 +117,7 @@ fn image_for(prefix: &str) -> &'static str {
 }
 
 fn tmp(name: &str) -> PathBuf {
-    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("exiftool_port_heif_{}", std::process::id()));
+    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("exiftool_rs_heif_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     dir.join(name)
 }
@@ -139,8 +139,8 @@ fn snapshot(path: &Path) -> Vec<String> {
     out
 }
 
-fn write(image: &str, ops: &[Op], out_name: &str) -> (exiftool_port::Result<u32>, PathBuf) {
-    let src = Path::new("../tests/images").join(image);
+fn write(image: &str, ops: &[Op], out_name: &str) -> (exiftool_rs::Result<u32>, PathBuf) {
+    let src = Path::new("tests/images").join(image);
     let dst = tmp(out_name);
     let mut et = ExifTool::new();
     for (tag, value) in ops {
@@ -161,7 +161,7 @@ fn heif_writes_match_exiftool() {
         // Deleting from a file with no EXIF or XMP (QuickTime.heic,
         // HEIF_plain.avif) changes nothing, which ExifTool reports as
         // "1 image files unchanged".
-        let empty = snapshot(&Path::new("../tests/images").join(image)).is_empty();
+        let empty = snapshot(&Path::new("tests/images").join(image)).is_empty();
         // Writing the value already there changes nothing either, and is
         // not counted: both files' GPSLatitudeRef is already North.
         let changed = if empty && case == "deleteall" {
@@ -173,7 +173,7 @@ fn heif_writes_match_exiftool() {
         };
         assert_eq!(n as usize, changed, "{id}: every request should be applied");
         let expected: Vec<String> =
-            std::fs::read_to_string(format!("../tests/expected_heif/{id}.txt"))
+            std::fs::read_to_string(format!("tests/expected_heif/{id}.txt"))
                 .unwrap()
                 .lines()
                 .map(str::to_string)
@@ -226,7 +226,7 @@ fn a_request_nothing_can_apply_is_skipped() {
     assert_eq!(res.unwrap(), 0);
     assert_eq!(
         std::fs::read(&dst).unwrap(),
-        std::fs::read("../tests/images/issue17.heic").unwrap()
+        std::fs::read("tests/images/issue17.heic").unwrap()
     );
     // Mixed with one that works, only the one that works is counted.
     let (res, _) = write(
@@ -251,7 +251,7 @@ fn deleting_an_absent_tag_changes_nothing() {
     assert_eq!(res.unwrap(), 0);
     assert_eq!(
         std::fs::read(&dst).unwrap(),
-        std::fs::read("../tests/issue21/issue21_zero_extent.heic").unwrap()
+        std::fs::read("tests/issue21/issue21_zero_extent.heic").unwrap()
     );
     // With the extent length given, the file stores its Exif item with
     // construction method 1, which ExifTool 13.59 reads but cannot rewrite:
@@ -260,7 +260,7 @@ fn deleting_an_absent_tag_changes_nothing() {
     let mut et = ExifTool::new();
     et.set_new_value("IFD0:Make", None);
     let dst = tmp("e.heic");
-    assert_eq!(et.write_info("../tests/issue21/issue21.heic", &dst).unwrap(), 0);
+    assert_eq!(et.write_info("tests/issue21/issue21.heic", &dst).unwrap(), 0);
     assert_eq!(et.write_warnings(), ["Can't currently extract Exif with construction method 1"]);
     let left = snapshot(&dst);
     assert!(left.iter().any(|t| t.starts_with("IFD0:Make=")), "{left:?}");

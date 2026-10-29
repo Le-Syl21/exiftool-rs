@@ -1,7 +1,7 @@
 //! Module data loads back as perl had it.
-use exiftool_port::interp::{Scope, Want};
+use exiftool_rs::interp::{Scope, Want};
 
-fn eval(it: &mut exiftool_port::interp::Interp, code: &str) -> String {
+fn eval(it: &mut exiftool_rs::interp::Interp, code: &str) -> String {
     let scope = Scope::new(None);
     match it.eval_string(code.as_bytes(), "main", &scope, Want::Scalar) {
         Ok(mut v) => v.pop().unwrap_or_default().to_text(),
@@ -11,7 +11,7 @@ fn eval(it: &mut exiftool_port::interp::Interp, code: &str) -> String {
 
 #[test]
 fn bmp_tables_load() {
-    let mut it = exiftool_port::runtime::new_interp();
+    let mut it = exiftool_rs::runtime::new_interp();
     assert_eq!(eval(&mut it, "require Image::ExifTool::BMP; 1"), "1");
     assert_eq!(eval(&mut it, "$Image::ExifTool::BMP::Main{0}{Name}"), "BMPVersion");
     assert_eq!(eval(&mut it, "$Image::ExifTool::BMP::Main{0}{PrintConv}{40}"), "Windows V3");

@@ -6,11 +6,11 @@
 //! bytes in its header. Extraction may fail on them or return partial tags;
 //! the only requirement is that it returns.
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
 use std::path::Path;
 
 fn survives(name: &str) {
-    let path = Path::new("../tests/malformed").join(name);
+    let path = Path::new("tests/malformed").join(name);
     // Ok or Err are both fine: only a panic (or an abort) fails the test.
     let _ = ExifTool::new().extract_info(&path);
 }
@@ -47,7 +47,7 @@ fn riff_truncated_chunks() {
 /// parsers that spun without advancing (Lytro JSON, TNEF, cyclic OLE2 FATs).
 #[test]
 fn fuzz_campaign_1() {
-    let mut names: Vec<_> = std::fs::read_dir("../tests/malformed")
+    let mut names: Vec<_> = std::fs::read_dir("tests/malformed")
         .unwrap()
         .filter_map(|e| e.ok()?.file_name().into_string().ok())
         .filter(|n| n.starts_with("fuzz-"))

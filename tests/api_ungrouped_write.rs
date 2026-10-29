@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 
 fn dir() -> PathBuf {
     let d = Path::new(env!("CARGO_TARGET_TMPDIR")).join("ungrouped_write");
@@ -58,7 +58,7 @@ fn map(pairs: &[(&str, &str)]) -> BTreeMap<String, Vec<String>> {
 /// parallel).
 fn base(name: &str) -> PathBuf {
     write(
-        Path::new("../tests/images/Canon.jpg"),
+        Path::new("tests/images/Canon.jpg"),
         &format!("base_{name}.jpg"),
         &[
             ("XMP-tiff:Artist", Some("OldX")),
@@ -117,7 +117,7 @@ fn an_iptc_tag_also_replaces_its_xmp_copy_and_its_trailer_copies() {
     // to the FotoStation IPTC record (IPTC2), and creates no IPTC directory
     // in the MIE trailer, whose own MIE-Geo:City it writes instead.
     let out = write(
-        Path::new("../tests/images/ExifTool.jpg"),
+        Path::new("tests/images/ExifTool.jpg"),
         "city.jpg",
         &[("City", Some("New"))],
     );

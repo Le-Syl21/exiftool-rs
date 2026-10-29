@@ -1,14 +1,14 @@
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
 use std::path::Path;
 
 #[test]
 fn test_write_read_roundtrip() {
-    let src = Path::new("../tests/images/Canon.jpg");
+    let src = Path::new("tests/images/Canon.jpg");
     if !src.exists() {
         return;
     }
 
-    let tmp = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("exiftool_port_test_roundtrip.jpg");
+    let tmp = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("exiftool_rs_test_roundtrip.jpg");
     std::fs::copy(src, &tmp).unwrap();
 
     let mut et = ExifTool::new();
@@ -30,8 +30,8 @@ fn test_write_read_roundtrip() {
 /// files copied"), and in place the file is left alone ("Nothing to do.").
 #[test]
 fn undefined_tag_is_skipped_with_a_warning() {
-    let src = Path::new("../tests/images/Writer.jpg");
-    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("exiftool_port_undefined_{}", std::process::id()));
+    let src = Path::new("tests/images/Writer.jpg");
+    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("exiftool_rs_undefined_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
 
     let mut et = ExifTool::new();

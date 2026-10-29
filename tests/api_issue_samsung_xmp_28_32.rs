@@ -15,10 +15,10 @@
 //! of the tags is not compared: ExifTool sets the file type of an XMP file
 //! once the XMP is read, so its Warning comes before the File tags.
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 use std::collections::BTreeMap;
 
-const DIR: &str = "../tests/issues/samsung_xmp";
+const DIR: &str = "tests/issues/samsung_xmp";
 
 /// `(fixture, mode)` -> the sorted `Group1:Tag <TAB> value` lines.
 fn expected() -> BTreeMap<(String, String), Vec<String>> {

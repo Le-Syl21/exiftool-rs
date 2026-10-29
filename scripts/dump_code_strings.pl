@@ -2,7 +2,7 @@
 # Dump every distinct Perl code string held in ExifTool's tag tables, for the
 # interpreter's coverage test. Record format: "KIND LENGTH\n" then the bytes
 # and a newline.
-#   perl scripts/dump_code_strings.pl ../../exiftool/lib > tests/data/code_strings.txt
+#   perl scripts/dump_code_strings.pl ../exiftool/lib > tests/data/code_strings.txt
 use strict; use warnings; no warnings 'once';
 use File::Find;
 my $root = shift or die "usage: $0 EXIFTOOL_LIB\n";

@@ -13,7 +13,7 @@ case "$name" in
         ;;
     *) echo "unknown corpus: $name" >&2; exit 1 ;;
 esac
-dest="$here/../target/corpus"
+dest="$here/target/corpus"
 mkdir -p "$dest"
 if [ ! -d "$dest/$name" ]; then
     curl -fsSL -o "$dest/$file" "https://github.com/Le-Syl21/exiftool-rs/releases/download/$tag/$file"

@@ -8,10 +8,10 @@
 //! expected values are what ExifTool 13.59 prints (`-G1 -s -a`) for the
 //! source.
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 use std::path::Path;
 
-const DIR: &str = "../tests/issues/copy";
+const DIR: &str = "tests/issues/copy";
 
 /// `Group1:Name` = printed value of every EXIF tag of a file.
 fn exif(path: &Path) -> Vec<(String, String)> {

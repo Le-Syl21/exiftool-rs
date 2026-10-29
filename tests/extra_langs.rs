@@ -6,21 +6,21 @@
 
 use std::path::Path;
 
-use exiftool_port::interp::{Binding, Flow, Want};
-use exiftool_port::perl::Value;
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::interp::{Binding, Flow, Want};
+use exiftool_rs::perl::Value;
+use exiftool_rs::{ExifTool, Options};
 
-const CANON: &str = "../tests/images/Canon.jpg";
+const CANON: &str = "tests/images/Canon.jpg";
 
 /// Run the exiftool application on `args`; returns its output and its
 /// exit code.
 fn exiftool_rs(args: &[&str]) -> (String, i32) {
-    let mut it = exiftool_port::runtime::new_interp();
+    let mut it = exiftool_rs::runtime::new_interp();
     it.strict = false;
     it.set_scalar("main::0", Value::str("exiftool-rs"));
     let argv: Vec<Value> = args.iter().map(|a| Value::str(a)).collect();
     it.set_global(b'@', "main::ARGV", Binding::Array(std::rc::Rc::new(std::cell::RefCell::new(argv))));
-    exiftool_port::cli::register(&mut it);
+    exiftool_rs::cli::register(&mut it);
     match it.call_named("main::<program>", vec![], Want::Void) {
         Ok(_) => {}
         Err(Flow::Exit(code)) => it.exit_code = Some(code),

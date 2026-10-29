@@ -5,7 +5,7 @@
 # is never written to. Prints one line per script and the totals.
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
-src=$(cd "${1:-$here/../../exiftool}" && pwd)
+src=$(cd "${1:-${EXIFTOOL_DIR:-$here/../exiftool}}" && pwd)
 work="$here/target/suite"
 mkdir -p "$work/out"
 rsync -a "$src/t/" "$work/t/"

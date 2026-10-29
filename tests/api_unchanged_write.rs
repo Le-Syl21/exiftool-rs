@@ -5,7 +5,9 @@
 //! Perl reports as "1 image files updated" while its new file has the same
 //! bytes. The extensions (MP3, FLAC, MKV) follow the same rule.
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
+
+mod common;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
@@ -20,7 +22,7 @@ fn dir(name: &str) -> PathBuf {
 /// A copy of a test image, dated in 2001.
 fn copy(d: &Path, name: &str) -> PathBuf {
     let file = d.join(name);
-    std::fs::copy(Path::new("../tests/images").join(name), &file).unwrap();
+    std::fs::copy(Path::new("tests/images").join(name), &file).unwrap();
     let f = std::fs::File::options().write(true).open(&file).unwrap();
     f.set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000_000)).unwrap();
     file
@@ -43,14 +45,9 @@ fn write(file: &Path, ops: &[(&str, Option<&str>)]) -> u32 {
 /// Perl ExifTool's summary for the same write in place, on a copy ("1
 /// image files updated", "1 image files unchanged"), and the bytes of the
 /// copy after it. `None` when Perl ExifTool is not at `$EXIFTOOL_DIR`
-/// (default `../../exiftool`).
+/// (default `../exiftool`, next to the repository: tests/common/mod.rs).
 fn perl_summary(file: &Path, args: &[&str]) -> Option<(String, Vec<u8>)> {
-    let dir = std::env::var_os("EXIFTOOL_DIR").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("../../exiftool"));
-    let script = dir.join("exiftool");
-    if !script.is_file() {
-        eprintln!("Perl ExifTool not found (EXIFTOOL_DIR)");
-        return None;
-    }
+    let script = common::exiftool_dir("the Perl side of the comparison")?.join("exiftool");
     let copy = file.with_extension(format!("perl.{}", file.extension().unwrap().to_str().unwrap()));
     std::fs::copy(file, &copy).unwrap();
     let out = std::process::Command::new("prlimit")

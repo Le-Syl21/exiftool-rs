@@ -1,10 +1,10 @@
-//! What the facade (`exiftool_port::ExifTool`, the root crate's API over
+//! What the facade (`exiftool_rs::ExifTool`, the root crate's API over
 //! Image::ExifTool) guarantees, one test per requirement drawn from the
 //! issues of the root crate. Expected values are Perl ExifTool 13.59's.
 
 use std::path::{Path, PathBuf};
 
-use exiftool_port::{ExifTool, FileType, Options, Value};
+use exiftool_rs::{ExifTool, FileType, Options, Value};
 
 fn dir(name: &str) -> PathBuf {
     let d = Path::new(env!("CARGO_TARGET_TMPDIR")).join("api_requirements").join(name);
@@ -14,7 +14,7 @@ fn dir(name: &str) -> PathBuf {
 }
 
 fn image(name: &str) -> PathBuf {
-    Path::new("../tests/images").join(name)
+    Path::new("tests/images").join(name)
 }
 
 /// `Group1:Name` = printed value, every instance.
@@ -268,13 +268,13 @@ fn png_all_is_deleted() {
 
 #[test]
 fn file_types_are_exiftools() {
-    assert_eq!(exiftool_port::get_file_type(image("Canon.jpg")).unwrap(), FileType::Jpeg);
-    assert_eq!(exiftool_port::get_file_type(image("PNG.png")).unwrap(), FileType::Png);
-    assert_eq!(exiftool_port::file_type::detect_from_extension("cr2"), Some(FileType::Cr2));
-    assert_eq!(exiftool_port::file_type::detect_from_magic(b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR"), Some(FileType::Png));
-    assert_eq!(FileType::Jpeg.support(), exiftool_port::file_type::Support::ReadWrite);
-    assert_eq!(FileType::Xmp.support(), exiftool_port::file_type::Support::ReadWriteCreate);
-    assert_eq!(FileType::Mp3.support(), exiftool_port::file_type::Support::Read);
+    assert_eq!(exiftool_rs::get_file_type(image("Canon.jpg")).unwrap(), FileType::Jpeg);
+    assert_eq!(exiftool_rs::get_file_type(image("PNG.png")).unwrap(), FileType::Png);
+    assert_eq!(exiftool_rs::file_type::detect_from_extension("cr2"), Some(FileType::Cr2));
+    assert_eq!(exiftool_rs::file_type::detect_from_magic(b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR"), Some(FileType::Png));
+    assert_eq!(FileType::Jpeg.support(), exiftool_rs::file_type::Support::ReadWrite);
+    assert_eq!(FileType::Xmp.support(), exiftool_rs::file_type::Support::ReadWriteCreate);
+    assert_eq!(FileType::Mp3.support(), exiftool_rs::file_type::Support::Read);
     assert!(ExifTool::writable_tags(FileType::Mp3).unwrap().is_empty());
     assert!(ExifTool::writable_tags(FileType::Jpeg).unwrap().contains("artist"));
 }

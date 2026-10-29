@@ -9,7 +9,7 @@
 //! LensID composites see them). `expected.txt` is every tag ExifTool reported
 //! for them with `-a -G1`, with and without `-n` (`make_expected.py`).
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -25,7 +25,7 @@ struct Expected {
 }
 
 fn expected() -> Vec<Expected> {
-    let text = std::fs::read_to_string("../tests/issues/canon/expected.txt").unwrap();
+    let text = std::fs::read_to_string("tests/issues/canon/expected.txt").unwrap();
     text.lines()
         .map(|l| {
             let f: Vec<&str> = l.split('\t').collect();
@@ -48,7 +48,7 @@ fn read(name: &str, numeric: bool) -> HashMap<String, String> {
     });
     let mut out = HashMap::new();
     for t in et
-        .extract_info(Path::new("../tests/issues/canon").join(name))
+        .extract_info(Path::new("tests/issues/canon").join(name))
         .unwrap()
     {
         out.entry(format!("{}:{}", t.group.family1, t.name))
@@ -90,7 +90,7 @@ fn canon_focal_and_iso_values_match_exiftool() {
 /// every block is read.
 #[test]
 fn crw_focal_units_after_focal_length_block() {
-    let data = std::fs::read("../tests/issues/canon/focal.crw").unwrap();
+    let data = std::fs::read("tests/issues/canon/focal.crw").unwrap();
     // The fixture's directory: CameraSettings (0x102d, 52 bytes at 0), then
     // CanonFocalLength (0x1029, 8 bytes at 52). Swap the two blocks.
     let (hlen, settings, focal) = (26, 52, 8);

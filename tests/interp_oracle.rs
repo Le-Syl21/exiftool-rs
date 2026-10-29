@@ -10,9 +10,9 @@ use std::cell::RefCell;
 use std::process::Command;
 use std::rc::Rc;
 
-use exiftool_port::interp::{Interp, Scope, Want};
-use exiftool_port::perl::value::Hash;
-use exiftool_port::perl::Value;
+use exiftool_rs::interp::{Interp, Scope, Want};
+use exiftool_rs::perl::value::Hash;
+use exiftool_rs::perl::Value;
 
 fn records() -> Vec<(String, Vec<u8>)> {
     let data = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/data/code_strings.txt")).unwrap();

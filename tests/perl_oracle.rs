@@ -2,8 +2,8 @@
 //! stringification over a grid of formats and values. Skipped when perl is
 //! not installed.
 
-use exiftool_port::perl::sprintf::sprintf;
-use exiftool_port::perl::Value;
+use exiftool_rs::perl::sprintf::sprintf;
+use exiftool_rs::perl::Value;
 use std::process::Command;
 
 const VALUES: &[&str] = &[
@@ -84,7 +84,7 @@ fn numeric_strings_match_perl() {
     let expected: Vec<&[u8]> = out.stdout.split(|&b| b == 0).collect();
     let mut failures = Vec::new();
     for (k, v) in VALUES.iter().enumerate() {
-        let num = exiftool_port::perl::ops::add(&Value::Int(0), &Value::str(v)).to_string();
+        let num = exiftool_rs::perl::ops::add(&Value::Int(0), &Value::str(v)).to_string();
         let truth = if Value::str(v).truthy() { "1" } else { "0" };
         if num.as_bytes() != expected[2 * k] {
             failures.push(format!("0+{v:?}: perl {:?}, ours {num:?}", String::from_utf8_lossy(expected[2 * k])));
@@ -132,7 +132,7 @@ fn pack_unpack_match_perl() {
     let expected = split_sep(&out.stdout);
     let mut failures = Vec::new();
     for (k, t) in templates.iter().enumerate() {
-        let ours = exiftool_port::perl::pack::unpack(t.as_bytes(), &data)
+        let ours = exiftool_rs::perl::pack::unpack(t.as_bytes(), &data)
             .map(|v| {
                 v.iter()
                     .map(|x| x.to_bytes().iter().map(|b| format!("{b:02x}")).collect::<String>())
@@ -178,7 +178,7 @@ fn pack_unpack_match_perl() {
     let expected = split_sep(&out.stdout);
     for (k, (t, args)) in cases.iter().enumerate() {
         let vals: Vec<Value> = args.iter().map(|a| Value::str(a)).collect();
-        let ours: String = exiftool_port::perl::pack::pack(t.as_bytes(), &vals)
+        let ours: String = exiftool_rs::perl::pack::pack(t.as_bytes(), &vals)
             .map(|b| b.iter().map(|x| format!("{x:02x}")).collect())
             .unwrap_or_else(|e| e);
         if ours.as_bytes() != &expected[k][..] {
@@ -224,7 +224,7 @@ fn tr_matches_perl() {
         // The subject is a double-quoted perl string: expand its escapes the
         // same way for our side.
         let subject = perl_dq(s);
-        let (res, n) = exiftool_port::perl::tr::tr(&subject, a.as_bytes(), b.as_bytes(), f);
+        let (res, n) = exiftool_rs::perl::tr::tr(&subject, a.as_bytes(), b.as_bytes(), f);
         let ours = format!("{} {n}", res.iter().map(|x| format!("{x:02x}")).collect::<String>());
         if ours.as_bytes() != &expected[k][..] {
             failures.push(format!("tr/{a}/{b}/{f} on {s:?}: perl {:?}, ours {ours:?}", String::from_utf8_lossy(&expected[k])));

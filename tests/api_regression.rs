@@ -1,4 +1,4 @@
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
 use std::collections::BTreeSet;
 use std::panic;
 use std::path::Path;
@@ -14,7 +14,7 @@ fn oracle_modules() {
 }
 
 /// Helper to call extract_info catching both errors and panics.
-fn safe_extract(path: &Path) -> Option<Vec<exiftool_port::Tag>> {
+fn safe_extract(path: &Path) -> Option<Vec<exiftool_rs::Tag>> {
     let path = path.to_path_buf();
     let result = panic::catch_unwind(move || {
         oracle_modules();
@@ -45,13 +45,13 @@ fn safe_extract(path: &Path) -> Option<Vec<exiftool_port::Tag>> {
 /// `(file, "missing" | "extra", tag)`.
 type Delta = (String, &'static str, String);
 
-const BASELINE: &str = "../tests/parity_baseline.txt";
+const BASELINE: &str = "tests/parity_baseline.txt";
 
 /// Compute the current set of deltas across the corpus, and how many files were
 /// actually compared.
 fn current_deltas() -> (BTreeSet<Delta>, usize) {
-    let images_dir = Path::new("../tests/images");
-    let expected_dir = Path::new("../tests/expected");
+    let images_dir = Path::new("tests/images");
+    let expected_dir = Path::new("tests/expected");
 
     let mut entries: Vec<_> = std::fs::read_dir(images_dir)
         .unwrap()
@@ -213,7 +213,7 @@ fn regression_tag_names() {
 // Regenerate: UPDATE_VALUE_BASELINE=1 cargo test --release --test regression regression_tag_values
 
 #[cfg(unix)]
-const VALUE_BASELINE: &str = "../tests/value_baseline.txt";
+const VALUE_BASELINE: &str = "tests/value_baseline.txt";
 
 /// Mirror src/main.rs::sanitize_display_value — the `-s` display sanitization.
 #[cfg(unix)]
@@ -263,8 +263,8 @@ fn force_oracle_tz() {
 fn current_value_deltas() -> (BTreeSet<(String, String)>, usize) {
     use std::collections::HashMap;
     force_oracle_tz();
-    let images_dir = Path::new("../tests/images");
-    let expected_dir = Path::new("../tests/expected_values");
+    let images_dir = Path::new("tests/images");
+    let expected_dir = Path::new("tests/expected_values");
 
     let mut entries: Vec<_> = std::fs::read_dir(images_dir)
         .unwrap()
@@ -413,15 +413,15 @@ fn regression_tag_values() {
 //
 // Regenerate: UPDATE_GROUP_BASELINE=1 cargo test --release --test regression regression_tag_groups
 
-const GROUP_BASELINE: &str = "../tests/group_baseline.txt";
+const GROUP_BASELINE: &str = "tests/group_baseline.txt";
 
 /// `(file, tag, "family1" | "family2")`.
 type GroupDelta = (String, String, &'static str);
 
 fn current_group_deltas() -> (BTreeSet<GroupDelta>, usize) {
     use std::collections::HashMap;
-    let images_dir = Path::new("../tests/images");
-    let expected_dir = Path::new("../tests/expected_groups");
+    let images_dir = Path::new("tests/images");
+    let expected_dir = Path::new("tests/expected_groups");
 
     let mut entries: Vec<_> = std::fs::read_dir(images_dir)
         .unwrap()
@@ -575,7 +575,7 @@ fn regression_tag_groups() {
 // Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 
 #[cfg(unix)]
-const MULTISET_BASELINE: &str = "../tests/multiset_baseline.txt";
+const MULTISET_BASELINE: &str = "tests/multiset_baseline.txt";
 
 /// `(file, "default" | "ee", "extra" | "missing", name, value, occurrence)`.
 #[cfg(unix)]
@@ -588,8 +588,8 @@ const MULTISET_MODES: [(u8, &str, &str); 2] = [(0, ".mvals", "default"), (1, ".e
 
 /// `safe_extract`, with an explicit `extract_embedded` setting.
 #[cfg(unix)]
-fn safe_extract_with_ee(path: &Path, extract_embedded: u8) -> Option<Vec<exiftool_port::Tag>> {
-    use exiftool_port::Options;
+fn safe_extract_with_ee(path: &Path, extract_embedded: u8) -> Option<Vec<exiftool_rs::Tag>> {
+    use exiftool_rs::Options;
     let path = path.to_path_buf();
     let result = panic::catch_unwind(move || {
         oracle_modules();
@@ -610,8 +610,8 @@ fn safe_extract_with_ee(path: &Path, extract_embedded: u8) -> Option<Vec<exiftoo
 fn current_multiset_deltas() -> (BTreeSet<MultiDelta>, usize) {
     use std::collections::BTreeMap;
     force_oracle_tz();
-    let images_dir = Path::new("../tests/images");
-    let expected_dir = Path::new("../tests/expected_multi");
+    let images_dir = Path::new("tests/images");
+    let expected_dir = Path::new("tests/expected_multi");
 
     let mut entries: Vec<_> = std::fs::read_dir(images_dir)
         .unwrap()
@@ -781,7 +781,7 @@ fn regression_tag_multiset() {
 
 #[test]
 fn all_test_files_parse_without_panic() {
-    let images_dir = Path::new("../tests/images");
+    let images_dir = Path::new("tests/images");
     let mut ok = 0;
     let mut err = 0;
     let mut panicked = 0;
@@ -866,7 +866,7 @@ const FIT_VOLATILE_TAGS: &[&str] = &[
 /// dumping two sorted lists of ~180 lines.
 #[cfg(unix)]
 fn assert_fit_parity(extract_embedded: u8, baseline: &str, mode: &str) {
-    use exiftool_port::Options;
+    use exiftool_rs::Options;
     use std::collections::BTreeMap;
 
     // FIT record timestamps (GPSDateTime/TimeStamp) are rendered in the machine's
@@ -893,7 +893,7 @@ fn assert_fit_parity(extract_embedded: u8, baseline: &str, mode: &str) {
         ..Default::default()
     });
     let tags = et
-        .extract_info(Path::new("../tests/images/Garmin.fit"))
+        .extract_info(Path::new("tests/images/Garmin.fit"))
         .expect("FIT extraction");
 
     let mut got: Vec<String> = tags
@@ -959,13 +959,13 @@ fn assert_fit_parity(extract_embedded: u8, baseline: &str, mode: &str) {
 #[cfg(unix)]
 #[test]
 fn fit_default_parity() {
-    assert_fit_parity(0, "../tests/expected_values/Garmin.fit.vals", "default");
+    assert_fit_parity(0, "tests/expected_values/Garmin.fit.vals", "default");
 }
 
 #[cfg(unix)]
 #[test]
 fn fit_extract_embedded_parity() {
-    assert_fit_parity(1, "../tests/expected_values/Garmin.fit.ee.vals", "-ee");
+    assert_fit_parity(1, "tests/expected_values/Garmin.fit.ee.vals", "-ee");
 }
 
 /// Tag order for the readers that once walked a `HashMap`, and so reordered
@@ -1021,7 +1021,7 @@ fn plist_and_gcontainer_tags_keep_exiftool_order() {
     for (file, group1, want) in cases {
         oracle_modules();
         let tags = ExifTool::new()
-            .extract_info(Path::new("../tests/images").join(file))
+            .extract_info(Path::new("tests/images").join(file))
             .unwrap_or_else(|e| panic!("{file}: {e}"));
         let got: Vec<&str> = tags
             .iter()

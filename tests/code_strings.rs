@@ -20,7 +20,7 @@ fn all_table_strings_parse() {
     let recs = records();
     let mut failures = Vec::new();
     for (kind, code) in &recs {
-        if let Err(e) = exiftool_port::interp::parse::parse_program(code, "Image::ExifTool") {
+        if let Err(e) = exiftool_rs::interp::parse::parse_program(code, "Image::ExifTool") {
             if perl_rejects(code) {
                 continue; // ExifTool's own string does not compile either
             }
@@ -33,8 +33,8 @@ fn all_table_strings_parse() {
 
 /// Whether perl itself fails to compile the string.
 fn perl_rejects(code: &[u8]) -> bool {
-    let mut path = std::env::temp_dir();
-    path.push(format!("exiftool_port_code_{}.pl", std::process::id()));
+    let mut path = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
+    path.push(format!("exiftool_rs_code_{}.pl", std::process::id()));
     let mut src = b"no strict; no warnings; sub { ".to_vec();
     src.extend_from_slice(code);
     src.extend_from_slice(b"\n}\n");

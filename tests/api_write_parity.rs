@@ -16,16 +16,18 @@
 //!
 //! Baselines live in `tests/expected_write/` and are generated from Perl
 //! ExifTool. Normal runs need no Perl — they compare against those snapshots.
-//! Regenerate after an intentional change (needs `../exiftool`):
+//! Regenerate after an intentional change (needs the ExifTool checkout: `$EXIFTOOL_DIR`, or `../exiftool`):
 //!
 //! ```sh
-//! WRITE_PARITY_REGEN=1 cargo test --test write_parity
+//! WRITE_PARITY_REGEN=1 cargo test --test api_write_parity
 //! ```
 
 use std::path::Path;
 use std::process::Command;
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
+
+mod common;
 
 /// One edit applied to `image`, identified by `id` (the baseline file name).
 /// `ops` is a list of `(group-qualified tag, value)`; `None` deletes the tag.
@@ -151,7 +153,8 @@ fn write_ours(src: &Path, dst: &Path, ops: &[(&str, Option<&str>)]) {
 fn write_perl(src: &Path, dst: &Path, ops: &[(&str, Option<&str>)]) {
     std::fs::copy(src, dst).expect("copy source");
     let mut cmd = Command::new("perl");
-    cmd.arg("../exiftool/exiftool")
+    let dir = common::exiftool_dir("regenerating the write baselines").expect("WRITE_PARITY_REGEN needs the ExifTool checkout");
+    cmd.arg(dir.join("exiftool"))
         .arg("-charset")
         .arg("UTF8")
         .arg("-overwrite_original");
@@ -172,19 +175,19 @@ fn write_perl(src: &Path, dst: &Path, ops: &[(&str, Option<&str>)]) {
 #[test]
 fn iptc_write_parity() {
     let regen = std::env::var("WRITE_PARITY_REGEN").is_ok();
-    let img_dir = Path::new("../tests/images");
-    let exp_dir = Path::new("../tests/expected_write");
+    let img_dir = Path::new("tests/images");
+    let exp_dir = Path::new("tests/expected_write");
 
     // The corpus is committed; skip cleanly if a checkout lacks it.
     if !img_dir.join("IPTC.jpg").exists() {
-        eprintln!("../tests/images/IPTC.jpg missing — skipping write-parity");
+        eprintln!("tests/images/IPTC.jpg missing — skipping write-parity");
         return;
     }
 
     let mut mismatches = Vec::new();
     for case in CASES {
         let src = img_dir.join(case.image);
-        let tmp = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("exiftool_port_wp_{}.jpg", case.id));
+        let tmp = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("exiftool_rs_wp_{}.jpg", case.id));
         let exp = exp_dir.join(format!("{}.snap", case.id));
 
         if regen {
@@ -202,7 +205,7 @@ fn iptc_write_parity() {
             let want = std::fs::read_to_string(&exp)
                 .unwrap_or_else(|_| {
                     panic!(
-                        "missing baseline {} — run `WRITE_PARITY_REGEN=1 cargo test --test write_parity`",
+                        "missing baseline {} — run `WRITE_PARITY_REGEN=1 cargo test --test api_write_parity`",
                         exp.display()
                     )
                 })

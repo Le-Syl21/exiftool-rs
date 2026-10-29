@@ -16,7 +16,7 @@
 //! tag but the file system's is compared, and a tag ExifTool did not report
 //! is a failure too.
 
-use exiftool_port::{ExifTool, Options};
+use exiftool_rs::{ExifTool, Options};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
@@ -28,7 +28,7 @@ const DIVERGENT: &[(&str, &str, &str, &str)] = &[];
 type Expected = BTreeMap<(String, String), BTreeMap<String, String>>;
 
 fn expected() -> Expected {
-    let text = std::fs::read_to_string("../tests/issues/exif/expected.txt").unwrap();
+    let text = std::fs::read_to_string("tests/issues/exif/expected.txt").unwrap();
     let mut out = Expected::new();
     for l in text.lines() {
         let f: Vec<&str> = l.split('\t').collect();
@@ -49,7 +49,7 @@ fn read(name: &str, numeric: bool) -> BTreeMap<String, String> {
     });
     let mut out = BTreeMap::new();
     for t in et
-        .extract_info(Path::new("../tests/issues/exif").join(name))
+        .extract_info(Path::new("tests/issues/exif").join(name))
         .unwrap()
     {
         let group = t.group.family1.as_str();

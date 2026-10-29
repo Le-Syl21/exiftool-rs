@@ -4,7 +4,7 @@
 //! expected values are what ExifTool 13.59 prints for the same bytes, with
 //! and without the .orf extension.
 
-use exiftool_port::ExifTool;
+use exiftool_rs::ExifTool;
 use std::path::Path;
 
 /// A 26-byte ORF: header, IFD0 with one ASCII Make entry, its value, no IFD1.
@@ -32,7 +32,7 @@ fn orf(little_endian: bool, magic: &[u8; 2]) -> Vec<u8> {
     data
 }
 
-fn value(tags: &[exiftool_port::Tag], name: &str) -> Option<String> {
+fn value(tags: &[exiftool_rs::Tag], name: &str) -> Option<String> {
     tags.iter()
         .find(|t| t.name == name)
         .map(|t| t.print_value.clone())

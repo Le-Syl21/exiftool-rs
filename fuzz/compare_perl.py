@@ -14,7 +14,7 @@ import sys
 import time
 
 here = os.path.dirname(os.path.abspath(__file__))
-port = os.path.join(here, "..", "target", "release", "examples", "exiftool-rs")
+port = os.path.join(here, "..", "target", "release", "exiftool-rs")
 argv = sys.argv[1:]
 args = ["-a", "-u", "-G1"]
 if "--" in argv:

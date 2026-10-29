@@ -1,14 +1,22 @@
 //! ExifTool's own test scripts (t/*.t), run unchanged by the interpreter on
 //! top of the runtime.
 
-use exiftool_port::interp::{Scope, Want};
+use exiftool_rs::interp::{Scope, Want};
 
-/// Run one test script from the ExifTool checkout; returns its output.
-fn run_t(name: &str) -> (String, Option<i32>) {
-    let root = format!("{}/../../exiftool", env!("CARGO_MANIFEST_DIR"));
-    std::env::set_current_dir(&root).unwrap();
+mod common;
+
+/// Run one test script of the ExifTool checkout, in a copy of the files it
+/// reads (`files`, under t/), so that the checkout is never written to;
+/// returns its output.
+fn run_t(root: &std::path::Path, name: &str, files: &[&str]) -> (String, Option<i32>) {
+    let work = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("official");
+    std::fs::create_dir_all(work.join("t/images")).unwrap();
+    for f in [format!("{name}.t"), "TestLib.pm".to_string()].iter().map(String::as_str).chain(files.iter().copied()) {
+        std::fs::copy(root.join("t").join(f), work.join("t").join(f)).unwrap();
+    }
+    std::env::set_current_dir(&work).unwrap();
     let src = std::fs::read(format!("t/{name}.t")).unwrap();
-    let mut it = exiftool_port::runtime::new_interp();
+    let mut it = exiftool_rs::runtime::new_interp();
     let scope = Scope::new(None);
     it.strict = false;
     let r = it.eval_string(&src, "main", &scope, Want::Void);
@@ -35,6 +43,7 @@ fn passed(out: &str) -> bool {
 
 #[test]
 fn bmp() {
-    let (out, code) = run_t("BMP");
+    let Some(root) = common::exiftool_dir("t/BMP.t") else { return };
+    let (out, code) = run_t(&root, "BMP", &["BMP_2.out", "images/BMP.bmp"]);
     assert!(passed(&out) && code.unwrap_or(0) == 0, "t/BMP.t:\n{out}");
 }

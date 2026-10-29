@@ -1,16 +1,15 @@
 //! Parity under dng-compare's extraction flags (`-j -a -G0:1:4 -n -struct -b -u -U`),
 //! checked against Perl ExifTool 13.59 output captured on 2026-10-16.
 //! Fixtures are synthetic: a hand-built TIFF/DNG and Lightroom-style XMP.
-use exiftool_port::{ExifTool, Options, Value};
+use exiftool_rs::{ExifTool, Options, Value};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
-/// The port's exiftool application (the `exiftool-rs` example, which
-/// `cargo test` builds next to the tests).
+/// The exiftool application (the `exiftool-rs` binary, which `cargo test`
+/// builds for the integration tests).
 fn exiftool_rs() -> PathBuf {
-    let exe = std::env::current_exe().unwrap();
-    exe.parent().unwrap().parent().unwrap().join("examples").join(format!("exiftool-rs{}", std::env::consts::EXE_SUFFIX))
+    PathBuf::from(env!("CARGO_BIN_EXE_exiftool-rs"))
 }
 
 fn temp_dir() -> PathBuf {

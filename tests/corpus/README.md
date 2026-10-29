@@ -2,7 +2,7 @@
 
 Large corpora are not stored in the repository: each one is a
 `.tar.xz` file attached to a GitHub release of this repository, and
-`port/scripts/fetch_corpus.sh` downloads and unpacks it into
+`scripts/fetch_corpus.sh` downloads and unpacks it into
 `target/corpus/`, checking its SHA-256.
 
 | Corpus | Release | Files | Size | Source |
