@@ -117,6 +117,8 @@ pub fn new_interp() -> Interp {
     crate::modules::io_string::register(&mut it);
     #[cfg(target_os = "linux")]
     crate::modules::file_statx::register(&mut it);
+    #[cfg(windows)]
+    crate::modules::win32::register(&mut it);
     it
 }
 
@@ -159,8 +161,9 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
         return Ok(());
     }
     // The optional modules the port provides natively (src/modules): those
-    // of one platform only where they exist (File::StatX on Linux)
-    if matches!(what, "Term::ReadKey" | "POSIX::strptime" | "IO::String") || (cfg!(target_os = "linux") && what == "File::StatX") {
+    // of one platform only where they exist (File::StatX on Linux, the
+    // Win32 ones on Windows)
+    if matches!(what, "Term::ReadKey" | "POSIX::strptime" | "IO::String") || (cfg!(target_os = "linux") && what == "File::StatX") || (cfg!(windows) && matches!(what, "Win32::API" | "Win32API::File" | "Win32::FindFile")) {
         inc.borrow_mut().insert(key.as_bytes(), Value::str(&key));
         // (the module makes POSIX::strptime an alias of its strptime
         // unless POSIX has one)

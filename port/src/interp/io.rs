@@ -623,6 +623,8 @@ pub(super) fn file_target(it: &mut Interp, e: &Expr, scope: &Rc<Scope>) -> ER<Ta
             return Ok(match (&fh.path, &fh.input) {
                 (Some(p), _) => Target::Path(p.clone()),
                 (None, Some(Input::File(f))) => Target::Meta(f.get_ref().metadata()),
+                // (a file opened by descriptor, "+<&=FD")
+                (None, Some(Input::Rw(r))) => Target::Meta(r.f.metadata()),
                 (None, _) => Target::Path(String::new()),
             });
         }
@@ -720,7 +722,7 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         };
         let spec = spec.trim_start().to_string();
         // a dup: ">&NAME", ">&=NAME", "<&NAME" (mode keeps the "&")
-        let dup = ["<&=", ">>&=", ">&=", "<&", ">>&", ">&"].iter().find(|m| spec.starts_with(**m));
+        let dup = ["+<&=", "<&=", ">>&=", ">&=", "<&", ">>&", ">&"].iter().find(|m| spec.starts_with(**m));
         let (m, rest) = if let Some(m) = dup {
             (*m, &spec[m.len()..])
         } else if let Some(r) = spec.strip_prefix(">>") {
@@ -873,6 +875,31 @@ fn redirect_std(_it: &mut Interp, _h: &HandleRc, _fd: i32) {}
 /// stream is duplicated at the descriptor level, as perl's dup does, so
 /// that it survives a later redirection of that stream.
 fn open_dup(it: &mut Interp, h: &HandleRc, mode: &str, target: &Value) -> ER<Vec<Value>> {
+    // "&=FD" of a descriptor from Win32API::File::OsFHandleOpenFd: the
+    // handle takes over its file
+    if !target.is_ref() && !matches!(target, Value::Handle(_)) {
+        let name = target.to_text();
+        if let Some(f) = name.trim_start_matches('=').trim().parse::<i64>().ok().and_then(take_os_file) {
+            let mut fh = h.borrow_mut();
+            fh.eof = false;
+            fh.lines = 0;
+            fh.path = None;
+            fh.input = None;
+            fh.output = None;
+            if mode.starts_with("+<") {
+                fh.input = Some(Input::Rw(RwFile { f, buf: Vec::new(), at: 0 }));
+                fh.output = Some(Output::Rw);
+            } else if mode.starts_with('<') {
+                fh.input = Some(Input::File(BufReader::new(f)));
+            } else {
+                if mode.starts_with(">>") {
+                    let _ = (&f).seek(SeekFrom::End(0));
+                }
+                fh.output = Some(Output::File(std::io::BufWriter::new(f)));
+            }
+            return Ok(vec![Value::from(true)]);
+        }
+    }
     let src = if target.is_ref() || matches!(target, Value::Handle(_)) {
         it.handle_of(target, false)
     } else {
@@ -941,6 +968,28 @@ fn open_dup(it: &mut Interp, h: &HandleRc, mode: &str, target: &Value) -> ER<Vec
         redirect_std(it, h, fd);
     }
     Ok(vec![Value::from(true)])
+}
+
+thread_local! {
+    /// The files of the descriptors that Win32API::File::OsFHandleOpenFd
+    /// made, until an `open(FH, "<&=FD")` takes them over.
+    static OS_FILES: RefCell<(i64, std::collections::HashMap<i64, File>)> = RefCell::new((3, Default::default()));
+}
+
+/// A descriptor number for a file (OsFHandleOpenFd), that `open "&=FD"`
+/// then takes over.
+pub fn register_os_file(f: File) -> i64 {
+    OS_FILES.with(|t| {
+        let mut t = t.borrow_mut();
+        let fd = t.0;
+        t.0 += 1;
+        t.1.insert(fd, f);
+        fd
+    })
+}
+
+fn take_os_file(fd: i64) -> Option<File> {
+    OS_FILES.with(|t| t.borrow_mut().1.remove(&fd))
 }
 
 /// A new descriptor on the process's stdin, stdout or stderr (only when the

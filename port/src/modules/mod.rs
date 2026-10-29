@@ -171,6 +171,7 @@ pub mod v_card;
 pub mod validate;
 pub mod vorbis;
 pub mod wav_pack;
+pub mod win32;
 pub mod wpg;
 pub mod write_canon_raw;
 pub mod write_exif;

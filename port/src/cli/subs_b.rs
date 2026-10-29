@@ -487,12 +487,18 @@ fn find_file_windows(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
     pl::local_sig_warn(it, handler, |it| {
         let mut files: Vec<Value> = Vec::new();
         pl::eval_block(it, |it| {
-            let mut names = pl::call_list(it, "Win32::FindFile::FindFile", vec![wildfile.clone()])?;
+            let names = pl::call_list(it, "Win32::FindFile::FindFile", vec![wildfile.clone()])?;
             if names.is_empty() {
                 return Ok(());
             }
             // (apparently this isn't always sorted, so do a case-insensitive sort here)
-            names.sort_by(|x, y| b(&pl::uc(x)).cmp(&b(&pl::uc(y))));
+            // (an entry stringifies as its cFileName)
+            let mut keyed = Vec::new();
+            for nm in names {
+                keyed.push((b(&pl::uc(&pl::method(it, &nm, "cFileName", vec![])?)), nm));
+            }
+            keyed.sort_by(|x, y| x.0.cmp(&y.0));
+            let names: Vec<Value> = keyed.into_iter().map(|(_, nm)| nm).collect();
             // replace "\?" with ".", and "\*" with ".*" for regular expression
             let mut rname = quotemeta(&wildname);
             re(r"\\\?", "").subst(&mut rname, true, |_| b".".to_vec());
