@@ -47,6 +47,8 @@ pub enum Error {
     /// A field longer than the port builds (`BUILD_MAX`). Perl tries, and
     /// ends with "Out of memory!" when the system says no; the port dies.
     OutOfMemory,
+    /// `%c` of NaN or an infinity: "Cannot printf NaN with 'c'".
+    NotAChar(&'static str),
 }
 
 impl Error {
@@ -56,6 +58,8 @@ impl Error {
             Error::Overflow => format!("Integer overflow in format string for {op}"),
             Error::TooLarge => "Numeric format result too large".to_string(),
             Error::OutOfMemory => format!("Out of memory in {op}"),
+            // ("printf" for sprintf too, as perl says it)
+            Error::NotAChar(what) => format!("Cannot printf {what} with 'c'"),
         }
     }
 }
@@ -306,6 +310,15 @@ pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>
         let v = take(&mut next_arg, explicit);
         if conv == b's' {
             as_str();
+        }
+        if conv == b'c' {
+            if let Number::Float(f) = v.to_number() {
+                if f.is_nan() {
+                    return stop(Error::NotAChar("NaN"), out);
+                } else if f.is_infinite() {
+                    return stop(Error::NotAChar(if f > 0.0 { "Inf" } else { "-Inf" }), out);
+                }
+            }
         }
         match format_one(conv, &spec, &v) {
             Some(s) => out.extend(s),

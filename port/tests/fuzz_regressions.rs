@@ -44,6 +44,8 @@ fn sprintf_limits() {
     assert_eq!(interp("sprintf-width-overflow"), "Integer overflow in format string for sprintf");
     assert_eq!(interp("sprintf-float-too-large"), "Numeric format result too large");
     assert_eq!(interp("sprintf-width-huge"), "Out of memory in sprintf");
+    assert_eq!(interp("sprintf-char-nan"), "Cannot printf NaN with 'c'");
+    assert_eq!(perl("join '|', map { eval { sprintf('%c', $_) }; (split / at /, $@)[0] } 9**9**9, -9**9**9"), "Cannot printf Inf with 'c'|Cannot printf -Inf with 'c'");
     // (perl formats these: a precision past 65535 only adds zeros, and a
     // width of 1e164 is -1)
     assert_eq!(interp("sprintf-width-pad"), "");
