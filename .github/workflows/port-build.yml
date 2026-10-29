@@ -112,7 +112,8 @@ jobs:
           "$bin" -charset filename=utf8 -s -FileName -Model 'wïn/*.jpg' | tee out.txt
           grep -q 'FileName *: Ünïcödé 日本.jpg' out.txt
           # a directory, recursively
-          "$bin" -charset filename=utf8 -r -s3 -FileName wïn | sort | tee out.txt
+          # (the "========" file headers and the counts are not names)
+          "$bin" -charset filename=utf8 -r -s3 -FileName wïn | grep -v -e '^========' -e '^ ' | LC_ALL=C sort | tee out.txt
           test "$(cat out.txt)" = "$(printf 'plain.jpg\nÜnïcödé 日本.jpg')"
           # writing keeps the file times with -P (SetFileTime)
           f='wïn/Ünïcödé 日本.jpg'
