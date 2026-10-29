@@ -109,6 +109,7 @@ pub fn new_interp() -> Interp {
     crate::modules::brotli::register(&mut it);
     crate::modules::bunzip2::register(&mut it);
     crate::modules::lzma::register(&mut it);
+    crate::modules::gcstring::register(&mut it);
     crate::modules::time_piece::register(&mut it);
     it
 }
@@ -139,7 +140,7 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
         return require_file(it, what, &key);
     }
     // Pragmas and modules perl provides: nothing to load.
-    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname" | "Compress::Zlib" | "IO::Uncompress::RawInflate" | "IO::Uncompress::Gunzip" | "IO::Compress::RawDeflate" | "Archive::Zip" | "IO::Compress::Brotli" | "IO::Uncompress::Brotli" | "IO::Uncompress::Bunzip2" | "Compress::Raw::Lzma" | "Time::Piece" | "FileHandle" | "IO::Handle") {
+    if matches!(what, "strict" | "warnings" | "vars" | "Exporter" | "integer" | "utf8" | "bytes" | "constant" | "lib" | "POSIX" | "Encode" | "Time::Local" | "Scalar::Util" | "Digest::MD5" | "Digest::SHA" | "IO::File" | "File::Basename" | "Cwd" | "Carp" | "overload" | "Config" | "feature" | "File::Spec" | "File::Find" | "Unicode::Normalize" | "File::Glob" | "Time::HiRes" | "Win32" | "Sys::Hostname" | "Compress::Zlib" | "IO::Uncompress::RawInflate" | "IO::Uncompress::Gunzip" | "IO::Compress::RawDeflate" | "Archive::Zip" | "IO::Compress::Brotli" | "IO::Uncompress::Brotli" | "IO::Uncompress::Bunzip2" | "Compress::Raw::Lzma" | "Unicode::GCString" | "Unicode::LineBreak" | "Time::Piece" | "FileHandle" | "IO::Handle") {
         inc.borrow_mut().insert(key.as_bytes(), Value::str(&key));
         return Ok(());
     }
@@ -474,6 +475,8 @@ const PROVIDED_EXPORTS: &[(&str, &str)] = &[
     ("IO::Uncompress::Gunzip", ""),
     ("IO::Uncompress::Bunzip2", ""),
     ("Compress::Raw::Lzma", ""),
+    ("Unicode::GCString", ""),
+    ("Unicode::LineBreak", ""),
     ("IO::Compress::Brotli", "bro"),
     ("IO::Uncompress::Brotli", "unbro"),
     ("Cwd", "cwd getcwd fastcwd fastgetcwd"),

@@ -1054,6 +1054,7 @@ dependencies = [
  "rusty_alloc-api",
  "sha1",
  "sha2",
+ "unicode-width",
  "winres",
 ]
 

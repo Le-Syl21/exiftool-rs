@@ -20,3 +20,23 @@ R|-v3 7z/multi.7z
 R|-j -ZIP:all 7z/many.7z
 R|-s -ArchivedFileName 7z/
 
+# --- Unicode::GCString: the columns of the plain output in other languages
+R|-lang ja t/images/Canon.jpg
+R|-lang ja -G1 -a t/images/Canon.jpg
+R|-lang ja -G1 -a t/images/Nikon.jpg
+R|-lang ja -G1 -a t/images/Sony.jpg
+R|-lang ja -G1 -a t/images/XMP.jpg
+R|-lang ja -G1 -a t/images/IPTC.jpg
+R|-lang ja -G1 -a t/images/GPS.jpg
+R|-lang zh_cn -G1 -a t/images/Canon.jpg
+R|-lang zh_cn -G1 -a t/images/Olympus.jpg
+R|-lang zh_tw -G1 -a t/images/Pentax.jpg
+R|-lang ko -G1 -a t/images/Canon.jpg
+R|-lang ko -G1 -a t/images/FujiFilm.jpg
+R|-lang ru -G1 -a t/images/Canon.jpg
+R|-lang ru t/images/Nikon.jpg
+R|-lang fr -G1 -a t/images/Olympus.jpg
+R|-lang de t/images/Canon.jpg
+R|-lang ja -s t/images/Canon.jpg
+R|-lang ja -h t/images/Nikon.jpg
+R|-lang ja -a -G0:1 -u t/images/Panasonic.rw2

@@ -61,11 +61,11 @@ R|-lang de -G1 -a t/images/Canon.jpg
 R|-lang de -h t/images/Olympus.jpg
 R|-lang de -X t/images/Nikon.jpg
 R|-lang de -j t/images/Pentax.jpg
-R|-lang ja -G1 -a t/images/Canon.jpg
+RM|-lang ja -G1 -a t/images/Canon.jpg
 R|-lang ja -h t/images/Nikon.jpg
 R|-lang ja -X t/images/Canon.jpg
 R|-lang ja -j t/images/FujiFilm.jpg
-R|-lang zh_cn -G1 -a t/images/Canon.jpg
+RM|-lang zh_cn -G1 -a t/images/Canon.jpg
 R|-lang zh_cn -h t/images/Sony.jpg
 R|-lang zh_cn -X t/images/Olympus.jpg
 R|-lang zh_cn -j t/images/Nikon.jpg

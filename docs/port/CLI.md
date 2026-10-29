@@ -103,13 +103,17 @@ have a kind of their own:
 - `RM`/`WM`: Perl needs Compress::Raw::Lzma or Unicode::LineBreak, which
   the port provides and the host's Perl lacks; the Perl side runs in the
   container of the second judge set below (`PERL_FULL_CMD` to run it
-  otherwise).
+  otherwise). Today, the plain output in Japanese and Chinese, whose
+  columns Unicode::GCString aligns (the host's Perl counts characters):
+  `-lang ja -G1 -a` and `-lang zh_cn -G1 -a` on Canon.jpg (cli_cases.txt,
+  cases 53 and 57), `-lang zh-CN -Model` (cli_cases_options.txt) and
+  `-lang ja -a -G1` (cli_cases_subs_a.txt). The other languages' plain
+  output is the same either way (a character, a column).
 
 ### The second judge set: the optional modules
 
 The host's Perl lacks Compress::Raw::Lzma and Unicode::LineBreak, which the
-port provides (src/modules/lzma.rs; Unicode::LineBreak to
-come). Their reference is the
+port provides (src/modules/lzma.rs, gcstring.rs). Their reference is the
 Perl of `scripts/full_modules/Dockerfile` (Ubuntu 24.04's perl 5.38 and
 packaged modules, as the host, plus those two), run by
 `scripts/full_modules/perl.sh` with the case's directory and ExifTool's
@@ -123,9 +127,10 @@ PERL_CMD=scripts/full_modules/perl.sh CLI_CASES=scripts/cli_cases_full_modules.t
 
 `scripts/cli_cases_full_modules.txt` covers 7z archives with an encoded
 header (`scripts/full_modules/7z`, made with `7z a -mhc=on`: several files,
-a directory, UTF-8 names, empty files, stored and bzip2 data, 300 files).
+a directory, UTF-8 names, empty files, stored and bzip2 data, 300 files)
+and the plain output in ja, zh_cn, zh_tw, ko, ru, fr and de.
 
-What the module follows, and where it parts from Perl's:
+What the two modules follow, and where they part from Perl's:
 
 - Compress::Raw::Lzma: the raw LZMA1 decoder 7Z.pm uses is the port's own
   (lzma.rs says why no crate would do). On the headers of the test
@@ -137,6 +142,10 @@ What the module follows, and where it parts from Perl's:
   compressed never ends: 7Z.pm gives each 32 KB block to a new decoder,
   the second fails, and its read loop waits for bytes that never come (a
   3000-file archive does it, so none is a case).
+- Unicode::GCString: `columns` on unicode-width; gcstring.rs lists the code
+  points where it differs from Unicode::LineBreak 2019.001 (whose
+  character database is Unicode 8.0), none of them in the text of
+  ExifTool's languages.
 
 ## Languages exiftool-rs adds
 

@@ -48,6 +48,7 @@ pub mod font;
 pub mod foto_station;
 pub mod fuji_film;
 pub mod garmin;
+pub mod gcstring;
 pub mod geo_tiff;
 pub mod geolocation;
 pub mod geotag;
