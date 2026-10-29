@@ -65,13 +65,44 @@ pub trait FormatExtension: Send + Sync {
     /// none for a tag copied without one (the whole file, a tag list of
     /// `Title` or `-all`): such an edit is for the destination's preferred
     /// group for that name, whatever group the source had (a FLAC's Vorbis
-    /// Title copied to an MP3 is an edit of `Title`, for its ID3 Title). A
+    /// Title copied to an MP3 is an edit of `Title`, for its ID3 Title;
+    /// these are the edits [`copy_edits`](Self::copy_edits) gives). A
     /// group the tag list names is kept (`Vorbis:Title`, `Title>ID3:Title`,
     /// `all:all`). An edit the extension cannot apply
     /// (another group, a tag it does not write) is left out: it is not
     /// counted, as ExifTool does not count what it cannot place. An error
     /// fails the write, and nothing is written.
     fn write(&self, input: &[u8], file_type: &str, edits: &[NewValue]) -> Result<Vec<u8>>;
+
+    /// The edits that stand for the tags a copy (`set_new_values_from_file`)
+    /// queues without a destination group, for a file of type `file_type`:
+    /// by default, one edit of each tag's name, without a group, as
+    /// ExifTool's `SetNewValuesFromFile` queues it. An extension may also
+    /// write the source's tags its format names differently (the built-in
+    /// ones write an ID3 `Year` copied to a FLAC as its Vorbis `DATE`: see
+    /// `docs/port/API.md`). Only for these tags: a tag copied to a group the
+    /// tag list names, and every `set_new_value` request, are given to
+    /// [`write`](Self::write) as they are.
+    fn copy_edits(&self, file_type: &str, copied: &[CopiedTag]) -> Vec<NewValue> {
+        let _ = file_type;
+        copied.iter().map(|t| NewValue { tag: t.tag.clone(), group: None, value: Some(t.value.clone()) }).collect()
+    }
+}
+
+/// A tag a copy queues without a destination group, as the source has it
+/// (see [`FormatExtension::copy_edits`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CopiedTag {
+    /// ExifTool's name of the tag (`Year`, `TrackNumber`).
+    pub tag: String,
+    /// The value ExifTool copies (the printed value, the ValueConv value
+    /// for a `TAG#`; a list joined with ", ").
+    pub value: String,
+    /// The tag's family 0 group in the source (`ID3`, `Vorbis`,
+    /// `Matroska`, `QuickTime`), none for an expression or an assignment.
+    pub family0: Option<String>,
+    /// Its family 1 group (`ID3v2_3`, `Vorbis`, `Info`, `ItemList`).
+    pub family1: Option<String>,
 }
 
 /// Does `ext` handle files of `file_type` (case aside)?

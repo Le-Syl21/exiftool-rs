@@ -464,15 +464,15 @@ impl ExifTool {
             let len = fs::metadata(src_path).map_err(Error::Io)?.len();
             Ok(len == output.len() as u64 && fs::read(src_path).map_err(Error::Io)? == output)
         };
-        let (output, unchanged, by_extension) = if rtn != 0 {
+        let (output, unchanged, by_extension_edits) = if rtn != 0 {
             let unchanged = rtn == 2 || same_bytes(&output)?;
-            (output, unchanged, false)
-        } else if let Some(output) = self.write_by_extension(src_path, dst_path)? {
+            (output, unchanged, None)
+        } else if let Some((output, edits)) = self.write_by_extension(src_path, dst_path)? {
             // (ExifTool's warnings about these requests, "Sorry, ID3:Title
             // doesn't exist or isn't writable"..., do not hold)
             self.set_write_warnings(Vec::new());
             let unchanged = same_bytes(&output)?;
-            (output, unchanged, true)
+            (output, unchanged, Some(edits))
         } else {
             let msg = error.unwrap_or_else(|| "ExifTool could not write the file".to_string());
             return Err(if msg.contains("not yet supported") || msg.contains("Can't write") || msg.contains("not supported") {
@@ -482,7 +482,12 @@ impl ExifTool {
             });
         };
 
-        let requests = self.counted_requests();
+        // (an extension's: the edits it was given)
+        let by_extension = by_extension_edits.is_some();
+        let requests = match by_extension_edits {
+            Some(edits) => edits,
+            None => self.counted_requests(None),
+        };
         let in_place = same_file(src_path, dst_path);
         let nothing_to_do = |skipped: usize| -> Result<u32> {
             if !requests.is_empty() && skipped == requests.len() {
@@ -519,10 +524,11 @@ impl ExifTool {
     }
 
     /// The new file an extension writes for a source ExifTool cannot
-    /// write: `None` when ExifTool can write the source's type (`CanWrite`)
-    /// or no extension writes it, or when ExifTool gives the destination's
-    /// name a type the extension does not write.
-    fn write_by_extension(&self, src: &Path, dst: &Path) -> Result<Option<Vec<u8>>> {
+    /// write, and the edits it was given: `None` when ExifTool can write
+    /// the source's type (`CanWrite`) or no extension writes it, or when
+    /// ExifTool gives the destination's name a type the extension does not
+    /// write.
+    fn write_by_extension(&self, src: &Path, dst: &Path) -> Result<Option<(Vec<u8>, Vec<NewValue>)>> {
         if self.extensions.is_empty() {
             return Ok(None);
         }
@@ -539,7 +545,8 @@ impl ExifTool {
             return Ok(None);
         }
         let input = fs::read(src).map_err(Error::Io)?;
-        ext.write(&input, &file_type, &self.counted_requests()).map(Some)
+        let edits = self.counted_requests(Some((ext.as_ref(), &file_type)));
+        ext.write(&input, &file_type, &edits).map(|output| Some((output, edits)))
     }
 
     /// The warnings of the last [`write_info`](Self::write_info) call, as
@@ -559,8 +566,11 @@ impl ExifTool {
     /// them: a copy stands for each new value it queues, as ExifTool's
     /// `SetNewValuesFromFile` queues it (see [`copy_edits`](Self::copy_edits)),
     /// unless a later request is for the same tag (or a whole group), which
-    /// overrides it.
-    fn counted_requests(&self) -> Vec<NewValue> {
+    /// overrides it. For an extension writing a file of type `file_type`
+    /// (`target`), the tags a copy queues without a destination group are
+    /// the edits its [`copy_edits`](FormatExtension::copy_edits) gives for
+    /// them, in their place.
+    fn counted_requests(&self, target: Option<(&dyn FormatExtension, &str)>) -> Vec<NewValue> {
         let mut out = Vec::new();
         for (i, r) in self.requests.iter().enumerate() {
             match r {
@@ -568,11 +578,24 @@ impl ExifTool {
                 Request::Copy { path, tags } => {
                     let later = &self.requests[i + 1..];
                     let overridden = |name: &str| later.iter().any(|r| matches!(r, Request::Set(nv) if nv.tag.eq_ignore_ascii_case(name) || is_all(&nv.tag)));
-                    for nv in self.copy_edits(path, tags) {
-                        if !overridden(&nv.tag) {
-                            out.push(nv);
+                    let mut edits: Vec<NewValue> = Vec::new();
+                    let mut copied: Vec<extension::CopiedTag> = Vec::new();
+                    // (where the group-less ones go, among the others)
+                    let mut at = None;
+                    for (nv, family0, family1) in self.copy_edits(path, tags) {
+                        match (target, &nv.group, nv.value) {
+                            (Some(_), None, Some(value)) => {
+                                at.get_or_insert(edits.len());
+                                copied.push(extension::CopiedTag { tag: nv.tag, value, family0, family1 });
+                            }
+                            (_, _, value) => edits.push(NewValue { value, ..nv }),
                         }
                     }
+                    if let (Some((ext, file_type)), Some(at)) = (target, at) {
+                        let translated = ext.copy_edits(file_type, &copied);
+                        edits.splice(at..at, translated);
+                    }
+                    out.extend(edits.into_iter().filter(|nv| !overridden(&nv.tag)));
                 }
             }
         }
@@ -591,13 +614,16 @@ impl ExifTool {
     /// is text), the tags of the source's file system and ExifTool groups,
     /// composite tags, and list items to delete (`-<`). When a new value
     /// replaces another of the same tag and group, as ExifTool replaces it,
-    /// only the last is kept.
-    fn copy_edits(&self, path: &Path, tags: &[String]) -> Vec<NewValue> {
+    /// only the last is kept. Each comes with the family 0 and 1 groups of
+    /// the source tag (none for an expression or an assignment).
+    fn copy_edits(&self, path: &Path, tags: &[String]) -> Vec<(NewValue, Option<String>, Option<String>)> {
         // (read as the write reads it: MWG adds composite tags only)
         let options = self.options.clone();
         let (p, t) = (path.to_path_buf(), tags.to_vec());
-        // (group, tag, value) of each new value, in order
-        let recs = self.run(move |it| -> Result<Vec<(Option<String>, String, String)>> {
+        // (group, tag, value, source family 0 and 1 groups) of each new
+        // value, in order
+        type Rec = (Option<String>, String, String, Option<String>, Option<String>);
+        let recs = self.run(move |it| -> Result<Vec<Rec>> {
             let args = vec![pv_path(&p), pv_array(t.iter().map(|t| pv_str(t)).collect()), pv_array(options.write_options())];
             let r = call(it, "CopyEdits", args, Want::Scalar)?;
             let mut recs = Vec::new();
@@ -622,19 +648,19 @@ impl ExifTool {
                         None => continue,
                     },
                 };
-                recs.push((get(0), tag, value));
+                recs.push((get(0), tag, value, get(3), get(5)));
             }
             Ok(recs)
         });
-        let mut out: Vec<NewValue> = Vec::new();
-        for (group, tag, value) in recs.unwrap_or_default() {
+        let mut out: Vec<(NewValue, Option<String>, Option<String>)> = Vec::new();
+        for (group, tag, value, family0, family1) in recs.unwrap_or_default() {
             if value.is_empty() || value.starts_with("(Binary data") {
                 continue;
             }
             let group = group.filter(|g| !g.is_empty());
             let same = |nv: &NewValue| nv.tag.eq_ignore_ascii_case(&tag) && nv.group.as_deref().map(str::to_ascii_lowercase) == group.as_deref().map(str::to_ascii_lowercase);
-            out.retain(|nv| !same(nv));
-            out.push(NewValue { tag, group, value: Some(value) });
+            out.retain(|(nv, _, _)| !same(nv));
+            out.push((NewValue { tag, group, value: Some(value) }, family0, family1));
         }
         out
     }

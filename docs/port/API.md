@@ -142,6 +142,9 @@ pub trait FormatExtension: Send + Sync {
     fn name(&self) -> &str;
     fn file_types(&self) -> &[&str];   // ExifTool FileType names: "MP3", "FLAC"...
     fn write(&self, input: &[u8], file_type: &str, edits: &[NewValue]) -> Result<Vec<u8>>;
+    // the edits for the tags a copy queues without a destination group
+    // (default: each by its name; see "Equivalent tags in a copy")
+    fn copy_edits(&self, file_type: &str, copied: &[CopiedTag]) -> Vec<NewValue> { ... }
 }
 
 impl ExifTool {
@@ -203,13 +206,12 @@ format puts nothing in the file that its format does not have:
 
 The tags two formats both have carry over in a copy (FLAC to MP3: Title,
 Copyright; MP3 to FLAC: Title, Artist, Album, Genre, Comment, Composer,
-Copyright...); a tag the formats name differently does not, as in
-ExifTool (ID3 `Year` is not Vorbis `Date`, ID3 `Track` is not Vorbis
-`TrackNumber`). A tag the source has under a name of the destination's
+Copyright...). A tag the source has under a name of the destination's
 format is copied whatever it is in the source, as ExifTool copies it to a
 format it writes (a Matroska track's `TrackNumber` becomes a Vorbis
-`TRACKNUMBER`, as it becomes an M4A's track number). A request for another
-group (`EXIF:Artist` in an MP3) is not written and not counted. Perl
+`TRACKNUMBER`, as it becomes an M4A's track number).
+
+A request for another group (`EXIF:Artist` in an MP3) is not written and not counted. Perl
 ExifTool reads the files they write back with the new values
 (`tests/api_media_write.rs` checks each case with the port's reader and,
 when found at `$EXIFTOOL_DIR`, with Perl ExifTool 13.59). Without the
@@ -220,6 +222,75 @@ The exiftool-rs application (`examples/exiftool_rs.rs`, the port of the
 `exiftool` script) does not use them: it stays ExifTool's, so `exiftool-rs
 -Title=x a.mp3` says "Can't write MP3 files" as `exiftool` does. Reading
 stays ExifTool's for every type (it reads all of these).
+
+#### Equivalent tags in a copy
+
+ExifTool alone would leave out the tags the formats name differently (ID3
+`Year` is no Vorbis tag, an M4A's `TrackNumber` is no ID3 `Track`). For a
+copy to a format the built-in extensions write, these are also written as
+the destination's tag of the same meaning, their values converted
+(`FormatExtension::copy_edits`, `port/src/api/extra_writers/equivalents.rs`).
+Only for a tag copied **without a destination group** (the whole file, a
+tag list of `Year` or `-all`): never for a tag copied to a group the tag
+list names (`ID3:Year`, `Year>ID3:Year`, `all:all`), never for a
+`set_new_value` request, and never for a format ExifTool writes itself,
+whose copies stay exactly ExifTool's. The names are ExifTool's (ID3.pm,
+Vorbis.pm, Matroska.pm `%StdTag`, QuickTime.pm `%ItemList`); a Vorbis field
+Vorbis.pm does not list is named as ExifTool names it when reading
+(`DISCNUMBER` is `Discnumber`) and written under its usual field name. The
+M4A's iTunes tags are a source only (ExifTool writes M4A).
+
+| Meaning | ID3 (MP3, AIFF) | Vorbis (FLAC, Ogg, Opus) | Matroska (MKV, WebM) | QuickTime ItemList (source) |
+|---|---|---|---|---|
+| date | `RecordingTime` (TDRC), `ReleaseTime` (TDRL), `Year` (TYER/TYE/ID3v1, with `Date` TDAT and `Time` TIME); written as `Year` | `Date` (`DATE`) | `DateReleased` (`DATE_RELEASED`); `DateTimeOriginal` (`DATE_RECORDED`, not the segment's Info date) as a source | `ContentCreateDate` (©day) |
+| track | `Track` (TRCK, `n/total`) | `TrackNumber` (`TRACKNUMBER`) + `Tracktotal` (`TRACKTOTAL`; `TOTALTRACKS` as a source) | `PartNumber` (`PART_NUMBER`) + `TotalParts` (`TOTAL_PARTS`) | `TrackNumber` (trkn, `n of total`) |
+| disc | `PartOfSet` (TPOS, `n/total`) | `Discnumber` (`DISCNUMBER`) + `Disctotal` (`DISCTOTAL`; `TOTALDISCS` as a source) | (none) | `DiskNumber` (disk, `n of total`) |
+| album artist | `Band` (TPE2) | `Albumartist` (`ALBUMARTIST`; `ALBUM ARTIST` as a source) | (none) | `AlbumArtist` (aART) |
+| compilation | `Compilation` (TCMP, Yes/No) | `Compilation` (`COMPILATION`, 1/0) | (none) | `Compilation` (cpil, Yes/No) |
+| beats per minute | `BeatsPerMinute` (TBPM) | `BPM` (`BPM`, read as `Bpm`) | `BPM` (`BPM`) | `BeatsPerMinute` (tmpo) |
+| grouping | `Grouping` (TIT1) | `Grouping` (`GROUPING`) | (none) | `Grouping` (©grp) |
+| lyrics | `Lyrics` (USLT) | `Lyrics` (`LYRICS`) | `Lyrics` (`LYRICS`) | `Lyrics` (©lyr) |
+
+Values are converted to the destination's form: a date (`2024`,
+`2024-05-01`, ExifTool's `2024:05:01 12:00:00`, `...T12:00:00Z`) is its year
+for ID3 `Year` (TYER and ID3v1 hold four digits), an ISO 8601 date for a
+Vorbis `DATE` (`2024-05-01T12:00:00`), the Matroska spec's form for
+`DATE_RELEASED` (`2024-05-01 12:00:00`); an ID3v2.3 `Year` is completed by
+its TDAT (`DDMM`) and TIME (`HHMM`), which are no Vorbis `DATE` of their
+own. A number with its total (`1/5`, `1 of 5`) is `1/5` in ID3, one tag
+and its total in Vorbis (`TRACKNUMBER=1`, `TRACKTOTAL=5`) and Matroska
+(`PART_NUMBER`, `TOTAL_PARTS`); a total given apart joins its number. A
+compilation flag is 1/0 in Vorbis. Text is copied as it is.
+
+Matroska's choices, per its tagging spec: the writer puts new SimpleTags in
+a whole-file Tag (no Targets: level 50, the album), where `TOTAL_PARTS` is
+the number of tracks, and `PART_NUMBER` is the track's number as ffmpeg
+and mkvtoolnix map a file's track number; the date is `DATE_RELEASED`, as
+they map a file's date (`DATE_RECORDED` is read too). There is no disc
+number, album artist, compilation or grouping: a disc number is the
+`PART_NUMBER` of a level-40 Tag and an album artist the `ARTIST` of the
+album's Tag, which ExifTool does not tell from the track's. Pairs that are
+not unambiguous are left out: Vorbis `ORGANIZATION` or `LABEL` for ID3
+`Publisher`, Vorbis `DESCRIPTION` for a comment, a Matroska album title.
+The tags of the same name in every format (`Title`, `Artist`, `Album`,
+`Genre`, `Composer`, `Comment`, `Copyright`...) already carry over by name.
+
+Precedence: what the destination's format takes by name comes first. A
+tag the source has under the destination's own name, of another format
+(an M4A's `TrackNumber` for a Vorbis `TRACKNUMBER`) or unrelated (an XMP
+`Date`), is written by its name as ExifTool would, the former converted;
+no equivalent is then made for that destination tag (nor its total). A tag
+of the destination's own format is never converted (FLAC to Ogg keeps
+`TRACKNUMBER=1/5`; its `DISCNUMBER`, which Vorbis.pm does not list, is
+written too). Among the source's equivalents, the one of the
+destination's name comes first, then the order above (a recording time
+before a year). A later `set_new_value` request for the destination's tag
+overrides the equivalent, as it overrides any copied tag. The test matrix
+(`tests/api_media_copy.rs`: the six formats and an M4A, to each of the
+six) reads each output back with the port and with Perl ExifTool 13.59.
+
+The same idea was proposed to ExifTool itself, for the formats it writes:
+<https://github.com/exiftool/exiftool/issues/497>.
 
 ### Threads
 

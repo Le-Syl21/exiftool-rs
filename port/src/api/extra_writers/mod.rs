@@ -23,13 +23,20 @@
 //! not have. A request for another group (`EXIF:Artist` in an MP3, a copy
 //! to `Vorbis:Title`) is left out. Each writer keeps everything it is not
 //! asked to change (see its module).
+//!
+//! In a copy, a tag copied without a destination group is also written as
+//! the destination's tag of the same meaning when the formats name it
+//! differently (ID3 `Year`, Vorbis `DATE`, Matroska `DATE_RELEASED`,
+//! QuickTime `ContentCreateDate`...), its value converted: see
+//! [`FormatExtension::copy_edits`] and the `equivalents` module.
 
 use std::sync::Arc;
 
 use super::error::Result;
 use super::exiftool::NewValue;
-use super::extension::FormatExtension;
+use super::extension::{CopiedTag, FormatExtension};
 
+mod equivalents;
 pub mod flac;
 pub mod id3;
 pub mod matroska;
@@ -60,6 +67,10 @@ impl FormatExtension for Id3Writer {
 
     fn file_types(&self) -> &[&str] {
         &["MP3", "AIFF"]
+    }
+
+    fn copy_edits(&self, _file_type: &str, copied: &[CopiedTag]) -> Vec<NewValue> {
+        equivalents::edits_for_copy(equivalents::Format::Id3, copied)
     }
 
     fn write(&self, input: &[u8], file_type: &str, edits: &[NewValue]) -> Result<Vec<u8>> {
@@ -94,6 +105,10 @@ impl FormatExtension for VorbisWriter {
 
     fn file_types(&self) -> &[&str] {
         &["FLAC", "OGG", "OPUS"]
+    }
+
+    fn copy_edits(&self, _file_type: &str, copied: &[CopiedTag]) -> Vec<NewValue> {
+        equivalents::edits_for_copy(equivalents::Format::Vorbis, copied)
     }
 
     fn write(&self, input: &[u8], file_type: &str, edits: &[NewValue]) -> Result<Vec<u8>> {
@@ -132,6 +147,10 @@ impl FormatExtension for MatroskaWriter {
 
     fn file_types(&self) -> &[&str] {
         &["MKV", "WEBM"]
+    }
+
+    fn copy_edits(&self, _file_type: &str, copied: &[CopiedTag]) -> Vec<NewValue> {
+        equivalents::edits_for_copy(equivalents::Format::Matroska, copied)
     }
 
     fn write(&self, input: &[u8], _file_type: &str, edits: &[NewValue]) -> Result<Vec<u8>> {

@@ -173,8 +173,9 @@ sub CountCopy {
 # ExifTool's (an extension): [ destination group (undef for none), tag,
 # value as ExifTool copies it (a list as an ARRAY, binary data as a SCALAR
 # reference), family 0 group of the source tag (undef for an expression or
-# an assignment), 1 for a deletion of a list item ('-<') ], one for each
-# SetNewValue call SetNewValuesFromFile makes.
+# an assignment), 1 for a deletion of a list item ('-<'), family 1 group of
+# the source tag ], one for each SetNewValue call SetNewValuesFromFile
+# makes.
 our @copied;
 sub CopyEdits {
     my ($file, $tags, $opts) = @_;
@@ -189,9 +190,9 @@ sub CopyEdits {
 # A SetNewValue call of CopyNewValues: recorded in @copied, not made.
 sub Record {
     my ($src, $srcTag, $tag, $val, %opts) = @_;
-    my $g0 = defined $srcTag ? $src->GetGroup($srcTag, 0) : undef;
+    my ($g0, $g1) = defined $srcTag ? ($src->GetGroup($srcTag, 0), $src->GetGroup($srcTag, 1)) : ();
     $tag =~ s/ .*//;    # (a tag key: "Title (1)")
-    push @copied, [ $opts{Group}, $tag, $val, $g0, $opts{DelValue} ? 1 : 0 ];
+    push @copied, [ $opts{Group}, $tag, $val, $g0, $opts{DelValue} ? 1 : 0, $g1 ];
     return (1);
 }
 
