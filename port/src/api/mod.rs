@@ -44,4 +44,4 @@ pub fn get_file_type<P: AsRef<std::path::Path>>(path: P) -> Result<FileType> {
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The Perl ExifTool release this crate is a port of.
-pub const EXIFTOOL_VERSION: &str = "13.59";
+pub const EXIFTOOL_VERSION: &str = "13.60";

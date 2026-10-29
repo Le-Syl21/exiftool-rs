@@ -166,7 +166,7 @@ A request without a group goes to the writer of the file; one for another
 group (`EXIF:Artist` in an MP3) is not written and not counted. Perl
 ExifTool reads the files they write back with the new values
 (`tests/api_media_write.rs` checks each case with the port's reader and,
-when found at `$EXIFTOOL_DIR`, with Perl ExifTool 13.59). Without the
+when found at `$EXIFTOOL_DIR`, with Perl ExifTool 13.60). Without the
 feature, or after `clear_extensions`, these formats are refused as Perl
 refuses them ("Can't write MP3 files").
 

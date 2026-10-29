@@ -13,7 +13,7 @@ calls natives and natives call Perl code the same way, so a file can be
 ported one sub at a time and stay correct at every step.
 
 ExifTool's whole test suite runs unchanged on top of this (114 scripts,
-603 tests). It passes today, and it must still pass after every ported sub.
+604 tests). It passes today, and it must still pass after every ported sub.
 
 ## The rules
 
@@ -122,12 +122,13 @@ if so, run `git reset --hard perl-port` first (the worktree is clean).
 ## Checking a port
 
 All commands take the ExifTool checkout explicitly; use
-`/home/sylvain/dev/exiftool`. Build with `-j2`.
+`/home/sylvain/dev/exiftool`, a tree of the release the port follows
+(`EXIFTOOL_VERSION`; UPGRADING.md for a new one). Build with `-j2`.
 
 1. `cargo build --release --example run_t -j2` in `port/`: no errors, no
    warnings.
 2. **The suite**: `sh scripts/run_suite.sh /home/sylvain/dev/exiftool` must
-   print `114 scripts, 114 pass, 603/603 tests ok`.
+   print `114 scripts, 114 pass, 604/604 tests ok`.
 3. **Every test image**: `sh scripts/compare_images.sh /home/sylvain/dev/exiftool`
    must print `194 identical, 0 different` (everything extracted, printed
    and raw, duplicates and unknown tags included, perl against the port).
