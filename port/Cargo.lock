@@ -1100,6 +1100,7 @@ dependencies = [
  "sha1",
  "sha2 0.10.9",
  "unicode-width",
+ "windows-sys 0.61.2",
  "winres",
 ]
 

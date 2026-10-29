@@ -70,6 +70,12 @@ noto-fonts-dl = { version = "0.1.10", optional = true, features = ["ar", "bn", "
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+# Win32::API, Win32API::File, Win32::FindFile and Term::ReadKey's console
+# modes on Windows (src/modules/win32.rs, term_readkey.rs): the Win32 API's
+# bindings, pure Rust
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Console"] }
+
 [target.'cfg(windows)'.build-dependencies]
 winres = { version = "0.1", optional = true }
 

@@ -150,6 +150,12 @@ impl Interp {
                 "STDERR" => Some(Output::Stderr),
                 _ => None,
             },
+            // STDIN reads the process's own (`<STDIN>`, getc) when the
+            // interpreter owns the streams
+            input: match name {
+                "STDIN" if self.passthrough => std_stream_file(0).map(|f| Input::File(BufReader::new(f))),
+                _ => None,
+            },
             ..Default::default()
         };
         let h = Rc::new(RefCell::new(fh));
@@ -210,6 +216,33 @@ impl Interp {
             }
             _ => None,
         }
+    }
+
+    /// `getc FH`: the next character of a handle (a byte, or a UTF-8
+    /// character under a :utf8 layer), or None at the end of its input.
+    pub fn getc(&mut self, v: &Value) -> Option<Value> {
+        let h = self.handle_of(v, false)?;
+        let mut fh = h.borrow_mut();
+        let utf8 = fh.utf8;
+        let r = fh.input.as_mut()?.reader();
+        let mut c = Vec::new();
+        let mut byte = [0u8];
+        loop {
+            match r.read(&mut byte) {
+                Ok(1) => c.push(byte[0]),
+                _ => break,
+            }
+            // a UTF-8 character's length, from its first byte
+            let want = if !utf8 { 1 } else { crate::perl::utf8::char_len(c[0]) };
+            if c.len() >= want {
+                break;
+            }
+        }
+        if c.is_empty() {
+            fh.eof = true;
+            return None;
+        }
+        Some(if utf8 { Value::chars(c) } else { Value::bytes(c) })
     }
 
     /// Everything behind a handle, for natives that read a whole file
@@ -899,7 +932,18 @@ fn std_stream_file(fd: i32) -> Option<File> {
     (d >= 0).then(|| unsafe { File::from_raw_fd(d) })
 }
 
-#[cfg(not(unix))]
+#[cfg(windows)]
+fn std_stream_file(fd: i32) -> Option<File> {
+    // (stdin only: the outputs keep going through the interpreter's
+    // streams)
+    use std::os::windows::io::AsHandle;
+    if fd != 0 {
+        return None;
+    }
+    std::io::stdin().as_handle().try_clone_to_owned().ok().map(File::from)
+}
+
+#[cfg(not(any(unix, windows)))]
 fn std_stream_file(_fd: i32) -> Option<File> {
     None
 }

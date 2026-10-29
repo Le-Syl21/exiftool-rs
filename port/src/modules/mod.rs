@@ -158,6 +158,7 @@ pub mod tag_info_xml;
 pub mod tag_lookup;
 pub mod text;
 pub mod tnef;
+pub mod term_readkey;
 pub mod time_hires;
 pub mod time_piece;
 pub mod torrent;
