@@ -3004,6 +3004,8 @@ impl Interp {
         // `$x += 1`, `$x .= "a"`, `$x |= 1`... on an undef $x do not warn
         let lhs = !(assign && a.is_undef() && matches!(op, BinOp::Add | BinOp::Sub | BinOp::Concat | BinOp::BitOr | BinOp::BitXor));
         match op {
+            // a logical xor takes its operands as booleans: nothing to warn
+            BinOp::Xor => {}
             BinOp::Concat | BinOp::StrEq | BinOp::StrNe | BinOp::StrLt | BinOp::StrGt | BinOp::StrLe | BinOp::StrGe | BinOp::StrCmp => {
                 if lhs {
                     self.use_str(a, l, scope, desc, many)?;
