@@ -55,6 +55,20 @@ thread_local! {
     static FEW_CACHE: RefCell<HashMap<Vec<u8>, Vec<(String, Rc<PerlRegex>)>>> = RefCell::new(HashMap::default());
 }
 
+/// The most patterns a cache keeps: ExifTool builds patterns from the data
+/// it reads (tag names, values), and the caches outlive the interpreters
+/// (one per facade call), so that a thread reading files without end would
+/// keep every pattern it ever saw (2.7 KB each). A full cache starts over.
+const CACHE_MAX: usize = 1 << 14;
+
+/// A cache with room for one more pattern.
+fn with_room<K, V>(cache: &mut HashMap<K, V>) -> &mut HashMap<K, V> {
+    if cache.len() >= CACHE_MAX {
+        cache.clear();
+    }
+    cache
+}
+
 /// `compile` without JIT, for a pattern built at run time that is matched
 /// a few times only (one per XMP property name): JIT compiling it cost
 /// more than the matches it would speed up.
@@ -64,7 +78,7 @@ pub fn compile_few(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String>
         return Ok(re);
     }
     let compiled = build_jit(pattern, false, flags, false, false)?;
-    FEW_CACHE.with(|c| c.borrow_mut().entry(pattern.to_vec()).or_default().push((flags.to_string(), compiled.clone())));
+    FEW_CACHE.with(|c| with_room(&mut c.borrow_mut()).entry(pattern.to_vec()).or_default().push((flags.to_string(), compiled.clone())));
     Ok(compiled)
 }
 
@@ -76,7 +90,7 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
         return Ok(re);
     }
     let compiled = build(pattern, false, flags, false)?;
-    CACHE.with(|c| c.borrow_mut().entry(pattern.to_vec()).or_default().push((flags.to_string(), compiled.clone())));
+    CACHE.with(|c| with_room(&mut c.borrow_mut()).entry(pattern.to_vec()).or_default().push((flags.to_string(), compiled.clone())));
     Ok(compiled)
 }
 
@@ -90,7 +104,7 @@ pub fn compile_utf(pattern: &[u8], pat_utf8: bool, flags: &str) -> Result<Rc<Per
         return Ok(re);
     }
     let compiled = build(pattern, pat_utf8, flags, true)?;
-    UTF_CACHE.with(|c| c.borrow_mut().entry(pattern.to_vec()).or_default().push((pat_utf8, flags.to_string(), compiled.clone())));
+    UTF_CACHE.with(|c| with_room(&mut c.borrow_mut()).entry(pattern.to_vec()).or_default().push((pat_utf8, flags.to_string(), compiled.clone())));
     Ok(compiled)
 }
 

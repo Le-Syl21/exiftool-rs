@@ -78,8 +78,11 @@ fn pack_limits() {
     for name in ["pack-count-huge", "pack-count-huge-2", "pack-count-huge-3", "pack-count-huge-4"] {
         assert_eq!(interp(name), "Out of memory in pack", "{name}");
     }
-    // 100 million characters unpacked: perl runs out of memory (4 GB)
+    assert_eq!(interp("unpack-count-after-slash"), "Count after length/code in unpack");
+    // 100 million characters unpacked: perl runs out of memory (4 GB);
+    // a 1.8 GB string of bits: perl makes it
     assert_eq!(interp("unpack-values-huge"), "Out of memory in unpack");
+    assert_eq!(interp("unpack-bits-huge"), "Out of memory in unpack");
     // `%32C*` over 44 MB: summed as read (it made a value of each byte)
     assert_eq!(interp("unpack-checksum-large"), "");
     // a precision of 7 million: zeros put in front one by one took minutes
@@ -149,6 +152,35 @@ fn interpreters_are_freed() {
     }
     let after = rss_kb().unwrap();
     assert!(after < before + 10_000, "{before} kB -> {after} kB");
+}
+
+/// The compiled patterns are cached per thread, beyond the interpreters
+/// (one per facade call), and ExifTool builds patterns from what it reads:
+/// the caches are bounded. 100 000 patterns used to keep 280 MB.
+#[test]
+fn regex_caches_are_bounded() {
+    let _serial = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
+    perl("'x' =~ /^warm-up$/");
+    let Some(before) = rss_kb() else { return };
+    for k in 0..20 {
+        perl(&format!("my $n = 0; for my $i (1..5000) {{ $n++ if 'x' =~ /^a{k}_$i(?:b|c)+$/ }} $n"));
+    }
+    let after = rss_kb().unwrap();
+    assert!(after < before + 120_000, "{before} kB -> {after} kB");
+}
+
+/// Files the facade must read in a reasonable time. A RealMedia metadata
+/// structure of size 0 was read again and again: perl hangs on it too
+/// (Real.pm, ProcessRealMeta); the port reads it once.
+#[test]
+fn extract_inputs() {
+    let et = ExifTool::new();
+    for (name, tags) in [("real-meta-size-zero.rm", 10)] {
+        let start = Instant::now();
+        let read = et.extract_info(Path::new("tests/fuzz/extract").join(name)).unwrap();
+        assert!(start.elapsed() < Duration::from_secs(20), "{name}: {:?}", start.elapsed());
+        assert!(read.len() >= tags, "{name}: {} tags", read.len());
+    }
 }
 
 /// Replay the `interp` inputs of a directory (`FUZZ_INPUTS`), printing how

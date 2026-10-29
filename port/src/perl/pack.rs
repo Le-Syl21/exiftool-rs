@@ -159,6 +159,10 @@ fn parse_items(t: &[u8], pos: &mut usize, op: &str) -> Result<Vec<Item>, String>
             item.slash = true;
             i += 1;
         }
+        // (the count of `N/a` comes from the data)
+        if op == "unpack" && matches!(item.count, Count::N(_)) && items.last().is_some_and(|p: &Item| p.slash) {
+            return Err("Count after length/code in unpack".into());
+        }
         items.push(item);
     }
     *pos = i;
@@ -481,15 +485,18 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
                     Count::Star => remaining * 2,
                 }
                 .min(remaining * 2);
+                if nyb > BUILD_MAX {
+                    return Err("Out of memory in unpack".into());
+                }
                 let bytes = nyb.div_ceil(2);
-                let mut s = String::with_capacity(nyb);
+                let mut s = Vec::with_capacity(nyb);
                 for k in 0..nyb {
                     let b = data[pos + k / 2];
                     let v = if (k % 2 == 0) == (item.letter == b'H') { b >> 4 } else { b & 0xf };
-                    s.push(char::from_digit(v as u32, 16).unwrap());
+                    s.push(b"0123456789abcdef"[v as usize]);
                 }
                 pos += bytes;
-                out.push(Value::str(&s));
+                out.push(Value::bytes(s));
             }
             b'B' | b'b' => {
                 let bits = match count {
@@ -498,14 +505,17 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
                     Count::Star => remaining * 8,
                 }
                 .min(remaining * 8);
-                let mut s = String::with_capacity(bits);
+                if bits > BUILD_MAX {
+                    return Err("Out of memory in unpack".into());
+                }
+                let mut s = Vec::with_capacity(bits);
                 for k in 0..bits {
                     let b = data[pos + k / 8];
                     let bit = if item.letter == b'B' { (b >> (7 - k % 8)) & 1 } else { (b >> (k % 8)) & 1 };
-                    s.push(if bit == 1 { '1' } else { '0' });
+                    s.push(b'0' + bit);
                 }
                 pos += bits.div_ceil(8);
-                out.push(Value::str(&s));
+                out.push(Value::bytes(s));
             }
             b'x' => {
                 let n = match count {

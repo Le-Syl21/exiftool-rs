@@ -265,6 +265,11 @@ pub fn process_real_meta(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
             d.set("Prefix", tag.clone());
             pl::method(it, &et, "ProcessDirectory", vec![d, tag_table_ptr.clone()])?;
         }
+        // A structure of size 0 is read again and again, without end (as
+        // in perl, which hangs on it): once is enough.
+        if !size.truthy() {
+            break;
+        }
         pos = pl::add(&pos, &size); // step to next Metadata structure
     }
     if !pl::num_eq(&pos, &dir_end) {
