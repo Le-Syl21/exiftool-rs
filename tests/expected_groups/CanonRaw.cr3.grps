@@ -117,6 +117,7 @@ FilePermissions	System	Other
 FileSize	System	Other
 FileType	File	Other
 FileTypeExtension	File	Other
+FirmwareInfo	Track4	Camera
 FirmwareVersion	Track4	Camera
 FisheyeFilter	Canon	Camera
 Flash	ExifIFD	Camera

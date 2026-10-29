@@ -109,6 +109,7 @@ FNumber	3.5
 FOV	75.3 deg
 FileType	CR3
 FileTypeExtension	cr3
+FirmwareInfo	1.0.0 34(00) at offset 0x5c1
 FirmwareVersion	1.0.0
 FisheyeFilter	Off
 Flash	No Flash

@@ -4,6 +4,12 @@
 # Oracle: tests/expected_multi/*.mvals, from scripts/gen_multiset_baselines.sh
 # Regenerate: UPDATE_MULTISET_BASELINE=1 cargo test --release --test regression regression_tag_multiset
 # Format: <file>\t<default|ee>\t<extra|missing>\t<occurrence>\t<tag>\t<value>
+CanonRaw.cr3	default	missing	0	FirmwareInfo	1.0.0 34(00) at offset 0x5c1
+CanonRaw.cr3	ee	missing	0	FirmwareInfo	1.0.0 34(00) at offset 0x5c1
+Olympus2.jpg	default	extra	0	WhiteBalanceBracket	0 0
+Olympus2.jpg	default	missing	0	WhiteBalanceFineTune	0 0
+Olympus2.jpg	ee	extra	0	WhiteBalanceBracket	0 0
+Olympus2.jpg	ee	missing	0	WhiteBalanceFineTune	0 0
 PSP.psp	default	extra	0	Copyright	© 2010 Phil Harvey
 PSP.psp	default	missing	0	Copyright	� 2010 Phil Harvey
 PSP.psp	ee	extra	0	Copyright	© 2010 Phil Harvey
