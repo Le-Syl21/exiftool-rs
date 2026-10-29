@@ -17,7 +17,8 @@ read, convert or write metadata on its own.
 | `image_info(path)`, `exiftool_port::image_info` | the same, as a name→value map |
 | `set_new_value(tag, value)` | queued; replayed as `SetNewValue($tag, $value, Shift => 0, Protected => 1)` (`Protected` unless the name has a wildcard), as the exiftool application does for `-TAG=VALUE` |
 | `set_new_values_from_file(src, tags)` | queued; replayed as `SetNewValuesFromFile($src, @tags)`; returns the number of tags it sets, counted as the application counts them for `-tagsFromFile` |
-| `write_info(src, dst)` | a new ExifTool, the queued requests replayed in order, `WriteInfo($src, \$out)` |
+| `write_info(src, dst)` | the queued requests replayed in order (after `SetNewValue()` clears those of an earlier call), `WriteInfo($src, \$out)` |
+| `register_extension(ext)`, `clear_extensions()` | none: a Rust writer `write_info` calls for a type `CanWrite` refuses (see Extensions) |
 | `write_warnings()` | the warnings of `SetNewValue`, `SetNewValuesFromFile` and `WriteInfo` (the `Warning` tags) |
 | `get_file_type(path)`, `file_type::detect_from_magic` | `ImageInfo(..., 'FileType')` with `FastScan => 3` |
 | `file_type::detect_from_extension` | `GetFileType` |
@@ -30,7 +31,8 @@ turns it on), `fast_scan` → `FastScan`, `requested_tags` → the tag list of
 `ExtractEmbedded`, `show_unknown` → `Unknown`, `process_compressed` →
 `Compress`, `geolocation` → `Geolocation`, `struct_output` → `Struct`,
 `use_mwg` → `Image::ExifTool::MWG::Load`, `lang` → `Lang` (reading and
-writing). Extraction always runs with
+writing), `binary` → `Binary`; `fresh_interpreter` (see Threads) and
+`trim` (see Values) are the facade's own. Extraction always runs with
 `PrintConv` on: `print_conv` only chooses which of the two values
 `image_info` returns, as in the root crate.
 
@@ -70,7 +72,23 @@ works, and the `-lang` list does not show it.
   is a `String`. A list is a `List`, a structure a `Struct` (fields in
   ExifTool's order, `OrderedKeys`), binary data `Binary` (its bytes), or,
   when ExifTool did not extract them, the `(Binary data N bytes, ...)` text.
+  ExifTool leaves out the bytes of some binary tags (a preview image, a
+  JpgFromRaw: those it reads with `ExtractBinary`) unless its `Binary`
+  option is set or the tag is requested by name: set `Options::binary`
+  (`-b`), or name the tag in `requested_tags`, to have them. ExifTool.jpg's
+  PreviewImage is `(Binary data 1039273 bytes, ...)` without, its 5777
+  bytes with either. The printed value stays the text.
   `raw_value.to_display_string()` is what `exiftool -n` prints.
+- `Options::trim` (off by default: values are ExifTool's) strips, at the
+  start and end of each printed value and of each text raw value (each
+  item of a list, each field of a structure), white space and invisible
+  characters: ASCII white space, NUL and the other C0 controls, DEL, C1
+  controls, and Unicode white space, zero-width characters and BOM
+  (U+00A0, U+1680, U+180E, U+2000-U+200F, U+2028, U+2029, U+202F,
+  U+205F, U+2060, U+3000, U+FEFF). Numbers and binary data are not
+  touched. Olympus2.jpg's ImageDescription, `OLYMPUS DIGITAL CAMERA` and
+  nine spaces, becomes `OLYMPUS DIGITAL CAMERA`; GPS.jpg's IPTC City, one
+  space, becomes empty (the tag stays).
 - Groups are `GetGroup`'s; `family3` is `Main` or `DocN`.
 - `Tag::id` is the tag ID, `Numeric` when it is an integer of 16 bits,
   `Text` otherwise. `Tag::priority` is the tag's `Priority`, 1 when it has
@@ -94,19 +112,102 @@ When nothing takes effect, a new destination gets ExifTool's unchanged
 copy and the call returns `Ok(0)`; in place it fails and leaves the file
 alone ("Nothing to do.").
 
+### Extensions
+
+ExifTool's own ways of being extended work in the port as they do in
+Perl, since the port runs Perl code: a config file (`.ExifTool_config`,
+`-config`, `%Image::ExifTool::UserDefined`) adds tags, composite tags,
+shortcuts and options; a custom module can be loaded by it. The Rust API
+adds one for what is better written in Rust, a format engine:
+`exiftool_port::extension::FormatExtension`.
+
+```rust
+pub trait FormatExtension: Send + Sync {
+    fn name(&self) -> &str;
+    fn file_types(&self) -> &[&str];   // ExifTool FileType names: "MP3", "FLAC"...
+    fn write(&self, input: &[u8], file_type: &str, edits: &[NewValue]) -> Result<Vec<u8>>;
+}
+
+impl ExifTool {
+    pub fn register_extension<E: FormatExtension + 'static>(&mut self, ext: E);
+    pub fn clear_extensions(&mut self);
+}
+```
+
+`write_info` calls an extension only when ExifTool cannot write the
+source's type itself: ExifTool's write is tried first, and only when it
+fails is the source's `FileType` (as `ImageInfo` finds it) looked up; if
+`CanWrite` says no and an extension lists that type (the one registered
+last, if several do), the extension writes the whole new file. Its output
+then goes through what any write goes through: a temporary file renamed
+over the destination, the requests that took effect counted by reading it
+back with ExifTool. Nothing changes for a type ExifTool writes. The edits
+are the queued requests in order, a copy (`set_new_values_from_file`)
+given as one edit per tag it copies, under the source tag's family 1
+group. A destination name ExifTool gives a type to must be one of the
+extension's types (`.opus` is `OGG`). The warnings of such a write are
+empty: ExifTool's (`Sorry, ID3:Title doesn't exist or isn't writable`) would be wrong
+there.
+
+The built-in extensions, registered by `ExifTool::new` when the
+`extra-writers` cargo feature is on (the default), are the root crate's
+writers for the formats Perl ExifTool reads and refuses to write, in
+`port/src/api/extra_writers/` (copied from the root crate's src/writer/ and
+adapted: tag names as ExifTool reads them, the port's reader in their
+tests):
+
+| Extension | Types | Writes |
+|---|---|---|
+| `Id3Writer` | `MP3`, `AIFF` | ID3v2 frames (in the tag's version; ID3v2.3 for a new tag) and the ID3v1 trailer of an MP3; the `ID3 ` chunk of an AIFF. Groups `ID3`, `ID3v1`, `ID3v2*` |
+| `VorbisWriter` | `FLAC`, `OGG`, `OPUS` | the Vorbis comments of FLAC, Ogg Vorbis, Ogg FLAC and Opus files (Ogg pages re-paginated, CRCs recomputed). Group `Vorbis`; a field is matched by the name ExifTool gives it (Vorbis.pm), a new one takes ExifTool's field for the name |
+| `MatroskaWriter` | `MKV`, `WEBM` | the segment Title (`Matroska:Title`, read as `Info:Title`) and SimpleTags, positions relocated (SeekHead, Cues, Clusters) |
+
+A request without a group goes to the writer of the file; one for another
+group (`EXIF:Artist` in an MP3) is not written and not counted. Perl
+ExifTool reads the files they write back with the new values
+(`tests/api_media_write.rs` checks each case with the port's reader and,
+when found at `$EXIFTOOL_DIR`, with Perl ExifTool 13.59). Without the
+feature, or after `clear_extensions`, these formats are refused as Perl
+refuses them ("Can't write MP3 files").
+
+The exiftool-rs application (`examples/exiftool_rs.rs`, the port of the
+`exiftool` script) does not use them: it stays ExifTool's, so `exiftool-rs
+-Title=x a.mp3` says "Can't write MP3 files" as `exiftool` does. Reading
+stays ExifTool's for every type (it reads all of these).
+
 ### Threads
 
-`ExifTool` is `Send + Sync`, and calls can run on several threads at once.
-Each call runs on an interpreter of its own (the interpreter is not `Send`),
-as each run of the exiftool application is a process of its own. ExifTool
-keeps state in its tables from one file to the next, in Perl too: in one
-process, XMP.xml gets an AutoFocus composite that a module loaded for an
-earlier file defines, and after writing Kodak.jpg's Make the output reads
-"Unrecognized MakerNoteUnknown" instead of "Unrecognized MakerNotes". A
-call therefore never depends on the ones before it. The price is the
-interpreter's start, about as long again as reading a small file
-(the root crate's regression suite: 7 s with interpreters kept per thread,
-15 s with one per call).
+An `ExifTool` keeps one interpreter, and one `Image::ExifTool` object on
+it, for all its calls, as a Perl program that makes one
+`Image::ExifTool->new` and reads (or writes) file after file with it, and
+as the exiftool application does for the files of one command. Each call
+starts with `ClearOptions()` and `SetNewValue()` (no option or new value
+stays from the call before), then sets its options. What ExifTool itself
+keeps from one file to the next stays, as in Perl: its tables, the modules
+loaded. With one `Image::ExifTool` object in Perl, as with one `ExifTool`
+here, XMP.xml has no AutoFocus composite read first, and has one ("On")
+read after Nikon.jpg, whose module defines it; after writing Kodak.jpg's
+Make, the output reads "Unrecognized MakerNoteUnknown" instead of
+"Unrecognized MakerNotes". Two `ExifTool` objects never share anything.
+
+`Options::fresh_interpreter` (off by default) runs each call on an
+interpreter of its own instead, with a new `Image::ExifTool` object, as
+each run of the exiftool application is a process of its own: no call
+then depends on the ones before it, at the price of the interpreter's
+start (about 16 ms) for each call. Reading ExifTool's 194 test images with
+one `ExifTool`: 4.46 s with `fresh_interpreter`, 2.57 s without (-42 %);
+the output is the same but for XMP.xml's AutoFocus above (and the order of
+some composite tags, as ExifTool's composite table grows).
+
+`ExifTool` is `Send + Sync`. The interpreter is not `Send` (it holds
+`Rc`s, some shared with caches of its thread), so it lives on a thread of
+its own, started on the object's first call and ended when the object is
+dropped, which runs the calls one at a time: threads that share an
+`ExifTool` take turns (one `ExifTool` per thread reads in parallel). A
+panic in a call is the caller's, and the interpreter it leaves is
+replaced. With `fresh_interpreter`, calls run on the caller's thread, in
+parallel. Turning `use_mwg` off after a call with it replaces the
+interpreter (MWG cannot be unloaded).
 
 ## The GUI
 
@@ -128,8 +229,10 @@ The root crate had its own readers and writers; the facade has ExifTool's.
 Where the two differ, the facade is ExifTool's:
 
 - **Formats ExifTool does not write** (MP3/AIFF ID3, FLAC, Ogg, Opus,
-  Matroska) are refused with `Error::UnsupportedFileType("Can't write MP3
-  files")`; the root crate wrote them. `writable_tags` is ExifTool's whole
+  Matroska) are written by the built-in extensions, the root crate's
+  writers (see Extensions); without them they are refused with
+  `Error::UnsupportedFileType("Can't write MP3 files")`, as ExifTool
+  refuses them. `writable_tags` is ExifTool's whole
   writable set for a type ExifTool writes, and empty otherwise (never
   `None`).
 - **Writes ExifTool refuses fail**: SonyILCE9.arw (cut-off preview) gives
@@ -141,13 +244,15 @@ Where the two differ, the facade is ExifTool's:
   and not warned about, as ExifTool says nothing.
 - **Printed values are not sanitized for a terminal**: trailing spaces,
   control characters and NULs stay as ExifTool has them (`exiftool -j`
-  keeps them; only its text output trims them). The root crate trimmed them.
+  keeps them; only its text output trims them). The root crate trimmed them;
+  `Options::trim` does.
 - **Tag order** is ExifTool's (`GetTagList`, as `exiftool` lists them).
 - **`image_info` with duplicates** keys a duplicate `Name [Group0:Group1]`
   as before, but which instance is the plain `Name` is ExifTool's choice.
 - **Binary data** ExifTool does not extract unless asked (a preview image,
-  a thumbnail) is the `(Binary data N bytes, ...)` text; request the tag
-  (`requested_tags`) to get its bytes, as with ExifTool.
+  a JpgFromRaw) is the `(Binary data N bytes, ...)` text; set
+  `Options::binary` or request the tag (`requested_tags`) to get its bytes,
+  as with ExifTool.
 - **`extract_info_from_bytes`** identifies the data by its content only;
   the path is not used (no FileName/Directory tags, no type by extension).
 - **`get_file_type` and `detect_from_*`** give ExifTool's type; a type the

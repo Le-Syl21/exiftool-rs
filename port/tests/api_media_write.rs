@@ -1,6 +1,7 @@
 //! QuickTime (MOV/M4A) metadata writing, checked against ExifTool 13.59,
 //! and the formats ExifTool does not write (ID3, Vorbis comments in
-//! FLAC/Ogg/Opus, Matroska), which it refuses.
+//! FLAC/Ogg/Opus, Matroska), written by the built-in extensions and read
+//! back by the port and by Perl ExifTool.
 //!
 //! The QuickTime cases apply the same edit ExifTool was given and compare
 //! the ItemList, UserData, Keys and XMP tags of our output, as our reader
@@ -167,40 +168,102 @@ fn quicktime_m4a_matches_exiftool() {
     }
 }
 
-/// ExifTool 13.59 does not write these formats: as the exiftool application
-/// (`exiftool -o out.mp3 -Title=x MP3.mp3`: "Can't write MP3 files"),
-/// `write_info` refuses them and writes nothing.
-fn check_refused(src: &str, ops: &[Op], kind: &str) {
-    let ext = src.rsplit('.').next().unwrap();
-    let name = format!("refused_{}_{}.{ext}", src.replace('.', "_"), ops.len());
-    let _ = std::fs::remove_file(tmp(&name));
-    let (out, r) = write(src, &name, ops);
-    match r {
-        Err(exiftool_port::Error::UnsupportedFileType(msg)) => {
-            assert_eq!(msg, format!("Can't write {kind} files"), "{src} {ops:?}")
+/// Perl ExifTool, to read a written file back: `$EXIFTOOL_DIR/exiftool`
+/// (default `../../exiftool`, next to the exiftool-rs checkout). `None`
+/// when it is not there or perl is missing.
+fn perl_exiftool() -> Option<PathBuf> {
+    let dir = std::env::var_os("EXIFTOOL_DIR").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("../../exiftool"));
+    let script = dir.join("exiftool");
+    let perl = std::process::Command::new("perl").arg("-e").arg("1").output().map(|o| o.status.success()).unwrap_or(false);
+    (perl && script.is_file()).then_some(script)
+}
+
+/// `Group1:Tag=Value` lines of a file as Perl ExifTool 13.59 reads it
+/// (`exiftool -a -G0:1 -s -charset UTF8`), for the family 0 group `g0`.
+fn read_perl(script: &Path, path: &Path, g0: &str) -> BTreeMap<String, usize> {
+    let mut cmd = if cfg!(target_os = "linux") {
+        let mut c = std::process::Command::new("prlimit");
+        c.args(["--as=4000000000", "--", "timeout", "60", "perl"]);
+        c
+    } else {
+        std::process::Command::new("perl")
+    };
+    let out = cmd.arg(script).args(["-a", "-G0:1", "-s", "-charset", "UTF8"]).arg(path).output().expect("run perl exiftool");
+    assert!(out.status.success(), "perl exiftool {}: {}", path.display(), String::from_utf8_lossy(&out.stderr));
+    let mut m = BTreeMap::new();
+    for line in String::from_utf8_lossy(&out.stdout).lines() {
+        // "[ID3:ID3v2_2]   Title    : value"
+        let Some(rest) = line.strip_prefix('[') else { continue };
+        let Some((groups, rest)) = rest.split_once(']') else { continue };
+        // (one name when both families have it: "[Vorbis]")
+        let (f0, f1) = groups.split_once(':').unwrap_or((groups, groups));
+        let Some((name, value)) = rest.split_once(" : ") else { continue };
+        if f0 == g0 {
+            *m.entry(format!("{f1}:{}={}", name.trim(), value)).or_default() += 1;
         }
-        other => panic!("{src} {ops:?}: {other:?}"),
     }
-    assert!(!out.exists(), "{src}: output written");
+    m
+}
+
+/// `before` with the `changed` tags (`Group1:Tag`) dropped, and given their
+/// new value when there is one.
+fn edited(mut before: BTreeMap<String, usize>, changed: &[(&str, Option<&str>)]) -> BTreeMap<String, usize> {
+    for (key, value) in changed {
+        before.retain(|k, _| !k.starts_with(&format!("{key}=")));
+        if let Some(v) = value {
+            *before.entry(format!("{key}={v}")).or_default() += 1;
+        }
+    }
+    before
+}
+
+/// The formats Perl ExifTool reads but does not write ("Can't write MP3
+/// files"), written by the built-in extensions (feature `extra-writers`):
+/// the edit must be there and nothing else of `g0` may have changed, as the
+/// port's reader reads the result, and as Perl ExifTool 13.59 reads it back.
+fn check_extension(src: &str, g0: &str, ops: &[Op], changed: &[(&str, Option<&str>)]) {
+    let ext = src.rsplit('.').next().unwrap();
+    let name = format!("ext_{}_{}.{ext}", src.replace('.', "_"), ops.len());
+    let (out, r) = write(src, &name, ops);
+    let n = r.unwrap_or_else(|e| panic!("{src} {ops:?}: {e}"));
+    assert_eq!(n as usize, ops.len(), "{src} {ops:?}: applied count");
+    let input = Path::new("../tests/images").join(src);
+    let keep = |a: &str, _: &str| a == g0;
+    assert_eq!(read(&out, keep), edited(read(&input, keep), changed), "{src} {ops:?}: read by the port");
+    match perl_exiftool() {
+        Some(script) => assert_eq!(read_perl(&script, &out, g0), edited(read_perl(&script, &input, g0), changed), "{src} {ops:?}: read by Perl ExifTool"),
+        None => eprintln!("Perl ExifTool not found (EXIFTOOL_DIR): {src} not read back by it"),
+    }
 }
 
 #[test]
-fn id3_is_not_written() {
-    check_refused("MP3.mp3", &[("ID3:Title", Some("New title")), ("ID3:Composer", None)], "MP3");
-    check_refused("AIFF.aif", &[("ID3:Album", Some("Älbum")), ("ID3:Lyrics", None)], "AIFF");
+fn id3_edits_keep_the_other_frames() {
+    check_extension(
+        "MP3.mp3",
+        "ID3",
+        &[("ID3:Title", Some("New title")), ("ID3:Composer", None)],
+        &[("ID3v2_2:Title", Some("New title")), ("ID3v1:Title", Some("New title")), ("ID3v2_2:Composer", None)],
+    );
+    check_extension("AIFF.aif", "ID3", &[("ID3:Album", Some("Älbum")), ("ID3:Lyrics", None)], &[("ID3v2_2:Album", Some("Älbum")), ("ID3v2_2:Lyrics", None)]);
 }
 
 #[test]
-fn vorbis_comments_are_not_written() {
-    check_refused("FLAC.flac", &[("Vorbis:Title", Some("New")), ("Vorbis:Copyright", None)], "FLAC");
-    check_refused("Vorbis.ogg", &[("Vorbis:Genre", Some("Jazz")), ("Vorbis:Comment", None)], "OGG");
-    check_refused("Opus.opus", &[("Vorbis:Artist", Some("Someone"))], "OGG");
-    check_refused("FLAC.ogg", &[("Vorbis:Album", Some("An album"))], "OGG");
+fn vorbis_comment_edits_keep_the_others() {
+    check_extension("FLAC.flac", "Vorbis", &[("Vorbis:Title", Some("New")), ("Vorbis:Copyright", None)], &[("Vorbis:Title", Some("New")), ("Vorbis:Copyright", None)]);
+    check_extension("Vorbis.ogg", "Vorbis", &[("Vorbis:Genre", Some("Jazz")), ("Vorbis:Comment", None)], &[("Vorbis:Genre", Some("Jazz")), ("Vorbis:Comment", None)]);
+    check_extension("Opus.opus", "Vorbis", &[("Vorbis:Artist", Some("Someone"))], &[("Vorbis:Artist", Some("Someone"))]);
+    check_extension("FLAC.ogg", "Vorbis", &[("Vorbis:Album", Some("An album"))], &[("Vorbis:Album", Some("An album"))]);
 }
 
 #[test]
-fn matroska_is_not_written() {
-    check_refused("Matroska.mkv", &[("Matroska:Title", Some("A title"))], "MKV");
+fn matroska_title_and_tags() {
+    check_extension("Matroska.mkv", "Matroska", &[("Matroska:Title", Some("A title"))], &[("Info:Title", Some("A title"))]);
+    check_extension(
+        "Matroska.mkv",
+        "Matroska",
+        &[("Matroska:Artist", Some("An artist")), ("Matroska:Title", Some("Another title"))],
+        &[("Info:Title", Some("Another title")), ("Matroska:Artist", Some("An artist"))],
+    );
 }
 
 #[test]
@@ -208,16 +271,86 @@ fn unwritable_requests_are_skipped() {
     // Nothing of this can be written: as ExifTool 13.59 does with a request
     // it cannot apply (`-IPTC:City=x` on a MOV: "1 image files copied"), the
     // output is an unchanged copy and nothing is counted. ExifTool does not
-    // warn about it (IPTC:City is a tag it can write, only not here).
-    let src = "QuickTime.mov";
+    // warn about it (IPTC:City is a tag it can write, only not here); nor do
+    // the extensions, for a group they do not write (EXIF in an MP3, XMP in
+    // a FLAC).
+    for (src, op) in [("QuickTime.mov", ("IPTC:City", Some("x"))), ("MP3.mp3", ("EXIF:Artist", Some("x"))), ("FLAC.flac", ("XMP:Title", Some("x")))] {
+        let mut et = ExifTool::new();
+        et.set_new_value(op.0, op.1);
+        let out = tmp(&format!("skip_{src}"));
+        let input = Path::new("../tests/images").join(src);
+        assert_eq!(et.write_info(&input, &out).unwrap(), 0, "{src}");
+        assert_eq!(std::fs::read(&out).unwrap(), std::fs::read(&input).unwrap(), "{src}");
+        assert_eq!(et.write_warnings(), Vec::<String>::new(), "{src}");
+    }
+}
+
+/// Without the extensions, ExifTool 13.59 does not write these formats: as
+/// the exiftool application (`exiftool -o out.mp3 -Title=x MP3.mp3`: "Can't
+/// write MP3 files"), `write_info` refuses them and writes nothing.
+#[test]
+fn without_extensions_these_formats_are_refused() {
+    for (src, op, kind) in [
+        ("MP3.mp3", ("ID3:Title", Some("New title")), "MP3"),
+        ("AIFF.aif", ("ID3:Album", Some("x")), "AIFF"),
+        ("FLAC.flac", ("Vorbis:Title", Some("New")), "FLAC"),
+        ("Vorbis.ogg", ("Vorbis:Genre", Some("Jazz")), "OGG"),
+        ("Opus.opus", ("Vorbis:Artist", Some("Someone")), "OGG"),
+        ("Matroska.mkv", ("Matroska:Title", Some("A title")), "MKV"),
+    ] {
+        let mut et = ExifTool::new();
+        et.clear_extensions();
+        et.set_new_value(op.0, op.1);
+        let ext = src.rsplit('.').next().unwrap();
+        let out = tmp(&format!("refused_{}.{ext}", src.replace('.', "_")));
+        let _ = std::fs::remove_file(&out);
+        match et.write_info(Path::new("../tests/images").join(src), &out) {
+            Err(exiftool_port::Error::UnsupportedFileType(msg)) => assert_eq!(msg, format!("Can't write {kind} files"), "{src}"),
+            other => panic!("{src}: {other:?}"),
+        }
+        assert!(!out.exists(), "{src}: output written");
+    }
+}
+
+/// An extension that counts its calls and writes the input unchanged.
+struct Counting(std::sync::Arc<std::sync::atomic::AtomicUsize>, &'static [&'static str]);
+
+impl exiftool_port::FormatExtension for Counting {
+    fn name(&self) -> &str {
+        "counting"
+    }
+    fn file_types(&self) -> &[&str] {
+        self.1
+    }
+    fn write(&self, input: &[u8], _file_type: &str, _edits: &[exiftool_port::NewValue]) -> exiftool_port::Result<Vec<u8>> {
+        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Ok(input.to_vec())
+    }
+}
+
+#[test]
+fn extensions_are_called_only_for_what_exiftool_cannot_write() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let calls = std::sync::Arc::new(AtomicUsize::new(0));
+    // A type ExifTool writes is ExifTool's, whatever is registered.
     let mut et = ExifTool::new();
-    et.set_new_value("IPTC:City", Some("x"));
-    let out = tmp(&format!("skip_{src}"));
-    let input = Path::new("../tests/images").join(src);
-    assert_eq!(et.write_info(&input, &out).unwrap(), 0, "{src}");
-    assert_eq!(std::fs::read(&out).unwrap(), std::fs::read(&input).unwrap(), "{src}");
-    assert_eq!(et.write_warnings(), Vec::<String>::new(), "{src}");
-    // ExifTool writes neither MP3 nor FLAC at all.
-    check_refused("MP3.mp3", &[("EXIF:Artist", Some("x"))], "MP3");
-    check_refused("FLAC.flac", &[("XMP:Title", Some("x"))], "FLAC");
+    et.register_extension(Counting(calls.clone(), &["JPEG"]));
+    et.set_new_value("EXIF:Artist", Some("Someone"));
+    assert_eq!(et.write_info(Path::new("../tests/images/Canon.jpg"), tmp("ext_canon.jpg")).unwrap(), 1);
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    // The last registered for a type writes it (here, in place of the
+    // built-in ID3 writer: the copy is unchanged, so nothing is counted).
+    et.clear_new_values();
+    et.register_extension(Counting(calls.clone(), &["MP3"]));
+    et.set_new_value("ID3:Title", Some("x"));
+    let out = tmp("ext_counting.mp3");
+    let input = Path::new("../tests/images/MP3.mp3");
+    assert_eq!(et.write_info(input, &out).unwrap(), 0);
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(std::fs::read(&out).unwrap(), std::fs::read(input).unwrap());
+    // A destination ExifTool names another type is refused, as ExifTool
+    // refuses it.
+    let r = et.write_info(input, tmp("ext_counting.flac"));
+    assert!(matches!(&r, Err(exiftool_port::Error::UnsupportedFileType(m)) if m == "Can't write FLAC files"), "{r:?}");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
 }

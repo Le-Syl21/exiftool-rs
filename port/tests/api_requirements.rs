@@ -166,6 +166,60 @@ fn raw_values_are_typed_numbers() {
 }
 
 #[test]
+fn binary_data_is_extracted_with_the_binary_option() {
+    // As ImageInfo with and without `Binary => 1` (Perl ExifTool 13.59):
+    // ExifTool.jpg's PreviewImage is "Binary data 1039273 bytes" without it,
+    // 5777 bytes of JPEG with it; its ThumbnailImage is extracted either way.
+    let raw = |binary: bool, file: &str, name: &str, requested: &[&str]| -> Value {
+        let et = ExifTool::with_options(Options { binary, requested_tags: requested.iter().map(|t| t.to_string()).collect(), ..Options::default() });
+        let tags = et.extract_info(image(file)).unwrap();
+        let t = tags.iter().find(|t| t.name == name).unwrap_or_else(|| panic!("{file}: no {name}"));
+        assert!(t.print_value.starts_with("(Binary data "), "{file} {name}: {}", t.print_value);
+        t.raw_value.clone()
+    };
+    let bytes = |v: Value| match v {
+        Value::Binary(b) => b,
+        other => panic!("not binary: {other:?}"),
+    };
+    assert_eq!(raw(false, "ExifTool.jpg", "PreviewImage", &[]), Value::String("(Binary data 1039273 bytes, use -b option to extract)".into()));
+    let preview = bytes(raw(true, "ExifTool.jpg", "PreviewImage", &[]));
+    assert_eq!(preview.len(), 5777);
+    assert!(preview.starts_with(b"\xff\xd8\xff\xdb"));
+    assert_eq!(bytes(raw(false, "ExifTool.jpg", "ThumbnailImage", &[])).len(), 1558);
+    assert_eq!(raw(false, "Nikon.nef", "JpgFromRaw", &[]), Value::String("(Binary data 29 bytes, use -b option to extract)".into()));
+    assert_eq!(bytes(raw(true, "Nikon.nef", "JpgFromRaw", &[])).len(), 29);
+    // A tag requested by name has its bytes without the option, as with
+    // ExifTool.
+    assert_eq!(bytes(raw(false, "ExifTool.jpg", "PreviewImage", &["PreviewImage"])), preview);
+    // (a composite one needs the tags it is made from: ImageInfo gives
+    // nothing for Nikon.nef's PreviewImage requested alone, in Perl too)
+    let et = ExifTool::with_options(Options { requested_tags: vec!["PreviewImage".into()], ..Options::default() });
+    assert!(et.extract_info(image("Nikon.nef")).unwrap().is_empty());
+}
+
+#[test]
+fn values_are_trimmed_on_request() {
+    let tag = |trim: bool, file: &str, key: &str| -> (String, Value) {
+        let et = ExifTool::with_options(Options { trim, duplicates: true, ..Options::default() });
+        let tags = et.extract_info(image(file)).unwrap();
+        let t = tags.iter().find(|t| format!("{}:{}", t.group.family1, t.name) == key).unwrap_or_else(|| panic!("{file}: no {key}"));
+        (t.print_value.clone(), t.raw_value.clone())
+    };
+    // ExifTool's values by default, as `exiftool -j` gives them
+    let padded = "OLYMPUS DIGITAL CAMERA         ";
+    assert_eq!(tag(false, "Olympus2.jpg", "IFD0:ImageDescription"), (padded.to_string(), Value::String(padded.into())));
+    assert_eq!(tag(false, "GPS.jpg", "IPTC:City").0, " ");
+    // trimmed: the printed and the raw value
+    assert_eq!(tag(true, "Olympus2.jpg", "IFD0:ImageDescription"), ("OLYMPUS DIGITAL CAMERA".to_string(), Value::String("OLYMPUS DIGITAL CAMERA".into())));
+    assert_eq!(tag(true, "GPS.jpg", "IPTC:City"), (String::new(), Value::String(String::new())));
+    // numbers and binary data are left as they are
+    let (_, orientation) = tag(true, "NikonD70.jpg", "IFD0:Orientation");
+    assert_eq!(orientation, Value::U16(1));
+    let (_, thumbnail) = tag(true, "ExifTool.jpg", "JFXX:ThumbnailImage");
+    assert!(matches!(&thumbnail, Value::Binary(b) if b.len() == 1558), "{thumbnail:?}");
+}
+
+#[test]
 fn lens_id_does_not_depend_on_duplicates() {
     let lens = |duplicates: bool| -> Vec<String> {
         ExifTool::with_options(Options { duplicates, ..Options::default() })
@@ -235,13 +289,46 @@ fn mwg_composites_are_loaded_on_request() {
             .any(|t| t.group.family0 == "Composite" && t.name == "DateTimeOriginal")
     };
     assert!(mwg(true));
-    // and only then: each call starts from a new ExifTool
+    // and only then: each object has an ExifTool of its own
     assert!(!mwg(false));
+    // nor once turned off on the same object (MWG cannot be unloaded: the
+    // object's interpreter is replaced)
+    let mut et = ExifTool::with_options(Options { use_mwg: true, ..Options::default() });
+    let has = |et: &ExifTool| et.extract_info(image("Canon.jpg")).unwrap().iter().any(|t| t.group.family0 == "Composite" && t.name == "DateTimeOriginal");
+    assert!(has(&et));
+    et.options_mut().use_mwg = false;
+    assert!(!has(&et));
+}
+
+#[test]
+fn one_interpreter_per_object() {
+    // An ExifTool reuses its interpreter and Image::ExifTool object, so
+    // ExifTool's tables carry from one file to the next as in Perl: with one
+    // Image::ExifTool object, `ImageInfo` gives XMP.xml no AutoFocus, then
+    // reads Nikon.jpg (Nikon.pm defines the AutoFocus composite), then gives
+    // XMP.xml AutoFocus "On".
+    let auto_focus = |et: &ExifTool| et.image_info(image("XMP.xml")).unwrap().get("AutoFocus").cloned();
+    let et = ExifTool::new();
+    assert_eq!(auto_focus(&et), None);
+    assert_eq!(et.image_info(image("Nikon.jpg")).unwrap().get("AutoFocus").map(String::as_str), Some("On"));
+    assert_eq!(auto_focus(&et).as_deref(), Some("On"));
+    // A new object starts from a new interpreter.
+    assert_eq!(auto_focus(&ExifTool::new()), None);
+    // With fresh_interpreter, every call does.
+    let et = ExifTool::with_options(Options { fresh_interpreter: true, ..Options::default() });
+    et.image_info(image("Nikon.jpg")).unwrap();
+    assert_eq!(auto_focus(&et), None);
+    // The options of one call do not stay for the next (ClearOptions).
+    let mut et = ExifTool::with_options(Options { requested_tags: vec!["Model".into()], ..Options::default() });
+    assert_eq!(et.extract_info(image("Canon.jpg")).unwrap().len(), 1);
+    et.options_mut().requested_tags.clear();
+    assert!(et.extract_info(image("Canon.jpg")).unwrap().len() > 50);
 }
 
 #[test]
 fn engines_are_per_thread() {
-    // ExifTool is Send + Sync: each thread reads with its own interpreter.
+    // ExifTool is Send + Sync: threads sharing one take turns on its
+    // interpreter.
     fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<ExifTool>();
     let et = std::sync::Arc::new(ExifTool::new());

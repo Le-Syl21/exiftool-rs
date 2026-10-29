@@ -8,14 +8,23 @@
 //! is the one ExifTool's application prints, and the raw value is
 //! ExifTool's ValueConv value, typed only where its text is unchanged.
 //!
-//! Each call runs on an interpreter of its own, as each run of the exiftool
-//! application is a process of its own: ExifTool keeps state in its tables
-//! from one file to the next (in Perl too: in one process, XMP.xml gets an
-//! AutoFocus composite that a module loaded for an earlier file defines;
-//! after writing Kodak.jpg's Make, the output reads "Unrecognized
-//! MakerNoteUnknown" instead of "Unrecognized MakerNotes"), and a call must
-//! not depend on the ones before it. (The interpreter is not `Send` either:
-//! it holds `Rc`s.)
+//! An [`Engine`] (one per `ExifTool` object) keeps one interpreter, and one
+//! Image::ExifTool object on it, from one call to the next, as a Perl
+//! program reuses its `Image::ExifTool->new` object for file after file (and
+//! as the exiftool application does for the files of one command). ExifTool
+//! keeps state in its tables from one file to the next, in Perl too (in one
+//! process, XMP.xml gets an AutoFocus composite that a module loaded for an
+//! earlier file defines; after writing Kodak.jpg's Make, the output reads
+//! "Unrecognized MakerNoteUnknown" instead of "Unrecognized MakerNotes"), so
+//! a call may depend on the ones before it, exactly as it would in Perl.
+//! With `Options::fresh_interpreter`, each call runs on an interpreter of its
+//! own instead, as each run of the exiftool application is a process of its
+//! own, and no call depends on another.
+//!
+//! The interpreter is not `Send` (it holds `Rc`s, some shared with caches
+//! local to its thread), so a reused one lives on a thread of its own, the
+//! engine's worker, which runs the calls one at a time: `ExifTool` stays
+//! `Send + Sync`, and calls from several threads take turns.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -78,9 +87,19 @@ sub PrintText {
     return $val;
 }
 
+# The ExifTool object of a call: the one of the calls before on this
+# interpreter, its options and new values cleared, as a program reusing its
+# Image::ExifTool object for another file does.
+our $tool;
 sub Tool {
     my $opts = shift;
-    my $et = Image::ExifTool->new;
+    if ($tool) {
+        $tool->ClearOptions();
+        $tool->SetNewValue();
+    } else {
+        $tool = Image::ExifTool->new;
+    }
+    my $et = $tool;
     $et->Options(@$opts) if $opts and @$opts;
     return $et;
 }
@@ -181,6 +200,17 @@ sub Write {
     return [ $rtn, \$out, $warn, $err ];
 }
 
+# For a write ExifTool refused: the FileType of SRC (as ImageInfo finds
+# it), whether ExifTool can write that type, and the type of DST's name.
+sub WriteTypes {
+    my ($src, $dst) = @_;
+    my $et = Tool();
+    my $info = $et->ImageInfo($src, 'FileType');
+    my $type = $$info{FileType};
+    my $canWrite = (defined $type and Image::ExifTool::CanWrite($type)) ? 1 : 0;
+    return [ $type, $canWrite, scalar Image::ExifTool::GetFileType($dst) ];
+}
+
 # The FileType and FileTypeExtension of a file (a name or a SCALAR
 # reference), from its magic number and extension as ExtractInfo finds
 # them, without reading metadata.
@@ -219,18 +249,120 @@ fn new_engine(mwg: bool) -> Interp {
         panic!("exiftool-port: loading the API: {}", e.to_text());
     }
     if mwg {
-        let code = b"require Image::ExifTool::MWG; Image::ExifTool::MWG::Load(); 1;";
-        if let Err(e) = it.eval_string(code, "main", &scope, Want::Void) {
-            panic!("exiftool-port: loading MWG: {}", e.to_text());
-        }
+        load_mwg(&mut it);
     }
     it
+}
+
+fn load_mwg(it: &mut Interp) {
+    let scope = Scope::new(None);
+    let code = b"require Image::ExifTool::MWG; Image::ExifTool::MWG::Load(); 1;";
+    if let Err(e) = it.eval_string(code, "main", &scope, Want::Void) {
+        panic!("exiftool-port: loading MWG: {}", e.to_text());
+    }
 }
 
 /// Run `f` on a new interpreter, with MWG loaded if `mwg`.
 pub(crate) fn with_engine<R>(mwg: bool, f: impl FnOnce(&mut Interp) -> R) -> R {
     let mut it = new_engine(mwg);
     run(&mut it, f)
+}
+
+/// The interpreter of an `ExifTool` object, kept on its worker thread
+/// (started on first use, ended when the engine is dropped).
+#[derive(Default)]
+pub(crate) struct Engine {
+    worker: std::sync::Mutex<Option<Worker>>,
+}
+
+type Job = Box<dyn FnOnce(&mut WorkerState) + Send>;
+
+struct Worker {
+    jobs: std::sync::mpsc::Sender<Job>,
+}
+
+/// What a worker thread keeps: its interpreter, made on first use, and
+/// whether MWG is loaded in it.
+#[derive(Default)]
+struct WorkerState {
+    it: Option<(Interp, bool)>,
+}
+
+impl WorkerState {
+    /// The interpreter, with MWG loaded if `mwg`. MWG cannot be unloaded:
+    /// for a call without it, an interpreter that has it is replaced.
+    fn interp(&mut self, mwg: bool) -> &mut Interp {
+        match &mut self.it {
+            Some((_, loaded)) if *loaded == mwg => {}
+            Some((it, loaded)) if mwg => {
+                load_mwg(it);
+                *loaded = true;
+            }
+            _ => self.it = Some((new_engine(mwg), mwg)),
+        }
+        &mut self.it.as_mut().expect("interpreter").0
+    }
+}
+
+/// A worker's stack: the size of a main thread's (the interpreter recurses
+/// deeply).
+const WORKER_STACK: usize = 8 << 20;
+
+impl Engine {
+    /// Run `f` on this engine's interpreter, with MWG loaded if `mwg`, or on
+    /// a new interpreter if `fresh`. A panic in `f` is the caller's, and the
+    /// interpreter it leaves is dropped.
+    pub(crate) fn run<R: Send + 'static>(&self, fresh: bool, mwg: bool, f: impl FnOnce(&mut Interp) -> R + Send + 'static) -> R {
+        if fresh {
+            return with_engine(mwg, f);
+        }
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
+        let job: Job = Box::new(move |state: &mut WorkerState| {
+            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(state.interp(mwg), f)));
+            if r.is_err() {
+                state.it = None;
+            }
+            let _ = tx.send(r);
+        });
+        // (held until the result is back: calls from several threads take
+        // turns)
+        let mut worker = self.worker.lock().unwrap_or_else(|e| e.into_inner());
+        let mut job = Some(job);
+        while let Some(j) = job.take() {
+            let w = worker.get_or_insert_with(Worker::spawn);
+            if let Err(std::sync::mpsc::SendError(j)) = w.jobs.send(j) {
+                // the worker has ended: start another one
+                *worker = None;
+                job = Some(j);
+            }
+        }
+        match rx.recv() {
+            Ok(Ok(r)) => r,
+            Ok(Err(panic)) => std::panic::resume_unwind(panic),
+            Err(_) => {
+                *worker = None;
+                panic!("exiftool-port: the interpreter's thread has ended");
+            }
+        }
+    }
+}
+
+impl Worker {
+    fn spawn() -> Worker {
+        let (jobs, rx) = std::sync::mpsc::channel::<Job>();
+        std::thread::Builder::new()
+            .name("exiftool-port".into())
+            .stack_size(WORKER_STACK)
+            .spawn(move || {
+                let mut state = WorkerState::default();
+                // until the engine, which holds the sender, is dropped
+                while let Ok(job) = rx.recv() {
+                    job(&mut state);
+                }
+            })
+            .expect("exiftool-port: starting the interpreter's thread");
+        Worker { jobs }
+    }
 }
 
 fn run<R>(it: &mut Interp, f: impl FnOnce(&mut Interp) -> R) -> R {
