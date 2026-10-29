@@ -1,0 +1,85 @@
+# Build check of the Perl port (port/) on every release platform, run by hand.
+#
+# The port will replace the root crate at 1.0; until then ci.yml only builds
+# the root crate. This job proves the port (and its C dependencies, PCRE2 and
+# a static zlib) builds and runs on each target: CLI, GUI, the library's unit
+# tests and a read of the test images. Nothing is packaged or uploaded.
+name: Port build
+
+on:
+  workflow_dispatch:
+  # A workflow can only be dispatched from the default branch, which does not
+  # have this file yet: on perl-port it runs when the file itself changes.
+  push:
+    branches: [perl-port]
+    paths: ['.github/workflows/port-build.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            label: linux-x86_64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            label: linux-aarch64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: macos-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            label: macos-x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: windows-x86_64
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.label }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: port
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
+        with:
+          workspaces: port
+
+      - name: Install GUI dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libxdo-dev libglib2.0-dev
+
+      - name: Build CLI
+        run: cargo build --release --target ${{ matrix.target }} --example exiftool-rs
+
+      - name: Build GUI (with icon on Windows)
+        run: cargo build --release --target ${{ matrix.target }} --bin exiftool-rs-gui --features gui${{ runner.os == 'Windows' && ',win-icon' || '' }}
+
+      - name: Library unit tests
+        if: matrix.target != 'x86_64-apple-darwin'
+        run: cargo test --release --lib
+
+      - name: Read the test images
+        if: matrix.target != 'x86_64-apple-darwin'
+        run: |
+          bin=target/${{ matrix.target }}/release/examples/exiftool-rs
+          "$bin" -ver
+          "$bin" -a -u -G1 ../tests/images > read.txt
+          echo "$(grep -c '^========' read.txt) files, $(wc -l < read.txt) lines"
+          "$bin" -lang fr -s ../tests/images | head -20
