@@ -73,7 +73,42 @@ fn parse(s: &[u8], fmt: &[u8]) -> ([i64; 8], i64) {
 
 #[cfg(not(unix))]
 fn parse(s: &[u8], fmt: &[u8]) -> ([i64; 8], i64) {
-    (super::time_piece::strptime_fields(s, fmt, [-1, -1, -1, -1, -1, NO_YEAR, -1, -1]), -1)
+    let mut f = super::time_piece::strptime_fields(s, fmt, [-1, -1, -1, -1, -1, NO_YEAR, -1, -1]);
+    // glibc's strptime works out the month and day from a year day, and the
+    // week and year days from a full date, which Time::Piece's parser
+    // leaves to mktime
+    if f[5] != NO_YEAR && f[7] >= 0 && f[3] == -1 && f[4] == -1 {
+        let days = days_from_civil(f[5] + 1900, 1, 1) + f[7];
+        let (mut m, mut first) = (1, days_from_civil(f[5] + 1900, 1, 1));
+        while m < 12 && days_from_civil(f[5] + 1900, m + 1, 1) <= days {
+            m += 1;
+        }
+        first = if m > 1 { days_from_civil(f[5] + 1900, m, 1) } else { first };
+        f[4] = m - 1;
+        f[3] = days - first + 1;
+    }
+    if f[3] >= 1 && (0..12).contains(&f[4]) && f[5] != NO_YEAR {
+        let (y, m, d) = (f[5] + 1900, f[4] + 1, f[3]);
+        let days = days_from_civil(y, m, d);
+        if f[6] == -1 {
+            f[6] = (days + 4).rem_euclid(7);
+        }
+        if f[7] == -1 {
+            f[7] = days - days_from_civil(y, 1, 1);
+        }
+    }
+    (f, -1)
+}
+
+/// Days since 1970-01-01 of a proleptic Gregorian date.
+#[cfg(not(unix))]
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * ((m + 9) % 12) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146097 + doe - 719468
 }
 
 fn native(_: &mut Interp, a: Vec<Value>, _: crate::interp::Want) -> crate::interp::eval::ER<Vec<Value>> {

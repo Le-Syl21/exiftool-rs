@@ -4,7 +4,8 @@
 # the root crate. This job proves the port (and its C dependencies, PCRE2 and
 # a static zlib) builds and runs on each target: CLI, GUI, the library's unit
 # tests and a read of the test images. Nothing is packaged or uploaded.
-# Locally, `CC_x86_64_pc_windows_gnu=gcc cargo check --target
+# The Windows job also exercises the Win32 modules (Unicode names,
+# wildcards, FileCreateDate, -P). Locally, `CC_x86_64_pc_windows_gnu=gcc cargo check --target
 # x86_64-pc-windows-gnu` type-checks the Windows build without mingw.
 name: Port build
 
