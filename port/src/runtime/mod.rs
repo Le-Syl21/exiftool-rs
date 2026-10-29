@@ -114,6 +114,7 @@ pub fn new_interp() -> Interp {
     crate::modules::time_hires::register(&mut it);
     crate::modules::term_readkey::register(&mut it);
     crate::modules::posix_strptime::register(&mut it);
+    crate::modules::io_string::register(&mut it);
     it
 }
 
@@ -148,7 +149,7 @@ pub fn require(it: &mut Interp, what: &str) -> ER<()> {
         return Ok(());
     }
     // The optional modules the port provides natively (src/modules)
-    if matches!(what, "Term::ReadKey" | "POSIX::strptime") {
+    if matches!(what, "Term::ReadKey" | "POSIX::strptime" | "IO::String") {
         inc.borrow_mut().insert(key.as_bytes(), Value::str(&key));
         // (the module makes POSIX::strptime an alias of its strptime
         // unless POSIX has one)

@@ -68,6 +68,7 @@ pub mod ico;
 pub mod id3;
 pub mod import;
 pub mod in_design;
+pub mod io_string;
 pub mod iptc;
 pub mod iso;
 pub mod itc;
