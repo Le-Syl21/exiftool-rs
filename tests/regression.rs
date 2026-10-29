@@ -553,7 +553,7 @@ fn regression_tag_groups() {
 // This ratchet compares the COMPLETE multiset of `name<TAB>value` pairs — every
 // occurrence, not one per name — for both modes, against
 // `tests/expected_multi/<file>.mvals` and `<file>.ee.mvals`. Those oracles come
-// from Perl ExifTool 13.59 via `scripts/gen_multiset_baselines.sh`; see that
+// from Perl ExifTool 13.60 via `scripts/gen_multiset_baselines.sh`; see that
 // script for the exact recipe (in short: `-S` so there is no column padding to
 // mistake for data, records split on `Name: ` headers so multi-line values stay
 // on one line, and the same `-s` sanitization the crate applies).
