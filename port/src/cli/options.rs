@@ -1347,7 +1347,7 @@ fn arg_file(it: &mut Interp) -> ER<bool> {
     let mt = get(it, "mt");
     if !pl::method(it, &mt, "Open", vec![fp.clone(), arg_file.clone()])?.truthy() {
         let exe_dir = it.get_scalar("Image::ExifTool::exeDir");
-        let ok = !re("^/", "").is_match(&arg_file) && pl::method(it, &mt, "Open", vec![fp, cat(&[exe_dir, s("/"), arg_file.clone()])])?.truthy();
+        let ok = !re("^/", "").is_match(&arg_file) && pl::method(it, &mt, "Open", vec![fp.clone(), cat(&[exe_dir, s("/"), arg_file.clone()])])?.truthy();
         if !ok {
             error(it, cat(&[s("Error opening arg file "), arg_file, s("\n")]))?;
             set(it, "badCmd", n(1));
@@ -1355,7 +1355,9 @@ fn arg_file(it: &mut Interp) -> ER<bool> {
         }
     }
     if num_is(&get(it, "stayOpen"), 1) {
-        set(it, "stayOpenFile", arg_file); // remember the name of the file we have open
+        set(it, "stayOpenFile", arg_file.clone()); // remember the name of the file we have open
+        let stdin = pl::str_eq(&arg_file, "-") && perl1(it, "-p $fp or -S $fp", &[("fp", fp.clone())])?.truthy();
+        set(it, "stayOpenStdin", Value::from(stdin));
         set(it, "stayOpenBuff", s("")); // initialize buffer for reading this file
         set(it, "stayOpen", n(2));
         set(it, "helped", n(1));

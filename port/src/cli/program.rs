@@ -157,6 +157,7 @@ const LEXICALS: &[(u8, &str)] = &[
     (b'$', "showTagID"),
     (b'$', "stayOpenBuff"),
     (b'$', "stayOpenFile"),
+    (b'$', "stayOpenStdin"),
     (b'$', "structOpt"),
     (b'$', "tabFormat"),
     (b'$', "tagOut"),
@@ -406,8 +407,8 @@ pub fn program(it: &mut Interp, _a: Vec<Value>, _want: Want) -> ER<Vec<Value>> {
     // }
     it.add_end_sub("main::Cleanup");
 
-    // my $version = '13.59';
-    set(it, "version", s("13.59"));
+    // my $version = '13.60';
+    set(it, "version", s("13.60"));
 
     // $^W = 1;    # enable global warnings
     it.set_scalar("main::^W", n(1));
@@ -806,7 +807,8 @@ fn command_loop(it: &mut Interp, _scope: &Rc<Scope>) -> ER<()> {
 
         // initialize necessary static file-scope variables
         // (not done: @commonArgs, @moreArgs, $critical, $binaryStdout, $helped,
-        //  $interrupted, $mt, $pause, $rtnValApp, $rtnValPrev, $stayOpen, $stayOpenBuff, $stayOpenFile)
+        //  $interrupted, $mt, $pause, $rtnValApp, $rtnValPrev, $stayOpen, $stayOpenBuff,
+        //  $stayOpenFile, $stayOpenStdin)
         undef_all(
             it,
             &[
