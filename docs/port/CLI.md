@@ -95,11 +95,17 @@ python3 -I scripts/compare_cli.py /home/sylvain/dev/exiftool   # no new differen
 
 `compare_cli.py` runs `scripts/cli_cases.txt` (`CLI_CASES=FILE` for one's
 own cases) with Perl's exiftool and with `run_t exiftool`, each in a copy of
-the images, and compares output, exit status and written files. Its known
-difference today (to keep, not to add to): `-ver -v` (the Perl
-installation). The cases whose Perl needs a module the host's Perl lacks
-have a kind of their own:
+the images, and compares output, exit status and written files. It has no
+known difference: the cases whose output is the port's own by design, or
+needs a Perl module the host's Perl lacks, are told apart by their kind:
 
+- `S` (`-ver -v`, case 108): checked against the port's own golden output,
+  `scripts/cli_golden/<args>.txt`, with the version numbers (and the
+  target) masked but ExifTool's and perl's, not against Perl
+  (`CLI_GOLDEN_UPDATE=1` rewrites the golden files after a deliberate
+  change). It is the program's own output, so it runs with `PORT_BIN`
+  only (under `run_t exiftool`, the script prints its own and the case is
+  skipped).
 - `RM`/`WM`: Perl needs Compress::Raw::Lzma or Unicode::LineBreak, which
   the port provides and the host's Perl lacks; the Perl side runs in the
   container of the second judge set below (`PERL_FULL_CMD` to run it
@@ -109,6 +115,34 @@ have a kind of their own:
   cases 53 and 57), `-lang zh-CN -Model` (cli_cases_options.txt) and
   `-lang ja -a -G1` (cli_cases_subs_a.txt). The other languages' plain
   output is the same either way (a character, a column).
+
+### `-ver -v`
+
+`-ver` alone prints `13.59` as Perl does (scripts read it); with `-v` the
+lines that describe perl and its optional modules are the port's own:
+
+```
+exiftool-rs version 0.0.0 (port of ExifTool 13.59)
+Rust version 1.99.1 (x86_64-unknown-linux-gnu)
+Platform: linux
+Included libraries:
+  Perl interpreter             own Rust implementation (perl 5.38 semantics)
+  Perl regular expressions     own Rust implementation, based on pcre2 0.2.11 (PCRE2 10.46, C, static)
+  ...
+  Memory allocator             rusty_alloc 2.2.7
+```
+
+Nothing there is written by hand: build.rs reads the crates' versions in
+Cargo.lock (followed from this package, so the versions actually built),
+the compiler's from `rustc -V` and the target from Cargo; PCRE2's and
+zlib's versions are asked of the libraries (`pcre2_config`,
+`zlibVersion`), and "static" or "shared" is where their code is (dladdr:
+in the executable, or in a system library a build script picked). The
+allocator is the program's (`build_info::set_allocator`, which
+`exiftool-rs` and `run_t` call; the library alone lists none). The perl
+version is the one the port follows, that of the judges' Perl (the
+interpreter's `$]` still says 5.036). Perl's other lines (`-v9`: Current
+Dir, Script Name...; `-v2`: Include directories) are kept.
 
 ### The second judge set: the optional modules
 

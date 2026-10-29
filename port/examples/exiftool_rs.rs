@@ -10,6 +10,8 @@ use exiftool_port::perl::Value;
 static GLOBAL: rusty_alloc_api::RustyAlloc = rusty_alloc_api::RustyAlloc;
 
 fn main() {
+    // (listed by -ver -v, which the library cannot know)
+    exiftool_port::build_info::set_allocator(exiftool_port::build_info::crate_desc("rusty_alloc"));
     let mut args = std::env::args();
     let zero = args.next().unwrap_or_else(|| "exiftool".to_string());
     let mut it = exiftool_port::runtime::new_interp();

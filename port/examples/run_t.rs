@@ -8,6 +8,8 @@ use exiftool_port::interp::{Scope, Want};
 static GLOBAL: rusty_alloc_api::RustyAlloc = rusty_alloc_api::RustyAlloc;
 
 fn main() {
+    // (listed by -ver -v, which the library cannot know)
+    exiftool_port::build_info::set_allocator(exiftool_port::build_info::crate_desc("rusty_alloc"));
     let path = std::env::args().nth(1).expect("usage: run_t SCRIPT");
     let src = std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
     let mut it = exiftool_port::runtime::new_interp();

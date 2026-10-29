@@ -11,7 +11,10 @@ PORT_BIN=PATH runs the port's own exiftool-rs binary instead of run_t + script.
 Outputs go to target/cli/<n>/{perl,port}.
 
 The case kinds (KIND|ARGUMENTS) are R (read-only) and W (writes, the files
-are compared too), and:
+are compared too), and two more:
+  S   the port alone, against its golden output scripts/cli_golden/<args>.txt
+      with the version numbers masked: a case whose output is the port's own
+      by design (-ver -v); CLI_GOLDEN_UPDATE=1 writes the golden files
   RM, WM  Perl needs an optional module that the host's Perl lacks and the
       port provides (Compress::Raw::Lzma, Unicode::LineBreak): Perl is then
       the container's (PERL_FULL_CMD, default scripts/full_modules/perl.sh)
@@ -34,6 +37,7 @@ work = os.path.join(here, "target", "cli")
 port = os.path.join(here, "target", "release", "examples", "run_t")
 script = os.path.join(src, "exiftool")
 limit = ["prlimit", "--as=4000000000", "--", "timeout", "300"]
+golden_dir = os.path.join(here, "scripts", "cli_golden")
 full_modules = os.path.join(here, "scripts", "full_modules")
 
 
@@ -115,6 +119,31 @@ def normalize(text, cwd):
     return NOW.sub("TODAY", text)
 
 
+# what changes from one build of the port to another in its own -ver -v:
+# the versions (but ExifTool's and perl's, which the port follows), and the
+# target after the compiler's version
+VERSIONS = re.compile(r"(?<![\w.])(?<!ExifTool )(?<!perl )\d+\.\d+(\.\d+)*")
+TARGET = re.compile(r"^(Rust version [^(]*)\(.*\)$", re.M)
+
+
+def masked(text):
+    return VERSIONS.sub("N.N", TARGET.sub(r"\1(TARGET)", text))
+
+
+def golden_check(args, rc, out, err):
+    """An S case: the port's output, versions masked, against its golden file."""
+    got = f"rc={rc}\n--- stdout\n{masked(out)}--- stderr\n{masked(err)}"
+    path = os.path.join(golden_dir, re.sub(r"\W+", "_", args).strip("_") + ".txt")
+    if os.environ.get("CLI_GOLDEN_UPDATE"):
+        os.makedirs(golden_dir, exist_ok=True)
+        with open(path, "w") as f:
+            f.write(got)
+    if not os.path.exists(path):
+        return False
+    with open(path) as f:
+        return f.read() == got
+
+
 def run(cmd, cwd, env):
     t = time.monotonic()
     p = subprocess.run(limit + cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True)
@@ -131,16 +160,20 @@ def main():
     # (for scripts/full_modules/perl.sh: the tree to mount in its container)
     env_perl["EXIFTOOL_SRC"] = src
     os.makedirs(env_perl["EXIFTOOL_HOME"], exist_ok=True)
-    same, bad, tp, tr = 0, [], 0.0, 0.0
+    same, bad, skipped, tp, tr = 0, [], [], 0.0, 0.0
     for n, (kind, args) in enumerate(cases(), 1):
         argv = shlex.split(args)
         res = {}
+        # (an S case is the program's own: run_t runs the script's)
+        if kind == "S" and not os.environ.get("PORT_BIN"):
+            skipped.append(f"{n}: {args}")
+            continue
         # (PORT_BIN=path: the port's own exiftool binary, which reads no
         # script, instead of run_t running ExifTool's script)
         port_cmd = [os.environ["PORT_BIN"]] if os.environ.get("PORT_BIN") else [port, script]
         perl = perl_full_cmd if "M" in kind and not os.environ.get("PERL_CMD") else perl_cmd
         sides = (("perl", perl + [script], env_perl), ("port", port_cmd, env_port))
-        for side, cmd, env in sides:
+        for side, cmd, env in sides[1:] if kind == "S" else sides:
             d = os.path.join(work, str(n), side)
             prepare(d)
             cwd = d
@@ -151,6 +184,13 @@ def main():
                 f.write(f"rc={rc}\n--- stdout\n{out}--- stderr\n{err}--- files\n")
                 f.writelines(f"{k} {v}\n" for k, v in sorted(fl.items()))
             res[side] = (rc, out, err, fl, secs)
+        if kind == "S":
+            tr += res["port"][4]
+            if golden_check(args, *res["port"][:3]):
+                same += 1
+            else:
+                bad.append(f"{n}: {args} (against scripts/cli_golden)")
+            continue
         tp += res["perl"][4]
         tr += res["port"][4]
         if res["perl"][:4] == res["port"][:4]:
@@ -160,6 +200,8 @@ def main():
     print(f"{same} identical, {len(bad)} different")
     for b in bad:
         print("different " + b)
+    for s in skipped:
+        print("skipped " + s + " (the port's own binary only: PORT_BIN)")
     gain = (tp - tr) / tp * 100 if tp else 0
     print(f"time: perl {tp:.1f} s, port {tr:.1f} s ({gain:+.0f} %)")
 

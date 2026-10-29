@@ -1271,11 +1271,12 @@ fn print_version(it: &mut Interp) -> ER<()> {
     let release = it.get_scalar("Image::ExifTool::RELEASE");
     let verbose = get(it, "verbose");
     if verbose.truthy() {
-        pl::print_to(it, None, &[cat(&[s("ExifTool version "), version, str_, release, s("\n")])])?;
-        let perl_ver = perl1(it, "$]", &[])?;
-        let unicode = perl1(it, "${^UNICODE}", &[])?;
-        let uc_str = if !unicode.is_undef() { cat(&[s(" (-C"), unicode, s(")")]) } else { s("") };
-        pl::print_to(it, None, &[pl::sprintf("Perl version %s%s\n", &[perl_ver, uc_str])])?;
+        // Not perl's lines: the port's version, compiler and libraries
+        // (docs/port/CLI.md), with perl's other lines as they are.
+        use crate::build_info as bi;
+        let head = format!("exiftool-rs version {} (port of ExifTool ", env!("CARGO_PKG_VERSION"));
+        pl::print_to(it, None, &[cat(&[s(&head), version, str_, release, s(")\n")])])?;
+        pl::print_to(it, None, &[s(&format!("Rust version {} ({})\n", bi::RUSTC_VERSION, bi::TARGET))])?;
         let os = perl1(it, "$^O", &[])?;
         pl::print_to(it, None, &[cat(&[s("Platform: "), os.clone(), s("\n")])])?;
         if pl::gt(&verbose, &n(8)) {
@@ -1292,30 +1293,9 @@ fn print_version(it: &mut Interp) -> ER<()> {
             let exe_path = get(it, "exePath");
             pl::print_to(it, None, &[cat(&[s("Exe Path:    "), exe_path, s("\n")])])?;
         }
-        pl::print_to(it, None, &[s("Optional libraries:\n")])?;
-        let recommends = lex_array(it, "recommends");
-        let alt_recommends = lex_hash(it, "altRecommends");
-        // (foreach aliases $_ to the elements of @recommends)
-        for k in 0..recommends.len() {
-            let mut m = recommends.at(k as i64);
-            if re("^Win32", "").is_match(&m) && !pl::str_eq(&os, "MSWin32") {
-                continue;
-            }
-            if re("StatX", "").is_match(&m) && !pl::str_eq(&os, "linux") {
-                continue;
-            }
-            let mut ver = eval_string(it, &cat(&[s("require "), m.clone(), s(" and $"), m.clone(), s("::VERSION")]));
-            let alt = alt_recommends.get(m.to_bytes());
-            // check for alternative if primary not available
-            if !ver.truthy() && alt.truthy() {
-                ver = eval_string(it, &cat(&[s("require "), alt.clone(), s(" and $"), alt.clone(), s("::VERSION")]));
-                if ver.truthy() {
-                    m = alt;
-                    recommends.set_at(k, m.clone());
-                }
-            }
-            let shown = if ver.truthy() { ver } else { s("(not installed)") };
-            pl::print_to(it, None, &[pl::sprintf("  %-28s %s\n", &[m, shown])])?;
+        pl::print_to(it, None, &[s("Included libraries:\n")])?;
+        for (name, what) in bi::included_libraries() {
+            pl::print_to(it, None, &[s(&format!("  {name:<28} {what}\n"))])?;
         }
         if pl::gt(&verbose, &n(1)) {
             pl::print_to(it, None, &[s("Include directories:\n")])?;

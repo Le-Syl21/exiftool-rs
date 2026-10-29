@@ -20,6 +20,8 @@ rustc-hash = "2"
 # Perl-compatible regular expressions on bytes (backreferences, lookahead,
 # /s on binary data), as ExifTool's patterns and magic numbers need.
 pcre2 = "0.2"
+# PCRE2 itself (the C library pcre2 builds in), for its version in -ver -v
+pcre2-sys = "0.2"
 # Digest::MD5
 md-5 = "0.10"
 # Digest::SHA
