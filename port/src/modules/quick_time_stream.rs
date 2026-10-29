@@ -1696,7 +1696,7 @@ pub fn process_free_gps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
                 }
             }
         }
-    } else if let Some(c) = mt(r"^(.{16}|.{48}|.{80})LIGOGPSINFO\0", "s", &data).filter(|c| len_of(&data) >= len_of(&cap(c, 1)) + 0x84) {
+    } else if let Some(c) = mt(r"^(.{16}|.{48}|.{80}|.{116})LIGOGPSINFO\0", "s", &data).filter(|c| len_of(&data) >= len_of(&cap(c, 1)) + 0x84) {
         gps_type(it, &et, &debug, n(5))?;
         let pos = len_of(&cap(&c, 1));
         // iiway s1 dual dash cam - offset 16, encrypted and fuzzed with scale 1

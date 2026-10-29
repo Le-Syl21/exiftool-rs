@@ -150,7 +150,7 @@ pub fn autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     } else {
         let mut args = vec![autoload];
         args.extend(a.iter().cloned());
-        pl::at(8757);
+        pl::at(8863);
         call_aliased(it, "Image::ExifTool::DoAutoLoad", args, &a, 1, want)
     }
 }
@@ -285,7 +285,7 @@ pub fn get_matrix_structure(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
 /// Returns: average sample rate (in Hz)
 pub fn calc_sample_rate(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, val_pt) = (arg(&a, 0), arg(&a, 1));
-    pl::at(8859);
+    pl::at(8965);
     let dat = pl::unpack("N*", &pl::sderef(&val_pt)?)?;
     let (mut num, mut dur) = (n(0), n(0));
     let mut i = 2usize;
@@ -297,7 +297,7 @@ pub fn calc_sample_rate(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     if !(num.truthy() && dur.truthy() && et.get("MediaTS").truthy()) {
         return pl::ret_undef();
     }
-    pl::at(8867);
+    pl::at(8973);
     ret(pl::div(&pl::mul(&num, &et.get("MediaTS")), &dur)?)
 }
 
@@ -534,7 +534,7 @@ pub fn get_var_int(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 fn get_var_int_impl(it: &mut Interp, data_pt: &Value, pos_arg: &mut Value, nn: &Value, default: &Value) -> ER<Value> {
     let pos = pos_arg.clone();
-    pl::at(9045);
+    pl::at(9151);
     let len = n(pl::sderef(data_pt)?.to_bytes().len() as i64);
     *pos_arg = pl::add(&pos, nn); // update current position
     if pl::gt(&pl::add(&pos, nn), &len) {
@@ -561,7 +561,7 @@ pub fn get_string(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 }
 
 fn get_string_impl(_it: &mut Interp, data_pt: &Value, pos_arg: &mut Value) -> ER<Value> {
-    pl::at(9065);
+    pl::at(9171);
     let data = pl::sderef(data_pt)?.to_bytes();
     let len = n(data.len() as i64);
     let mut pos = pos_arg.clone();
@@ -938,7 +938,7 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
         et.get_or_new_array("PATH").push(s("ItemInformation"));
         let cur_pos = raf_tell(it, &raf)?;
         let primary = et.get("PrimaryItem");
-        pl::at(9357);
+        pl::at(9463);
         m(it, &et, "VerboseDir", vec![s("Processing items from ItemInformation"), n(pl::hderef(&items)?.len() as i64)])?;
         for id in sorted_num_keys(&items) {
             let item = items.get(id.to_bytes());
@@ -1119,6 +1119,7 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
             let mut start = Value::Undef;
             let sub_table;
             let mut proc = Value::Undef;
+            let mut xiaomi_mess = false; // (%moreDirInfo)
             let pos = pl::add(&extents.at(0).at(1), &base);
             if name.eq_str("EXIF") && buff.to_bytes().len() >= 4 {
                 if re(r"^(MM\0\x2a|II\x2a\0)", "").is_match(&buff) {
@@ -1128,22 +1129,31 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
                     //  until someone screws it up like this)
                     m(it, &et, "Warn", vec![s("Missing Exif header size")])?;
                     start = n(6);
-                } else {
+                } else if buff.to_bytes().len() > 4 {
                     let nn = pl::unpack1("N", &buff)?;
                     start = pl::add(&n(4), &nn); // skip "Exif\0\0" header if it exists
                     if pl::gt(&start, &n(buff.to_bytes().len() as i64)) {
                         m(it, &et, "Warn", vec![s("Invalid EXIF header")])?;
                         continue;
                     }
+                    if pl::num_eq(&nn, &n(10)) && &pl::substr(&buff, 4, Some(2)).to_bytes()[..] == b"\xff\xe1" {
+                        // (see https://source.android.com/docs/core/camera/heif)
+                        proc = Value::Code(it.sub_ref("Image::ExifTool::ProcessJPEG"));
+                        // ($subTable isn't necessary for ProcessJPEG)
+                        xiaomi_mess = true;
+                        start = n(4); // start of JPEG-like data
+                    }
                     if et.get("HTML_DUMP").truthy() {
                         m(it, &et, "HDump", vec![pos.clone(), n(4), s("Exif header length"), cat(&[&s("Value: "), &nn])])?;
-                        if nn.truthy() {
+                        if nn.truthy() && !proc.truthy() {
                             m(it, &et, "HDump", vec![pl::add(&pos, &n(4)), pl::sub(&start, &n(4)), s("Exif header")])?;
                         }
                     }
                 }
                 sub_table = get_tag_table(it, "Image::ExifTool::Exif::Main")?;
-                proc = Value::Code(it.sub_ref("Image::ExifTool::ProcessTIFF"));
+                if !proc.truthy() {
+                    proc = Value::Code(it.sub_ref("Image::ExifTool::ProcessTIFF"));
+                }
             } else if name.eq_str("PreviewImage") {
                 // take a quick stab at determining the size of the image
                 // (based on JPEG previews found in Fuji X-H2S HIF images)
@@ -1180,6 +1190,9 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
             dir_info.set("DirLen", pl::sub(&blen, &start));
             dir_info.set("DataPos", pos.clone());
             dir_info.set("Base", pl::add(&pos, &start)); // (needed for HtmlDump and IsOffset tags in binary data)
+            if xiaomi_mess {
+                dir_info.set("XiaomiMess", n(1));
+            }
             // handle processing of metadata for sub-documents
             let refers = item.get("RefersTo");
             if !primary.is_undef() && refers.truthy() && !refers.get(primary.to_bytes()).truthy() {
@@ -1191,7 +1204,10 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
                 let lowest = sorted_num_keys(&refers).into_iter().next().unwrap_or_default();
                 items.get_or_new_hash(lowest.to_bytes()).set("DocNum", et.get("DOC_NUM"));
             }
+            let old_base = et.get("BASE");
+            et.set("BASE", pl::add(&et.get("BASE"), &dir_info.get("DataPos")));
             m(it, &et, "ProcessDirectory", vec![dir_info, sub_table, proc])?;
+            et.set("BASE", old_base);
             et.delete("DOC_NUM");
         }
         if !raf_seek(it, &raf, cur_pos, n(0))? {
@@ -1205,7 +1221,7 @@ fn handle_item_info_impl(it: &mut Interp, et: &Value) -> ER<Value> {
     // process the item properties now that we should know their associations and document numbers
     let ipc = et.get("ItemPropertyContainer");
     if ipc.truthy() {
-        pl::at(9531);
+        pl::at(9648);
         let ipc_list = pl::aderef(&ipc)?;
         let (dir_info, sub_table, proc) = (arg(&ipc_list, 0), arg(&ipc_list, 1), arg(&ipc_list, 2));
         et.set("IsItemProperty", n(1)); // set item property flag
@@ -1262,7 +1278,7 @@ fn quick_time_format_impl(flags: &Value, len: &Value) -> Value {
 pub fn process_meta_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    pl::at(9580);
+    pl::at(9697);
     let data = pl::sderef(&data_pt)?;
     let dir_len = n(data.to_bytes().len() as i64);
     let verbose = m(it, &et, "Options", vec![s("Verbose")])?;
@@ -1331,7 +1347,7 @@ pub fn process_sample_desc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     let dir_len = if dl.truthy() {
         dl
     } else {
-        pl::at(9634);
+        pl::at(9751);
         pl::sub(&n(pl::sderef(&data_pt)?.to_bytes().len() as i64), &pos)
     };
     if pl::gt(&pl::add(&pos, &n(8)), &dir_len) {
@@ -1385,7 +1401,7 @@ pub fn process_hybrid(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let dir_len = if dl.truthy() {
         dl
     } else {
-        pl::at(9666);
+        pl::at(9783);
         pl::sub(&n(pl::sderef(&data_pt)?.to_bytes().len() as i64), &dir_start)
     };
     let end = pl::add(&dir_start, &dir_len);
@@ -1394,7 +1410,7 @@ pub fn process_hybrid(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let mut child_pos = Value::Undef;
 
     while pl::le(&pos, &pl::sub(&end, &n(8))) {
-        pl::at(9673);
+        pl::at(9790);
         let tag = substr_w(it, &pl::sderef(&data_pt)?, &pl::add(&try_, &n(4)), Some(&n(4)))?;
         // look only for well-behaved tag ID's
         if re(r"[^\w ]", "").is_match(&tag) {
@@ -1403,7 +1419,7 @@ pub fn process_hybrid(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
             continue;
         }
         let size = get32u(it, &data_pt, try_.clone())?;
-        if pl::num_eq(&pl::add(&size, &try_), &end) {
+        if pl::num_eq(&pl::add(&size, &try_), &end) || pl::num_eq(&pl::add(&size, &try_), &pl::sub(&end, &n(4))) {
             // the atom ends exactly at the end of the parent -- this must be it
             child_pos = pos.clone();
             dir_info.set("DirLen", pos.clone()); // the binary data ends at the first child atom
@@ -1435,7 +1451,7 @@ pub fn process_rights(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
     let data_pos = dir_info.get("Base");
-    pl::at(9710);
+    pl::at(9827);
     let data = pl::sderef(&data_pt)?;
     let dir_len = n(data.to_bytes().len() as i64);
     let opts = et.get("OPTIONS");
@@ -1479,7 +1495,7 @@ pub fn process_rights(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 pub fn process_nextbase(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_tbl) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    pl::at(9748);
+    pl::at(9865);
     let data = pl::sderef(&data_pt)?;
     m(it, &et, "VerboseDir", vec![s("Nextbase"), Value::Undef, n(data.to_bytes().len() as i64)])?;
     for c in re(r"(.*?): +(.*)\x0d", "").each(&data) {
@@ -1501,7 +1517,7 @@ pub fn process_nextbase(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 pub fn process_encoding_params(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let data_pt = dir_info.get("DataPt");
-    pl::at(9765);
+    pl::at(9882);
     let data = pl::sderef(&data_pt)?;
     let dir_len = data.to_bytes().len() as i64;
     m(it, &et, "VerboseDir", vec![s("Encoding Params"), pl::div(&n(dir_len), &n(8))?])?;
@@ -1524,7 +1540,7 @@ pub fn process_keys(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 fn process_keys_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(a, 0), arg(a, 1), arg(a, 2));
     let data_pt = dir_info.get("DataPt");
-    pl::at(9784);
+    pl::at(9901);
     let data = pl::sderef(&data_pt)?;
     let dir_len = data.to_bytes().len() as i64;
     let mut out = Value::Undef;
@@ -1632,7 +1648,7 @@ fn process_keys_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
             // delete other languages too if they exist
             let other = old_info.get("OtherLang");
             if other.truthy() {
-                pl::at(9862);
+                pl::at(9979);
                 for k in pl::aderef(&other)? {
                     item_list.delete(k.to_bytes());
                 }
@@ -1681,7 +1697,7 @@ pub fn identify_trailers(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
 fn identify_trailers_impl(it: &mut Interp, raf: &Value) -> ER<Value> {
     let (mut trailer, mut next_trail, mut buff) = (Value::Undef, Value::Undef, Value::Undef);
     let (mut typ, mut len);
-    pl::at(9901);
+    pl::at(10018);
     let pos = raf_tell(it, raf)?;
     let mut offset = n(0); // positive offset back from end of file
     while raf_seek(it, raf, pl::sub(&n(-40), &offset), n(2))? && pl::num_eq(&raf_read(it, raf, &mut buff, n(40))?, &n(40)) {
