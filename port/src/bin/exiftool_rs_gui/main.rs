@@ -289,18 +289,16 @@ impl App {
         }
     }
 
+    /// One section per family-0 group, in order of first appearance. ExifTool
+    /// lists tags in file order, so a group's tags need not be consecutive
+    /// (EXIF, MakerNotes, EXIF again...).
     fn build_groups(&mut self) {
         let mut groups: Vec<(String, Vec<Tag>)> = Vec::new();
-        let mut current_group = String::new();
-
         for tag in &self.tags {
             let grp = &tag.group.family0;
-            if grp != &current_group {
-                current_group = grp.clone();
-                groups.push((grp.clone(), Vec::new()));
-            }
-            if let Some(last) = groups.last_mut() {
-                last.1.push(tag.clone());
+            match groups.iter_mut().find(|(g, _)| g == grp) {
+                Some((_, tags)) => tags.push(tag.clone()),
+                None => groups.push((grp.clone(), vec![tag.clone()])),
             }
         }
         self.groups = groups;
@@ -908,6 +906,12 @@ mod tests {
         assert!(app.status.ends_with("tags | Canon.jpg"), "{}", app.status);
         let names: Vec<&str> = app.groups.iter().map(|(g, _)| g.as_str()).collect();
         assert!(names.contains(&"EXIF") && names.contains(&"MakerNotes") && names.contains(&"Composite"), "{names:?}");
+        // one section per group, though ExifTool lists EXIF and MakerNotes tags interleaved
+        let mut unique = names.clone();
+        unique.dedup();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), names.len(), "{names:?}");
         assert_eq!(shown(&app, "Make"), Some(("Make".into(), "Canon".into())));
         assert_eq!(shown(&app, "Flash").map(|s| s.1), Some("No Flash".into()));
         // a JPEG's EXIF is writable, a composite or a file property is not

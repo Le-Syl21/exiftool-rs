@@ -72,6 +72,9 @@ default = []
 gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
 # The Windows icon/version resource in the executables (build.rs)
 win-icon = ["winres"]
+# Lets the `egui-mcp` server attach to a running GUI, to drive and screenshot
+# it (`EGUI_INSPECTION=1`, served on 127.0.0.1:5719). Development only.
+inspection = ["gui", "eframe/inspection"]
 
 # The application, named as the crate's binary on main (exiftool-rs), so
 # that it can never be mistaken for Perl's exiftool.
