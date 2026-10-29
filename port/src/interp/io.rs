@@ -501,6 +501,7 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
                         match target {
                             Target::Last => return Ok(it.last_stat.clone()),
                             Target::Path(p) => if name == "lstat" { std::fs::symlink_metadata(p) } else { std::fs::metadata(p) },
+                            Target::Meta(m) => m,
                         }
                     }
                     None => std::fs::metadata(it.read_scalar("_", scope).to_text()),
@@ -542,6 +543,9 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
 
 pub(super) enum Target {
     Path(String),
+    /// A handle on a file of the process (stdin, a pipe...): perl stats the
+    /// descriptor itself (fstat), whatever its name was.
+    Meta(std::io::Result<std::fs::Metadata>),
     /// `_`: the last stat
     Last,
 }
@@ -554,16 +558,19 @@ pub(super) fn file_target(it: &mut Interp, e: &Expr, scope: &Rc<Scope>) -> ER<Ta
         _ => {}
     }
     let v = it.scalar(e, scope)?;
-    if let Value::Handle(_) | Value::ScalarRef(_) = &v {
+    let is_handle = match &v {
+        Value::Handle(_) | Value::ScalarRef(_) => true,
+        Value::Str(s) | Value::UStr(s) => s.starts_with(b"*"),
+        _ => false,
+    };
+    if is_handle {
         if let Some(h) = it.handle_of(&v, false) {
-            return Ok(Target::Path(h.borrow().path.clone().unwrap_or_default()));
-        }
-    }
-    if let Value::Str(s) | Value::UStr(s) = &v {
-        if s.starts_with(b"*") {
-            if let Some(h) = it.handle_of(&v, false) {
-                return Ok(Target::Path(h.borrow().path.clone().unwrap_or_default()));
-            }
+            let fh = h.borrow();
+            return Ok(match (&fh.path, &fh.input) {
+                (Some(p), _) => Target::Path(p.clone()),
+                (None, Some(Input::File(f))) => Target::Meta(f.get_ref().metadata()),
+                (None, _) => Target::Path(String::new()),
+            });
         }
     }
     Ok(Target::Path(v.to_text()))
