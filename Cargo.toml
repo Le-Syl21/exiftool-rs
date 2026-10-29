@@ -1,84 +1,57 @@
 [package]
-name = "exiftool-rs"
-version = "0.14.1"
+name = "exiftool-port"
+version = "0.0.0"
 edition = "2021"
-rust-version = "1.82"
-description = "Read, write, and edit metadata in 93 file formats — a pure Rust reimplementation of ExifTool 13.59 with tag-name and value parity across the test corpus"
+description = "Faithful Rust port of Perl ExifTool 13.60 (work in progress)"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/Le-Syl21/exiftool-rs"
-homepage = "https://github.com/Le-Syl21/exiftool-rs"
-documentation = "https://docs.rs/exiftool-rs"
-readme = "README.md"
-keywords = ["exif", "metadata", "jpeg", "tiff", "xmp"]
-categories = ["multimedia::images", "parser-implementations"]
-exclude = [
-    "scripts/",
-    ".github/",
-    # Cargo never builds a dependency's tests, and ours read
-    # `tests/images/`, which is too large to ship.
-    "tests/",
-    "fuzz/",
-    "assets/fonts/",
-    "assets/screenshot.png",
-]
+publish = false
 
-[[bin]]
-name = "exiftool-rs"
-path = "src/main.rs"
-
-[[bin]]
-name = "exiftool-rs-gui"
-path = "src/gui.rs"
-required-features = ["gui"]
-
-# Live differential parity auditor vs a pinned Perl ExifTool release. Dev-only
-# (needs perl + network), behind a feature so normal builds stay lean.
-[[bin]]
-name = "parity"
-path = "src/bin/parity/main.rs"
-required-features = ["parity"]
-
-# Counter one of the ISO-ExifTool goal: what share of ExifTool's conversion
-# expressions the evaluator understands. Reads them from a Perl checkout, so the
-# figure can be reproduced rather than taken on trust.
-[[bin]]
-name = "conv_coverage"
-path = "src/bin/conv_coverage.rs"
-required-features = ["parity"]
+# Standalone while the port grows next to the current crate.
+[workspace]
 
 [lib]
-name = "exiftool_rs"
+name = "exiftool_port"
 path = "src/lib.rs"
 
-[features]
-default = []
-win-icon = ["winres"]
-gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
-# No extra deps: the parity auditor shells out to curl/tar/perl.
-parity = []
-
 [dependencies]
-thiserror = "2"
-byteorder = "1"
-memmap2 = "0.9"
-# Unpinned again: attribute values reach us through
-# `escape_attribute_whitespace`, which rewrites CR/LF/TAB as character
-# references before parsing. Those are exempt from XML attribute-value
-# normalisation, so ExifTool's raw bytes survive any conforming parser --
-# 1.4 added that normalisation and cost three tags of read parity before.
-xml = "1"
-encoding_rs = "0.8"
-flate2 = "1"
-brotli = "9"
+# FxHash: a fast hash for the interpreter's maps and the Perl hashes (whose
+# order is kept apart, so it changes no output); pure Rust
+rustc-hash = "2"
+# Perl-compatible regular expressions on bytes (backreferences, lookahead,
+# /s on binary data), as ExifTool's patterns and magic numbers need.
+pcre2 = "0.2"
+# PCRE2 itself (the C library pcre2 builds in), for its version in -ver -v
+pcre2-sys = "0.2"
+# Digest::MD5
+md-5 = "0.10"
+# Digest::SHA
+sha2 = "0.10"
+sha1 = "0.10"
+# Compress::Zlib and IO::(Un)Compress: zlib itself, as perl uses, so
+# compressed output is byte for byte the same
+flate2 = { version = "1", default-features = false, features = ["zlib"] }
+# zlib's deflateInit2 directly: Compress::Raw::Zlib deflates with memLevel 9,
+# which flate2 cannot set, and the memory level changes the output bytes.
+# "static": the crate's own copy of zlib, built in, not the system's (whose
+# version, if any, would decide the bytes written). Measured on 197 inputs
+# against Perl: C zlib 197/197 identical, zlib-rs (pure Rust) 8/197, so the
+# compressor stays C.
+libz-sys = { version = "1", features = ["static"] }
+# IO::(Un)Compress::Brotli: mbrotli, Brotli in Rust whose encoder is
+# byte-identical to Google's library (the perl module's). Measured on 197
+# inputs against Perl: mbrotli 197/197 identical (as Google's C library,
+# brotlic), the brotli crate 186/197.
+mbrotli = "0.5.17"
+# IO::Uncompress::Bunzip2 (Rawzor), on the bzip2 reference code
+bzip2 = "0.6"
+# Unicode::GCString's columns (the script's plain output with -lang ja,
+# zh, ko...): East Asian widths, pure Rust
 unicode-width = "0.2"
-# Temporary files created exclusively next to the destination, removed on failure.
-tempfile = "3.27"
 
-# GUI dependencies (optional)
-# eframe 0.35 flipped its default renderer to wgpu; its D3D12 backend fails to
-# build on Windows (wgpu/windows-rs mismatch). We render with glow (OpenGL, as in
-# 0.31), so select the default feature set with wgpu swapped for glow — this drops
-# egui-wgpu/wgpu/d3d12 entirely and keeps the build portable.
+# The GUI's dependencies (feature "gui"), as on main: eframe with glow
+# (OpenGL) in place of its default wgpu, whose D3D12 backend does not build
+# on Windows; image for the icon, rfd for the file dialogs, and the Noto
+# fonts of the CJK, Arabic, Devanagari and Bengali scripts.
 eframe = { version = "0.37", optional = true, default-features = false, features = [
     "accesskit",
     "default_fonts",
@@ -87,22 +60,56 @@ eframe = { version = "0.37", optional = true, default-features = false, features
     "web_screen_reader",
     "x11",
 ] }
-egui = { version = "0.37", optional = true }
+# (egui 0.37 moved its emoji and symbol fonts behind a feature: without it
+# the marks and icons of the window, ✏ 🌐 ☀ 🌙, are drawn as empty boxes)
+egui = { version = "0.37", optional = true, features = ["monochrome_emoji_fonts"] }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "bmp", "tiff"] }
 rfd = { version = "0.17", optional = true }
-noto-fonts-dl = { version = "0.1", optional = true, features = ["ar", "bn", "hi", "ja", "ko", "zh", "zh_tw"] }
-filetime = "0.2.27"
-regex-lite = "0.1.9"
+noto-fonts-dl = { version = "0.1.10", optional = true, features = ["ar", "bn", "hi", "ja", "ko", "zh", "zh_tw"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# Win32::API, Win32API::File, Win32::FindFile and Term::ReadKey's console
+# modes on Windows (src/modules/win32.rs, term_readkey.rs): the Win32 API's
+# bindings, pure Rust
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Console"] }
 
 [target.'cfg(windows)'.build-dependencies]
 winres = { version = "0.1", optional = true }
 
-[dev-dependencies]
+[features]
+# The built-in format extensions: writers for the types ExifTool reads and
+# does not write (ID3, Vorbis comments, Matroska; src/api/extra_writers/)
+default = ["extra-writers"]
+extra-writers = []
+# The GUI, exiftool-rs-gui (none of its dependencies in the default build)
+gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
+# The Windows icon/version resource in the executables (build.rs)
+win-icon = ["winres"]
+# Lets the `egui-mcp` server attach to a running GUI, to drive and screenshot
+# it (`EGUI_INSPECTION=1`, served on 127.0.0.1:5719). Development only.
+inspection = ["gui", "eframe/inspection"]
 
-[profile.release]
-opt-level = 3
-lto = "thin"
-# The symbol table was about a fifth of the shipped binary. Without it a panic
-# still reports its file and line; only backtraces lose their function names.
-# Applies to our own builds: a crate that depends on this one uses its profile.
-strip = true
+# The application, named as the crate's binary on main (exiftool-rs), so
+# that it can never be mistaken for Perl's exiftool.
+[[example]]
+name = "exiftool-rs"
+path = "examples/exiftool_rs.rs"
+
+# The GUI, a binary as on main (exiftool-rs-gui), built by `cargo build
+# --features gui`. Its tests (the model, with no window) run with `cargo
+# test --features gui`.
+[[bin]]
+name = "exiftool-rs-gui"
+path = "src/bin/exiftool_rs_gui/main.rs"
+required-features = ["gui"]
+
+[dev-dependencies]
+# The examples' global allocator: rusty_alloc, a pure-Rust remake of
+# mimalloc. The interpreter allocates many small values; measured over the
+# test images and 120 RAW files (CPU time, pinned, best of 8): system malloc
+# 0 %, mimalloc (C) -11 / -12 %, rusty_alloc -10 / -13 %, dlmalloc +18 / +14 %,
+# with the same output for all.
+rusty_alloc-api = "2.2.7"
