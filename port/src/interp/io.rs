@@ -656,6 +656,7 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         _ => None,
     };
     h.borrow_mut().name = name;
+    let two_arg = args.len() < 3;
     let (mode, target) = if args.len() >= 3 {
         (it.scalar(&args[1], scope)?.to_text(), it.scalar(&args[2], scope)?)
     } else {
@@ -703,7 +704,23 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     fh.eof = false;
     fh.lines = 0;
     fh.path = if target.is_ref() { None } else { Some(target.to_text()) };
+    // 2-argument open of "-" is STDIN ("<-", "-") or STDOUT (">-")
+    let dash = two_arg && !target.is_ref() && &target.to_bytes()[..] == b"-";
+    if dash {
+        fh.path = None;
+    }
     let ok = match (mode_base.as_str(), &target) {
+        ("<", _) if dash => match std_stream_file(0) {
+            Some(f) => {
+                fh.input = Some(Input::File(BufReader::new(f)));
+                true
+            }
+            None => false,
+        },
+        (">" | ">>", _) if dash => {
+            fh.output = Some(Output::Stdout);
+            true
+        }
         ("<", Value::ScalarRef(c)) => {
             fh.input = Some(Input::Memory(Cursor::new(c.borrow().to_bytes().to_vec())));
             true
