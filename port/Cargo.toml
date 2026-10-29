@@ -65,7 +65,7 @@ eframe = { version = "0.37", optional = true, default-features = false, features
 egui = { version = "0.37", optional = true, features = ["monochrome_emoji_fonts"] }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "bmp", "tiff"] }
 rfd = { version = "0.17", optional = true }
-noto-fonts-dl = { version = "0.1", optional = true, features = ["ar", "bn", "hi", "ja", "ko", "zh", "zh_tw"] }
+noto-fonts-dl = { version = "0.1.10", optional = true, features = ["ar", "bn", "hi", "ja", "ko", "zh", "zh_tw"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
