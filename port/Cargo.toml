@@ -43,14 +43,49 @@ mbrotli = "0.5.17"
 # IO::Uncompress::Bunzip2 (Rawzor), on the bzip2 reference code
 bzip2 = "0.6"
 
+# The GUI's dependencies (feature "gui"), as on main: eframe with glow
+# (OpenGL) in place of its default wgpu, whose D3D12 backend does not build
+# on Windows; image for the icon, rfd for the file dialogs, and the Noto
+# fonts of the CJK, Arabic, Devanagari and Bengali scripts.
+eframe = { version = "0.37", optional = true, default-features = false, features = [
+    "accesskit",
+    "default_fonts",
+    "glow",
+    "wayland",
+    "web_screen_reader",
+    "x11",
+] }
+egui = { version = "0.37", optional = true }
+image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "bmp", "tiff"] }
+rfd = { version = "0.17", optional = true }
+noto-fonts-dl = { version = "0.1", optional = true, features = ["ar", "bn", "hi", "ja", "ko", "zh", "zh_tw"] }
+
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = { version = "0.1", optional = true }
+
+[features]
+default = []
+# The GUI, exiftool-rs-gui (none of its dependencies in the default build)
+gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
+# The Windows icon/version resource in the executables (build.rs)
+win-icon = ["winres"]
 
 # The application, named as the crate's binary on main (exiftool-rs), so
 # that it can never be mistaken for Perl's exiftool.
 [[example]]
 name = "exiftool-rs"
 path = "examples/exiftool_rs.rs"
+
+# The GUI, a binary as on main (exiftool-rs-gui), built by `cargo build
+# --features gui`. Its tests (the model, with no window) run with `cargo
+# test --features gui`.
+[[bin]]
+name = "exiftool-rs-gui"
+path = "src/bin/exiftool_rs_gui/main.rs"
+required-features = ["gui"]
 
 [dev-dependencies]
 # The examples' global allocator: rusty_alloc, a pure-Rust remake of

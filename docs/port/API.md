@@ -29,9 +29,32 @@ turns it on), `fast_scan` → `FastScan`, `requested_tags` → the tag list of
 `ImageInfo` (`Group:Tag`, `Group:*`...), `extract_embedded` →
 `ExtractEmbedded`, `show_unknown` → `Unknown`, `process_compressed` →
 `Compress`, `geolocation` → `Geolocation`, `struct_output` → `Struct`,
-`use_mwg` → `Image::ExifTool::MWG::Load`. Extraction always runs with
+`use_mwg` → `Image::ExifTool::MWG::Load`, `lang` → `Lang` (reading and
+writing). Extraction always runs with
 `PrintConv` on: `print_conv` only chooses which of the two values
 `image_info` returns, as in the root crate.
+
+### Languages
+
+`Options::lang` is ExifTool's `Lang` option: `Tag::description` is
+`GetDescription` and `Tag::print_value` the PrintConv value in that
+language, as `exiftool -lang` prints them, and a write takes values in it
+(Writer.pl converts a translated value back), its result read back in it.
+The code is taken as `-lang` takes it (`zh-CN` is `zh_cn`), `zh` is
+`zh_cn` as in the root crate, English is `None` or `"en"`, and a language
+ExifTool does not have is ignored, as ExifTool ignores it.
+
+The languages are ExifTool's 18 (its Lang modules, unchanged) and four the
+root crate had and ExifTool does not: `ar`, `bn`, `hi` and `pt`. Those are
+Lang modules of the same format (`%Image::ExifTool::Lang::pt::Translate`),
+made from the root crate's `locales/*.yml` (descriptions; `locales/values/`
+has no values for them) by `scripts/gen_extra_langs.pl`, which dumps them
+to `data/Lang_{ar,bn,hi,pt}.pld` as the other modules are dumped and lists
+them in `data/extra_langs.rs`. `Options(Lang => ...)` accepts them; they are
+not in `@Image::ExifTool::langs`, so `-lang` (the list), `-listx` and
+`-lang xx` print Perl's list, as the CLI judge cases (`-lang`, `-E -lang`,
+`-q -lang`, `-lang xx`, `-listx`) compare it. `exiftool-rs -lang pt`
+works, and the `-lang` list does not show it.
 
 ### Values
 
@@ -84,6 +107,20 @@ call therefore never depends on the ones before it. The price is the
 interpreter's start, about as long again as reading a small file
 (the root crate's regression suite: 7 s with interpreters kept per thread,
 15 s with one per call).
+
+## The GUI
+
+`exiftool-rs-gui` (`cargo build --release --features gui`, giving
+`target/release/exiftool-rs-gui`; `src/bin/exiftool_rs_gui/`) is the root crate's
+src/gui.rs on the facade, with the same panels, strings and behaviour. Its
+own strings are the `_ui.*` entries of the root crate's locales
+(`data/gui_text.tsv`, written by `scripts/gen_extra_langs.pl`); the tag
+descriptions and values are ExifTool's, read with `Options::lang`, where
+the root crate looked them up in its own tables. So changing the language
+reads the file again, the Copy button copies the values as shown (in the
+language), and an edit starts from, and is saved as, the value in the
+language. The model is tested without a window (`cargo test --features
+gui`).
 
 ## Differences with the root crate
 
