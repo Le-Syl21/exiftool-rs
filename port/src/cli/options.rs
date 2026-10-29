@@ -1556,6 +1556,11 @@ fn lang(it: &mut Interp) -> ER<bool> {
     if lang_opt.truthy() {
         // make lower case and use underline as a separator (eg. 'en_ca')
         pl::tr(&mut lang_opt, "-A-Z", "_a-z", "");
+        // 'zh' is Simplified Chinese, as in exiftool-rs before the port
+        // (Perl's exiftool has no 'zh' and rejects it)
+        if &*lang_opt.to_bytes() == b"zh" {
+            lang_opt = s("zh_cn");
+        }
         set(it, "langOpt", lang_opt.clone());
         options(it, vec![s("Lang"), lang_opt.clone()])?;
         let cur = options(it, vec![s("Lang")])?;

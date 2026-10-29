@@ -17,6 +17,17 @@ use crate::perl::Value;
 
 #[path = "../../data/index.rs"]
 mod index;
+// The Lang modules exiftool-rs adds to ExifTool's (scripts/gen_extra_langs.pl)
+#[path = "../../data/extra_langs.rs"]
+mod extra_langs;
+
+/// The languages exiftool-rs adds to ExifTool's 18 (code, name): Lang
+/// modules made from the root crate's locales. They are not in
+/// `@Image::ExifTool::langs`, whose list `-lang` and `-listx` print as
+/// Perl's, but `Options(Lang => ...)` accepts them.
+pub fn extra_langs() -> &'static [(&'static str, &'static str)] {
+    extra_langs::EXTRA_LANGS
+}
 
 /// A module's ported subs.
 pub type Registrar = fn(&mut Interp);
@@ -27,7 +38,7 @@ fn registrar(module: &str) -> Option<Registrar> {
 }
 
 fn module_data(module: &str) -> Option<&'static [u8]> {
-    index::MODULES.iter().find(|(m, _)| *m == module).map(|(_, d)| *d)
+    index::MODULES.iter().chain(extra_langs::EXTRA_MODULES).find(|(m, _)| *m == module).map(|(_, d)| *d)
 }
 
 /// The `%INC` key of a module: Image::ExifTool::BMP is Image/ExifTool/BMP.pm.

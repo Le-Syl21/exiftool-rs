@@ -98,3 +98,11 @@ own cases) with Perl's exiftool and with `run_t exiftool`, each in a copy of
 the images, and compares output, exit status and written files. Its known
 difference today (to keep, not to add to): `-ver -v` (the Perl
 installation).
+
+## Languages exiftool-rs adds
+
+`-lang` also takes `ar`, `bn`, `hi` and `pt` (Lang modules made from the
+root crate's locales, see API.md "Languages"), and `zh` for `zh_cn`, as
+exiftool-rs did before the port. Perl rejects those codes; everything else
+`-lang` does is Perl's, the list it prints included (`-lang`, `-lang xx`,
+`-listx` show ExifTool's 18 languages, as the judge cases compare them).

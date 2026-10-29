@@ -1,0 +1,552 @@
+ar	about	حول
+ar	cancel	إلغاء
+ar	copied	تم النسخ إلى الحافظة!
+ar	copy	نسخ
+ar	drop_start	أسقط ملفاً أو مجلداً للبدء
+ar	edit	تحرير
+ar	editable_hint	الحقول بهذا اللون قابلة للتعديل بالنقر المزدوج
+ar	error	خطأ
+ar	folder	مجلد
+ar	no_files	لم يتم العثور على ملفات مدعومة في المجلد
+ar	ok	موافق
+ar	open	فتح
+ar	original	أصلي
+ar	pending	تعديل(ات) معلقة
+ar	read_only	للقراءة فقط (علامة مركبة/محسوبة)
+ar	save	حفظ
+ar	save_error	خطأ في الحفظ
+ar	saved	تم حفظ التعديلات
+ar	tooltip_copy	نسخ جميع البيانات الوصفية إلى الحافظة
+ar	tooltip_folder	فتح مجلد والتنقل بالأسهم
+ar	tooltip_open	فتح ملف لتحليله
+ar	tooltip_save	حفظ التعديلات في الملف
+ar	welcome	أسقط ملفاً أو مجلداً هنا\nأو استخدم أزرار فتح / مجلد
+ar	welcome_title	exiftool-rs
+bn	about	সম্পর্কে
+bn	cancel	বাতিল
+bn	copied	ক্লিপবোর্ডে কপি করা হয়েছে!
+bn	copy	অনুলিপি
+bn	drop_start	শুরু করতে একটি ফাইল বা ফোল্ডার ড্রপ করুন
+bn	edit	সম্পাদনা
+bn	editable_hint	এই রঙের ক্ষেত্রগুলি ডাবল-ক্লিকে সম্পাদনযোগ্য
+bn	error	ত্রুটি
+bn	folder	ফোল্ডার
+bn	no_files	ফোল্ডারে কোনো সমর্থিত ফাইল পাওয়া যায়নি
+bn	ok	ঠিক আছে
+bn	open	খুলুন
+bn	original	মূল
+bn	pending	পরিবর্তন(সমূহ) মুলতুবি
+bn	read_only	শুধু-পাঠযোগ্য (কম্পোজিট/গণনাকৃত ট্যাগ)
+bn	save	সংরক্ষণ
+bn	save_error	সংরক্ষণ ত্রুটি
+bn	saved	সম্পাদনা সংরক্ষিত
+bn	tooltip_copy	সমস্ত মেটাডেটা ক্লিপবোর্ডে কপি করুন
+bn	tooltip_folder	ফোল্ডার খুলুন এবং তীর দিয়ে নেভিগেট করুন
+bn	tooltip_open	বিশ্লেষণের জন্য ফাইল খুলুন
+bn	tooltip_save	ফাইলে পরিবর্তন সংরক্ষণ করুন
+bn	welcome	এখানে একটি ফাইল বা ফোল্ডার ড্রপ করুন\nঅথবা খুলুন / ফোল্ডার বোতাম ব্যবহার করুন
+bn	welcome_title	exiftool-rs
+cs	about	O aplikaci
+cs	cancel	Zrušit
+cs	copied	Zkopírováno do schránky!
+cs	copy	Kopírovat
+cs	drop_start	Přetáhněte soubor nebo složku pro zahájení
+cs	edit	Upravit
+cs	editable_hint	Pole v této barvě lze upravit dvojklikem
+cs	error	Chyba
+cs	folder	Složka
+cs	no_files	Ve složce nebyly nalezeny žádné podporované soubory
+cs	ok	OK
+cs	open	Otevřít
+cs	original	Originál
+cs	pending	čekající úprava(y)
+cs	read_only	Pouze pro čtení (složený/vypočtený tag)
+cs	save	Uložit
+cs	save_error	Chyba při ukládání
+cs	saved	úpravy uloženy
+cs	tooltip_copy	Zkopírovat všechna metadata do schránky
+cs	tooltip_folder	Otevřít složku a procházet šipkami
+cs	tooltip_open	Otevřít soubor k analýze
+cs	tooltip_save	Uložit změny do souboru
+cs	welcome	Přetáhněte sem soubor nebo složku\nnebo použijte tlačítka Otevřít / Složka
+cs	welcome_title	exiftool-rs
+de	about	Über
+de	cancel	Abbrechen
+de	copied	In die Zwischenablage kopiert!
+de	copy	Kopieren
+de	drop_start	Datei oder Ordner hierher ziehen
+de	edit	Bearbeiten
+de	editable_hint	Felder in dieser Farbe sind per Doppelklick bearbeitbar
+de	error	Fehler
+de	folder	Ordner
+de	no_files	Keine unterstützten Dateien im Ordner gefunden
+de	ok	OK
+de	open	Öffnen
+de	original	Original
+de	pending	Änderung(en) ausstehend
+de	read_only	Schreibgeschützt (zusammengesetztes/berechnetes Tag)
+de	save	Speichern
+de	save_error	Speicherfehler
+de	saved	Änderungen gespeichert
+de	tooltip_copy	Alle Metadaten in die Zwischenablage kopieren
+de	tooltip_folder	Ordner öffnen und mit Pfeilen navigieren
+de	tooltip_open	Datei zum Analysieren öffnen
+de	tooltip_save	Änderungen in der Datei speichern
+de	welcome	Datei oder Ordner hierher ziehen\noder Öffnen / Ordner-Schaltflächen verwenden
+de	welcome_title	exiftool-rs
+en	about	About
+en	cancel	Cancel
+en	copied	Copied to clipboard!
+en	copy	Copy
+en	drop_start	Drop a file or folder to start
+en	edit	Edit
+en	editable_hint	Fields in this color are editable via double-click
+en	error	Error
+en	folder	Folder
+en	no_files	No supported files found in folder
+en	ok	OK
+en	open	Open
+en	original	Original
+en	pending	modification(s) pending
+en	read_only	Read-only (composite/computed tag)
+en	save	Save
+en	save_error	Save error
+en	saved	edits saved
+en	tooltip_copy	Copy all metadata to clipboard
+en	tooltip_folder	Open a folder and browse files with arrows
+en	tooltip_open	Open a file to analyze
+en	tooltip_save	Save metadata changes to the file
+en	welcome	Drop a file or folder here\nor use Open / Folder buttons
+en	welcome_title	exiftool-rs
+en_ca	about	About
+en_ca	cancel	Cancel
+en_ca	copied	Copied to clipboard!
+en_ca	copy	Copy
+en_ca	drop_start	Drop a file or folder to start
+en_ca	edit	Edit
+en_ca	editable_hint	Fields in this colour are editable via double-click
+en_ca	error	Error
+en_ca	folder	Folder
+en_ca	no_files	No supported files found in folder
+en_ca	ok	OK
+en_ca	open	Open
+en_ca	original	Original
+en_ca	pending	modification(s) pending
+en_ca	read_only	Read-only (composite/computed tag)
+en_ca	save	Save
+en_ca	save_error	Save error
+en_ca	saved	edits saved
+en_ca	tooltip_copy	Copy all metadata to clipboard
+en_ca	tooltip_folder	Open a folder and browse files with arrows
+en_ca	tooltip_open	Open a file to analyse
+en_ca	tooltip_save	Save metadata changes to the file
+en_ca	welcome	Drop a file or folder here\nor use Open / Folder buttons
+en_ca	welcome_title	exiftool-rs
+en_gb	about	About
+en_gb	cancel	Cancel
+en_gb	copied	Copied to clipboard!
+en_gb	copy	Copy
+en_gb	drop_start	Drop a file or folder to start
+en_gb	edit	Edit
+en_gb	editable_hint	Fields in this colour are editable via double-click
+en_gb	error	Error
+en_gb	folder	Folder
+en_gb	no_files	No supported files found in folder
+en_gb	ok	OK
+en_gb	open	Open
+en_gb	original	Original
+en_gb	pending	modification(s) pending
+en_gb	read_only	Read-only (composite/computed tag)
+en_gb	save	Save
+en_gb	save_error	Save error
+en_gb	saved	edits saved
+en_gb	tooltip_copy	Copy all metadata to clipboard
+en_gb	tooltip_folder	Open a folder and browse files with arrows
+en_gb	tooltip_open	Open a file to analyse
+en_gb	tooltip_save	Save metadata changes to the file
+en_gb	welcome	Drop a file or folder here\nor use Open / Folder buttons
+en_gb	welcome_title	exiftool-rs
+es	about	Acerca de
+es	cancel	Cancelar
+es	copied	¡Copiado al portapapeles!
+es	copy	Copiar
+es	drop_start	Suelta un archivo o carpeta para comenzar
+es	edit	Editar
+es	editable_hint	Los campos de este color son editables con doble clic
+es	error	Error
+es	folder	Carpeta
+es	no_files	No se encontraron archivos compatibles en la carpeta
+es	ok	OK
+es	open	Abrir
+es	original	Original
+es	pending	modificación(es) pendiente(s)
+es	read_only	Solo lectura (etiqueta compuesta/calculada)
+es	save	Guardar
+es	save_error	Error al guardar
+es	saved	ediciones guardadas
+es	tooltip_copy	Copiar todos los metadatos al portapapeles
+es	tooltip_folder	Abrir carpeta y navegar con flechas
+es	tooltip_open	Abrir un archivo para analizar
+es	tooltip_save	Guardar cambios en el archivo
+es	welcome	Suelta un archivo o carpeta aquí\no usa los botones Abrir / Carpeta
+es	welcome_title	exiftool-rs
+fi	about	Tietoja
+fi	cancel	Peruuta
+fi	copied	Kopioitu leikepöydälle!
+fi	copy	Kopioi
+fi	drop_start	Pudota tiedosto tai kansio aloittaaksesi
+fi	edit	Muokkaa
+fi	editable_hint	Tämän väriset kentät ovat muokattavissa kaksoisnapsautuksella
+fi	error	Virhe
+fi	folder	Kansio
+fi	no_files	Kansiosta ei löytynyt tuettuja tiedostoja
+fi	ok	OK
+fi	open	Avaa
+fi	original	Alkuperäinen
+fi	pending	muokkaus(ta) odottaa
+fi	read_only	Vain luku (yhdistelmä-/laskettu tunniste)
+fi	save	Tallenna
+fi	save_error	Tallennusvirhe
+fi	saved	muokkaukset tallennettu
+fi	tooltip_copy	Kopioi kaikki metatiedot leikepöydälle
+fi	tooltip_folder	Avaa kansio ja selaa nuolilla
+fi	tooltip_open	Avaa tiedosto analysoitavaksi
+fi	tooltip_save	Tallenna muutokset tiedostoon
+fi	welcome	Pudota tiedosto tai kansio tähän\ntai käytä Avaa / Kansio -painikkeita
+fi	welcome_title	exiftool-rs
+fr	about	À propos
+fr	cancel	Annuler
+fr	copied	Copié dans le presse-papiers !
+fr	copy	Copier
+fr	drop_start	Déposez un fichier ou un dossier pour commencer
+fr	edit	Modifier
+fr	editable_hint	Les champs de cette couleur sont modifiables via un double-clic
+fr	error	Erreur
+fr	folder	Dossier
+fr	no_files	Aucun fichier pris en charge trouvé dans le dossier
+fr	ok	OK
+fr	open	Ouvrir
+fr	original	Original
+fr	pending	modification(s) en attente
+fr	read_only	Lecture seule (tag composite/calculé)
+fr	save	Enregistrer
+fr	save_error	Erreur d'enregistrement
+fr	saved	modifications enregistrées
+fr	tooltip_copy	Copier toutes les métadonnées dans le presse-papiers
+fr	tooltip_folder	Ouvrir un dossier et naviguer avec les flèches
+fr	tooltip_open	Ouvrir un fichier à analyser
+fr	tooltip_save	Sauvegarder les modifications dans le fichier
+fr	welcome	Déposez un fichier ou un dossier ici\nou utilisez les boutons Ouvrir / Dossier
+fr	welcome_title	exiftool-rs
+hi	about	परिचय
+hi	cancel	रद्द करें
+hi	copied	क्लिपबोर्ड पर कॉपी किया गया!
+hi	copy	कॉपी
+hi	drop_start	शुरू करने के लिए कोई फ़ाइल या फ़ोल्डर ड्रॉप करें
+hi	edit	संपादित करें
+hi	editable_hint	इस रंग के फ़ील्ड डबल-क्लिक से संपादन योग्य हैं
+hi	error	त्रुटि
+hi	folder	फ़ोल्डर
+hi	no_files	फ़ोल्डर में कोई समर्थित फ़ाइल नहीं मिली
+hi	ok	ठीक है
+hi	open	खोलें
+hi	original	मूल
+hi	pending	संशोधन लंबित
+hi	read_only	केवल-पढ़ने योग्य (संयुक्त/गणना किया गया टैग)
+hi	save	सहेजें
+hi	save_error	सहेजने में त्रुटि
+hi	saved	संपादन सहेजे गए
+hi	tooltip_copy	सभी मेटाडेटा क्लिपबोर्ड पर कॉपी करें
+hi	tooltip_folder	फ़ोल्डर खोलें और तीरों से नेविगेट करें
+hi	tooltip_open	विश्लेषण के लिए फ़ाइल खोलें
+hi	tooltip_save	फ़ाइल में परिवर्तन सहेजें
+hi	welcome	यहाँ कोई फ़ाइल या फ़ोल्डर ड्रॉप करें\nया खोलें / फ़ोल्डर बटन का उपयोग करें
+hi	welcome_title	exiftool-rs
+it	about	Informazioni
+it	cancel	Annulla
+it	copied	Copiato negli appunti!
+it	copy	Copia
+it	drop_start	Trascina un file o una cartella per iniziare
+it	edit	Modifica
+it	editable_hint	I campi di questo colore sono modificabili con doppio clic
+it	error	Errore
+it	folder	Cartella
+it	no_files	Nessun file supportato trovato nella cartella
+it	ok	OK
+it	open	Apri
+it	original	Originale
+it	pending	modifica/e in sospeso
+it	read_only	Sola lettura (tag composito/calcolato)
+it	save	Salva
+it	save_error	Errore di salvataggio
+it	saved	modifiche salvate
+it	tooltip_copy	Copia tutti i metadati negli appunti
+it	tooltip_folder	Apri cartella e naviga con le frecce
+it	tooltip_open	Apri un file da analizzare
+it	tooltip_save	Salva le modifiche nel file
+it	welcome	Trascina un file o una cartella qui\no usa i pulsanti Apri / Cartella
+it	welcome_title	exiftool-rs
+ja	about	情報
+ja	cancel	キャンセル
+ja	copied	クリップボードにコピーしました！
+ja	copy	コピー
+ja	drop_start	ファイルまたはフォルダをドロップして開始
+ja	edit	編集
+ja	editable_hint	この色のフィールドはダブルクリックで編集できます
+ja	error	エラー
+ja	folder	フォルダ
+ja	no_files	フォルダ内にサポートされているファイルがありません
+ja	ok	OK
+ja	open	開く
+ja	original	オリジナル
+ja	pending	件の変更が保留中
+ja	read_only	読み取り専用（合成/計算タグ）
+ja	save	保存
+ja	save_error	保存エラー
+ja	saved	編集を保存しました
+ja	tooltip_copy	すべてのメタデータをクリップボードにコピー
+ja	tooltip_folder	フォルダを開いて矢印で移動
+ja	tooltip_open	分析するファイルを開く
+ja	tooltip_save	変更をファイルに保存
+ja	welcome	ファイルまたはフォルダをここにドロップ\nまたは「開く」/「フォルダ」ボタンを使用
+ja	welcome_title	exiftool-rs
+ko	about	정보
+ko	cancel	취소
+ko	copied	클립보드에 복사되었습니다!
+ko	copy	복사
+ko	drop_start	파일 또는 폴더를 끌어다 놓아 시작하세요
+ko	edit	편집
+ko	editable_hint	이 색상의 필드는 더블 클릭으로 편집할 수 있습니다
+ko	error	오류
+ko	folder	폴더
+ko	no_files	폴더에서 지원되는 파일을 찾을 수 없습니다
+ko	ok	확인
+ko	open	열기
+ko	original	원본
+ko	pending	수정 사항 보류 중
+ko	read_only	읽기 전용 (합성/계산된 태그)
+ko	save	저장
+ko	save_error	저장 오류
+ko	saved	편집 내용 저장됨
+ko	tooltip_copy	모든 메타데이터를 클립보드에 복사
+ko	tooltip_folder	폴더를 열고 화살표로 탐색
+ko	tooltip_open	분석할 파일 열기
+ko	tooltip_save	변경 사항을 파일에 저장
+ko	welcome	파일 또는 폴더를 여기에 끌어다 놓거나\n열기 / 폴더 버튼을 사용하세요
+ko	welcome_title	exiftool-rs
+nl	about	Over
+nl	cancel	Annuleren
+nl	copied	Gekopieerd naar klembord!
+nl	copy	Kopiëren
+nl	drop_start	Sleep een bestand of map om te beginnen
+nl	edit	Bewerken
+nl	editable_hint	Velden in deze kleur zijn bewerkbaar via dubbelklik
+nl	error	Fout
+nl	folder	Map
+nl	no_files	Geen ondersteunde bestanden gevonden in map
+nl	ok	OK
+nl	open	Openen
+nl	original	Origineel
+nl	pending	wijziging(en) in behandeling
+nl	read_only	Alleen-lezen (samengestelde/berekende tag)
+nl	save	Opslaan
+nl	save_error	Opslagfout
+nl	saved	bewerkingen opgeslagen
+nl	tooltip_copy	Alle metadata naar klembord kopiëren
+nl	tooltip_folder	Map openen en navigeren met pijltjes
+nl	tooltip_open	Bestand openen om te analyseren
+nl	tooltip_save	Wijzigingen opslaan in het bestand
+nl	welcome	Sleep een bestand of map hierheen\nof gebruik de knoppen Openen / Map
+nl	welcome_title	exiftool-rs
+pl	about	O programie
+pl	cancel	Anuluj
+pl	copied	Skopiowano do schowka!
+pl	copy	Kopiuj
+pl	drop_start	Upuść plik lub folder, aby rozpocząć
+pl	edit	Edytuj
+pl	editable_hint	Pola w tym kolorze można edytować podwójnym kliknięciem
+pl	error	Błąd
+pl	folder	Folder
+pl	no_files	Nie znaleziono obsługiwanych plików w folderze
+pl	ok	OK
+pl	open	Otwórz
+pl	original	Oryginał
+pl	pending	oczekująca(-e) modyfikacja(-e)
+pl	read_only	Tylko do odczytu (tag złożony/obliczony)
+pl	save	Zapisz
+pl	save_error	Błąd zapisu
+pl	saved	zmiany zapisane
+pl	tooltip_copy	Skopiuj wszystkie metadane do schowka
+pl	tooltip_folder	Otwórz folder i nawiguj strzałkami
+pl	tooltip_open	Otwórz plik do analizy
+pl	tooltip_save	Zapisz zmiany w pliku
+pl	welcome	Upuść plik lub folder tutaj\nlub użyj przycisków Otwórz / Folder
+pl	welcome_title	exiftool-rs
+pt	about	Sobre
+pt	cancel	Cancelar
+pt	copied	Copiado para a área de transferência!
+pt	copy	Copiar
+pt	drop_start	Solte um arquivo ou pasta para começar
+pt	edit	Editar
+pt	editable_hint	Os campos nesta cor são editáveis com duplo clique
+pt	error	Erro
+pt	folder	Pasta
+pt	no_files	Nenhum arquivo compatível encontrado na pasta
+pt	ok	OK
+pt	open	Abrir
+pt	original	Original
+pt	pending	modificação(ões) pendente(s)
+pt	read_only	Somente leitura (tag composta/calculada)
+pt	save	Salvar
+pt	save_error	Erro ao salvar
+pt	saved	edições salvas
+pt	tooltip_copy	Copiar todos os metadados para a área de transferência
+pt	tooltip_folder	Abrir pasta e navegar com setas
+pt	tooltip_open	Abrir um arquivo para analisar
+pt	tooltip_save	Salvar alterações no arquivo
+pt	welcome	Solte um arquivo ou pasta aqui\nou use os botões Abrir / Pasta
+pt	welcome_title	exiftool-rs
+ru	about	О программе
+ru	cancel	Отмена
+ru	copied	Скопировано в буфер обмена!
+ru	copy	Копировать
+ru	drop_start	Перетащите файл или папку для начала
+ru	edit	Редактировать
+ru	editable_hint	Поля этого цвета редактируются двойным щелчком
+ru	error	Ошибка
+ru	folder	Папка
+ru	no_files	В папке не найдено поддерживаемых файлов
+ru	ok	ОК
+ru	open	Открыть
+ru	original	Оригинал
+ru	pending	изменение(я) ожидают сохранения
+ru	read_only	Только чтение (составной/вычисляемый тег)
+ru	save	Сохранить
+ru	save_error	Ошибка сохранения
+ru	saved	изменения сохранены
+ru	tooltip_copy	Скопировать все метаданные в буфер обмена
+ru	tooltip_folder	Открыть папку и навигировать стрелками
+ru	tooltip_open	Открыть файл для анализа
+ru	tooltip_save	Сохранить изменения в файл
+ru	welcome	Перетащите файл или папку сюда\nили используйте кнопки Открыть / Папка
+ru	welcome_title	exiftool-rs
+sk	about	O aplikácii
+sk	cancel	Zrušiť
+sk	copied	Skopírované do schránky!
+sk	copy	Kopírovať
+sk	drop_start	Presuňte súbor alebo priečinok na spustenie
+sk	edit	Upraviť
+sk	editable_hint	Polia v tejto farbe je možné upraviť dvojklikom
+sk	error	Chyba
+sk	folder	Priečinok
+sk	no_files	V priečinku sa nenašli žiadne podporované súbory
+sk	ok	OK
+sk	open	Otvoriť
+sk	original	Originál
+sk	pending	čakajúca(-e) úprava(-y)
+sk	read_only	Iba na čítanie (zložený/vypočítaný tag)
+sk	save	Uložiť
+sk	save_error	Chyba pri ukladaní
+sk	saved	úpravy uložené
+sk	tooltip_copy	Skopírovať všetky metadáta do schránky
+sk	tooltip_folder	Otvoriť priečinok a prechádzať šípkami
+sk	tooltip_open	Otvoriť súbor na analýzu
+sk	tooltip_save	Uložiť zmeny do súboru
+sk	welcome	Presuňte sem súbor alebo priečinok\nalebo použite tlačidlá Otvoriť / Priečinok
+sk	welcome_title	exiftool-rs
+sv	about	Om
+sv	cancel	Avbryt
+sv	copied	Kopierat till urklipp!
+sv	copy	Kopiera
+sv	drop_start	Släpp en fil eller mapp för att starta
+sv	edit	Redigera
+sv	editable_hint	Fält i denna färg kan redigeras med dubbelklick
+sv	error	Fel
+sv	folder	Mapp
+sv	no_files	Inga stödda filer hittades i mappen
+sv	ok	OK
+sv	open	Öppna
+sv	original	Original
+sv	pending	ändring(ar) väntar
+sv	read_only	Skrivskyddad (sammansatt/beräknad tagg)
+sv	save	Spara
+sv	save_error	Sparningsfel
+sv	saved	redigeringar sparade
+sv	tooltip_copy	Kopiera alla metadata till urklipp
+sv	tooltip_folder	Öppna mapp och navigera med pilar
+sv	tooltip_open	Öppna en fil att analysera
+sv	tooltip_save	Spara ändringar i filen
+sv	welcome	Släpp en fil eller mapp här\neller använd knapparna Öppna / Mapp
+sv	welcome_title	exiftool-rs
+tr	about	Hakkında
+tr	cancel	İptal
+tr	copied	Panoya kopyalandı!
+tr	copy	Kopyala
+tr	drop_start	Başlamak için bir dosya veya klasör sürükleyin
+tr	edit	Düzenle
+tr	editable_hint	Bu renkteki alanlar çift tıklama ile düzenlenebilir
+tr	error	Hata
+tr	folder	Klasör
+tr	no_files	Klasörde desteklenen dosya bulunamadı
+tr	ok	Tamam
+tr	open	Aç
+tr	original	Orijinal
+tr	pending	bekleyen değişiklik(ler)
+tr	read_only	Salt okunur (bileşik/hesaplanmış etiket)
+tr	save	Kaydet
+tr	save_error	Kaydetme hatası
+tr	saved	düzenlemeler kaydedildi
+tr	tooltip_copy	Tüm meta verileri panoya kopyala
+tr	tooltip_folder	Klasör aç ve oklarla gezin
+tr	tooltip_open	Analiz edilecek dosya aç
+tr	tooltip_save	Değişiklikleri dosyaya kaydet
+tr	welcome	Buraya bir dosya veya klasör sürükleyin\nya da Aç / Klasör düğmelerini kullanın
+tr	welcome_title	exiftool-rs
+zh	about	关于
+zh	cancel	取消
+zh	copied	已复制到剪贴板！
+zh	copy	复制
+zh	drop_start	拖放文件或文件夹以开始
+zh	edit	编辑
+zh	editable_hint	此颜色的字段可通过双击编辑
+zh	error	错误
+zh	folder	文件夹
+zh	no_files	文件夹中未找到受支持的文件
+zh	ok	确定
+zh	open	打开
+zh	original	原始
+zh	pending	项修改待保存
+zh	read_only	只读（复合/计算标签）
+zh	save	保存
+zh	save_error	保存错误
+zh	saved	编辑已保存
+zh	tooltip_copy	将所有元数据复制到剪贴板
+zh	tooltip_folder	打开文件夹并用箭头浏览
+zh	tooltip_open	打开文件进行分析
+zh	tooltip_save	将更改保存到文件
+zh	welcome	将文件或文件夹拖放到此处\n或使用打开/文件夹按钮
+zh	welcome_title	exiftool-rs
+zh_tw	about	關於
+zh_tw	cancel	取消
+zh_tw	copied	已複製到剪貼簿！
+zh_tw	copy	複製
+zh_tw	drop_start	拖放檔案或資料夾以開始
+zh_tw	edit	編輯
+zh_tw	editable_hint	此顏色的欄位可透過雙擊編輯
+zh_tw	error	錯誤
+zh_tw	folder	資料夾
+zh_tw	no_files	在資料夾中找不到支援的檔案
+zh_tw	ok	確定
+zh_tw	open	開啟
+zh_tw	original	原始
+zh_tw	pending	項修改待儲存
+zh_tw	read_only	唯讀（複合/計算標籤）
+zh_tw	save	儲存
+zh_tw	save_error	儲存錯誤
+zh_tw	saved	編輯已儲存
+zh_tw	tooltip_copy	將所有中繼資料複製到剪貼簿
+zh_tw	tooltip_folder	開啟資料夾並用箭頭瀏覽
+zh_tw	tooltip_open	開啟檔案進行分析
+zh_tw	tooltip_save	將變更儲存到檔案
+zh_tw	welcome	在此拖放檔案或資料夾\n或使用「開啟」/「資料夾」按鈕
+zh_tw	welcome_title	exiftool-rs

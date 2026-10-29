@@ -48,6 +48,13 @@ pub struct Options {
     ///
     /// [`Value::Struct`]: super::value::Value::Struct
     pub struct_output: bool,
+    /// Language of tag descriptions and printed values (ExifTool's `Lang`
+    /// option, `-lang`): `None` or `"en"` for English, one of ExifTool's
+    /// languages (`fr`, `de`, `ja`, `zh_cn`...), or one exiftool-rs adds
+    /// (`ar`, `bn`, `hi`, `pt`). `zh` is `zh_cn`, and `zh-CN` is `zh_cn`, as
+    /// `-lang` takes it. A language ExifTool does not have is ignored, as
+    /// ExifTool ignores it. Writing takes values in this language too.
+    pub lang: Option<String>,
 }
 
 impl Default for Options {
@@ -63,6 +70,7 @@ impl Default for Options {
             use_mwg: false,
             geolocation: false,
             struct_output: false,
+            lang: None,
         }
     }
 }
@@ -92,6 +100,9 @@ impl Options {
         if self.geolocation {
             o.push(("Geolocation", PV::Int(1)));
         }
+        if let Some(lang) = self.lang_code() {
+            o.push(("Lang", pv_str(&lang)));
+        }
         flatten(o)
     }
 
@@ -103,7 +114,24 @@ impl Options {
         if self.process_compressed {
             o.push(("Compress", PV::Int(1)));
         }
+        // (ExifTool takes a translated PrintConv value back when its
+        // language is set)
+        if let Some(lang) = self.lang_code() {
+            o.push(("Lang", pv_str(&lang)));
+        }
         flatten(o)
+    }
+
+    /// `lang` as ExifTool's `Lang` option takes it: lower case with
+    /// underlines, as the exiftool application makes it (`zh-CN` is
+    /// `zh_cn`), and `zh` for `zh_cn`. `None` for English.
+    fn lang_code(&self) -> Option<String> {
+        let lang = self.lang.as_deref()?.trim().replace('-', "_").to_ascii_lowercase();
+        match lang.as_str() {
+            "" | "en" => None,
+            "zh" => Some("zh_cn".to_string()),
+            _ => Some(lang),
+        }
     }
 }
 
@@ -404,6 +432,7 @@ impl ExifTool {
                     let reader = ExifTool::with_options(Options {
                         duplicates: true,
                         requested_tags: tags.clone(),
+                        lang: self.options.lang.clone(),
                         ..Options::default()
                     });
                     let Ok(src) = reader.read(path) else { continue };
@@ -429,9 +458,11 @@ impl ExifTool {
     fn count_applied(&self, before: &Path, after: &Path, requests: &[NewValue]) -> (u32, usize) {
         let keep = |t: &ReadTag| !matches!(t.tag.group.family0.as_str(), "System" | "Composite" | "ExifTool");
         let read = |p: &Path| -> Vec<ReadTag> {
+            // (in the language of the requested values)
             let reader = ExifTool::with_options(Options {
                 duplicates: true,
                 use_mwg: self.options.use_mwg,
+                lang: self.options.lang.clone(),
                 ..Options::default()
             });
             reader.read(p).map(|v| v.into_iter().filter(keep).collect()).unwrap_or_default()

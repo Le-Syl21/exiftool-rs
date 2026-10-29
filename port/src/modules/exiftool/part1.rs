@@ -2268,6 +2268,11 @@ fn options_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 for l in garray(it, "Image::ExifTool::langs").items() {
                     langs.set(l.to_bytes(), n(1));
                 }
+                // (and the languages exiftool-rs adds, which @langs leaves out
+                // so that the lists ExifTool prints stay its own)
+                for (l, _) in crate::runtime::extra_langs() {
+                    langs.set(l.as_bytes(), n(1));
+                }
                 if langs.get(new_val.to_bytes()).truthy() {
                     let code = format!("require Image::ExifTool::Lang::{}", new_val.to_text());
                     let scope = crate::interp::Scope::new(None);
