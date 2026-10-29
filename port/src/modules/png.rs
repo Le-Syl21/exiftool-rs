@@ -355,7 +355,18 @@ pub fn found_png(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                     }
                     png_call(it, "DoneDir", vec![et.clone(), dir_name.clone(), out_buff.clone(), tag_info.get("NonStandard")])?;
                 } else {
-                    processed = m(it, &et, "ProcessDirectory", vec![subdir_info.clone(), sub_table.clone(), process_proc])?;
+                    // embedded directories use offsets relative to their own PNG chunk (github453)
+                    // (local $$et{PROCESSED} = { }, restored on every exit)
+                    let saved = et.exists("PROCESSED").then(|| et.get("PROCESSED"));
+                    et.set("PROCESSED", Value::new_hash());
+                    let r = m(it, &et, "ProcessDirectory", vec![subdir_info.clone(), sub_table.clone(), process_proc]);
+                    match saved {
+                        Some(v) => et.set("PROCESSED", v),
+                        None => {
+                            et.delete("PROCESSED");
+                        }
+                    }
+                    processed = r?;
                 }
                 val = val_ref.deref();
                 compressed = n(1); // pretend this is compressed since it is binary data
@@ -522,7 +533,7 @@ pub fn process_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     // ImageMagick 5.3.6 writes profiles with the following headers:
     // "\nICC Profile\n", "\nIPTC profile\n", "\n\xaa\x01{generic prof\n"
     // and "\ngeneric profile\n"
-    pl::at(1166);
+    pl::at(1168);
     let Some(c) = re(r"^\n(.*?)\n\s*(\d+)\n(.*)", "s").m(&pl::sderef(&data_pt)?) else {
         return ret(n(0));
     };
@@ -676,7 +687,7 @@ pub fn process_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
 /// Notes: writes new chunk data to ${$$dirInfo{OutBuff}} if writing tag
 pub fn process_png_compressed(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, mut tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    pl::at(1291);
+    pl::at(1293);
     let parts = split0(&pl::sderef(&dir_info.get("DataPt"))?, 2);
     let (tag, mut val) = (arg(&parts, 0), arg(&parts, 1));
     if val.is_undef() {
@@ -718,7 +729,7 @@ pub fn process_png_compressed(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Ve
 /// Notes: writes new chunk data to ${$$dirInfo{OutBuff}} if writing tag
 pub fn process_png_text(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    pl::at(1328);
+    pl::at(1330);
     let parts = split0(&pl::sderef(&dir_info.get("DataPt"))?, 2);
     let (tag, val) = (arg(&parts, 0), arg(&parts, 1));
     let out_buff = dir_info.get("OutBuff");
@@ -734,7 +745,7 @@ pub fn process_png_text(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 /// Notes: writes new chunk data to ${$$dirInfo{OutBuff}} if writing tag
 pub fn process_png_itxt(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info, tag_table_ptr) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    pl::at(1342);
+    pl::at(1344);
     let parts = split0(&pl::sderef(&dir_info.get("DataPt"))?, 2);
     let (tag, dat) = (arg(&parts, 0), arg(&parts, 1));
     if !(!dat.is_undef() && pl::ge(&pl::length(&dat), &n(4))) {
@@ -767,7 +778,7 @@ pub fn process_png_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     let tag = tag_info.get("TagID");
     let del = if out_buff.truthy() { Value::from(et.get("DEL_GROUP").get("EXIF").truthy() || et.get("DEL_GROUP").get("IFD0").truthy()) } else { out_buff.clone() };
 
-    pl::at(1368);
+    pl::at(1370);
     if re(r"^Exif\0\0", "").is_match(&pl::sderef(&data_pt)?) {
         m(it, &et, "Warn", vec![pl::s("Improper \"Exif00\" header in EXIF chunk")])?;
         pl::set_deref(&data_pt, pl::substr(&data_pt.deref(), 6, None))?;
@@ -845,7 +856,7 @@ pub fn process_png(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let std_case = pl::pkg_hash(it, "Image::ExifTool::PNG::stdCase");
 
     // check to be sure this is a valid PNG/MNG/JNG image
-    pl::at(1424);
+    pl::at(1426);
     if !(pl::num_eq(&read(it, &raf, &mut sig, n(8))?, &n(8)) && png_lookup.get(sig.to_bytes()).truthy()) {
         return ret(n(0));
     }

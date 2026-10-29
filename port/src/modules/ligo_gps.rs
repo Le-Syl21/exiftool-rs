@@ -468,6 +468,7 @@ pub fn process_ligo_gps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         et.get_or_new_array("PATH").push(dir_name.clone());
     }
     // not fuzzed if header =~ /LIGOGPSINFO\0\0\0\0[\x01\x14]/ (\x01=BlueSkySeaDV688)
+    // (also see notes in github issue #470)
     if re(r"^\0\0\0[\x01\x14]", "").is_match(&pl::substr(&data, pos.to_i64() - 8, Some(4))) {
         no_fuzz = n(1);
     }
@@ -522,7 +523,7 @@ pub fn process_ligo_json(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     let data_pt = dir_info.get("DataPt");
     let _dir_len = dir_info.get("DirLen");
     runtime::require(it, "Image::ExifTool::Import")?;
-    pl::at(340);
+    pl::at(341);
     let data = pl::sderef(&data_pt)?;
     let start = get_pos(it, &data_pt);
     m(it, &et, "VerboseDir", vec![s("LIGO_JSON"), Value::Undef, n(len_of(&data) - start.unwrap_or(0) as i64)])?;

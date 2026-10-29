@@ -57,7 +57,7 @@ fn process_fit_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
     let base_type = runtime::lex_hash(it, PKG, "baseType");
 
     // verify this is a valid Garmin FIT file
-    pl::at(6305);
+    pl::at(6330);
     if !(pl::num_eq(&raf_read(it, &raf, &mut buff, n(12))?, &n(12)) && re(r"^.{8}\.FIT", "s").is_match(&buff)) {
         return ret(n(0));
     }
@@ -363,6 +363,19 @@ fn process_fit_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
                         let mut name = dn.get("3");
                         re(r"($|_)([a-z])", "").subst(&mut name, true, |c| cap(c, 2).to_bytes().to_ascii_uppercase());
                         name = pl::call(it, "Image::ExifTool::MakeTagName", vec![name])?;
+                        // make sure name is unique
+                        for k in pl::call_list(it, "Image::ExifTool::TagTableKeys", vec![tbl.clone()])? {
+                            let ti = tbl.get(k.to_bytes());
+                            if pl::ref_of(&ti) != "HASH" {
+                                continue;
+                            }
+                            let existing = ti.get("Name");
+                            if !(existing.truthy() && existing.to_bytes()[..] == name.to_bytes()[..]) {
+                                continue;
+                            }
+                            name = cat(&[&name, &s("-"), &idx]); // add developer data index
+                            break;
+                        }
                         let tag_info = hash_of(vec![("Name", name)]);
                         let mut units = dn.get("8");
                         if units.truthy() {
@@ -385,13 +398,17 @@ fn process_fit_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
             if bt.truthy() {
                 let fmt = bt.at(0);
                 let fs = scalar(part2_format_size(it, fmt.clone()))?;
-                pl::at(6552);
+                pl::at(6585);
                 let count = pl::div(&size, &fs)?;
                 if pl::num_eq(&pl::int(&count), &count) {
                     let val = read_value(it, &buff_ref, pos.clone(), fmt.clone(), count, size.clone())?;
                     // ignore invalid values
-                    // (NAN may be 'NaN' or 'nan' on different systems, so 'lc' is required)
-                    if pl::lc(&val).to_bytes() != bt.at(2).to_bytes() {
+                    // (the string representation of NaN maybe 'nan', '-NaN' or according
+                    // to ChatGPT other junk such as '1.#QNAN' on some systems, so use a
+                    // numerical test for this since NaN is not equal to itself numerically)
+                    let invalid = bt.at(2);
+                    let is_invalid = if pl::str_eq(&invalid, "NaN") { !pl::num_eq(&val, &val) } else { val.to_bytes()[..] == invalid.to_bytes()[..] };
+                    if !is_invalid {
                         if !field.at(3).truthy() {
                             field_value.set(num.to_bytes(), val.clone());
                         }

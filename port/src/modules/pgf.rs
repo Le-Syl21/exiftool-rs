@@ -66,9 +66,17 @@ pub fn process_pgf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
     // extract information from the embedded metadata image (PNG format)
     if pl::gt(&len, &n(0)) && pl::lt(&len, &n(0x1000000)) && pl::num_eq(&raf_read_cell(it, &raf, &buff, len.clone())?, &len) {
+        let depth = et.get("PGFReEntryDepth");
+        let depth = if depth.truthy() { depth } else { n(0) };
+        if pl::gt(&depth, &n(10)) {
+            pl::method(it, &et, "Warn", vec![pl::s("PGF nesting too deep")])?;
+            return ret(n(1));
+        }
+        et.set("PGFReEntryDepth", pl::add(&depth, &n(1)));
         let opts = Value::new_hash();
         opts.set("ReEntry", n(1));
         pl::method(it, &et, "ExtractInfo", vec![rf(&buff), opts])?;
+        et.set("PGFReEntryDepth", depth);
     }
     ret(n(1))
 }

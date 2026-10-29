@@ -113,11 +113,12 @@ pub fn process_r3d(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>>
         pos = pl::add(&pos, &n(2)); // skip length word
     }
     // do sanity check on the directory size (in case our assumptions were wrong)
-    if pl::lt(&dir_len, &n(300)) || pl::ge(&dir_len, &n(2048)) || pl::gt(&pl::add(&pos, &dir_len), &pl::length(&val(&buff))) {
+    if pl::lt(&dir_len, &n(300)) || pl::ge(&dir_len, &n(10000)) || pl::gt(&pl::add(&pos, &dir_len), &pl::length(&val(&buff))) {
         // tag 0x1000 with length 0x000f should be near the directory start
-        // ($buff =~ /\0\x0f\x10[\0\x06]/g: pos($buff) is undef here, so the search starts at 0)
+        // (0xad sample is from github443)
+        // ($buff =~ /\0\x0f\x10[\0\x06\xad]/g: pos($buff) is undef here, so the search starts at 0)
         let b = val(&buff).to_bytes();
-        let rx = crate::perl::regex::compile(br"\0\x0f\x10[\0\x06]", "").expect("pattern");
+        let rx = crate::perl::regex::compile(br"\0\x0f\x10[\0\x06\xad]", "").expect("pattern");
         let found = match rx.match_at(&b, 0) {
             Ok(Some(sp)) => sp[0].map(|(_, e)| e),
             _ => None,
