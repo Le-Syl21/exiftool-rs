@@ -1,12 +1,14 @@
 # The Rust API over the port
 
-`port/src/api/` keeps the high-level API of the current crate
+`src/api/` keeps the high-level API of the crate before 1.0
 (`exiftool_rs::ExifTool`, `Options`, `Tag`, `Value`...) as a facade over
-the port (ARCHITECTURE.md §5). The names, signatures and re-exports are the
-root crate's, so code written against `exiftool_rs` builds against
-`exiftool_port` by renaming the crate. Behind it, every call is answered by
-Image::ExifTool itself, run by the port's interpreter: the facade does not
-read, convert or write metadata on its own.
+the port (ARCHITECTURE.md §5). The names, signatures and re-exports are
+those of 0.14, so code written against `exiftool_rs` 0.14 builds against
+1.0 unchanged, except for what "Differences with the root crate" lists
+(the root crate is 0.14, whose own readers and writers were at the
+repository's root while the port grew in `port/`). Behind it, every call
+is answered by Image::ExifTool itself, run by the port's interpreter: the
+facade does not read, convert or write metadata on its own.
 
 ## What each call maps to
 
@@ -14,7 +16,7 @@ read, convert or write metadata on its own.
 |---|---|
 | `ExifTool::extract_info(path)` | `new`, `Options(...)`, `ImageInfo($file, @requested_tags)`, then for each key of `GetTagList`: `GetTagName`, `GetGroup` (families 0-3, and 6 for the format), `GetDescription`, `GetValue($key, 'ValueConv')` |
 | `extract_info_from_bytes(data, _)` | the same on `\$data` |
-| `image_info(path)`, `exiftool_port::image_info` | the same, as a name→value map |
+| `image_info(path)`, `exiftool_rs::image_info` | the same, as a name→value map |
 | `set_new_value(tag, value)` | queued; replayed as `SetNewValue($tag, $value, Shift => 0, Protected => 1)` (`Protected` unless the name has a wildcard), as the exiftool application does for `-TAG=VALUE` |
 | `set_new_values_from_file(src, tags)` | queued; replayed as `SetNewValuesFromFile($src, @tags)`; returns the number of tags it sets, counted as the application counts them for `-tagsFromFile` |
 | `write_info(src, dst)` | the queued requests replayed in order (after `SetNewValue()` clears those of an earlier call), `WriteInfo($src, \$out)` |
@@ -135,7 +137,7 @@ Perl, since the port runs Perl code: a config file (`.ExifTool_config`,
 `-config`, `%Image::ExifTool::UserDefined`) adds tags, composite tags,
 shortcuts and options; a custom module can be loaded by it. The Rust API
 adds one for what is better written in Rust, a format engine:
-`exiftool_port::extension::FormatExtension`.
+`exiftool_rs::extension::FormatExtension`.
 
 ```rust
 pub trait FormatExtension: Send + Sync {
@@ -183,7 +185,7 @@ there.
 The built-in extensions, registered by `ExifTool::new` when the
 `extra-writers` cargo feature is on (the default), are the root crate's
 writers for the formats Perl ExifTool reads and refuses to write, in
-`port/src/api/extra_writers/` (copied from the root crate's src/writer/ and
+`src/api/extra_writers/` (copied from the root crate's src/writer/ and
 adapted: tag names as ExifTool reads them, the port's reader in their
 tests):
 
@@ -218,7 +220,7 @@ when found at `$EXIFTOOL_DIR`, with Perl ExifTool 13.60). Without the
 feature, or after `clear_extensions`, these formats are refused as Perl
 refuses them ("Can't write MP3 files").
 
-The exiftool-rs application (`examples/exiftool_rs.rs`, the port of the
+The exiftool-rs application (`src/main.rs`, the port of the
 `exiftool` script) does not use them: it stays ExifTool's, so `exiftool-rs
 -Title=x a.mp3` says "Can't write MP3 files" as `exiftool` does. Reading
 stays ExifTool's for every type (it reads all of these).
@@ -229,7 +231,7 @@ ExifTool alone would leave out the tags the formats name differently (ID3
 `Year` is no Vorbis tag, an M4A's `TrackNumber` is no ID3 `Track`). For a
 copy to a format the built-in extensions write, these are also written as
 the destination's tag of the same meaning, their values converted
-(`FormatExtension::copy_edits`, `port/src/api/extra_writers/equivalents.rs`).
+(`FormatExtension::copy_edits`, `src/api/extra_writers/equivalents.rs`).
 Only for a tag copied **without a destination group** (the whole file, a
 tag list of `Year` or `-all`): never for a tag copied to a group the tag
 list names (`ID3:Year`, `Year>ID3:Year`, `all:all`), never for a

@@ -1,11 +1,11 @@
 # Porting a Perl file to Rust
 
 This is the method every port follows. The reference example is
-`port/src/modules/gps.rs`, the port of `GPS.pm`: read it before starting.
+`src/modules/gps.rs`, the port of `GPS.pm`: read it before starting.
 
 ## How the port runs
 
-The crate in `port/` runs ExifTool. A module not ported yet runs from its
+The crate runs ExifTool. A module not ported yet runs from its
 Perl source in the crate's Perl interpreter; each sub ported to Rust is
 registered as a *native* under its Perl name and replaces the Perl version
 everywhere, including in tables and in references taken earlier. Perl code
@@ -116,8 +116,9 @@ perl's. Statements that cannot die need nothing.
 
 ## Before you start
 
-Your worktree may have been created from `main`, which has no `port/`:
-if so, run `git reset --hard perl-port` first (the worktree is clean).
+Your worktree may have been created from a branch that does not have
+the port yet (before 1.0, the port was in `port/`, next to the old
+crate): if so, ask which branch to start from.
 
 ## Checking a port
 
@@ -125,7 +126,7 @@ All commands take the ExifTool checkout explicitly; use
 `/home/sylvain/dev/exiftool`, a tree of the release the port follows
 (`EXIFTOOL_VERSION`; UPGRADING.md for a new one). Build with `-j2`.
 
-1. `cargo build --release --example run_t -j2` in `port/`: no errors, no
+1. `cargo build --release --example run_t -j2`: no errors, no
    warnings.
 2. **The suite**: `sh scripts/run_suite.sh /home/sylvain/dev/exiftool` must
    print `114 scripts, 114 pass, 604/604 tests ok`.

@@ -2,6 +2,30 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
+## [1.0.0] - unreleased
+
+exiftool-rs becomes a faithful port of Perl ExifTool 13.60: ExifTool's own
+modules, embedded, run by a Perl interpreter written in Rust, with its subs
+and the `exiftool` application ported to Rust one by one. It replaces the
+0.x reimplementation (MIGRATION.md).
+
+### Changed
+
+- Everything read, printed and written is ExifTool's: ExifTool's test suite
+  passes unchanged (114 scripts, 604 tests), every test image extracts as
+  Perl does, and the CLI is compared with Perl's `exiftool` case by case.
+- The CLI has every option of the `exiftool` application.
+- The Rust API keeps 0.14's names and signatures, as a facade over
+  Image::ExifTool (docs/port/API.md lists the differences).
+- 0.x's writers for the types ExifTool does not write (ID3, FLAC, Ogg,
+  Opus, Matroska) are kept, behind the `extra-writers` feature (default).
+- Building needs a C compiler (PCRE2 and zlib are built in).
+
+### Removed
+
+- The internal modules 0.x exported (`formats`, `metadata`, `tags`,
+  `writer`, `encoding`, `geolocation`, `geotag`, `i18n`, `md5`...).
+
 ## [0.14.1] - 2026-10-24
 
 Twelve reports from @julyx10, each checked against ExifTool 13.59 on the

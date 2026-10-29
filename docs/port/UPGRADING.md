@@ -12,7 +12,7 @@ in the port ("Undefined subroutine" where the tables call it).
 
 In the commands below, `OLD` is the ExifTool tree the port follows now
 (`~/dev/exiftool`) and `NEW` a tree of the new release. Never edit either:
-make NEW a copy under `port/target/scratch/` (`rsync -a --exclude=.git`),
+make NEW a copy under `target/scratch/` (`rsync -a --exclude=.git`),
 or use a clone read-only. Every perl and port run goes under
 `prlimit --as=4000000000 -- timeout N` (the judge scripts do it).
 
@@ -22,14 +22,14 @@ or use a clone read-only. Every perl and port run goes under
 git clone https://github.com/exiftool/exiftool ~/.cache/claude-work/etNEW
 cd ~/.cache/claude-work/etNEW && git log --oneline -3      # "Update to 13.NN"
 git diff --stat OLDSHA NEWSHA                              # the files touched
-rsync -a --exclude=.git ~/.cache/claude-work/etNEW/ port/target/scratch/etNEW/
+rsync -a --exclude=.git ~/.cache/claude-work/etNEW/ target/scratch/etNEW/
 ```
 
 `Changes` (the release notes) says what each change is for; read it first.
 
 ## 2. List the subs the release changes
 
-From `port/`:
+From the repository's root:
 
 ```sh
 python3 -I scripts/upgrade_diff.py OLD NEW          # summary
@@ -94,19 +94,19 @@ of src/lib.rs and src/cli/, the docs here, and the golden output of
 
 ## 5. Judges
 
-All against NEW, from `port/`, after `cargo build --release --example run_t
---example exiftool-rs -j2`:
+All against NEW, from the repository's root, after `cargo build --release --example run_t
+--bin exiftool-rs -j2`:
 
 ```sh
 sh scripts/run_suite.sh NEW                 # NEW's own t/: same count or more, all pass
 sh scripts/compare_images.sh NEW            # every t/images file identical
-PORT_BIN=$PWD/target/release/examples/exiftool-rs python3 -I scripts/compare_cli.py NEW
+PORT_BIN=$PWD/target/release/exiftool-rs python3 -I scripts/compare_cli.py NEW
 for f in scripts/cli_cases_*.txt; do        # the other case files, the same way
-    CLI_CASES=$f PORT_BIN=$PWD/target/release/examples/exiftool-rs python3 -I scripts/compare_cli.py NEW
+    CLI_CASES=$f PORT_BIN=$PWD/target/release/exiftool-rs python3 -I scripts/compare_cli.py NEW
 done
 EXIFTOOL_SRC=$PWD/target/scratch/etNEW PERL_CMD=scripts/full_modules/perl.sh \
     CLI_CASES=scripts/cli_cases_full_modules.txt \
-    PORT_BIN=$PWD/target/release/examples/exiftool-rs python3 -I scripts/compare_cli.py NEW
+    PORT_BIN=$PWD/target/release/exiftool-rs python3 -I scripts/compare_cli.py NEW
 cargo test -j2 --release --no-fail-fast
 python3 -I scripts/compare_corpus.py rawsamples NEW   # tests/corpus/README.md
 ```
@@ -120,12 +120,12 @@ with `CLI_GOLDEN_UPDATE=1` once, and check its diff is only the version.
 Notes on the judges:
 
 - A few tests of `cargo test` (official.rs, parse_sources.rs,
-  parse_testlib.rs, debug_run.rs) read ExifTool's tree at
-  `port/../../exiftool`, and `api_media_write.rs` reads written files
-  back with `$EXIFTOOL_DIR` (default the same tree): that must be NEW.
-  In a worktree, where `../../exiftool` does not exist, link it to NEW
-  for the run and remove the link after.
-- `compare_corpus.py` expects the corpus at `../target/corpus/rawsamples`
+  parse_testlib.rs, debug_run.rs, and api_media_write.rs,
+  api_media_copy.rs and api_unchanged_write.rs, which read written files
+  back with Perl) read ExifTool's tree at `$EXIFTOOL_DIR`, by default
+  `../exiftool` next to the repository (tests/common/mod.rs): set it to
+  NEW. Without a tree they are skipped, with a line on stderr.
+- `compare_corpus.py` expects the corpus at `target/corpus/rawsamples`
   (a link to the unpacked corpus will do). Perl takes more than its hour
   on three Hasselblad 3FR files with `-j -n` (FixUTF8, quadratic on their
   large binary value: exiftool/exiftool#496), so the `-n` side times out
@@ -214,7 +214,7 @@ FirmwareInfo (`1.0.0 34(00) at offset 0x5c1`); Olympus2.jpg's
 WhiteBalanceBracket is WhiteBalanceFineTune. No other test expectation
 changed.
 
-Judges against 13.60 (port/target/scratch/et1360, a copy of the release):
+Judges against 13.60 (target/scratch/et1360, a copy of the release):
 
 - its suite: 114 scripts, 114 pass, 604/604 tests (13.59 had 603);
 - compare_images: 194 identical, 0 different;

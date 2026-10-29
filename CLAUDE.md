@@ -2,166 +2,79 @@
 
 ## Project Overview
 
-exiftool-rs is a Rust reimplementation of Perl ExifTool v13.53.
-The Perl source is at `../exiftool/` for reference.
+exiftool-rs is a faithful Rust port of Perl ExifTool 13.60: ExifTool's own
+modules, dumped and embedded (`data/`), run by a Perl interpreter written in
+Rust, with ExifTool's subs and the `exiftool` application ported to Rust one
+by one as natives. The output must be ExifTool's, for every command and
+every argument.
 
-## Architecture
+The reference documentation is `docs/port/`; read it before changing code:
+
+- `docs/port/ARCHITECTURE.md`: the design (runtime, Perl engine, dumps,
+  tests, decisions).
+- `docs/port/PORTING.md`: the method every port of a Perl file follows,
+  and how a port is checked.
+- `docs/port/CLI.md`: the `exiftool` application's port and the judges.
+- `docs/port/API.md`: the Rust API (`exiftool_rs::ExifTool`...), a facade
+  over Image::ExifTool.
+- `docs/port/UPGRADING.md`: taking a new ExifTool release.
+
+The Perl source of the release followed is the reference: `$EXIFTOOL_DIR`,
+by default `../exiftool` next to this repository. Never edit it.
+
+## Layout
 
 ```
 src/
-├── lib.rs              # Crate root, re-exports
-├── main.rs             # CLI binary (~30 options)
-├── gui.rs              # GUI binary (optional, feature "gui")
-├── i18n.rs             # Internationalization (YAML locale loading)
-├── exiftool.rs         # ExifTool struct: read API + write API + dispatch
-├── error.rs            # Error types
-├── value.rs            # Value enum (String, URational, Binary, etc.)
-├── tag.rs              # Tag, TagGroup, TagId structs
-├── file_type.rs        # 115 file types, magic detection
-├── composite.rs        # 16 computed tags (GPS, ImageSize, etc.)
-├── geolocation.rs      # Reverse geocoding from Geolocation.dat
-├── config.rs           # .ExifTool_config parser
-├── formats/            # 29 format readers (one per file)
-│   └── heif_items.rs   # HEIF item tables (iinf/iloc/iref/ipma), shared by reader and writer
-├── metadata/           # Cross-format: exif.rs, iptc.rs, xmp.rs, makernotes.rs
-├── tags/               # Tag tables + print conversions
-│   ├── exif.rs         # Hand-written EXIF tags + print conv
-│   ├── iptc.rs         # IPTC tags
-│   ├── makernotes.rs   # MakerNotes tag lookup (9 manufacturers)
-│   ├── canon_sub.rs    # Canon CameraSettings/ShotInfo decoders
-│   ├── nikon_conv.rs   # Nikon print conversions
-│   ├── sony_conv.rs    # Sony print conversions
-│   ├── generated.rs    # AUTO-GENERATED: 4,286 tag names
-│   ├── print_conv_generated.rs  # AUTO-GENERATED: 45,685 print conversions, as static tables
-│   ├── binary_tables.rs         # Interpreter for the binary sub-table descriptions
-│   ├── binary_tables_generated.rs  # AUTO-GENERATED: 283 binary sub-tables, as data
-│   ├── sony_ciphered.rs         # Interpreter for the Sony ciphered table descriptions
-│   ├── sony_ciphered_generated.rs  # AUTO-GENERATED: 59 Sony ciphered tables, as data
-│   ├── canon_custom2.rs         # Interpreter for CanonCustom::Functions2 (variants by model/count)
-│   └── canon_custom2_generated.rs  # AUTO-GENERATED: CanonCustom::Functions2, as data
-├── writer/             # 15 writer modules
-│   ├── jpeg_writer.rs  # JPEG segment rewriting
-│   ├── exif_writer.rs  # TIFF/EXIF IFD building
-│   ├── xmp_writer.rs   # XMP XML generation
-│   ├── iptc_writer.rs  # IPTC-IIM encoding
-│   ├── exif_edit.rs    # In-place EXIF edits (keeps IFD1, maker notes, offsets)
-│   ├── xmp_edit.rs     # In-place XMP packet edits
-│   ├── heif_writer.rs  # HEIF/AVIF Exif/XMP items, iloc relocation
-│   └── ...             # png, tiff, webp, mp4, psd, pdf, matroska, etc.
-└── scripts/
-    ├── gen_tags.pl      # Generate tag names from Perl source
-    ├── gen_print_conv.pl # Generate print conversions from Perl source
-    ├── gen_binary_tables.pl  # Generate the binary sub-table descriptions
-    └── gen_sony_ciphered.pl  # Generate the Sony ciphered table descriptions
+├── lib.rs           # crate root: the API's re-exports and the engine's modules
+├── main.rs          # exiftool-rs, the application (the port of the `exiftool` script)
+├── api/             # the Rust API facade (ExifTool, Options, Tag, Value...)
+│   └── extra_writers/  # writers for the types ExifTool reads only (feature extra-writers)
+├── cli/             # the `exiftool` script's subs and main program
+├── interp/          # the Perl interpreter (parser, evaluator, builtins, I/O)
+├── perl/            # Perl's values, hashes, pack, sprintf, tr, regexes (PCRE2)
+├── runtime/         # loading the embedded modules (data/), prototypes, sub index
+├── modules/         # natives: ExifTool's subs ported to Rust, one file per Perl file
+├── build_info.rs    # what -ver -v lists (from build.rs)
+└── bin/
+    ├── exiftool_rs_gui/  # the GUI (feature gui)
+    └── parity/           # the live parity auditor (feature parity)
+data/                # the dumps of ExifTool's modules (scripts/dump_all.sh), embedded
+examples/            # run_t (runs ExifTool's t/*.t: the judges), API examples
+tests/               # integration tests and their fixtures (images, expected outputs)
+scripts/             # the judges, the dump and generator scripts
+fuzz/                # cargo-fuzz targets (own workspace, nightly)
+locales/             # the GUI's texts and the four languages ExifTool lacks
+assets/              # icons (GUI window, Windows resource)
 ```
 
 ## Key Commands
 
-```bash
-cargo build --release                    # Build CLI only
-cargo build --release --features gui     # Build CLI + GUI
-cargo test --release                     # Run tests (227 unit + 16 integration + 10 doc), as CI does
-cargo run -- -s photo.jpg                # Run CLI
-cargo run --features gui --bin exiftool-rs-gui  # Run GUI
-cargo run --features gui --bin exiftool-rs-gui -- -lang fr  # GUI in French
-
-# Regenerate from Perl source:
-perl scripts/gen_tags.pl ../exiftool/lib > src/tags/generated.rs
-perl scripts/gen_print_conv.pl ../exiftool/lib > src/tags/print_conv_generated.rs
-perl scripts/gen_binary_tables.pl ../exiftool/lib > src/tags/binary_tables_generated.rs
-perl scripts/gen_sony_ciphered.pl ../exiftool/lib > src/tags/sony_ciphered_generated.rs
-perl scripts/gen_canon_custom2.pl ../exiftool/lib > src/tags/canon_custom2_generated.rs
-perl scripts/gen_iptc_write.pl ../exiftool > src/tags/iptc_write_generated.rs   # IPTC write table
-perl scripts/gen_xmp_write.pl ../exiftool > src/tags/xmp_write_generated.rs     # XMP write table
-
-# Always finish a regeneration with:
-cargo fmt        # or, for one file: rustfmt --edition 2021 <file>
-```
-
-The generators emit readable Rust, not rustfmt's layout — long `Regex::new`
-statics and table rows come out on a single line where rustfmt would wrap
-them, and rustfmt also sorts the `use` lists and aligns trailing comments. The
-committed files are the formatted version, and `cargo fmt --check` is a blocking
-CI gate, so a regeneration that skips `cargo fmt` shows up as a several-thousand
-line diff and a red lint job. Run against ExifTool 13.59's `lib`, the last three
-generators reproduce their committed file byte for byte once formatted;
-`gen_tags.pl` has drifted from `generated.rs`, so read its diff before
-committing one.
-
-`print_conv_generated.rs`, `binary_tables_generated.rs` and
-`sony_ciphered_generated.rs` are data: static tables, the few lookup functions
-that read them, and for the two binary-table modules one small function per
-distinct condition. The binary tables are decoded by hand-written code, in
-`binary_tables.rs` and `sony_ciphered.rs`: change how a table is read there,
-change what a table contains through its generator. Each table used to be
-unrolled into code of its own, which made those three modules most of the
-crate's build time and of the binary's size.
-
-## Key Design Decisions
-
-1. **No external dependencies for formats** — all parsers are hand-written
-2. **Auto-generated tag tables** — Perl scripts extract from ExifTool source
-3. **Fallback chain for tag lookup** — hand-written tables → generated tables
-4. **Print conversion chain** — hand-written → manufacturer-specific → generated
-5. **In-place EXIF edits** — JPEG and HEIF EXIF is edited where it is (`writer/exif_edit.rs`), keeping byte order, IFD1, InteropIFD and maker notes, as ExifTool does
-6. **Geolocation.dat** — uses ExifTool's binary database directly (no conversion)
-7. **GUI is optional** — behind `gui` feature flag, no GUI deps in default build
-8. **i18n via YAML** — locale files in `locales/`, 23 languages, UI strings prefixed `_ui.`
-
-## GUI Architecture
-
-- `src/gui.rs` — standalone binary using `eframe`/`egui`
-- `src/i18n.rs` — loads YAML locale files, provides `ui_text()` and `tag_description()`
-- `locales/*.yml` — 23 language files (3230 tag descriptions + 19 UI strings each)
-- `assets/icon.png` — application icon (also embedded in Windows `.exe` via `build.rs`)
-- `build.rs` — Windows-only: embeds `assets/icon.ico` into the executable via `winres`
-
-## Important Files
-
-- `generated.rs`, `print_conv_generated.rs`, `binary_tables_generated.rs` and
-  `sony_ciphered_generated.rs` are AUTO-GENERATED — don't edit
-- `exiftool.rs` contains both read and write logic — it's the largest file
-- `file_type.rs` has the FileType enum with 115 variants
-- `metadata/exif.rs` is the core EXIF IFD parser, also handles MakerNote dispatch
-
-## Testing
+Build and test with `-j2`. Every perl, run_t or exiftool-rs run of the
+judges goes under `prlimit --as=4000000000 -- timeout N` (the scripts do
+it). Scratch files go to `target/scratch/`, never to /tmp.
 
 ```bash
-# Run against ExifTool's full test suite:
-for f in ../exiftool/t/images/*; do target/release/exiftool -s "$f"; done
+cargo build -j2 --release                         # the CLI, target/release/exiftool-rs
+cargo build -j2 --release --features gui          # and the GUI, exiftool-rs-gui
+EXIFTOOL_DIR=~/dev/exiftool cargo test -j2 --release   # tests (skips those needing ExifTool without it)
 
-# Compare with Perl:
-diff <(target/release/exiftool -s -n photo.jpg) <(perl ../exiftool/exiftool -s -n photo.jpg)
+# The judges (docs/port/CLI.md), all must pass before a commit:
+bash scripts/run_suite.sh ~/dev/exiftool          # 114 scripts, 114 pass, 604/604 tests ok
+bash scripts/compare_images.sh ~/dev/exiftool     # 194 identical, 0 different
+PORT_BIN=$PWD/target/release/exiftool-rs python3 -I scripts/compare_cli.py ~/dev/exiftool
+
+# Windows type-check from Linux, without mingw:
+CC_x86_64_pc_windows_gnu=gcc cargo check -j2 --release --target x86_64-pc-windows-gnu --features gui
 ```
 
-### Scalability & performance
+## Rules
 
-- `tests/large_file.rs` builds a sparse multi-GB MP4 at run time and asserts
-  metadata is still extracted — a regression guard for the mmap reader (issue #5).
-  Unix-only; runs in normal `cargo test`.
-- `tests/perf_report.rs` is an `#[ignore]`d, non-blocking perf harness. Run it to
-  record a data point; it micro-benchmarks the host (CPU/RAM/disk) so runs stay
-  comparable across machines, and appends to `perf/history.tsv` (+ `perf/last-run.txt`):
-
-  ```sh
-  cargo test --release --test perf_report -- --ignored --nocapture
-  ```
-
-## Adding a New Format
-
-1. Create `src/formats/myformat.rs` with `pub fn read_myformat(data: &[u8]) -> Result<Vec<Tag>>`
-2. Add `pub mod myformat;` to `src/formats/mod.rs`
-3. Add `FileType::MyFormat` variant to `src/file_type.rs` (enum + description + mime + extensions + magic)
-4. Add dispatch in `ExifTool::process_file()` in `src/exiftool.rs`
-
-## Adding Write Support
-
-1. Create `src/writer/myformat_writer.rs`
-2. Add to `src/writer/mod.rs`
-3. Add dispatch in `ExifTool::apply_changes()` in `src/exiftool.rs`
-4. Add `fn write_myformat()` method to `ExifTool`
-
-`write_info` reads the output back and returns how many queued requests
-actually took effect (a written tag present with its value, a deleted tag
-or group absent); when none did it fails without writing. A writer that
-ignores a request therefore shows up as a lower count, not a silent success.
+- Faithful port: a Rust function mirrors the Perl sub it ports, its names
+  and structure; a difference with Perl's output is a bug of the port
+  (PORTING.md).
+- `data/` is generated (`scripts/dump_all.sh`, `scripts/gen_extra_langs.pl`):
+  never edit it by hand.
+- Nothing is named `exiftool` (the binary is `exiftool-rs`), so that it is
+  never mistaken for Perl's.
+- Code, comments and commit messages in English.

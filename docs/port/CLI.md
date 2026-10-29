@@ -1,7 +1,7 @@
 # Porting the exiftool application
 
 The `exiftool` script of ExifTool 13.60 (`../exiftool/exiftool`, 5082 lines
-before `__END__`) is ported to Rust in `port/src/cli/`, with the method of
+before `__END__`) is ported to Rust in `src/cli/`, with the method of
 PORTING.md: faithful, sub by sub, judged at every step against Perl.
 
 ## How the port runs while it is under way
@@ -23,9 +23,9 @@ interpreter (no Perl needed: the library is built in). For that program:
 
 `main::<program>` (the main program, below) runs in place of the script's
 top-level code with `EXIFTOOL_NATIVE_MAIN=1`. The application itself is the
-binary `exiftool-rs` (`cargo build --release --example exiftool-rs`), named
-as the crate's binary on main so that it is never mistaken for Perl's
-`exiftool`: it reads no Perl file. `PORT_BIN=target/release/examples/exiftool-rs`
+binary `exiftool-rs` (`cargo build --release --bin exiftool-rs`), named
+so that it is never mistaken for Perl's
+`exiftool`: it reads no Perl file. `PORT_BIN=target/release/exiftool-rs`
 makes the CLI judge run it.
 
 ## The parts
@@ -85,7 +85,7 @@ where the script's `if` is.
 
 ## Judges
 
-From `port/`, all three must pass before every commit:
+From the repository's root, all three must pass before every commit:
 
 ```sh
 sh scripts/run_suite.sh /home/sylvain/dev/exiftool       # 114 scripts, 114 pass, 604/604 tests ok
