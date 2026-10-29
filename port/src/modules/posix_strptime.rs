@@ -73,11 +73,17 @@ fn parse(s: &[u8], fmt: &[u8]) -> ([i64; 8], i64) {
 
 #[cfg(not(unix))]
 fn parse(s: &[u8], fmt: &[u8]) -> ([i64; 8], i64) {
+    parse_time_piece(s, fmt)
+}
+
+/// Windows' parser: Time::Piece's, completed as glibc's strptime.
+#[cfg(any(test, not(unix)))]
+fn parse_time_piece(s: &[u8], fmt: &[u8]) -> ([i64; 8], i64) {
     let mut f = super::time_piece::strptime_fields(s, fmt, [-1, -1, -1, -1, -1, NO_YEAR, -1, -1]);
     // glibc's strptime works out the month and day from a year day, and the
     // week and year days from a full date, which Time::Piece's parser
     // leaves to mktime
-    if f[5] != NO_YEAR && f[7] >= 0 && f[3] == -1 && f[4] == -1 {
+    if f[5] != NO_YEAR && f[7] >= 0 && f[3] <= 0 && f[4] == -1 {
         let days = days_from_civil(f[5] + 1900, 1, 1) + f[7];
         let (mut m, mut first) = (1, days_from_civil(f[5] + 1900, 1, 1));
         while m < 12 && days_from_civil(f[5] + 1900, m + 1, 1) <= days {
@@ -101,7 +107,7 @@ fn parse(s: &[u8], fmt: &[u8]) -> ([i64; 8], i64) {
 }
 
 /// Days since 1970-01-01 of a proleptic Gregorian date.
-#[cfg(not(unix))]
+#[cfg(any(test, not(unix)))]
 fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     let y = if m <= 2 { y - 1 } else { y };
     let era = y.div_euclid(400);
@@ -143,5 +149,14 @@ mod tests {
         assert_eq!(f("2024:05:06 junk", "%Y:%m:%d")[..6], [None, None, None, Some(6), Some(4), Some(124)]);
         assert_eq!(f("2024-13-01", "%Y-%m-%d")[..6], [None, None, None, None, None, Some(124)]);
         assert_eq!(f("2024 100", "%Y %j")[..8], [None, None, None, Some(9), Some(3), Some(124), Some(2), Some(99)]);
+    }
+
+    /// Windows' parser gives the same fields where a date sets them.
+    #[test]
+    fn time_piece_parser_as_glibc() {
+        let f = |s: &str, fmt: &str| super::parse_time_piece(s.as_bytes(), fmt.as_bytes()).0;
+        assert_eq!(f("2024:05:06 07:08:09", "%Y:%m:%d %H:%M:%S"), [9, 8, 7, 6, 4, 124, 1, 126]);
+        assert_eq!(f("2024/05/06", "%Y/%m/%d")[3..], [6, 4, 124, 1, 126]);
+        assert_eq!(f("2024 100", "%Y %j")[3..], [9, 3, 124, 2, 99]);
     }
 }

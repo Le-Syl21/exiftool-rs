@@ -12,10 +12,16 @@ name: Port build
 on:
   workflow_dispatch:
   # A workflow can only be dispatched from the default branch, which does not
-  # have this file yet: on perl-port it runs when the file itself changes.
+  # have this file yet: on perl-port it runs when the file itself or the
+  # platform-specific modules change (Windows can't be run locally).
   push:
     branches: [perl-port]
-    paths: ['.github/workflows/port-build.yml']
+    paths:
+      - '.github/workflows/port-build.yml'
+      - 'port/src/modules/win32.rs'
+      - 'port/src/modules/posix_strptime.rs'
+      - 'port/src/modules/term_readkey.rs'
+      - 'port/src/modules/file_statx.rs'
 
 permissions:
   contents: read
