@@ -502,6 +502,13 @@ pub mod indexmap_lite {
             self.values.iter()
         }
 
+        /// The values, the hash left empty.
+        pub fn take_values(&mut self) -> Vec<Value> {
+            let values = std::mem::take(&mut self.values);
+            self.clear();
+            values
+        }
+
         pub fn clear(&mut self) {
             self.keys.clear();
             self.index.clear();

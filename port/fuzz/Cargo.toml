@@ -1,0 +1,40 @@
+[package]
+name = "exiftool-port-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.exiftool-port]
+path = ".."
+
+# Its own workspace, so the fuzz crate and its nightly-only build never touch
+# the port's.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "extract"
+path = "fuzz_targets/extract.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "write"
+path = "fuzz_targets/write.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "interp"
+path = "fuzz_targets/interp.rs"
+test = false
+doc = false
+bench = false

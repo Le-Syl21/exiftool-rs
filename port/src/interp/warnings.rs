@@ -548,13 +548,20 @@ impl Interp {
         let fmt = vals.first().cloned().unwrap_or_else(|| Value::str(""));
         let rest = &vals[1.min(vals.len())..];
         if origin.is_empty() {
-            return Ok(crate::perl::sprintf::sprintf_value(&fmt, rest, None));
+            let out = crate::perl::sprintf::sprintf_value(&fmt, rest, None);
+            if let Some(e) = crate::perl::sprintf::take_error() {
+                return die(e.message(op));
+            }
+            return Ok(out);
         }
         if let Some(f) = vals.first() {
             self.list_use(f, 0, args, origin, scope, op, false)?;
         }
         let mut uses = Vec::new();
         let out = crate::perl::sprintf::sprintf_value(&fmt, rest, Some(&mut uses));
+        if let Some(e) = crate::perl::sprintf::take_error() {
+            return die(e.message(op));
+        }
         use crate::perl::sprintf::ArgUse;
         for u in uses {
             match u {

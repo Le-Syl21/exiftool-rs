@@ -31,6 +31,92 @@ thread_local! {
     static UTF: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     /// A `%c` above 0xFF was met in a byte string (perl upgrades it).
     static WIDE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// The error the last sprintf stopped on (see `take_error`).
+    static ERROR: std::cell::Cell<Option<Error>> = const { std::cell::Cell::new(None) };
+}
+
+/// Why a `sprintf` stopped: perl croaks on these.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Error {
+    /// A width or precision beyond perl's limit (a quarter of the address
+    /// space): "Integer overflow in format string for sprintf".
+    Overflow,
+    /// A float conversion whose result would pass INT_MAX: "Numeric format
+    /// result too large".
+    TooLarge,
+    /// A field longer than the port builds (`BUILD_MAX`). Perl tries, and
+    /// ends with "Out of memory!" when the system says no; the port dies.
+    OutOfMemory,
+    /// `%c` of NaN or an infinity: "Cannot printf NaN with 'c'".
+    NotAChar(&'static str),
+}
+
+impl Error {
+    /// The message perl dies with, for `op` (`sprintf` or `printf`).
+    pub fn message(self, op: &str) -> String {
+        match self {
+            Error::Overflow => format!("Integer overflow in format string for {op}"),
+            Error::TooLarge => "Numeric format result too large".to_string(),
+            Error::OutOfMemory => format!("Out of memory in {op}"),
+            // ("printf" for sprintf too, as perl says it)
+            Error::NotAChar(what) => format!("Cannot printf {what} with 'c'"),
+        }
+    }
+}
+
+/// The error the last `sprintf` call stopped on, if any (it returns what
+/// it had formatted so far): the caller dies with it, as perl does.
+pub fn take_error() -> Option<Error> {
+    ERROR.with(|e| e.take())
+}
+
+/// Stop a sprintf on a perl error (`take_error` gives it back).
+fn stop(e: Error, out: Vec<u8>) -> Vec<u8> {
+    ERROR.with(|c| c.set(Some(e)));
+    out
+}
+
+/// Perl's limit on a width or precision (sv.c, `expect_number` and
+/// `sprintf_arg_num_val`): beyond it the format "overflows".
+const WIDTH_MAX: u64 = (usize::MAX / 4) as u64;
+
+/// The longest field the port builds. Perl allocates any width up to
+/// `WIDTH_MAX` (and runs out of memory past a few GB); a format that asks
+/// for more than this is refused instead of exhausting the memory.
+pub const BUILD_MAX: usize = 1 << 28;
+
+/// A width or precision written in the format: perl croaks when one more
+/// digit could pass `WIDTH_MAX`.
+fn format_number(digits: &[u8]) -> Result<usize, Error> {
+    let mut n: u64 = 0;
+    for (k, &d) in digits.iter().enumerate() {
+        if k > 0 && n > (WIDTH_MAX - 9) / 10 {
+            return Err(Error::Overflow);
+        }
+        n = n * 10 + (d - b'0') as u64;
+    }
+    Ok(n as usize)
+}
+
+/// Perl's SvIV of a `*` argument: a float past the IV range goes through
+/// a UV, so that 1e19 is negative and 1e300 or Inf -1 (as `sprintf("%*d",
+/// 1e300, 5)` shows: a width of 1, left-justified).
+fn sv_iv(v: &Value) -> i64 {
+    match v.to_number() {
+        Number::Float(f) if f.is_nan() => 0,
+        Number::Float(f) if f >= 9.223372036854775808e18 => crate::perl::ops::to_uv(v) as i64,
+        Number::UInt(u) => u as i64,
+        _ => v.to_i64(),
+    }
+}
+
+/// A width or precision given as an argument (`*`), and whether it is
+/// negative.
+fn argument_number(n: i64) -> Result<(usize, bool), Error> {
+    if n.unsigned_abs() > WIDTH_MAX {
+        return Err(Error::Overflow);
+    }
+    Ok((n.unsigned_abs() as usize, n < 0))
 }
 
 /// `sprintf` with perl's character strings: the result is a character
@@ -56,6 +142,7 @@ fn utf_mode() -> bool {
 
 /// `sprintf`, recording in `trace` how each conversion used its argument.
 pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>>) -> Vec<u8> {
+    ERROR.with(|e| e.set(None));
     let mut out = Vec::with_capacity(fmt.len() + 16);
     let mut next_arg = 0usize;
     let mut i = 0;
@@ -90,6 +177,9 @@ pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>
         }
     };
     while i < fmt.len() {
+        if out.len() > BUILD_MAX {
+            return stop(Error::OutOfMemory, out);
+        }
         let c = fmt[i];
         if c != b'%' {
             out.push(c);
@@ -135,18 +225,24 @@ pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>
         // Width.
         if i < fmt.len() && fmt[i] == b'*' {
             i += 1;
-            let w = take(&mut next_arg, None).to_i64();
-            if w < 0 {
+            let (w, neg) = match argument_number(sv_iv(&take(&mut next_arg, None))) {
+                Ok(w) => w,
+                Err(e) => return stop(e, out),
+            };
+            if neg {
                 spec.left = true;
             }
-            spec.width = Some(w.unsigned_abs() as usize);
+            spec.width = Some(w);
         } else {
             let s = i;
             while i < fmt.len() && fmt[i].is_ascii_digit() {
                 i += 1;
             }
             if i > s {
-                spec.width = std::str::from_utf8(&fmt[s..i]).ok().and_then(|t| t.parse().ok());
+                match format_number(&fmt[s..i]) {
+                    Ok(w) => spec.width = Some(w),
+                    Err(e) => return stop(e, out),
+                }
             }
         }
         // Precision.
@@ -154,17 +250,36 @@ pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>
             i += 1;
             if i < fmt.len() && fmt[i] == b'*' {
                 i += 1;
-                let p = take(&mut next_arg, None).to_i64();
-                spec.prec = if p < 0 { None } else { Some(p as usize) };
+                let (p, neg) = match argument_number(sv_iv(&take(&mut next_arg, None))) {
+                    Ok(p) => p,
+                    Err(e) => return stop(e, out),
+                };
+                spec.prec = if neg { None } else { Some(p) };
             } else {
                 let s = i;
                 while i < fmt.len() && fmt[i].is_ascii_digit() {
                     i += 1;
                 }
-                spec.prec = Some(
-                    std::str::from_utf8(&fmt[s..i]).ok().and_then(|t| t.parse().ok()).unwrap_or(0),
-                );
+                // (leading zeros add nothing: "%.007f")
+                let digits = &fmt[s..i];
+                let start = digits.iter().position(|&d| d != b'0').unwrap_or(digits.len());
+                match format_number(&digits[start..]) {
+                    Ok(p) => spec.prec = Some(p),
+                    Err(e) => return stop(e, out),
+                }
             }
+        }
+        // A float's field past INT_MAX is perl's own error (its width, or
+        // its precision and a few characters). Otherwise a precision makes
+        // digits for a number; it only cuts a string.
+        let conv = fmt[i..].iter().find(|c| !b"hlqLVztj".contains(c));
+        let float = conv.is_some_and(|c| b"eEfFgGaA".contains(c));
+        let digits = float || conv.is_some_and(|c| b"diuoxXbB".contains(c));
+        if float && spec.width.unwrap_or(0).max(spec.prec.unwrap_or(0).saturating_add(20)) > i32::MAX as usize {
+            return stop(Error::TooLarge, out);
+        }
+        if spec.width.unwrap_or(0) > BUILD_MAX || (digits && spec.prec.unwrap_or(0) > BUILD_MAX) {
+            return stop(Error::OutOfMemory, out);
         }
         // Size modifiers, ignored: perl's IV and NV are already the widest.
         while i < fmt.len() && matches!(fmt[i], b'h' | b'l' | b'q' | b'L' | b'V' | b'z' | b't' | b'j') {
@@ -195,6 +310,15 @@ pub fn sprintf_traced(fmt: &[u8], args: &[Value], trace: Option<&mut Vec<ArgUse>
         let v = take(&mut next_arg, explicit);
         if conv == b's' {
             as_str();
+        }
+        if conv == b'c' {
+            if let Number::Float(f) = v.to_number() {
+                if f.is_nan() {
+                    return stop(Error::NotAChar("NaN"), out);
+                } else if f.is_infinite() {
+                    return stop(Error::NotAChar(if f > 0.0 { "Inf" } else { "-Inf" }), out);
+                }
+            }
         }
         match format_one(conv, &spec, &v) {
             Some(s) => out.extend(s),
@@ -327,8 +451,8 @@ fn int_string(v: &Value, spec: &Spec) -> String {
         if p == 0 && digits == "0" {
             digits.clear();
         }
-        while digits.len() < p {
-            digits.insert(0, '0');
+        if digits.len() < p {
+            digits.insert_str(0, &"0".repeat(p - digits.len()));
         }
     }
     let sign = if neg {
@@ -370,8 +494,8 @@ fn unsigned_string(conv: u8, v: &Value, spec: &Spec) -> String {
         if p == 0 && u == 0 {
             digits.clear();
         }
-        while digits.len() < p {
-            digits.insert(0, '0');
+        if digits.len() < p {
+            digits.insert_str(0, &"0".repeat(p - digits.len()));
         }
     }
     if spec.alt && u != 0 {
@@ -388,6 +512,36 @@ fn unsigned_string(conv: u8, v: &Value, spec: &Spec) -> String {
     digits
 }
 
+/// Digits past which a double's exact decimal expansion is all zeros (its
+/// fraction has at most 1074 digits, its significand at most 767): Rust
+/// formats a precision of up to 65535 only, perl any.
+const EXACT_DIGITS: usize = 1100;
+
+/// `%.Pf`, for any P.
+fn fixed(n: f64, prec: usize) -> String {
+    if prec <= EXACT_DIGITS {
+        return format!("{:.*}", prec, n);
+    }
+    let mut s = format!("{:.*}", EXACT_DIGITS, n);
+    s.extend(std::iter::repeat('0').take(prec - EXACT_DIGITS));
+    s
+}
+
+/// Rust's `{:.Pe}`, for any P.
+fn sci(n: f64, prec: usize) -> String {
+    if prec <= EXACT_DIGITS {
+        return format!("{:.*e}", prec, n);
+    }
+    let s = format!("{:.*e}", EXACT_DIGITS, n);
+    let (m, e) = s.split_once('e').unwrap_or((&s, "0"));
+    let mut out = String::with_capacity(prec + 8);
+    out.push_str(m);
+    out.extend(std::iter::repeat('0').take(prec - EXACT_DIGITS));
+    out.push('e');
+    out.push_str(e);
+    out
+}
+
 fn float_string(conv: u8, n: f64, spec: &Spec) -> String {
     if n.is_nan() {
         return "NaN".into();
@@ -397,7 +551,7 @@ fn float_string(conv: u8, n: f64, spec: &Spec) -> String {
     }
     let upper = conv.is_ascii_uppercase();
     let s = match conv.to_ascii_lowercase() {
-        b'f' => format!("{:.*}", spec.prec.unwrap_or(6), n),
+        b'f' => fixed(n, spec.prec.unwrap_or(6)),
         b'e' => format_e(n, spec.prec.unwrap_or(6), spec.alt),
         b'g' => format_g(n, spec.prec.unwrap_or(6), spec.alt, true),
         _ => format_e(n, spec.prec.unwrap_or(13), spec.alt), // %a: not used by ExifTool
@@ -417,7 +571,7 @@ fn float_string(conv: u8, n: f64, spec: &Spec) -> String {
 /// C's `%.Pe`: one digit, a point, P digits, `e`, a sign and at least two
 /// exponent digits.
 pub fn format_e(n: f64, prec: usize, alt: bool) -> String {
-    let s = format!("{:.*e}", prec, n);
+    let s = sci(n, prec);
     let (mantissa, exp) = s.split_once('e').unwrap_or((&s, "0"));
     let exp: i32 = exp.parse().unwrap_or(0);
     let mantissa = if alt && prec == 0 { format!("{mantissa}.") } else { mantissa.to_string() };
@@ -432,7 +586,7 @@ pub fn format_g(n: f64, prec: usize, alt: bool, _c_style: bool) -> String {
     let p = if prec == 0 { 1 } else { prec };
     if n == 0.0 {
         return if alt {
-            format!("{:.*}", p - 1, n)
+            fixed(n, p - 1)
         } else if n.is_sign_negative() {
             "-0".into()
         } else {
@@ -440,12 +594,12 @@ pub fn format_g(n: f64, prec: usize, alt: bool, _c_style: bool) -> String {
         };
     }
     // The exponent after rounding to P significant digits.
-    let e_repr = format!("{:.*e}", p - 1, n);
+    let e_repr = sci(n, p - 1);
     let exp: i32 = e_repr.split_once('e').map_or(0, |(_, e)| e.parse().unwrap_or(0));
     let mut s = if exp < -4 || exp >= p as i32 {
         format_e(n, p - 1, alt)
     } else {
-        format!("{:.*}", (p as i32 - 1 - exp).max(0) as usize, n)
+        fixed(n, (p as i32 - 1 - exp).max(0) as usize)
     };
     if !alt {
         if let Some(epos) = s.find('e') {
