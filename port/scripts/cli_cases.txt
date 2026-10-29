@@ -2,6 +2,8 @@
 # the port. One case per line: KIND|ARGUMENTS.
 #   R  read-only: on t/images
 #   W  writes: on images/, whose files are compared too
+#   RM, WM  Perl needs an optional module the host's Perl lacks: Perl is
+#      then the one of scripts/full_modules (see compare_cli.py)
 # Each case runs in a fresh copy of the images (as both t/images and images)
 # for each side.
 # Arguments are split on spaces, except inside '...' quotes.

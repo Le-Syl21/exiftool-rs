@@ -9,6 +9,14 @@ EXIFTOOL_DIR is ExifTool's source tree (default ../../exiftool); FILTER keeps
 the cases whose line contains it; CLI_CASES=FILE reads the cases from FILE;
 PORT_BIN=PATH runs the port's own exiftool-rs binary instead of run_t + script.
 Outputs go to target/cli/<n>/{perl,port}.
+
+The case kinds (KIND|ARGUMENTS) are R (read-only) and W (writes, the files
+are compared too), and:
+  RM, WM  Perl needs an optional module that the host's Perl lacks and the
+      port provides (Compress::Raw::Lzma, Unicode::LineBreak): Perl is then
+      the container's (PERL_FULL_CMD, default scripts/full_modules/perl.sh)
+PERL_CMD=CMD runs Perl as CMD for every case (scripts/full_modules/perl.sh
+for the second judge set, cli_cases_full_modules.txt; see docs/port/CLI.md).
 """
 import hashlib
 import os
@@ -26,6 +34,20 @@ work = os.path.join(here, "target", "cli")
 port = os.path.join(here, "target", "release", "examples", "run_t")
 script = os.path.join(src, "exiftool")
 limit = ["prlimit", "--as=4000000000", "--", "timeout", "300"]
+full_modules = os.path.join(here, "scripts", "full_modules")
+
+
+def command(text):
+    """A command line from the environment, its program made absolute when
+    it is a relative path (each case runs in a directory of its own)."""
+    cmd = shlex.split(text)
+    if cmd and "/" in cmd[0]:
+        cmd[0] = os.path.abspath(cmd[0])
+    return cmd
+
+
+perl_cmd = command(os.environ["PERL_CMD"]) if os.environ.get("PERL_CMD") else ["perl"]
+perl_full_cmd = command(os.environ.get("PERL_FULL_CMD") or os.path.join(full_modules, "perl.sh"))
 
 # lines that differ between any two runs: the dates of the files
 # themselves, random IDs, the inode, the clock
@@ -65,6 +87,9 @@ def prepare(dir):
     shutil.copytree(os.path.join(dir, "images"), os.path.join(dir, "t", "images"), copy_function=shutil.copy2)
     for d in ("arg_files", "config_files", "fmt_files"):
         os.symlink(os.path.join(src, d), os.path.join(dir, d))
+    # the 7z archives of the second judge set (copied: a symbolic link would
+    # lead nowhere in the container of its reference Perl)
+    shutil.copytree(os.path.join(full_modules, "7z"), os.path.join(dir, "7z"), copy_function=shutil.copy2)
     with open(os.path.join(dir, "csv_in.csv"), "w") as f:
         f.write(CSV_IN)
     with open(os.path.join(dir, "json_in.json"), "w") as f:
@@ -103,6 +128,8 @@ def main():
     env_port = {k: v for k, v in os.environ.items() if k != "EXIFTOOL_LIB"}
     # no user config file on either side
     env_perl["EXIFTOOL_HOME"] = env_port["EXIFTOOL_HOME"] = os.path.join(work, "no_home")
+    # (for scripts/full_modules/perl.sh: the tree to mount in its container)
+    env_perl["EXIFTOOL_SRC"] = src
     os.makedirs(env_perl["EXIFTOOL_HOME"], exist_ok=True)
     same, bad, tp, tr = 0, [], 0.0, 0.0
     for n, (kind, args) in enumerate(cases(), 1):
@@ -111,13 +138,15 @@ def main():
         # (PORT_BIN=path: the port's own exiftool binary, which reads no
         # script, instead of run_t running ExifTool's script)
         port_cmd = [os.environ["PORT_BIN"]] if os.environ.get("PORT_BIN") else [port, script]
-        for side, cmd, env in (("perl", ["perl", script], env_perl), ("port", port_cmd, env_port)):
+        perl = perl_full_cmd if "M" in kind and not os.environ.get("PERL_CMD") else perl_cmd
+        sides = (("perl", perl + [script], env_perl), ("port", port_cmd, env_port))
+        for side, cmd, env in sides:
             d = os.path.join(work, str(n), side)
             prepare(d)
             cwd = d
             rc, out, err, secs = run(cmd + argv, cwd, env)
             out, err = normalize(out, cwd), normalize(err, cwd)
-            fl = files(d) if kind == "W" else {}
+            fl = files(d) if "W" in kind else {}
             with open(os.path.join(d, "..", side + ".txt"), "w") as f:
                 f.write(f"rc={rc}\n--- stdout\n{out}--- stderr\n{err}--- files\n")
                 f.writelines(f"{k} {v}\n" for k, v in sorted(fl.items()))

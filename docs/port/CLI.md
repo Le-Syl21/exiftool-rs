@@ -97,7 +97,46 @@ python3 -I scripts/compare_cli.py /home/sylvain/dev/exiftool   # no new differen
 own cases) with Perl's exiftool and with `run_t exiftool`, each in a copy of
 the images, and compares output, exit status and written files. Its known
 difference today (to keep, not to add to): `-ver -v` (the Perl
-installation).
+installation). The cases whose Perl needs a module the host's Perl lacks
+have a kind of their own:
+
+- `RM`/`WM`: Perl needs Compress::Raw::Lzma or Unicode::LineBreak, which
+  the port provides and the host's Perl lacks; the Perl side runs in the
+  container of the second judge set below (`PERL_FULL_CMD` to run it
+  otherwise).
+
+### The second judge set: the optional modules
+
+The host's Perl lacks Compress::Raw::Lzma and Unicode::LineBreak, which the
+port provides (src/modules/lzma.rs; Unicode::LineBreak to
+come). Their reference is the
+Perl of `scripts/full_modules/Dockerfile` (Ubuntu 24.04's perl 5.38 and
+packaged modules, as the host, plus those two), run by
+`scripts/full_modules/perl.sh` with the case's directory and ExifTool's
+tree mounted at their own paths:
+
+```sh
+docker build -t exiftool-rs-fullperl:local scripts/full_modules
+PERL_CMD=scripts/full_modules/perl.sh CLI_CASES=scripts/cli_cases_full_modules.txt \
+    python3 -I scripts/compare_cli.py /home/sylvain/dev/exiftool
+```
+
+`scripts/cli_cases_full_modules.txt` covers 7z archives with an encoded
+header (`scripts/full_modules/7z`, made with `7z a -mhc=on`: several files,
+a directory, UTF-8 names, empty files, stored and bzip2 data, 300 files).
+
+What the module follows, and where it parts from Perl's:
+
+- Compress::Raw::Lzma: the raw LZMA1 decoder 7Z.pm uses is the port's own
+  (lzma.rs says why no crate would do). On the headers of the test
+  archives cut at every length tried, decoded in one call or two, zeros,
+  random and corrupted data, its output, status and leftover input are
+  liblzma's (xz 5.4.5). A bad filter option dies with perl's message
+  (`Lc + Lp must be <= 4`), at the caller's line where perl names a line
+  of Lzma.pm. As in Perl, an archive whose encoded header is over 32 KB
+  compressed never ends: 7Z.pm gives each 32 KB block to a new decoder,
+  the second fails, and its read loop waits for bytes that never come (a
+  3000-file archive does it, so none is a case).
 
 ## Languages exiftool-rs adds
 

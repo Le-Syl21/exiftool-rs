@@ -83,6 +83,7 @@ pub mod lif;
 pub mod ligo_gps;
 pub mod lnk;
 pub mod lytro;
+pub mod lzma;
 pub mod m2ts;
 pub mod mac_os;
 pub mod maker_notes;

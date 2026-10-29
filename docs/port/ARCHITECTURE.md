@@ -155,7 +155,9 @@ Only standard work goes to crates:
   syntax (case-sensitive letters, suffixes such as `-g1:2`, and the tag
   operation grammar), so the parser is a hand port of the Perl chain.
 - **Paths and directory walking**: walkdir.
-- **Compression**: flate2, brotli, lzma.
+- **Compression**: flate2, brotli, bzip2 (Compress::Raw::Lzma's raw LZMA1
+  decoder is the port's own, src/modules/lzma.rs: no crate stops where
+  liblzma does at the end of a stream with no size and no end marker).
 - **Digests**: md5, sha.
 - **Dates**: strftime/strptime for `-d`.
 - **XML parsing**, where ExifTool uses its own parser only as a tokenizer.
