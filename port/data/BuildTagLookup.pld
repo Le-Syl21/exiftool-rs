@@ -287,12 +287,12 @@ Tags 0x0000 through 0x0103 are used by some older Olympus cameras, and are
 the same as Konica/Minolta tags.  These tags are also used for some models
 from other brands such as Acer, BenQ, Epson, Hitachi, HP, Maginon, Minolta,
 Pentax, Ricoh, Samsung, Sanyo, SeaLife, Sony, Supra and Vivitar.
-PDF€
+PDF¬
 The tags listed in the PDF tables below are those which are used by ExifTool
 to extract meta information, but they are only a small fraction of the total
 number of available PDF tags.  See
-L<http://www.adobe.com/devnet/pdf/pdf_reference.html> for the official PDF
-specification.
+L<https://web.archive.org/web/20210125064408/https://www.adobe.com/devnet/pdf/pdf_reference.html>
+for the official PDF specification.
 
 ExifTool supports reading and writing PDF documents up to version 2.0,
 including support for RC4, AES-128 and AES-256 encryption.  A
