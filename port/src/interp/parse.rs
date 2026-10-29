@@ -2750,7 +2750,7 @@ mod tests {
     #[test]
     fn interpolation() {
         let b = ok("\"a $val b $$self{Make} c @{[ 1+2 ]} d $val[0] e ${val}f\"");
-        let Stmt::Expr(Expr::Interp(parts)) = &b[0] else { panic!() };
+        let Some(Stmt::Expr(Expr::Interp(parts))) = b.iter().find(|s| !matches!(s, Stmt::Line(_))) else { panic!() };
         assert_eq!(parts.len(), 11);
     }
 }
