@@ -342,3 +342,21 @@ fn engines_are_per_thread() {
         assert_eq!(h.join().unwrap().as_deref(), Some("Canon EOS DIGITAL REBEL"));
     }
 }
+
+#[test]
+fn embedded_binary_is_binary() {
+    // PDF's EmbeddedImage ValueConv is a SCALAR reference to an element of
+    // the stream's dictionary: its raw value is the data (as many bytes as
+    // Perl ExifTool 13.60 reports), never the reference's "SCALAR(0x...)"
+    // text, and it prints as any binary value.
+    for (file, size) in [("PDF.pdf", 501), ("PDF2.pdf", 251)] {
+        let et = ExifTool::with_options(Options { extract_embedded: 1, ..Options::default() });
+        let tags = et.extract_info(image(file)).unwrap();
+        let t = tags.iter().find(|t| t.name == "EmbeddedImage").unwrap_or_else(|| panic!("{file}: no EmbeddedImage"));
+        match &t.raw_value {
+            Value::Binary(b) => assert_eq!(b.len(), size, "{file}"),
+            other => panic!("{file}: EmbeddedImage raw value {other:?}"),
+        }
+        assert_eq!(t.print_value, format!("(Binary data {size} bytes, use -b option to extract)"), "{file}");
+    }
+}
