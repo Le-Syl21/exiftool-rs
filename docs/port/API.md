@@ -18,6 +18,7 @@ read, convert or write metadata on its own.
 | `set_new_value(tag, value)` | queued; replayed as `SetNewValue($tag, $value, Shift => 0, Protected => 1)` (`Protected` unless the name has a wildcard), as the exiftool application does for `-TAG=VALUE` |
 | `set_new_values_from_file(src, tags)` | queued; replayed as `SetNewValuesFromFile($src, @tags)`; returns the number of tags it sets, counted as the application counts them for `-tagsFromFile` |
 | `write_info(src, dst)` | the queued requests replayed in order (after `SetNewValue()` clears those of an earlier call), `WriteInfo($src, \$out)` |
+| `register_extension(ext)`, `clear_extensions()` | none: a Rust writer `write_info` calls for a type `CanWrite` refuses (see Extensions) |
 | `write_warnings()` | the warnings of `SetNewValue`, `SetNewValuesFromFile` and `WriteInfo` (the `Warning` tags) |
 | `get_file_type(path)`, `file_type::detect_from_magic` | `ImageInfo(..., 'FileType')` with `FastScan => 3` |
 | `file_type::detect_from_extension` | `GetFileType` |
@@ -111,6 +112,69 @@ When nothing takes effect, a new destination gets ExifTool's unchanged
 copy and the call returns `Ok(0)`; in place it fails and leaves the file
 alone ("Nothing to do.").
 
+### Extensions
+
+ExifTool's own ways of being extended work in the port as they do in
+Perl, since the port runs Perl code: a config file (`.ExifTool_config`,
+`-config`, `%Image::ExifTool::UserDefined`) adds tags, composite tags,
+shortcuts and options; a custom module can be loaded by it. The Rust API
+adds one for what is better written in Rust, a format engine:
+`exiftool_port::extension::FormatExtension`.
+
+```rust
+pub trait FormatExtension: Send + Sync {
+    fn name(&self) -> &str;
+    fn file_types(&self) -> &[&str];   // ExifTool FileType names: "MP3", "FLAC"...
+    fn write(&self, input: &[u8], file_type: &str, edits: &[NewValue]) -> Result<Vec<u8>>;
+}
+
+impl ExifTool {
+    pub fn register_extension<E: FormatExtension + 'static>(&mut self, ext: E);
+    pub fn clear_extensions(&mut self);
+}
+```
+
+`write_info` calls an extension only when ExifTool cannot write the
+source's type itself: ExifTool's write is tried first, and only when it
+fails is the source's `FileType` (as `ImageInfo` finds it) looked up; if
+`CanWrite` says no and an extension lists that type (the one registered
+last, if several do), the extension writes the whole new file. Its output
+then goes through what any write goes through: a temporary file renamed
+over the destination, the requests that took effect counted by reading it
+back with ExifTool. Nothing changes for a type ExifTool writes. The edits
+are the queued requests in order, a copy (`set_new_values_from_file`)
+given as one edit per tag it copies, under the source tag's family 1
+group. A destination name ExifTool gives a type to must be one of the
+extension's types (`.opus` is `OGG`). The warnings of such a write are
+empty: ExifTool's (`Sorry, ID3:Title doesn't exist or isn't writable`) would be wrong
+there.
+
+The built-in extensions, registered by `ExifTool::new` when the
+`extra-writers` cargo feature is on (the default), are the root crate's
+writers for the formats Perl ExifTool reads and refuses to write, in
+`port/src/api/extra_writers/` (copied from the root crate's src/writer/ and
+adapted: tag names as ExifTool reads them, the port's reader in their
+tests):
+
+| Extension | Types | Writes |
+|---|---|---|
+| `Id3Writer` | `MP3`, `AIFF` | ID3v2 frames (in the tag's version; ID3v2.3 for a new tag) and the ID3v1 trailer of an MP3; the `ID3 ` chunk of an AIFF. Groups `ID3`, `ID3v1`, `ID3v2*` |
+| `VorbisWriter` | `FLAC`, `OGG`, `OPUS` | the Vorbis comments of FLAC, Ogg Vorbis, Ogg FLAC and Opus files (Ogg pages re-paginated, CRCs recomputed). Group `Vorbis`; a field is matched by the name ExifTool gives it (Vorbis.pm), a new one takes ExifTool's field for the name |
+| `MatroskaWriter` | `MKV`, `WEBM` | the segment Title (`Matroska:Title`, read as `Info:Title`) and SimpleTags, positions relocated (SeekHead, Cues, Clusters) |
+
+A request without a group goes to the writer of the file; one for another
+group (`EXIF:Artist` in an MP3) is not written and not counted. Perl
+ExifTool reads the files they write back with the new values
+(`tests/api_media_write.rs` checks each case with the port's reader and,
+when found at `$EXIFTOOL_DIR`, with Perl ExifTool 13.59). Without the
+feature, or after `clear_extensions`, these formats are refused as Perl
+refuses them ("Can't write MP3 files").
+
+The exiftool-rs application (`examples/exiftool_rs.rs`, the port of the
+`exiftool` script) does not use them: it stays ExifTool's, so `exiftool-rs
+-Title=x a.mp3` says "Can't write MP3 files" as `exiftool` does. Reading
+stays ExifTool's for every type (it reads all of these).
+
 ### Threads
 
 An `ExifTool` keeps one interpreter, and one `Image::ExifTool` object on
@@ -165,8 +229,10 @@ The root crate had its own readers and writers; the facade has ExifTool's.
 Where the two differ, the facade is ExifTool's:
 
 - **Formats ExifTool does not write** (MP3/AIFF ID3, FLAC, Ogg, Opus,
-  Matroska) are refused with `Error::UnsupportedFileType("Can't write MP3
-  files")`; the root crate wrote them. `writable_tags` is ExifTool's whole
+  Matroska) are written by the built-in extensions, the root crate's
+  writers (see Extensions); without them they are refused with
+  `Error::UnsupportedFileType("Can't write MP3 files")`, as ExifTool
+  refuses them. `writable_tags` is ExifTool's whole
   writable set for a type ExifTool writes, and empty otherwise (never
   `None`).
 - **Writes ExifTool refuses fail**: SonyILCE9.arw (cut-off preview) gives

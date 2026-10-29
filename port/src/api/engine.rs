@@ -200,6 +200,17 @@ sub Write {
     return [ $rtn, \$out, $warn, $err ];
 }
 
+# For a write ExifTool refused: the FileType of SRC (as ImageInfo finds
+# it), whether ExifTool can write that type, and the type of DST's name.
+sub WriteTypes {
+    my ($src, $dst) = @_;
+    my $et = Tool();
+    my $info = $et->ImageInfo($src, 'FileType');
+    my $type = $$info{FileType};
+    my $canWrite = (defined $type and Image::ExifTool::CanWrite($type)) ? 1 : 0;
+    return [ $type, $canWrite, scalar Image::ExifTool::GetFileType($dst) ];
+}
+
 # The FileType and FileTypeExtension of a file (a name or a SCALAR
 # reference), from its magic number and extension as ExtractInfo finds
 # them, without reading metadata.

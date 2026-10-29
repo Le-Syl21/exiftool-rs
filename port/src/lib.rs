@@ -14,4 +14,4 @@ pub mod runtime;
 
 // The root crate's API (`exiftool_rs::ExifTool`...), at the crate root as
 // there, with its modules under their names.
-pub use crate::api::{error, exiftool, file_type, get_file_type, image_info, tag, value, Error, ExifTool, FileType, ImageInfo, Options, Result, Tag, TagGroup, TagId, Value, EXIFTOOL_VERSION, VERSION};
+pub use crate::api::{error, exiftool, extension, file_type, get_file_type, image_info, tag, value, Error, ExifTool, FileType, FormatExtension, ImageInfo, NewValue, Options, Result, Tag, TagGroup, TagId, Value, EXIFTOOL_VERSION, VERSION};

@@ -67,7 +67,10 @@ libc = "0.2"
 winres = { version = "0.1", optional = true }
 
 [features]
-default = []
+# The built-in format extensions: writers for the types ExifTool reads and
+# does not write (ID3, Vorbis comments, Matroska; src/api/extra_writers/)
+default = ["extra-writers"]
+extra-writers = []
 # The GUI, exiftool-rs-gui (none of its dependencies in the default build)
 gui = ["eframe", "egui", "image", "rfd", "noto-fonts-dl"]
 # The Windows icon/version resource in the executables (build.rs)

@@ -11,6 +11,7 @@ use crate::perl::Value as PV;
 
 use super::engine::{self, call, pv_array, pv_path, pv_str, Engine};
 use super::error::{Error, Result};
+use super::extension::{self, FormatExtension};
 use super::file_type::{self, FileType};
 use super::tag::Tag;
 use super::value::Value;
@@ -248,6 +249,9 @@ pub struct ExifTool {
     write_warnings: std::sync::Mutex<Vec<String>>,
     /// The interpreter running Image::ExifTool for this object's calls.
     engine: Engine,
+    /// The writers `write_info` calls for a type ExifTool cannot write,
+    /// the last registered first.
+    extensions: Vec<std::sync::Arc<dyn FormatExtension>>,
 }
 
 /// What a read is of: a file, or data in memory.
@@ -281,7 +285,21 @@ impl ExifTool {
             requests: Vec::new(),
             write_warnings: std::sync::Mutex::new(Vec::new()),
             engine: Engine::default(),
+            extensions: extension::builtin(),
         }
+    }
+
+    /// Add a writer for file types ExifTool cannot write (see
+    /// [`FormatExtension`]). It goes before those already there, the
+    /// built-in ones included: the last registered for a type writes it.
+    pub fn register_extension<E: FormatExtension + 'static>(&mut self, ext: E) {
+        self.extensions.push(std::sync::Arc::new(ext));
+    }
+
+    /// Remove every extension, the built-in ones too: `write_info` then
+    /// writes what ExifTool writes, and refuses the rest as ExifTool does.
+    pub fn clear_extensions(&mut self) {
+        self.extensions.clear();
     }
 
     /// Get a mutable reference to the options.
@@ -430,14 +448,21 @@ impl ExifTool {
             Ok((rtn, output, warnings, f.get(3).and_then(engine::opt_text)))
         })?;
         self.set_write_warnings(warnings);
-        if rtn == 0 {
+        let output = if rtn != 0 {
+            output
+        } else if let Some(output) = self.write_by_extension(src_path, dst_path)? {
+            // (ExifTool's warnings about these requests, "Sorry, ID3:Title
+            // doesn't exist or isn't writable"..., do not hold)
+            self.set_write_warnings(Vec::new());
+            output
+        } else {
             let msg = error.unwrap_or_else(|| "ExifTool could not write the file".to_string());
             return Err(if msg.contains("not yet supported") || msg.contains("Can't write") || msg.contains("not supported") {
                 Error::UnsupportedFileType(msg)
             } else {
                 Error::InvalidData(msg)
             });
-        }
+        };
 
         let temp = TempFile::create(dst_path, &output)?;
         let requests = self.counted_requests();
@@ -449,6 +474,30 @@ impl ExifTool {
         }
         temp.persist(dst_path)?;
         Ok(if nothing_done { 0 } else { applied })
+    }
+
+    /// The new file an extension writes for a source ExifTool cannot
+    /// write: `None` when ExifTool can write the source's type (`CanWrite`)
+    /// or no extension writes it, or when ExifTool gives the destination's
+    /// name a type the extension does not write.
+    fn write_by_extension(&self, src: &Path, dst: &Path) -> Result<Option<Vec<u8>>> {
+        if self.extensions.is_empty() {
+            return Ok(None);
+        }
+        let (s, d) = (src.to_path_buf(), dst.to_path_buf());
+        let (file_type, can_write, dst_type) = self.run(move |it| -> Result<_> {
+            let r = call(it, "WriteTypes", vec![pv_path(&s), pv_path(&d)], Want::Scalar)?;
+            let f = engine::array(r.first().unwrap_or(&PV::Undef));
+            let get = |i: usize| f.get(i).and_then(engine::opt_text);
+            Ok((get(0), f.get(1).is_some_and(PV::truthy), get(2)))
+        })?;
+        let Some(file_type) = file_type.filter(|_| !can_write) else { return Ok(None) };
+        let Some(ext) = self.extensions.iter().rev().find(|e| extension::handles(e.as_ref(), &file_type)) else { return Ok(None) };
+        if dst_type.is_some_and(|t| !extension::handles(ext.as_ref(), &t)) {
+            return Ok(None);
+        }
+        let input = fs::read(src).map_err(Error::Io)?;
+        ext.write(&input, &file_type, &self.counted_requests()).map(Some)
     }
 
     /// The warnings of the last [`write_info`](Self::write_info) call, as

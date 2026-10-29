@@ -16,12 +16,16 @@
 mod engine;
 pub mod error;
 pub mod exiftool;
+pub mod extension;
+#[cfg(feature = "extra-writers")]
+pub mod extra_writers;
 pub mod file_type;
 pub mod tag;
 pub mod value;
 
 pub use error::{Error, Result};
-pub use exiftool::{ExifTool, ImageInfo, Options};
+pub use exiftool::{ExifTool, ImageInfo, NewValue, Options};
+pub use extension::FormatExtension;
 pub use file_type::FileType;
 pub use tag::{Tag, TagGroup, TagId};
 pub use value::Value;
