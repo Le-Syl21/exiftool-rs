@@ -129,8 +129,20 @@ Included libraries:
   Perl interpreter             own Rust implementation (perl 5.38 semantics)
   Perl regular expressions     own Rust implementation, based on pcre2 0.2.11 (PCRE2 10.46, C, static)
   ...
+  POSIX::strptime              own Rust implementation, based on libc 0.2.191 (the C library's strptime)
+  ...
+  File::StatX                  own Rust implementation, based on libc 0.2.191 (statx)
   Memory allocator             rusty_alloc 2.2.7
 ```
+
+The optional modules are those of the script's `@recommends` that the port
+provides, with its rules: File::StatX only on Linux, and on Windows
+`Win32::API`, `Win32::FindFile` and `Win32API::File` (based on
+windows-sys) after the others. POSIX::strptime is the C library's
+strptime, as the module's; Windows has none, and there it is Time::Piece's
+parser (no libc line). Time::HiRes, Term::ReadKey and IO::String, which
+the port also provides (src/modules/time_hires.rs, term_readkey.rs,
+io_string.rs), are not in `@recommends` and not listed.
 
 Nothing there is written by hand: build.rs reads the crates' versions in
 Cargo.lock (followed from this package, so the versions actually built),
@@ -146,10 +158,13 @@ Dir, Script Name...; `-v2`: Include directories) are kept.
 
 ### The second judge set: the optional modules
 
-The host's Perl lacks Compress::Raw::Lzma and Unicode::LineBreak, which the
-port provides (src/modules/lzma.rs, gcstring.rs). Their reference is the
-Perl of `scripts/full_modules/Dockerfile` (Ubuntu 24.04's perl 5.38 and
-packaged modules, as the host, plus those two), run by
+The host's Perl lacks Compress::Raw::Lzma, Unicode::LineBreak,
+POSIX::strptime, IO::String and File::StatX, which the port provides
+(src/modules/lzma.rs, gcstring.rs, posix_strptime.rs, io_string.rs,
+file_statx.rs). Their reference is the Perl of
+`scripts/full_modules/Dockerfile` (Ubuntu 24.04's perl 5.38 and packaged
+modules, as the host, plus those: File::StatX 0.005 built from CPAN), run
+by
 `scripts/full_modules/perl.sh` with the case's directory and ExifTool's
 tree mounted at their own paths:
 
@@ -161,8 +176,23 @@ PERL_CMD=scripts/full_modules/perl.sh CLI_CASES=scripts/cli_cases_full_modules.t
 
 `scripts/cli_cases_full_modules.txt` covers 7z archives with an encoded
 header (`scripts/full_modules/7z`, made with `7z a -mhc=on`: several files,
-a directory, UTF-8 names, empty files, stored and bzip2 data, 300 files)
-and the plain output in ja, zh_cn, zh_tw, ko, ru, fr and de.
+a directory, UTF-8 names, empty files, stored and bzip2 data, 300 files),
+the plain output in ja, zh_cn, zh_tw, ko, ru, fr and de, ProcessingTime
+(Time::HiRes, its value masked), FileCreateDate on Linux, the inverse
+date conversions of `-d` (POSIX::strptime, tried before Time::Piece), ZIP
+archives on a pipe (`- < FILE`: IO::String), and `-k`/`-pause` with the
+standard input not a terminal (Term::ReadKey, also on the host).
+
+Against the host's Perl, the port does without File::StatX,
+POSIX::strptime and IO::String (`EXIFTOOL_WITHOUT`, a list of modules
+whose `require` then fails as in a Perl that lacks them, which
+compare_cli.py sets but for the `RM`/`WM` cases and `PERL_CMD`, and
+compare_images.sh too): they change what ExifTool does with no case
+asking for them (FileCreateDate on every file on Linux, the `-d` inverse
+conversions, a ZIP on a pipe). FileCreateDate is a file's birth time,
+which differs between the two sides' copies of the images: compare_cli.py
+drops its lines but in the cases that read ExifTool's own files
+(`{SRC}/t/images/...`, the same files on both sides), which compare it.
 
 What the two modules follow, and where they part from Perl's:
 
@@ -176,10 +206,38 @@ What the two modules follow, and where they part from Perl's:
   compressed never ends: 7Z.pm gives each 32 KB block to a new decoder,
   the second fails, and its read loop waits for bytes that never come (a
   3000-file archive does it, so none is a case).
+- POSIX::strptime: libc's strptime(3) on a struct tm whose fields start
+  unset, with the LC_TIME of the environment (perl's); the fields it did
+  not set are undef, but the week and year days, which come out as
+  today's, as with the module (0.13 on glibc 2.39).
+- File::StatX: statx(2) through libc; `btime` is the seconds with the
+  nanoseconds as a fraction, undef when the filesystem keeps no birth
+  time.
+- IO::String: `new` only (an in-memory handle that the port's Archive::Zip
+  reads); ZIP.pm uses nothing else.
 - Unicode::GCString: `columns` on unicode-width; gcstring.rs lists the code
   points where it differs from Unicode::LineBreak 2019.001 (whose
   character database is Unicode 8.0), none of them in the text of
   ExifTool's languages.
+
+### Windows: the Win32 modules
+
+On MSWin32 ExifTool loads Win32::API, Win32API::File and Win32::FindFile
+(src/modules/win32.rs, on windows-sys): with Win32::API, WindowsLongPath is
+on, so every file name goes through EncodeFileName to the wide (UTF-16)
+calls: Open and Exists by CreateFileW and OsFHandleOpenFd (a descriptor
+that `open "<&=FD"` takes over), IsDirectory and the file attributes by
+GetFileAttributesW, Rename by MoveFileExW, Unlink by DeleteFileW, Unicode
+directories by CreateDirectoryW, and the file times (FileCreateDate, -P,
+and the creation date the script then keeps by default) by
+GetFileTime/SetFileTime;
+the script reads directories and expands wildcards with Win32::FindFile.
+Win32::API imports only the four functions ExifTool names. None of this
+runs on Linux: `CC_x86_64_pc_windows_gnu=gcc cargo check --target
+x86_64-pc-windows-gnu` type-checks it, the conversions are unit-tested,
+and `.github/workflows/port-build.yml` exercises it on Windows (Unicode
+names, a wildcard, a directory, -P, FileCreateDate written and read back,
+-delete_original, the attributes, a new Unicode directory).
 
 ## Languages exiftool-rs adds
 

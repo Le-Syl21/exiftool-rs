@@ -20,6 +20,10 @@ are compared too), and two more:
       the container's (PERL_FULL_CMD, default scripts/full_modules/perl.sh)
 PERL_CMD=CMD runs Perl as CMD for every case (scripts/full_modules/perl.sh
 for the second judge set, cli_cases_full_modules.txt; see docs/port/CLI.md).
+In the arguments, {SRC} is ExifTool's tree (the same files for both sides,
+for what differs between two copies: FileCreateDate), and "< FILE" at the
+end gives the command FILE (in its directory) on a pipe as its standard
+input, which is otherwise /dev/null.
 """
 import hashlib
 import os
@@ -56,12 +60,26 @@ perl_full_cmd = command(os.environ.get("PERL_FULL_CMD") or os.path.join(full_mod
 # lines that differ between any two runs: the dates of the files
 # themselves, random IDs, the inode, the clock
 VOLATILE = re.compile(r"File (Access|Inode Change|Modification) Date/Time|File(Access|InodeChange|Modify)Date|"
-                      r"New [GU]UID|New[GU]UID|File Inode Number|FileInodeNumber|Processing Time|ProcessingTime|"
+                      r"New [GU]UID|New[GU]UID|File Inode Number|FileInodeNumber|"
                       r"^\[?\w*\]?\s*(Now|Age)\s*:|\"Now\"")
+# the birth time of a file (FileCreateDate on Linux, with File::StatX), which
+# differs between the two sides' copies (by more than the second masked as
+# today's in -v3's raw numbers): kept only in the cases that read ExifTool's
+# own files ({SRC}), the same on both sides
+BIRTH = re.compile(r"File Creation Date/Time|FileCreateDate")
+# the ProcessingTime tag: there, but its value a timing
+PTIME = re.compile(r"(Processing ?Time\b[^0-9\n]*)[0-9][0-9.e+-]*")
 TODAY = time.strftime("%Y:%m:%d")
 # a date of today (a file's own dates in a format that does not name the
 # tag: -s3, -csv, -l...)
 NOW = re.compile(re.escape(TODAY) + r" \d\d:\d\d:\d\d(\.\d+)?([+-]\d\d:\d\d|Z)?")
+
+# the optional modules the port provides that the host's Perl lacks, and
+# which change what it does with no case asking for them (FileCreateDate on
+# every file, the -d inverse conversions, ZIP from a pipe): the port does
+# without them against the host's Perl (EXIFTOOL_WITHOUT), and has them
+# against the container's (PERL_CMD, the RM/WM cases)
+HOST_LACKS = "File::StatX POSIX::strptime IO::String"
 
 CSV_IN = "SourceFile,Artist,XMP:Title\nimages/Canon.jpg,From CSV,CSV title\n"
 JSON_IN = '[{"SourceFile":"images/Nikon.jpg","Artist":"From JSON","XMP:Subject":["a","b"]}]\n'
@@ -98,6 +116,9 @@ def prepare(dir):
         f.write(CSV_IN)
     with open(os.path.join(dir, "json_in.json"), "w") as f:
         f.write(JSON_IN)
+    # an answer to a question on the standard input ("< yes.txt")
+    with open(os.path.join(dir, "yes.txt"), "w") as f:
+        f.write("y\n")
 
 
 def files(dir):
@@ -113,9 +134,10 @@ def files(dir):
     return out
 
 
-def normalize(text, cwd):
+def normalize(text, cwd, same_files=False):
     text = text.replace(cwd, "WORK").replace(src, "SRC")
-    text = "".join(l for l in text.splitlines(True) if not VOLATILE.search(l))
+    text = "".join(l for l in text.splitlines(True) if not VOLATILE.search(l) and (same_files or not BIRTH.search(l)))
+    text = PTIME.sub(r"\1N", text)
     return NOW.sub("TODAY", text)
 
 
@@ -144,9 +166,15 @@ def golden_check(args, rc, out, err):
         return f.read() == got
 
 
-def run(cmd, cwd, env):
+def run(cmd, cwd, env, stdin=None):
     t = time.monotonic()
-    p = subprocess.run(limit + cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True)
+    if stdin:
+        # (through a pipe, as the container of the second judge set gives
+        # it to its Perl)
+        with open(os.path.join(cwd, stdin), "rb") as f:
+            p = subprocess.run(limit + cmd, cwd=cwd, env=env, input=f.read(), capture_output=True)
+    else:
+        p = subprocess.run(limit + cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True)
     return p.returncode, p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace"), time.monotonic() - t
 
 
@@ -160,9 +188,13 @@ def main():
     # (for scripts/full_modules/perl.sh: the tree to mount in its container)
     env_perl["EXIFTOOL_SRC"] = src
     os.makedirs(env_perl["EXIFTOOL_HOME"], exist_ok=True)
+    env_host = dict(env_port, EXIFTOOL_WITHOUT=HOST_LACKS)
     same, bad, skipped, tp, tr = 0, [], [], 0.0, 0.0
     for n, (kind, args) in enumerate(cases(), 1):
-        argv = shlex.split(args)
+        argv = [a.replace("{SRC}", src) for a in shlex.split(args)]
+        stdin = None
+        if len(argv) >= 2 and argv[-2] == "<":
+            stdin, argv = argv[-1], argv[:-2]
         res = {}
         # (an S case is the program's own: run_t runs the script's)
         if kind == "S" and not os.environ.get("PORT_BIN"):
@@ -172,13 +204,17 @@ def main():
         # script, instead of run_t running ExifTool's script)
         port_cmd = [os.environ["PORT_BIN"]] if os.environ.get("PORT_BIN") else [port, script]
         perl = perl_full_cmd if "M" in kind and not os.environ.get("PERL_CMD") else perl_cmd
-        sides = (("perl", perl + [script], env_perl), ("port", port_cmd, env_port))
+        # against the host's Perl, the port does without the optional
+        # modules that Perl lacks
+        env = env_port if perl is not perl_cmd or os.environ.get("PERL_CMD") else env_host
+        sides = (("perl", perl + [script], env_perl), ("port", port_cmd, env))
         for side, cmd, env in sides[1:] if kind == "S" else sides:
             d = os.path.join(work, str(n), side)
             prepare(d)
             cwd = d
-            rc, out, err, secs = run(cmd + argv, cwd, env)
-            out, err = normalize(out, cwd), normalize(err, cwd)
+            rc, out, err, secs = run(cmd + argv, cwd, env, stdin)
+            same_files = "{SRC}" in args
+            out, err = normalize(out, cwd, same_files), normalize(err, cwd, same_files)
             fl = files(d) if "W" in kind else {}
             with open(os.path.join(d, "..", side + ".txt"), "w") as f:
                 f.write(f"rc={rc}\n--- stdout\n{out}--- stderr\n{err}--- files\n")

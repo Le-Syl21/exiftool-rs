@@ -101,11 +101,24 @@ pub fn included_libraries() -> Vec<(&'static str, String)> {
         ("Digest::MD5", on(&["md-5"])),
         ("Digest::SHA", on(&["sha1", "sha2"])),
         ("Archive::Zip", own.to_string()),
+        // (the C library's strptime, as the module's; Windows has none,
+        // and there it is Time::Piece's parser)
+        ("POSIX::strptime", if cfg!(unix) { format!("{} (the C library's strptime)", on(&["libc"])) } else { own.to_string() }),
         ("Time::Piece", own.to_string()),
         ("Time::Local", own.to_string()),
         ("Compress::Raw::Lzma", own.to_string()),
         ("Unicode::LineBreak", on(&["unicode-width"])),
     ];
+    // the modules of one platform, as the script lists them: File::StatX
+    // on Linux, the Win32 ones on Windows
+    if cfg!(target_os = "linux") {
+        v.push(("File::StatX", format!("{} (statx)", on(&["libc"]))));
+    }
+    if cfg!(windows) {
+        for m in ["Win32::API", "Win32::FindFile", "Win32API::File"] {
+            v.push((m, on(&["windows-sys"])));
+        }
+    }
     if let Some(a) = allocator() {
         v.push(("Memory allocator", a.to_string()));
     }

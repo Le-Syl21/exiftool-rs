@@ -1,6 +1,7 @@
 # The second judge set: the cases where the optional modules the host's Perl
 # lacks change the output, against the Perl of scripts/full_modules (the
-# host's Perl plus Compress::Raw::Lzma and Unicode::LineBreak):
+# host's Perl plus Compress::Raw::Lzma, Unicode::LineBreak, POSIX::strptime,
+# IO::String and File::StatX):
 #   PERL_CMD=scripts/full_modules/perl.sh CLI_CASES=scripts/cli_cases_full_modules.txt \
 #       python3 -I scripts/compare_cli.py /home/sylvain/dev/exiftool
 # (see docs/port/CLI.md). Same format as cli_cases.txt.
@@ -40,3 +41,41 @@ R|-lang de t/images/Canon.jpg
 R|-lang ja -s t/images/Canon.jpg
 R|-lang ja -h t/images/Nikon.jpg
 R|-lang ja -a -G0:1 -u t/images/Panasonic.rw2
+
+# --- Time::HiRes: ProcessingTime (its value masked: a timing)
+R|-api ProcessingTime=1 -ProcessingTime t/images/Canon.jpg
+R|-s -ProcessingTime -Model t/images/Nikon.jpg
+R|-j -ProcessingTime t/images/Canon.jpg
+
+# --- File::StatX: FileCreateDate on Linux, from the birth time of the same
+# files on both sides (ExifTool's tree, {SRC})
+R|-FileCreateDate {SRC}/t/images/Canon.jpg
+R|-n -FileCreateDate {SRC}/t/images/Canon.jpg
+R|-G1 -s -time:all {SRC}/t/images/Nikon.jpg {SRC}/t/images/XMP.xmp
+R|-File:all -FileCreateDate {SRC}/t/images/Sony.jpg
+
+# --- POSIX::strptime: the inverse date conversions of -d (before Time::Piece)
+W|-d '%d/%m/%Y %H:%M' '-DateTimeOriginal=25/12/2023 10:30' images/Canon.jpg
+W|-d '%Y%m%d %H%M%S' '-XMP:DateCreated=20240102 030405' '-CreateDate=19991231 235959' images/Canon.jpg
+W|-d '%H:%M:%S%f%:z %m-%d-%Y' '-XMP:CreateDate=09:11:12.345-07:00 01-02-2024' images/Canon.jpg
+W|-d '%b %d %Y %I:%M %p' '-DateTimeOriginal=Dec 25 2023 07:15 PM' images/Canon.jpg
+W|-d '%H:%M' '-DateTimeOriginal=10:30' images/Canon.jpg
+W|-api StrictDate=1 -d '%H:%M' '-DateTimeOriginal=10:30' images/Canon.jpg
+W|-api StrictDate=1 -d '%Y-%m-%d' '-DateTimeOriginal=2024-01-02' images/Canon.jpg
+W|-api StrictDate=1 -d '%Y:%m:%d' '-DateTimeOriginal=bad date' images/Canon.jpg
+W|-d '%s' '-DateTimeOriginal=1700000000' images/Canon.jpg
+
+# --- IO::String: a ZIP archive from a pipe, which Archive::Zip reads from
+# memory
+R|-G1 -a - < images/ZIP.zip
+R|-G1 -a - < images/OOXML.docx
+R|- < images/OpenDoc.ods
+R|-ZIP:all - < images/iWork.numbers
+R|-G1 -a - < images/CaptureOne.eip
+
+# --- Term::ReadKey: -k and -pause with the standard input not a terminal
+# (/dev/null, or a file whose first character ReadKey reads)
+R|-k -Model t/images/Canon.jpg
+R|-pause t/images/Canon.jpg
+R|-k -Model t/images/Canon.jpg < yes.txt
+R|-k -badopt t/images/Canon.jpg

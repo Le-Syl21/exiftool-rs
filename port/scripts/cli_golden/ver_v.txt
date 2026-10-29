@@ -15,9 +15,11 @@ Included libraries:
   Digest::MD5                  own Rust implementation, based on md-5 N.N
   Digest::SHA                  own Rust implementation, based on sha1 N.N, sha2 N.N
   Archive::Zip                 own Rust implementation
+  POSIX::strptime              own Rust implementation, based on libc N.N (the C library's strptime)
   Time::Piece                  own Rust implementation
   Time::Local                  own Rust implementation
   Compress::Raw::Lzma          own Rust implementation
   Unicode::LineBreak           own Rust implementation, based on unicode-width N.N
+  File::StatX                  own Rust implementation, based on libc N.N (statx)
   Memory allocator             rusty_alloc N.N
 --- stderr
