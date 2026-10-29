@@ -162,8 +162,12 @@ fn heif_writes_match_exiftool() {
         // HEIF_plain.avif) changes nothing, which ExifTool reports as
         // "1 image files unchanged".
         let empty = snapshot(&Path::new("../tests/images").join(image)).is_empty();
+        // Writing the value already there changes nothing either, and is
+        // not counted: both files' GPSLatitudeRef is already North.
         let changed = if empty && case == "deleteall" {
             0
+        } else if case == "edit" {
+            ops.len() - 1
         } else {
             ops.len()
         };

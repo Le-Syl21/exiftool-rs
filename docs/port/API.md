@@ -103,14 +103,30 @@ failure the temporary file is removed and `dst` is left as it was. In place
 (`src` = `dst`) is the same. A destination ExifTool cannot write is refused
 as the exiftool application refuses `-o` ("Can't write MP3 files").
 
-It returns the number of requests that took effect, judged by reading the
-result back with ExifTool, as the root crate does: a written tag must be
-there with its value (or a new value), a deleted tag or group must be gone
-(an EXIF tag from its write group only; `PNG:all` the tags ExifTool can
-write). Deleting what the file does not have counts 0 and is not an error.
-When nothing takes effect, a new destination gets ExifTool's unchanged
-copy and the call returns `Ok(0)`; in place it fails and leaves the file
-alone ("Nothing to do.").
+It returns the number of requests that changed the file, judged by reading
+the result back with ExifTool, as the root crate does: a written tag must be
+there with its value (or a new value) that the file did not have, a deleted
+tag or group must be gone (an EXIF tag from its write group only; `PNG:all`
+the tags ExifTool can write). Deleting what the file does not have, or
+writing the value it already has, counts 0 and is not an error: `Artist=y`
+on a file whose Artist is `y` returns `Ok(0)`; with another request that
+changes something, only that one counts.
+
+When the write changes nothing, the call returns `Ok(0)`, and in place the
+file is not touched: no temporary file, no rename, the same modification
+time. That is when ExifTool's `WriteInfo` returns 2 ("1 image files
+unchanged": nothing written, as for a deletion of what is not there, when
+the exiftool application erases its temporary file), when ExifTool's
+output has the input's bytes, and for an extension when its output is the
+input or holds the same values (nothing counted). Perl differs on one
+point: writing the value already there, `WriteInfo` returns 1 and the
+application says "1 image files updated", renaming a new file with the
+same bytes over the old one (JPEG, PNG, M4A alike); the facade counts 0
+and leaves the file alone. A new destination gets the unchanged copy, as
+`exiftool -o` writes it ("1 image files copied"). When none of the
+requests can be written at all (a tag ExifTool does not define, `IPTC:City`
+in a MOV), a new destination gets the unchanged copy and the call returns
+`Ok(0)`; in place it fails and leaves the file alone ("Nothing to do.").
 
 ### Extensions
 

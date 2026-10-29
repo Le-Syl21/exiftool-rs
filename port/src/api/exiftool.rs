@@ -408,16 +408,24 @@ impl ExifTool {
     /// complete, and removed if anything fails.
     ///
     /// Returns the number of queued requests that changed the file, checked
-    /// by reading the result back: a written tag must be there with its new
-    /// value, a deleted tag or group must be gone. Deleting a tag the file
-    /// does not have changes nothing, so it is not counted, but it is not an
-    /// error either: like ExifTool's "1 image files unchanged", the call
-    /// returns `Ok(0)` and still writes `dst_path`.
+    /// by reading the result back: a written tag must be there with a value
+    /// the file did not have, a deleted tag or group must be gone. Deleting a
+    /// tag the file does not have, or writing the value it already has,
+    /// changes nothing, so it is not counted, but it is not an error either.
+    /// When the write changes nothing (ExifTool's `WriteInfo` returns 2,
+    /// "1 image files unchanged"; or the new file has the same bytes, as
+    /// when every value written is the one already there, which `WriteInfo`
+    /// still reports as an update; for an extension, also a file with the
+    /// same values), the call returns `Ok(0)`: in place, the file is left
+    /// alone (no temporary file, no rename, the same modification time); a
+    /// distinct `dst_path` gets the unchanged copy (ExifTool's "1 image
+    /// files copied").
     ///
-    /// When none of the queued requests takes effect, a distinct `dst_path`
-    /// gets ExifTool's unchanged copy and the call returns `Ok(0)`
-    /// (ExifTool's "1 image files copied"); in place, the call fails and
-    /// leaves the file alone (ExifTool's "Nothing to do."). ExifTool's
+    /// When none of the queued requests can be written at all (a tag
+    /// ExifTool does not define, a group the file cannot have), a distinct
+    /// `dst_path` gets ExifTool's unchanged copy and the call returns
+    /// `Ok(0)`; in place, the call fails and leaves the file alone
+    /// (ExifTool's "Nothing to do."). ExifTool's
     /// warnings ("Tag 'X' is not defined"...) are kept for
     /// [`write_warnings`](Self::write_warnings).
     pub fn write_info<P: AsRef<Path>, Q: AsRef<Path>>(&self, src_path: P, dst_path: Q) -> Result<u32> {
@@ -448,13 +456,23 @@ impl ExifTool {
             Ok((rtn, output, warnings, f.get(3).and_then(engine::opt_text)))
         })?;
         self.set_write_warnings(warnings);
-        let output = if rtn != 0 {
-            output
+        // Unchanged: ExifTool's WriteInfo returns 2 for a file it left as it
+        // was (nothing written: a deletion of what is not there), and a
+        // rewrite with the same bytes (the values already there, which
+        // WriteInfo still reports as written) changes nothing either.
+        let same_bytes = |output: &[u8]| -> Result<bool> {
+            let len = fs::metadata(src_path).map_err(Error::Io)?.len();
+            Ok(len == output.len() as u64 && fs::read(src_path).map_err(Error::Io)? == output)
+        };
+        let (output, unchanged, by_extension) = if rtn != 0 {
+            let unchanged = rtn == 2 || same_bytes(&output)?;
+            (output, unchanged, false)
         } else if let Some(output) = self.write_by_extension(src_path, dst_path)? {
             // (ExifTool's warnings about these requests, "Sorry, ID3:Title
             // doesn't exist or isn't writable"..., do not hold)
             self.set_write_warnings(Vec::new());
-            output
+            let unchanged = same_bytes(&output)?;
+            (output, unchanged, true)
         } else {
             let msg = error.unwrap_or_else(|| "ExifTool could not write the file".to_string());
             return Err(if msg.contains("not yet supported") || msg.contains("Can't write") || msg.contains("not supported") {
@@ -464,16 +482,40 @@ impl ExifTool {
             });
         };
 
-        let temp = TempFile::create(dst_path, &output)?;
         let requests = self.counted_requests();
+        let in_place = same_file(src_path, dst_path);
+        let nothing_to_do = |skipped: usize| -> Result<u32> {
+            if !requests.is_empty() && skipped == requests.len() {
+                let described: Vec<String> = requests.iter().map(NewValue::describe).collect();
+                return Err(Error::UnsupportedFileType(format!("nothing to do: none of the requested changes could be written to this file ({})", described.join(", "))));
+            }
+            Ok(0)
+        };
+        if unchanged {
+            // Nothing is counted. In place, the file is left alone, as the
+            // exiftool application leaves it ("1 image files unchanged": no
+            // temporary file, no rename), unless none of the requests could
+            // be written ("Nothing to do."); a new destination gets the
+            // unchanged copy ("1 image files copied").
+            if in_place {
+                let (_, skipped) = self.count_applied(src_path, src_path, &requests);
+                return nothing_to_do(skipped);
+            }
+            TempFile::create(dst_path, &output)?.persist(dst_path)?;
+            return Ok(0);
+        }
+        let temp = TempFile::create(dst_path, &output)?;
         let (applied, skipped) = self.count_applied(src_path, temp.path(), &requests);
-        let nothing_done = !requests.is_empty() && skipped == requests.len();
-        if nothing_done && same_file(src_path, dst_path) {
-            let described: Vec<String> = requests.iter().map(NewValue::describe).collect();
-            return Err(Error::UnsupportedFileType(format!("nothing to do: none of the requested changes could be written to this file ({})", described.join(", "))));
+        if in_place {
+            nothing_to_do(skipped)?;
+            // (an extension that rewrote the file the same, its values as
+            // they were: unchanged too)
+            if by_extension && applied == 0 {
+                return Ok(0);
+            }
         }
         temp.persist(dst_path)?;
-        Ok(if nothing_done { 0 } else { applied })
+        Ok(if !requests.is_empty() && skipped == requests.len() { 0 } else { applied })
     }
 
     /// The new file an extension writes for a source ExifTool cannot
@@ -599,8 +641,8 @@ impl ExifTool {
 
     /// How many of `requests` the rewrite of `before` into `after` carried
     /// out, judged by what ExifTool reads in each, and how many do not hold
-    /// in `after` (a deletion of something already absent holds without
-    /// being counted).
+    /// in `after` (a deletion of something already absent, a value already
+    /// there, holds without being counted).
     fn count_applied(&self, before: &Path, after: &Path, requests: &[NewValue]) -> (u32, usize) {
         let keep = |t: &ReadTag| !matches!(t.tag.group.family0.as_str(), "System" | "Composite" | "ExifTool");
         let read = |p: &Path| -> Vec<ReadTag> {
@@ -629,11 +671,15 @@ impl ExifTool {
                 skipped += 1;
                 continue;
             }
-            // ExifTool reports a file "unchanged" when the only edit deletes
-            // a tag it did not have; writing a value always counts, even the
-            // value already there.
-            let already_gone = nv.value.is_none() && png_group_deleted(nv, file_type, &before_tags).unwrap_or_else(|| request_applied(nv, &before_tags, &before_tags));
-            if !already_gone {
+            // Only what changed the file counts, as ExifTool reports a file
+            // "unchanged" (WriteInfo returns 2) when its edits leave it as it
+            // was: deleting a tag it did not have, writing the value already
+            // there.
+            let counts = match nv.value {
+                None => !png_group_deleted(nv, file_type, &before_tags).unwrap_or_else(|| request_applied(nv, &before_tags, &before_tags)),
+                Some(_) => request_changed(nv, &before_tags, &after_tags),
+            };
+            if counts {
                 changed += 1;
             }
         }
@@ -898,6 +944,20 @@ fn request_applied(nv: &NewValue, before: &[ReadTag], after: &[ReadTag]) -> bool
             })
         }
     }
+}
+
+/// Did writing a value (a request that holds in `after`) change the file:
+/// is a tag it wrote (of its name, or under another name with its value) in
+/// `after` with a value it did not have in `before`?
+fn request_changed(nv: &NewValue, before: &[ReadTag], after: &[ReadTag]) -> bool {
+    let Some(v) = &nv.value else { return false };
+    let group = nv.group.as_deref().filter(|g| !g.is_empty());
+    let new_here = |t: &Tag| !before.iter().any(|b| b.tag.name == t.name && b.tag.group.family1 == t.group.family1 && b.tag.print_value == t.print_value);
+    after.iter().any(|t| {
+        let t = &t.tag;
+        let named = t.name.eq_ignore_ascii_case(&nv.tag) || same_value(&t.print_value, v) || same_value(&t.raw_value.to_display_string(), v);
+        in_group(t, group) && named && new_here(t)
+    })
 }
 
 /// Convert a tag value to a safe filename.
