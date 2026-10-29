@@ -5,6 +5,10 @@
 use exiftool_port::interp::{Binding, Flow, Want};
 use exiftool_port::perl::Value;
 
+// See the rusty_alloc-api entry in Cargo.toml.
+#[global_allocator]
+static GLOBAL: rusty_alloc_api::RustyAlloc = rusty_alloc_api::RustyAlloc;
+
 fn main() {
     let mut args = std::env::args();
     let zero = args.next().unwrap_or_else(|| "exiftool".to_string());

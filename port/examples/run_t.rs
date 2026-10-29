@@ -3,6 +3,10 @@
 //! Prints the script's output; the exit status is the script's.
 use exiftool_port::interp::{Scope, Want};
 
+// See the rusty_alloc-api entry in Cargo.toml.
+#[global_allocator]
+static GLOBAL: rusty_alloc_api::RustyAlloc = rusty_alloc_api::RustyAlloc;
+
 fn main() {
     let path = std::env::args().nth(1).expect("usage: run_t SCRIPT");
     let src = std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"));

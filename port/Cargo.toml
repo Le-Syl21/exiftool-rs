@@ -51,3 +51,11 @@ libc = "0.2"
 [[example]]
 name = "exiftool-rs"
 path = "examples/exiftool_rs.rs"
+
+[dev-dependencies]
+# The examples' global allocator: rusty_alloc, a pure-Rust remake of
+# mimalloc. The interpreter allocates many small values; measured over the
+# test images and 120 RAW files (CPU time, pinned, best of 8): system malloc
+# 0 %, mimalloc (C) -11 / -12 %, rusty_alloc -10 / -13 %, dlmalloc +18 / +14 %,
+# with the same output for all.
+rusty_alloc-api = "2.2.7"
