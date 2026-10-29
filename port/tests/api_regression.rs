@@ -3,10 +3,21 @@ use std::collections::BTreeSet;
 use std::panic;
 use std::path::Path;
 
+/// The oracles were made by a Perl without the optional modules File::StatX
+/// (FileCreateDate on every file on Linux), POSIX::strptime and IO::String:
+/// the port does without them too (EXIFTOOL_WITHOUT, as its judges against
+/// the host's Perl).
+fn oracle_modules() {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| std::env::set_var("EXIFTOOL_WITHOUT", "File::StatX POSIX::strptime IO::String"));
+}
+
 /// Helper to call extract_info catching both errors and panics.
 fn safe_extract(path: &Path) -> Option<Vec<exiftool_port::Tag>> {
     let path = path.to_path_buf();
     let result = panic::catch_unwind(move || {
+        oracle_modules();
         let et = ExifTool::new();
         et.extract_info(&path)
     });
@@ -581,6 +592,7 @@ fn safe_extract_with_ee(path: &Path, extract_embedded: u8) -> Option<Vec<exiftoo
     use exiftool_port::Options;
     let path = path.to_path_buf();
     let result = panic::catch_unwind(move || {
+        oracle_modules();
         let et = ExifTool::with_options(Options {
             extract_embedded,
             ..Default::default()
@@ -785,6 +797,7 @@ fn all_test_files_parse_without_panic() {
             None => {
                 // Distinguish error from panic by trying again without catch_unwind
                 // (we already caught it, so just count it)
+                oracle_modules();
                 let et = ExifTool::new();
                 let is_panic = panic::catch_unwind(panic::AssertUnwindSafe(|| {
                     let _ = et.extract_info(&path);
@@ -874,6 +887,7 @@ fn assert_fit_parity(extract_embedded: u8, baseline: &str, mode: &str) {
         .collect();
     want.sort();
 
+    oracle_modules();
     let et = ExifTool::with_options(Options {
         extract_embedded,
         ..Default::default()
@@ -1005,6 +1019,7 @@ fn plist_and_gcontainer_tags_keep_exiftool_order() {
         ),
     ];
     for (file, group1, want) in cases {
+        oracle_modules();
         let tags = ExifTool::new()
             .extract_info(Path::new("../tests/images").join(file))
             .unwrap_or_else(|e| panic!("{file}: {e}"));

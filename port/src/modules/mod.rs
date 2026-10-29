@@ -37,6 +37,8 @@ pub mod dv;
 pub mod exe;
 pub mod exif;
 pub mod exiftool;
+#[cfg(target_os = "linux")]
+pub mod file_statx;
 pub mod fits;
 pub mod fixup;
 pub mod flac;

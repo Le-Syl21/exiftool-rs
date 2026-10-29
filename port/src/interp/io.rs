@@ -245,6 +245,27 @@ impl Interp {
         Some(if utf8 { Value::chars(c) } else { Value::bytes(c) })
     }
 
+    /// The file behind a handle (`f` gets it), for natives that need the
+    /// operating system's handle (File::StatX's fstatx, Win32API::File's
+    /// GetOsFHandle).
+    pub fn with_handle_file<R>(&mut self, v: &Value, f: impl FnOnce(&File) -> R) -> Option<R> {
+        let h = self.handle_of(v, false)?;
+        let mut fh = h.borrow_mut();
+        let fh = &mut *fh;
+        match (&mut fh.input, &mut fh.output) {
+            (Some(Input::File(r)), _) => Some(f(r.get_ref())),
+            (Some(Input::Rw(r)), _) => {
+                r.sync();
+                Some(f(&r.f))
+            }
+            (_, Some(Output::File(w))) => {
+                let _ = w.flush();
+                Some(f(w.get_ref()))
+            }
+            _ => None,
+        }
+    }
+
     /// Everything behind a handle, for natives that read a whole file
     /// (Archive::Zip): its file, or its in-memory data.
     pub fn handle_contents(&mut self, v: &Value) -> Option<Vec<u8>> {
@@ -948,7 +969,7 @@ fn std_stream_file(_fd: i32) -> Option<File> {
     None
 }
 
-fn os_error_text(e: &std::io::Error) -> String {
+pub(crate) fn os_error_text(e: &std::io::Error) -> String {
     match e.kind() {
         std::io::ErrorKind::NotFound => "No such file or directory".into(),
         std::io::ErrorKind::PermissionDenied => "Permission denied".into(),
