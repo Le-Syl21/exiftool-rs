@@ -62,14 +62,15 @@ jobs:
             cargo run --release --features parity --bin parity
           fi
 
-      # The two counters, reported rather than enforced. Pointed at a NEWER
-      # ExifTool this is the other half of the drift question: how much ground
-      # a version bump would open. The blocking copies are in ci.yml, which
-      # runs them against the pinned version at every tag.
-      - name: Counters against that version
-        if: always()
+      # Pointed at a NEWER ExifTool, the other half of the drift question:
+      # the subs the release adds, removes or changes, which the port has to
+      # take (docs/port/UPGRADING.md). Reported, not enforced.
+      - name: The subs that version changes
+        if: always() && inputs.exiftool_version != ''
         run: |
-          lib=$(echo target/parity/exiftool-*/lib)
-          test -d "$lib" || exit 0
-          cargo run --release --features parity --bin conv_coverage -- "$lib" | head -20
-          perl scripts/coverage_report.pl "$lib" src | tail -30
+          pinned=$(sed -n 's/^pub const EXIFTOOL_VERSION: &str = "\(.*\)";/\1/p' src/api/mod.rs)
+          mkdir -p target/upgrade
+          for v in "$pinned" '${{ inputs.exiftool_version }}'; do
+            curl -fsSL "https://github.com/exiftool/exiftool/archive/refs/tags/$v.tar.gz" | tar xz -C target/upgrade
+          done
+          python3 -I scripts/upgrade_diff.py "target/upgrade/exiftool-$pinned" 'target/upgrade/exiftool-${{ inputs.exiftool_version }}'

@@ -12,6 +12,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # The Perl ExifTool release the port follows (src/api/mod.rs,
+  # EXIFTOOL_VERSION; the lint job checks the two agree). Its source tree is
+  # what the tests that need one and the judges of the parity job read.
+  EXIFTOOL_VERSION: "13.60"
 
 jobs:
   lint:
@@ -23,7 +27,7 @@ jobs:
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
         with:
           toolchain: stable
-          components: rustfmt, clippy
+          components: clippy
 
       # First thing in the pipeline: the tag has to match the crate version.
       # Without it a v0.6.2 tag once published a GitHub release while Cargo.toml
@@ -45,6 +49,15 @@ jobs:
           fi
           echo "tag $GITHUB_REF_NAME <-> Cargo.toml $crate: OK"
 
+      # The ExifTool the tests and the judges download is the one the port
+      # follows, whose modules are embedded in data/.
+      - name: Check that EXIFTOOL_VERSION is the port's
+        run: |
+          grep -q "^pub const EXIFTOOL_VERSION: &str = \"$EXIFTOOL_VERSION\";" src/api/mod.rs || {
+            echo "::error::EXIFTOOL_VERSION=$EXIFTOOL_VERSION here, but src/api/mod.rs says $(grep 'EXIFTOOL_VERSION: &str' src/api/mod.rs)"
+            exit 1
+          }
+
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
 
       - name: Install GUI dependencies
@@ -52,17 +65,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libxdo-dev libglib2.0-dev
 
-      - name: Check formatting
-        run: cargo fmt --check
+      # No `cargo fmt --check`: the port is written in its own layout (one
+      # statement per line, however long, to follow the Perl line by line)
+      # and has never been run through rustfmt, which would rewrite most of
+      # it. Formatting is a decision for the whole tree at once, not a gate.
 
       # --all-targets so the tests are linted too: without it the gate covered
       # the library and the binaries only, and a lint error sitting in a test
-      # stayed invisible until someone ran clippy differently.
+      # stayed invisible until someone ran clippy differently. What fails is
+      # set in Cargo.toml ([lints.clippy]: the correctness and suspicious
+      # lints); the style lints the Perl-shaped code raises are warnings.
       - name: Clippy (CLI)
-        run: cargo clippy --release --all-targets -- -D warnings
+        run: cargo clippy --release --all-targets
 
-      - name: Clippy (GUI)
-        run: cargo clippy --release --features gui --all-targets -- -D warnings
+      - name: Clippy (GUI, parity auditor)
+        run: cargo clippy --release --features gui,parity --all-targets
 
   build:
     needs: lint
@@ -88,6 +105,9 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.label }}
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v7
@@ -109,23 +129,112 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libxdo-dev libglib2.0-dev
 
       - name: Build CLI (with icon on Windows)
-        run: cargo build --release --target ${{ matrix.target }} ${{ runner.os == 'Windows' && '--features win-icon' || '' }}
+        run: cargo build --release --target ${{ matrix.target }} --bin exiftool-rs ${{ runner.os == 'Windows' && '--features win-icon' || '' }}
 
       - name: Build GUI (with icon on Windows)
-        run: cargo build --release --target ${{ matrix.target }} --features gui${{ runner.os == 'Windows' && ',win-icon' || '' }}
+        run: cargo build --release --target ${{ matrix.target }} --bin exiftool-rs-gui --features gui${{ runner.os == 'Windows' && ',win-icon' || '' }}
 
-      - name: Run tests
+      # The source tree of the ExifTool release the port follows, for the
+      # tests that run ExifTool's own scripts, parse its sources or read a
+      # written file back with it (tests/common/mod.rs: skipped without it).
+      # Unpacked under target/ by a relative path (GNU tar on Windows takes
+      # "D:" for a host name), named for Rust by `pwd -W` there.
+      - name: Fetch Perl ExifTool ${{ env.EXIFTOOL_VERSION }}
         if: matrix.target != 'x86_64-apple-darwin'
-        # Release matches how the crate is built/run and how the parity baseline is
-        # generated (debug panics on arithmetic overflow, skewing the parity corpus).
-        # LTO is off for this step only. Under thin LTO every test executable
-        # repeats the library's whole optimisation at its own link, so the step
-        # cost several times a release build. Nothing it builds is shipped: it
-        # writes to target/release, the packages come from target/<triple>/release
-        # built above, and overflow checks stay off as in any release build.
+        run: |
+          mkdir -p target/exiftool
+          curl -fsSL "https://github.com/exiftool/exiftool/archive/refs/tags/$EXIFTOOL_VERSION.tar.gz" | tar xz -C target/exiftool
+          test -f "target/exiftool/exiftool-$EXIFTOOL_VERSION/lib/Image/ExifTool.pm"
+          echo "EXIFTOOL_DIR=$(pwd -W 2>/dev/null || pwd)/target/exiftool/exiftool-$EXIFTOOL_VERSION" >> "$GITHUB_ENV"
+
+      # Release matches how the binaries are built and run (debug panics on
+      # arithmetic overflow where Perl's numbers do not). LTO is off for this
+      # step only: under LTO every test executable repeats the library's
+      # whole optimisation at its own link, so the step would cost several
+      # times a release build. Nothing it builds is shipped: it writes to
+      # target/release, the packages come from target/<triple>/release.
+      # The integration tests run on Linux; on macOS and Windows, the unit
+      # tests and the binaries' (the integration tests, which call perl and
+      # use Unix paths in places, have not been run there yet), with the
+      # smoke tests below.
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
         env:
           CARGO_PROFILE_RELEASE_LTO: "off"
-        run: cargo test --release
+        run: cargo test --release --features gui
+
+      - name: Run unit tests (macOS, Windows)
+        if: runner.os != 'Linux' && matrix.target != 'x86_64-apple-darwin'
+        env:
+          CARGO_PROFILE_RELEASE_LTO: "off"
+        run: cargo test --release --features gui --lib --bins
+
+      - name: Read the test images
+        if: matrix.target != 'x86_64-apple-darwin'
+        run: |
+          bin=target/${{ matrix.target }}/release/exiftool-rs
+          "$bin" -ver
+          "$bin" -a -u -G1 tests/images > target/read.txt
+          echo "$(grep -c '^========' target/read.txt) files, $(wc -l < target/read.txt) lines"
+          "$bin" -lang fr -s tests/images | head -20
+
+      # The Win32 modules (src/modules/win32.rs): Unicode file names through
+      # Win32API::File (Open, Exists, Rename), Win32::FindFile (wildcards,
+      # directories) and Win32::API (WindowsLongPath, FileCreateDate, -P)
+      - name: Windows file names, times and attributes
+        if: runner.os == 'Windows'
+        run: |
+          set -ex
+          bin=$PWD/target/${{ matrix.target }}/release/exiftool-rs
+          mkdir -p target/win32 && cd target/win32
+          "$bin" -ver -v | tee ver.txt
+          grep -q '^  Win32::API ' ver.txt
+          grep -q '^  Win32::FindFile ' ver.txt
+          grep -q '^  Win32API::File ' ver.txt
+          mkdir -p 'wïn/sübdir'
+          cp ../../tests/images/Canon.jpg 'wïn/Ünïcödé 日本.jpg'
+          cp ../../tests/images/Canon.jpg 'wïn/sübdir/plain.jpg'
+          # a wildcard (quoted: the port's FindFile expands it, not bash)
+          "$bin" -charset filename=utf8 -s -FileName -Model 'wïn/*.jpg' | tee out.txt
+          grep -q 'FileName *: Ünïcödé 日本.jpg' out.txt
+          # a directory, recursively
+          # (the "========" file headers and the counts are not names)
+          "$bin" -charset filename=utf8 -r -s3 -FileName wïn | grep -v -e '^========' -e '^ ' | LC_ALL=C sort | tee out.txt
+          test "$(cat out.txt)" = "$(printf 'plain.jpg\nÜnïcödé 日本.jpg')"
+          # writing keeps the file times with -P (SetFileTime)
+          f='wïn/Ünïcödé 日本.jpg'
+          before=$("$bin" -charset filename=utf8 -s3 -FileModifyDate "$f")
+          "$bin" -charset filename=utf8 -P -overwrite_original -Artist=Win32 "$f"
+          test "$("$bin" -charset filename=utf8 -s3 -FileModifyDate "$f")" = "$before"
+          test "$("$bin" -charset filename=utf8 -s3 -Artist "$f")" = Win32
+          # FileCreateDate, written and read back (SetFileTime, GetFileTime)
+          "$bin" -charset filename=utf8 '-FileCreateDate=2020:01:02 03:04:05' "$f"
+          "$bin" -charset filename=utf8 -s3 -FileCreateDate "$f" | grep -q '^2020:01:02 03:04:05'
+          # a write that keeps a backup (Rename), then deleted (Unlink)
+          "$bin" -charset filename=utf8 -Comment=Win32 "$f"
+          test -f "${f}_original"
+          "$bin" -charset filename=utf8 -delete_original! wïn
+          test ! -f "${f}_original"
+          # the Windows file attributes (GetFileAttributesW)
+          attrib +r "$(cygpath -w "$f")"
+          "$bin" -charset filename=utf8 -s3 -FileAttributes "$f" | tee out.txt
+          grep -q 'Read Only' out.txt
+          # a directory with a Unicode name made for a new file (CreateDirectoryW)
+          "$bin" -charset filename=utf8 -o 'wïn/nëw/' "$f"
+          test -f 'wïn/nëw/Ünïcödé 日本.jpg'
+
+      # What crates.io will get: the packaged sources build on their own
+      # (`cargo package` builds them), and the .crate stays under the 10 MB
+      # crates.io accepts.
+      - name: Package the crate
+        if: matrix.label == 'linux-x86_64'
+        env:
+          CARGO_PROFILE_RELEASE_LTO: "off"
+        run: |
+          cargo package --locked
+          size=$(stat -c %s target/package/exiftool-rs-*.crate)
+          echo "exiftool-rs.crate: $size bytes"
+          test "$size" -lt 10000000 || { echo "::error::the .crate is $size bytes, over crates.io's 10 MB"; exit 1; }
 
       # --- Packaging (unsigned binaries; Apple signing happens further down,
       # in a job of its own behind the `signing` environment). ---
@@ -137,6 +246,7 @@ jobs:
 
       - name: Package CLI (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: Compress-Archive -Path target/${{ matrix.target }}/release/exiftool-rs.exe -DestinationPath exiftool-rs-cli-${{ matrix.label }}.zip
 
       - name: Upload CLI artifact
@@ -152,6 +262,7 @@ jobs:
 
       - name: Package GUI (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: Compress-Archive -Path target/${{ matrix.target }}/release/exiftool-rs-gui.exe -DestinationPath exiftool-rs-gui-${{ matrix.label }}.zip
 
       - name: Upload GUI artifact
@@ -160,20 +271,22 @@ jobs:
           name: exiftool-rs-gui-${{ matrix.label }}
           path: exiftool-rs-gui-${{ matrix.label }}.*
 
-  # Live differential parity gate, ahead of any signing: run the pinned Perl
-  # ExifTool (EXIFTOOL_VERSION, NOT the latest — an upstream tag running ahead
-  # would otherwise block the release) and exiftool-rs over the corpus, and diff
-  # the output, then edit every corpus file we write with both tools and re-read
-  # the outputs. A new read delta or a new failing write case (neither in its
-  # baseline under tests/) fails the job, so nothing gets signed or published.
-  # The binary downloads ExifTool itself; ubuntu-latest provides perl/curl/tar,
-  # and we install the optional Perl modules the corpus
-  # needs (without them ExifTool decodes less -> false deltas; the binary also
-  # checks they are present and fails cleanly if one is missing).
+  # The judges, ahead of any signing: the port against the pinned Perl
+  # ExifTool (EXIFTOOL_VERSION, NOT the latest — an upstream tag running
+  # ahead would otherwise block the release), downloaded with its test
+  # suite and images. A failing judge fails the job, so nothing gets signed
+  # or published (docs/port/CLI.md):
+  # - run_suite.sh: ExifTool's own t/*.t, unchanged, through the port;
+  # - compare_images.sh: everything extracted from each t/images file;
+  # - compare_cli.py: each command line of the case files, run by Perl's
+  #   exiftool and by exiftool-rs, output, exit status and written files.
+  # The host's Perl is Ubuntu 24.04's with the modules the judges were
+  # written against (scripts/full_modules/Dockerfile says which); the
+  # full-modules set runs Perl in that image, with the modules it lacks.
   parity:
     needs: lint
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
@@ -184,40 +297,68 @@ jobs:
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
 
-      # Pull ExifTool's full optional Perl-module set (Archive::Zip, LZMA, Brotli,
-      # Unicode::LineBreak from Recommends, POSIX::strptime from Suggests) via the
-      # distro package. Perl packages Suggest/Recommend only other Perl modules,
-      # so --install-suggests stays small — no hand-maintained list. The distro's
-      # exiftool binary is never run (the parity binary uses the downloaded pinned
-      # version). File::StatX stays absent by design: not packaged, and only adds
-      # machine-state (FileCreateDate/inode) that would break determinism.
-      - name: Install ExifTool's optional Perl modules
+      - name: Install the host's Perl modules
         run: |
           sudo apt-get update
-          sudo apt-get install -y --install-recommends --install-suggests \
-            libimage-exiftool-perl
+          sudo apt-get install -y --no-install-recommends perl libarchive-zip-perl \
+            libio-compress-brotli-perl libterm-readkey-perl util-linux rsync
 
-      - name: Show which Perl module packages got installed
-        run: dpkg -l | awk '$2 ~ /perl/ && $2 ~ /zip|compress|brotli|lzma|strptime|linebreak|charset|exiftool/ {print $2, $3}'
-
-      - name: Live parity vs pinned Perl ExifTool
-        run: cargo run --release --features parity --bin parity
-
-      # The three counters the ISO goal is stated in. Parity above says the
-      # output matches over the corpus; these say the crate still covers
-      # ExifTool itself, which a corpus can only measure where it has samples.
-      # Both read the pinned ExifTool the parity run just unpacked, never the
-      # distro copy, so they answer about the version this crate targets.
-      - name: Counter one — every conversion expression is accounted for
+      - name: Fetch Perl ExifTool ${{ env.EXIFTOOL_VERSION }}
         run: |
-          lib=$(echo target/parity/exiftool-*/lib)
-          test -d "$lib" || { echo "pinned ExifTool source not found under target/parity"; exit 1; }
-          cargo run --release --features parity --bin conv_coverage -- "$lib" --check
+          mkdir -p target/exiftool
+          curl -fsSL "https://github.com/exiftool/exiftool/archive/refs/tags/$EXIFTOOL_VERSION.tar.gz" | tar xz -C target/exiftool
+          test "$(perl "target/exiftool/exiftool-$EXIFTOOL_VERSION/exiftool" -ver)" = "$EXIFTOOL_VERSION"
+          echo "EXIFTOOL_DIR=$PWD/target/exiftool/exiftool-$EXIFTOOL_VERSION" >> "$GITHUB_ENV"
 
-      - name: Counter three — every reachable binary sub-table is reached
+      - name: Build the judges' binaries
+        run: cargo build --release --example run_t --bin exiftool-rs
+
+      - name: ExifTool's test suite
         run: |
-          lib=$(echo target/parity/exiftool-*/lib)
-          perl scripts/coverage_report.pl "$lib" src --check
+          bash scripts/run_suite.sh "$EXIFTOOL_DIR" | tee target/suite.txt
+          # "N scripts, N pass, T/T tests ok", and no failing script
+          awk 'NR == 1 { split($5, t, "/"); ok = ($1 == $3 && t[1] == t[2] && $1 > 0) } END { exit !ok }' target/suite.txt
+          ! grep -q '^failing:' target/suite.txt
+
+      - name: Every test image
+        run: |
+          bash scripts/compare_images.sh "$EXIFTOOL_DIR" | tee target/images.txt
+          grep -q ' identical, 0 different$' target/images.txt
+
+      - name: Build the full-modules Perl image
+        run: docker build -t exiftool-rs-fullperl:local scripts/full_modules
+
+      # Each case file; the known differences are the `-k` and `-pause`
+      # prompts (Term::ReadKey reading a terminal there is none of), which
+      # docs/port/UPGRADING.md lists. Any other difference fails the job.
+      - name: The CLI against Perl's exiftool
+        env:
+          PORT_BIN: ${{ github.workspace }}/target/release/exiftool-rs
+        run: |
+          fail=0
+          for f in scripts/cli_cases.txt scripts/cli_cases_*.txt; do
+            [ "$f" = scripts/cli_cases_full_modules.txt ] && continue
+            echo "::group::$f"
+            CLI_CASES=$f python3 -I scripts/compare_cli.py "$EXIFTOOL_DIR" | tee target/cli.txt
+            echo "::endgroup::"
+            if grep '^different ' target/cli.txt | grep -v -E ' -(k|pause)( |$)'; then
+              echo "::error::$f: differences with Perl"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: The CLI against Perl with the full modules
+        env:
+          PORT_BIN: ${{ github.workspace }}/target/release/exiftool-rs
+          PERL_CMD: scripts/full_modules/perl.sh
+          CLI_CASES: scripts/cli_cases_full_modules.txt
+        run: |
+          python3 -I scripts/compare_cli.py "$EXIFTOOL_DIR" | tee target/cli.txt
+          if grep '^different ' target/cli.txt | grep -v -E ' -(k|pause)( |$)'; then
+            echo "::error::full modules: differences with Perl"
+            exit 1
+          fi
 
   # Apple signing + notarization of the CLI and the GUI. Behind `signing` for the
   # same reason as Windows: the Apple secrets are environment secrets now (unreadable

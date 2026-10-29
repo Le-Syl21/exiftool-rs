@@ -46,7 +46,7 @@ jobs:
           export LC_ALL=C
 
           upstream_ver=$(cd /tmp/exiftool && perl exiftool -ver)
-          ported_ver=$(grep -oE 'ExifTool v?[0-9]+\.[0-9]+' README.md | head -1 | grep -oE '[0-9]+\.[0-9]+')
+          ported_ver=$(sed -n 's/^pub const EXIFTOOL_VERSION: &str = "\(.*\)";/\1/p' src/api/mod.rs)
 
           ls /tmp/exiftool/t/images/ | sort > /tmp/up-corpus.txt
           ls tests/images/           | sort > /tmp/my-corpus.txt
