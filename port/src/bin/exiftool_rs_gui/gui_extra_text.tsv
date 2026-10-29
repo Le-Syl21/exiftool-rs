@@ -1,0 +1,252 @@
+en	language	Language
+en	theme	Theme
+en	theme_system	System
+en	theme_light	Light
+en	theme_dark	Dark
+en	prev_file	Previous file
+en	next_file	Next file
+en	editable_legend	Editable: double-click or press Enter
+en	editable	editable
+en	read_only_short	read-only
+en	modified	modified
+en	new_value	New value
+fr	language	Langue
+fr	theme	Thème
+fr	theme_system	Système
+fr	theme_light	Clair
+fr	theme_dark	Sombre
+fr	prev_file	Fichier précédent
+fr	next_file	Fichier suivant
+fr	editable_legend	Modifiable : double-clic ou Entrée
+fr	editable	modifiable
+fr	read_only_short	lecture seule
+fr	modified	modifié
+fr	new_value	Nouvelle valeur
+es	language	Idioma
+es	theme	Tema
+es	theme_system	Sistema
+es	theme_light	Claro
+es	theme_dark	Oscuro
+es	prev_file	Archivo anterior
+es	next_file	Archivo siguiente
+es	editable_legend	Editable: doble clic o Intro
+es	editable	editable
+es	read_only_short	solo lectura
+es	modified	modificado
+es	new_value	Nuevo valor
+pt	language	Idioma
+pt	theme	Tema
+pt	theme_system	Sistema
+pt	theme_light	Claro
+pt	theme_dark	Escuro
+pt	prev_file	Arquivo anterior
+pt	next_file	Próximo arquivo
+pt	editable_legend	Editável: clique duplo ou Enter
+pt	editable	editável
+pt	read_only_short	somente leitura
+pt	modified	modificado
+pt	new_value	Novo valor
+it	language	Lingua
+it	theme	Tema
+it	theme_system	Sistema
+it	theme_light	Chiaro
+it	theme_dark	Scuro
+it	prev_file	File precedente
+it	next_file	File successivo
+it	editable_legend	Modificabile: doppio clic o Invio
+it	editable	modificabile
+it	read_only_short	sola lettura
+it	modified	modificato
+it	new_value	Nuovo valore
+de	language	Sprache
+de	theme	Design
+de	theme_system	System
+de	theme_light	Hell
+de	theme_dark	Dunkel
+de	prev_file	Vorherige Datei
+de	next_file	Nächste Datei
+de	editable_legend	Bearbeitbar: Doppelklick oder Eingabetaste
+de	editable	bearbeitbar
+de	read_only_short	schreibgeschützt
+de	modified	geändert
+de	new_value	Neuer Wert
+nl	language	Taal
+nl	theme	Thema
+nl	theme_system	Systeem
+nl	theme_light	Licht
+nl	theme_dark	Donker
+nl	prev_file	Vorig bestand
+nl	next_file	Volgend bestand
+nl	editable_legend	Bewerkbaar: dubbelklik of Enter
+nl	editable	bewerkbaar
+nl	read_only_short	alleen-lezen
+nl	modified	gewijzigd
+nl	new_value	Nieuwe waarde
+sv	language	Språk
+sv	theme	Tema
+sv	theme_system	System
+sv	theme_light	Ljust
+sv	theme_dark	Mörkt
+sv	prev_file	Föregående fil
+sv	next_file	Nästa fil
+sv	editable_legend	Redigerbar: dubbelklicka eller tryck Retur
+sv	editable	redigerbar
+sv	read_only_short	skrivskyddad
+sv	modified	ändrad
+sv	new_value	Nytt värde
+fi	language	Kieli
+fi	theme	Teema
+fi	theme_system	Järjestelmä
+fi	theme_light	Vaalea
+fi	theme_dark	Tumma
+fi	prev_file	Edellinen tiedosto
+fi	next_file	Seuraava tiedosto
+fi	editable_legend	Muokattava: kaksoisnapsauta tai paina Enter
+fi	editable	muokattava
+fi	read_only_short	vain luku
+fi	modified	muutettu
+fi	new_value	Uusi arvo
+pl	language	Język
+pl	theme	Motyw
+pl	theme_system	Systemowy
+pl	theme_light	Jasny
+pl	theme_dark	Ciemny
+pl	prev_file	Poprzedni plik
+pl	next_file	Następny plik
+pl	editable_legend	Edytowalne: dwuklik lub Enter
+pl	editable	edytowalne
+pl	read_only_short	tylko do odczytu
+pl	modified	zmienione
+pl	new_value	Nowa wartość
+cs	language	Jazyk
+cs	theme	Motiv
+cs	theme_system	Systémový
+cs	theme_light	Světlý
+cs	theme_dark	Tmavý
+cs	prev_file	Předchozí soubor
+cs	next_file	Další soubor
+cs	editable_legend	Upravitelné: dvojklik nebo Enter
+cs	editable	upravitelné
+cs	read_only_short	jen pro čtení
+cs	modified	změněno
+cs	new_value	Nová hodnota
+sk	language	Jazyk
+sk	theme	Motív
+sk	theme_system	Systémový
+sk	theme_light	Svetlý
+sk	theme_dark	Tmavý
+sk	prev_file	Predchádzajúci súbor
+sk	next_file	Ďalší súbor
+sk	editable_legend	Upraviteľné: dvojklik alebo Enter
+sk	editable	upraviteľné
+sk	read_only_short	len na čítanie
+sk	modified	zmenené
+sk	new_value	Nová hodnota
+tr	language	Dil
+tr	theme	Tema
+tr	theme_system	Sistem
+tr	theme_light	Açık
+tr	theme_dark	Koyu
+tr	prev_file	Önceki dosya
+tr	next_file	Sonraki dosya
+tr	editable_legend	Düzenlenebilir: çift tıklayın veya Enter'a basın
+tr	editable	düzenlenebilir
+tr	read_only_short	salt okunur
+tr	modified	değiştirildi
+tr	new_value	Yeni değer
+ru	language	Язык
+ru	theme	Тема
+ru	theme_system	Системная
+ru	theme_light	Светлая
+ru	theme_dark	Тёмная
+ru	prev_file	Предыдущий файл
+ru	next_file	Следующий файл
+ru	editable_legend	Можно изменить: двойной щелчок или Enter
+ru	editable	можно изменить
+ru	read_only_short	только чтение
+ru	modified	изменено
+ru	new_value	Новое значение
+ar	language	اللغة
+ar	theme	السمة
+ar	theme_system	النظام
+ar	theme_light	فاتح
+ar	theme_dark	داكن
+ar	prev_file	الملف السابق
+ar	next_file	الملف التالي
+ar	editable_legend	قابل للتعديل: نقر مزدوج أو مفتاح الإدخال
+ar	editable	قابل للتعديل
+ar	read_only_short	للقراءة فقط
+ar	modified	معدّل
+ar	new_value	القيمة الجديدة
+hi	language	भाषा
+hi	theme	थीम
+hi	theme_system	सिस्टम
+hi	theme_light	हल्की
+hi	theme_dark	गहरी
+hi	prev_file	पिछली फ़ाइल
+hi	next_file	अगली फ़ाइल
+hi	editable_legend	संपादन योग्य: डबल-क्लिक करें या Enter दबाएँ
+hi	editable	संपादन योग्य
+hi	read_only_short	केवल पढ़ने के लिए
+hi	modified	संशोधित
+hi	new_value	नया मान
+bn	language	ভাষা
+bn	theme	থিম
+bn	theme_system	সিস্টেম
+bn	theme_light	হালকা
+bn	theme_dark	গাঢ়
+bn	prev_file	আগের ফাইল
+bn	next_file	পরের ফাইল
+bn	editable_legend	সম্পাদনযোগ্য: ডাবল-ক্লিক করুন বা Enter চাপুন
+bn	editable	সম্পাদনযোগ্য
+bn	read_only_short	শুধু পড়ার জন্য
+bn	modified	পরিবর্তিত
+bn	new_value	নতুন মান
+zh	language	语言
+zh	theme	主题
+zh	theme_system	跟随系统
+zh	theme_light	浅色
+zh	theme_dark	深色
+zh	prev_file	上一个文件
+zh	next_file	下一个文件
+zh	editable_legend	可编辑：双击或按回车键
+zh	editable	可编辑
+zh	read_only_short	只读
+zh	modified	已修改
+zh	new_value	新值
+zh_tw	language	語言
+zh_tw	theme	主題
+zh_tw	theme_system	跟隨系統
+zh_tw	theme_light	淺色
+zh_tw	theme_dark	深色
+zh_tw	prev_file	上一個檔案
+zh_tw	next_file	下一個檔案
+zh_tw	editable_legend	可編輯：按兩下或按 Enter 鍵
+zh_tw	editable	可編輯
+zh_tw	read_only_short	唯讀
+zh_tw	modified	已修改
+zh_tw	new_value	新值
+ja	language	言語
+ja	theme	テーマ
+ja	theme_system	システム
+ja	theme_light	ライト
+ja	theme_dark	ダーク
+ja	prev_file	前のファイル
+ja	next_file	次のファイル
+ja	editable_legend	編集可能：ダブルクリックまたは Enter キー
+ja	editable	編集可能
+ja	read_only_short	読み取り専用
+ja	modified	変更済み
+ja	new_value	新しい値
+ko	language	언어
+ko	theme	테마
+ko	theme_system	시스템
+ko	theme_light	밝게
+ko	theme_dark	어둡게
+ko	prev_file	이전 파일
+ko	next_file	다음 파일
+ko	editable_legend	편집 가능: 두 번 클릭하거나 Enter 키
+ko	editable	편집 가능
+ko	read_only_short	읽기 전용
+ko	modified	수정됨
+ko	new_value	새 값

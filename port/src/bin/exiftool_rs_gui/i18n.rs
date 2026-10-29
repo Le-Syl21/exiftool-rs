@@ -39,12 +39,17 @@ pub const AVAILABLE_LANGUAGES: &[(&str, &str)] = &[
 
 static GUI_TEXT: &str = include_str!("../../../data/gui_text.tsv");
 
+/// The strings of the port's GUI that the root crate's has not (theme and
+/// language selectors, the names of the icon buttons, the states a screen
+/// reader says), in the same `lang<TAB>key<TAB>text` form.
+static GUI_EXTRA_TEXT: &str = include_str!("gui_extra_text.tsv");
+
 /// language -> key -> text
 fn all_text() -> &'static HashMap<&'static str, HashMap<&'static str, &'static str>> {
     static TEXT: OnceLock<HashMap<&'static str, HashMap<&'static str, &'static str>>> = OnceLock::new();
     TEXT.get_or_init(|| {
         let mut all: HashMap<&str, HashMap<&str, &str>> = HashMap::new();
-        for line in GUI_TEXT.lines() {
+        for line in GUI_TEXT.lines().chain(GUI_EXTRA_TEXT.lines()) {
             let mut p = line.splitn(3, '\t');
             if let (Some(lang), Some(key), Some(text)) = (p.next(), p.next(), p.next()) {
                 all.entry(lang).or_default().insert(key, text);
@@ -73,6 +78,18 @@ pub fn exiftool_lang(lang: &str) -> Option<String> {
     match normalize_lang(lang) {
         "en" => None,
         other => Some(other.to_string()),
+    }
+}
+
+/// The BCP 47 tag of a language of the selector, which tells a screen
+/// reader the voice (and braille table) to read a text with.
+pub fn bcp47(lang: &str) -> &str {
+    match lang {
+        "en_ca" => "en-CA",
+        "en_gb" => "en-GB",
+        "zh" => "zh-CN",
+        "zh_tw" => "zh-TW",
+        other => other,
     }
 }
 
