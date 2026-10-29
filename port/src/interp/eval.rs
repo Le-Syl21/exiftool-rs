@@ -645,6 +645,111 @@ impl Default for Interp {
     }
 }
 
+/// Perl's global destruction (perl_destruct): when the interpreter ends,
+/// everything its variables, subs and scopes reach is emptied, cycles
+/// included. ExifTool's data is full of cycles (a tag table holds its tag
+/// infos, each of which names its table again; the ExifTool object holds
+/// tag infos), which reference counting alone never frees: without this,
+/// each interpreter (one per facade call) leaked what it had loaded, about
+/// 2.5 MB for a JPEG. The containers are emptied one by one from a work
+/// list, so a deeply nested structure is not dropped recursively either.
+impl Drop for Interp {
+    fn drop(&mut self) {
+        let mut work: Vec<Value> = Vec::new();
+        let mut scopes: Vec<Rc<Scope>> = Vec::new();
+        let binding = |b: Binding, work: &mut Vec<Value>| {
+            work.push(match b {
+                Binding::Scalar(c) => Value::ScalarRef(c),
+                Binding::Array(a) => Value::ArrayRef(a),
+                Binding::Hash(h) => Value::HashRef(h),
+            })
+        };
+        for (_, b) in std::mem::take(&mut self.globals.map) {
+            binding(b, &mut work);
+        }
+        if let Some(b) = self.globals.topic.take() {
+            binding(b, &mut work);
+        }
+        work.extend(std::mem::take(&mut self.subs).into_values().map(Value::Code));
+        work.extend(std::mem::take(&mut self.sub_refs).into_values().map(Value::Code));
+        for (_, vars) in std::mem::take(&mut self.lex_memo) {
+            for (_, list) in vars {
+                for (_, b) in list {
+                    binding(b, &mut work);
+                }
+            }
+        }
+        scopes.extend(std::mem::take(&mut self.scope_memo).into_values());
+        scopes.extend(std::mem::take(&mut self.end_blocks).into_iter().map(|(_, s)| s));
+        for s in std::mem::take(&mut self.saved) {
+            match s {
+                Saved::Global(_, Some(b)) => binding(b, &mut work),
+                Saved::HElem(h, _, v) => work.extend([Value::HashRef(h)].into_iter().chain(v)),
+                Saved::AElem(a, _, v) => work.extend([Value::ArrayRef(a), v]),
+                _ => {}
+            }
+        }
+        for f in std::mem::take(&mut self.alias_frames) {
+            work.extend(f.args.map(Value::ArrayRef));
+            work.extend(f.originals);
+        }
+        let mut seen_scopes: rustc_hash::FxHashSet<*const Scope> = Default::default();
+        loop {
+            if let Some(v) = work.pop() {
+                match v {
+                    Value::ScalarRef(c) => {
+                        if let Ok(mut c) = c.try_borrow_mut() {
+                            work.push(std::mem::take(&mut *c));
+                        }
+                    }
+                    Value::ArrayRef(a) => {
+                        if let Ok(mut a) = a.try_borrow_mut() {
+                            work.append(&mut a);
+                        }
+                    }
+                    Value::HashRef(h) => {
+                        if let Ok(mut h) = h.try_borrow_mut() {
+                            work.extend(h.take_values());
+                        }
+                    }
+                    Value::Code(c) => {
+                        if let Code::Perl(_, s) = &*c {
+                            scopes.push(s.clone());
+                        }
+                    }
+                    Value::LvRef(lv) => {
+                        let mut lvs = vec![(*lv).clone()];
+                        while let Some(lv) = lvs.pop() {
+                            match lv {
+                                Lv::Scalar(c) => work.push(Value::ScalarRef(c)),
+                                Lv::AElem(a, _) | Lv::Array(a) | Lv::LastIndex(a) => work.push(Value::ArrayRef(a)),
+                                Lv::HElem(h, _) | Lv::Hash(h) => work.push(Value::HashRef(h)),
+                                Lv::List(l) => lvs.extend(l),
+                                Lv::Substr(l, ..) | Lv::Pos(l) => lvs.push(*l),
+                                Lv::ReadOnly(v) => work.push(v),
+                                Lv::Skip => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            } else if let Some(s) = scopes.pop() {
+                if !seen_scopes.insert(Rc::as_ptr(&s)) {
+                    continue;
+                }
+                if let Ok(mut vars) = s.vars.try_borrow_mut() {
+                    for (_, _, b) in vars.drain(..) {
+                        binding(b, &mut work);
+                    }
+                }
+                scopes.extend(s.parent.clone());
+            } else {
+                break;
+            }
+        }
+    }
+}
+
 const NO: fn() -> Value = || Value::str("");
 const YES: fn() -> Value = || Value::Int(1);
 

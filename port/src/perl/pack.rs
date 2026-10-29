@@ -30,16 +30,40 @@ struct Item {
     group: Option<Vec<Item>>,
 }
 
-fn parse_template(t: &[u8]) -> Result<Vec<Item>, String> {
+fn parse_template(t: &[u8], op: &str) -> Result<Vec<Item>, String> {
     let mut i = 0;
-    let items = parse_items(t, &mut i)?;
+    let items = parse_items(t, &mut i, op)?;
     if i < t.len() {
         return Err("Mismatched brackets in template".into());
     }
     Ok(items)
 }
 
-fn parse_items(t: &[u8], pos: &mut usize) -> Result<Vec<Item>, String> {
+/// A repeat count's digits, as perl's get_num reads them: past the IV
+/// range it croaks.
+fn repeat_count(digits: &[u8]) -> Result<usize, String> {
+    let mut n: i64 = 0;
+    for &d in digits {
+        n = n.checked_mul(10).and_then(|n| n.checked_add((d - b'0') as i64)).ok_or("pack/unpack repeat count overflow")?;
+    }
+    Ok(n as usize)
+}
+
+/// The longest string pack builds, and the most values unpack gives
+/// (`sprintf::BUILD_MAX`). Perl tries any count, and ends with "Out of
+/// memory!" when the system says no (or loops for as long as the count
+/// says); the port fails instead.
+const BUILD_MAX: usize = crate::perl::sprintf::BUILD_MAX;
+
+/// Fails when `out` would grow past `BUILD_MAX` by `more` bytes.
+fn grow(out: &[u8], more: usize) -> Result<(), String> {
+    if out.len().saturating_add(more) > BUILD_MAX {
+        return Err("Out of memory in pack".into());
+    }
+    Ok(())
+}
+
+fn parse_items(t: &[u8], pos: &mut usize, op: &str) -> Result<Vec<Item>, String> {
     let mut items = Vec::new();
     let mut i = *pos;
     while i < t.len() {
@@ -60,35 +84,45 @@ fn parse_items(t: &[u8], pos: &mut usize) -> Result<Vec<Item>, String> {
         // `%<bits>`: the checksum of the next item (unpack only).
         if c == b'%' {
             i += 1;
-            let mut bits = 0usize;
             let d0 = i;
             while i < t.len() && t[i].is_ascii_digit() {
-                bits = bits * 10 + (t[i] - b'0') as usize;
                 i += 1;
             }
-            if i == d0 {
-                bits = 16;
-            }
+            let bits = if i == d0 { 16 } else { repeat_count(&t[d0..i])? };
             items.push(Item { letter: b'%', endian: None, bang: false, count: Count::N(bits), slash: false, group: None });
             continue;
         }
         let mut group = None;
         if c == b'(' {
             i += 1;
-            let g = parse_items(t, &mut i)?;
+            let g = parse_items(t, &mut i, op)?;
             if t.get(i) != Some(&b')') {
                 return Err("No group ending character ')' found in template".into());
             }
             group = Some(g);
         } else if !c.is_ascii_alphabetic() && c != b'@' && c != b'.' {
-            return Err(format!("Invalid type '{}' in pack", c as char));
+            return Err(format!("Invalid type '{}' in {op}", c as char));
         }
         i += 1;
         let mut item = Item { letter: c, endian: None, bang: false, count: Count::One, slash: false, group };
+        // (perl's checks of the modifiers, pp_pack.c next_symbol)
         while i < t.len() && matches!(t[i], b'<' | b'>' | b'!') {
             match t[i] {
-                b'!' => item.bang = true,
-                e => item.endian = Some(e),
+                b'!' => {
+                    if item.group.is_some() || !b"sSiIlLxXnNvV@.".contains(&c) {
+                        return Err(format!("'!' allowed only after types sSiIlLxXnNvV@. in {op}"));
+                    }
+                    item.bang = true
+                }
+                e => {
+                    if item.group.is_none() && !b"sSiIlLqQjJfFdDpP".contains(&c) {
+                        return Err(format!("'{}' allowed only after types sSiIlLqQjJfFdDpP( in {op}", e as char));
+                    }
+                    if item.endian.is_some_and(|x| x != e) {
+                        return Err(format!("Can't use both '<' and '>' after type '{}' in {op}", c as char));
+                    }
+                    item.endian = Some(e)
+                }
             }
             i += 1;
         }
@@ -100,7 +134,7 @@ fn parse_items(t: &[u8], pos: &mut usize) -> Result<Vec<Item>, String> {
             while i < t.len() && t[i] != b']' {
                 i += 1;
             }
-            let n = std::str::from_utf8(&t[s..i]).ok().and_then(|x| x.parse().ok()).ok_or("bad count")?;
+            let n = if i > s && t[s..i].iter().all(u8::is_ascii_digit) { repeat_count(&t[s..i])? } else { return Err("bad count".into()) };
             item.count = Count::N(n);
             i += 1;
         } else {
@@ -109,7 +143,7 @@ fn parse_items(t: &[u8], pos: &mut usize) -> Result<Vec<Item>, String> {
                 i += 1;
             }
             if i > s {
-                item.count = Count::N(std::str::from_utf8(&t[s..i]).unwrap().parse().map_err(|_| "bad count")?);
+                item.count = Count::N(repeat_count(&t[s..i])?);
             }
         }
         if i < t.len() && t[i] == b'/' {
@@ -151,7 +185,7 @@ fn big_endian(item: &Item) -> bool {
 
 /// `unpack(TEMPLATE, EXPR)` in list context.
 pub fn unpack(template: &[u8], data: &[u8]) -> Result<Vec<Value>, String> {
-    let items = parse_template(template)?;
+    let items = parse_template(template, "unpack")?;
     let mut out = Vec::new();
     WARNINGS.with(|w| w.borrow_mut().clear());
     // a template that starts with U is in U0 mode
@@ -196,7 +230,7 @@ pub fn unpack_chars(template: &[u8], s: &[u8]) -> Result<Vec<Value>, String> {
     if let Some(d) = crate::perl::utf8::downgrade(s) {
         return unpack(template, &d);
     }
-    let items = parse_template(template)?;
+    let items = parse_template(template, "unpack")?;
     if items.iter().all(|i| matches!(i.letter, b'C' | b'U' | b'W') && i.group.is_none()) && !starts_with_u(template) {
         WARNINGS.with(|w| w.borrow_mut().clear());
         let chars: Vec<u32> = crate::perl::utf8::chars(s).collect();
@@ -380,8 +414,18 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
             };
             let mut k = 0;
             while k < n && (count != Count::Star || pos < data.len()) {
+                let (before, values) = (pos, out.len());
                 pos = unpack_items(g, data, pos, out)?;
                 k += 1;
+                if out.len() > BUILD_MAX {
+                    return Err("Out of memory in unpack".into());
+                }
+                // A repetition that read and gave nothing changed nothing:
+                // the others would do the same (perl does them all, which
+                // for a `*` never ends).
+                if pos == before && out.len() == values {
+                    break;
+                }
             }
             continue;
         }
@@ -451,6 +495,9 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
                 };
                 if item.bang {
                     if n > 0 && pos % n != 0 {
+                        if n - pos % n > remaining {
+                            return Err("'x' outside of string in unpack".into());
+                        }
                         pos += n - pos % n;
                     }
                 } else {
@@ -507,14 +554,19 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
             b'U' => {
                 if U0.with(|u| u.get()) {
                     // U0 mode: characters from the upgraded (UTF-8) data
-                    let text = String::from_utf8_lossy(&data[pos..]).into_owned();
-                    let n = repeat(count, text.chars().count());
-                    let mut used = 0;
-                    for ch in text.chars().take(n) {
-                        out.push(Value::Int(ch as i64));
-                        used += ch.len_utf8();
+                    // (each malformed sequence a U+FFFD, of its own length)
+                    let mut chars = Vec::new();
+                    for chunk in data[pos..].utf8_chunks() {
+                        chars.extend(chunk.valid().chars().map(|ch| (ch as i64, ch.len_utf8())));
+                        if !chunk.invalid().is_empty() {
+                            chars.push((0xFFFD, chunk.invalid().len()));
+                        }
                     }
-                    pos += used;
+                    let n = repeat(count, chars.len());
+                    for &(ch, len) in chars.iter().take(n) {
+                        out.push(Value::Int(ch));
+                        pos += len;
+                    }
                 } else {
                     // C0 mode: U reads UTF-8 characters from the bytes
                     if count == Count::One && pos >= data.len() {
@@ -565,6 +617,8 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
                     }
                     pos += 1;
                 }
+                // (the last line's newline may be missing)
+                pos = pos.min(data.len());
                 out.push(Value::bytes(res));
             }
             b'w' => {
@@ -662,7 +716,7 @@ fn repeat(count: Count, star: usize) -> usize {
 
 /// `pack(TEMPLATE, LIST)`.
 pub fn pack(template: &[u8], args: &[Value]) -> Result<Vec<u8>, String> {
-    let items = parse_template(template)?;
+    let items = parse_template(template, "pack")?;
     let mut out = Vec::new();
     let mut cur = Args { v: args, i: 0 };
     pack_items(&items, &mut cur, &mut out)?;
@@ -689,19 +743,33 @@ impl Args<'_> {
 fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), String> {
     for item in items {
         if let Some(g) = &item.group {
-            match item.count {
-                Count::Star => {
-                    while cur.remaining() > 0 {
-                        pack_items(g, cur, out)?;
-                    }
-                }
-                c => {
-                    for _ in 0..repeat(c, 0) {
-                        pack_items(g, cur, out)?;
-                    }
+            let n = match item.count {
+                Count::Star => usize::MAX,
+                c => repeat(c, 0),
+            };
+            let mut k = 0;
+            while k < n && (item.count != Count::Star || cur.remaining() > 0) {
+                let (args, len) = (cur.i, out.len());
+                pack_items(g, cur, out)?;
+                k += 1;
+                grow(out, 0)?;
+                // A repetition that took no argument and left the string
+                // as it was changed nothing: the others would do the same
+                // (perl does them all, which may never end).
+                if cur.i == args && out.len() == len {
+                    break;
                 }
             }
             continue;
+        }
+        // (the repetitions that have no argument left pack zeros: that
+        // many bytes at least)
+        let missing = |cur: &Args, size: usize| match item.count {
+            Count::Star => 0,
+            c => repeat(c, 0).saturating_sub(cur.remaining()).saturating_mul(size),
+        };
+        if item.letter == b'%' {
+            return Err("'%' may not be used in pack".into());
         }
         match item.letter {
             b'a' | b'A' | b'Z' => {
@@ -716,6 +784,7 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                     }
                     c => {
                         let n = repeat(c, 0);
+                        grow(out, n)?;
                         let mut field = s.to_vec();
                         let keep = if item.letter == b'Z' && n > 0 { n - 1 } else { n };
                         field.truncate(keep);
@@ -732,6 +801,7 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                     Count::Star => s.len(),
                     c => repeat(c, 0),
                 };
+                grow(out, nyb / 2)?;
                 let mut byte = 0u8;
                 for k in 0..nyb {
                     let ch = s.get(k).copied().unwrap_or(b'0');
@@ -759,6 +829,7 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                     Count::Star => s.len(),
                     c => repeat(c, 0),
                 };
+                grow(out, bits / 8)?;
                 let mut byte = 0u8;
                 for k in 0..bits {
                     let on = s.get(k).is_some_and(|&c| c & 1 == 1);
@@ -776,9 +847,11 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                 if item.bang {
                     if n > 0 && out.len() % n != 0 {
                         let pad = n - out.len() % n;
+                        grow(out, pad)?;
                         out.extend(std::iter::repeat(0).take(pad));
                     }
                 } else {
+                    grow(out, n)?;
                     out.extend(std::iter::repeat(0).take(n));
                 }
             }
@@ -788,6 +861,7 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
             }
             b'@' => {
                 let n = repeat(item.count, 0);
+                grow(out, n.saturating_sub(out.len()))?;
                 out.resize(n, 0);
             }
             b'U' => {
@@ -795,6 +869,7 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                     Count::Star => cur.remaining(),
                     c => repeat(c, 0),
                 };
+                grow(out, missing(cur, 1))?;
                 for _ in 0..n {
                     let v = cur.next();
                     let cp = v.to_i64().max(0) as u32;
@@ -824,6 +899,7 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                     Count::Star => cur.remaining(),
                     c => repeat(c, 0),
                 };
+                grow(out, missing(cur, 1))?;
                 for _ in 0..n {
                     let mut v = crate::perl::ops::to_uv(&cur.next());
                     let mut bytes = vec![(v & 0x7f) as u8];
@@ -841,6 +917,7 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                     Count::Star => cur.remaining(),
                     c => repeat(c, 0),
                 };
+                grow(out, missing(cur, if item.letter == b'f' { 4 } else { 8 }))?;
                 for _ in 0..n {
                     let v = cur.next().to_f64();
                     let mut b = if item.letter == b'f' { (v as f32).to_le_bytes().to_vec() } else { v.to_le_bytes().to_vec() };
@@ -856,6 +933,7 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
                     Count::Star => cur.remaining(),
                     c => repeat(c, 0),
                 };
+                grow(out, missing(cur, size))?;
                 for _ in 0..n {
                     let u = crate::perl::ops::to_uv(&cur.next());
                     let le = u.to_le_bytes();
