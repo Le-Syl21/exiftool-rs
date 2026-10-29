@@ -1357,7 +1357,21 @@ pub fn init(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 /// `grep /^$pat$/i, LIST` (the first match, for `my ($match) = grep ...`).
 fn grep_first_ci(pat: &Value, list: &[Value]) -> ER<Value> {
-    let p = [b"^", &pat.to_bytes()[..], b"$"].concat();
+    let pb = pat.to_bytes();
+    // A tag name (word characters only, the usual case): its pattern is the
+    // name itself, so a byte string matches when it is the name in another
+    // case, before an optional final newline (`$`), as PCRE2 matches it.
+    // Character strings, which caseless matching folds by Unicode's rules,
+    // still go through the pattern.
+    if pb.iter().all(|c| c.is_ascii_alphanumeric() || *c == b'_') && list.iter().all(|k| !matches!(k, Value::UStr(_))) {
+        let found = list.iter().find(|k| {
+            let b = k.to_bytes();
+            let b = b.strip_suffix(b"\n").unwrap_or(&b);
+            b.eq_ignore_ascii_case(&pb)
+        });
+        return Ok(found.cloned().unwrap_or_default());
+    }
+    let p = [b"^", &pb[..], b"$"].concat();
     let r = pl::re_dyn(&p, "i")?;
     Ok(list.iter().find(|k| r.is_match(k)).cloned().unwrap_or_default())
 }
