@@ -257,6 +257,11 @@ Condition 111
             $$valPt =~ /^\x01\xf1([\x02\x03]\x00)?/ and
             ($1 or $$self{Make} eq "RECONYX")
         
+Condition 128
+
+            $$valPt =~ /^\x15\0/ and substr($$valPt, 0x57, 1) eq "\0" and
+            substr($$valPt, 0x78, 1) eq "\0"
+        
 Condition 148
 
             $$valPt =~ /~\0\x04\0zmie~\0\0\x06.{4}[\x10\x18]\x04$/s or
@@ -458,6 +463,14 @@ Condition 29
 $$self{CameraInfoCount} == 96
 Condition 29
 $$self{CameraInfoCount} > 400
+Condition 55
+$$self{CanonFirmVer} and $$self{CanonFirmVer} =~ /^1\./
+Condition 55
+$$self{CanonFirmVer} and $$self{CanonFirmVer} =~ /^2\./
+Condition 56
+$$self{CanonFirmVer} and $$self{CanonFirmVer} eq "1.0.1"
+Condition 56
+$$self{CanonFirmVer} and $$self{CanonFirmVer} ge "1.6.0"
 Condition 84
 $$self{CmdDialsChangeMainSubExposure} and $$self{CmdDialsChangeMainSubExposure} == 1
 Condition 84
@@ -720,6 +733,14 @@ Condition 38
 $$self{LensID} and $$self{LensID} != 0
 Condition 72
 $$self{LensID} and $$self{LensID} != 0 and $$self{FocusMode} ne "Manual"
+Condition 66
+$$self{LensInfoSerial} and $$self{Model} !~ /\b(R6 Mark III|C50)$/
+Condition 129
+$$self{LensInfoSerial} and $$self{Model} !~ /\b(R6 Mark III|C50)$/ and ($$self{RFLensType} || 0) !~ /^(318|323|324|329|330|331)$/
+Condition 85
+$$self{LensInfoSerial} and ($$self{RFLensType} || 0) !~ /^(318|323|324|329|330|331)$/
+Condition 85
+$$self{LensInfoSerial} and ($$self{RFLensType} || 0) =~ /^(318|323|324|329|330|331)$/
 Condition 22
 $$self{LensMount} != 0
 Condition 22
@@ -856,8 +877,8 @@ Condition 64
 $$self{MetaVersion} and $$self{MetaVersion} eq "DC7303320222000"
 Condition 32
 $$self{Model} !~ /(D3S|D300S)\b/
-Condition 42
-$$self{Model} !~ /(K-(1|3|70|S1|S2)|KP)\b/
+Condition 45
+$$self{Model} !~ /(K-(1|3|70|S1|S2)|KF|KP)\b/
 Condition 51
 $$self{Model} !~ /(K110D|K2000|K-m|K-3 Mark III)\b/
 Condition 22
@@ -878,6 +899,8 @@ Condition 57
 $$self{Model} !~ /\b(20D|350D|REBEL XT|Kiss Digital N)\b/
 Condition 26
 $$self{Model} !~ /\b60D\b/
+Condition 55
+$$self{Model} !~ /\bEOS M/ and $$valPt =~ /^\x18\0\0\0/
 Condition 26
 $$self{Model} !~ /^(DSC-)/
 Condition 41
@@ -948,8 +971,8 @@ Condition 26
 $$self{Model} !~ /^NEX-5C/
 Condition 24
 $$self{Model} !~ /^SLT-/
-Condition 100
-$$self{Model} =~ /(645D|645Z|K-(1|01|3|5|7|30|50|70|500|r|x|S[12])|KP)\b/ and $$self{Model} !~ /III/
+Condition 103
+$$self{Model} =~ /(645D|645Z|K-(1|01|3|5|7|30|50|70|500|r|x|S[12])|KF|KP)\b/ and $$self{Model} !~ /III/
 Condition 46
 $$self{Model} =~ /(650D|REBEL T4i|Kiss X6i)\b/
 Condition 46
@@ -1038,8 +1061,8 @@ Condition 22
 $$self{Model} =~ /EOS/
 Condition 55
 $$self{Model} =~ /EOS/ and $$self{Model} !~ /EOS-1DS?$/
-Condition 32
-$$self{Model} =~ /K(P|-1|-70)\b/
+Condition 34
+$$self{Model} =~ /K(F|P|-1|-70)\b/
 Condition 41
 $$self{Model} =~ /K-(01|3|30|5|50|500)\b/
 Condition 32
@@ -1158,10 +1181,22 @@ Condition 27
 $$self{Model} =~ /\bD500\b/
 Condition 25
 $$self{Model} =~ /\bD5\b/
+Condition 35
+$$self{Model} =~ /\bEOS (R1|R5m2)$/
 Condition 39
 $$self{Model} =~ /\bEOS (R6m2|R8|R50)$/
-Condition 37
-$$self{Model} =~ /\bEOS R6 Mark III$/
+Condition 42
+$$self{Model} =~ /\bEOS R(P|\d+)?(m\d)?\b/
+Condition 78
+$$self{Model} =~ /\bEOS R(\d|P\b|a\b|\b)/ and ($$self{LensType} || 0) == 61182
+Condition 31
+$$self{Model} =~ /\bEOS R50 V$/
+Condition 30
+$$self{Model} =~ /\bEOS R5m2$/
+Condition 41
+$$self{Model} =~ /\bEOS R6 (Mark III|V)$/
+Condition 28
+$$self{Model} =~ /\bEOS RP$/
 Condition 31
 $$self{Model} =~ /\bEOS R[56]$/
 Condition 37
@@ -1398,6 +1433,8 @@ Condition 95
 $$self{Model} =~ /^NIKON Z50_2\b/i and $$self{AFAreaYPosition} and $$self{AFAreaYPosition} != 0
 Condition 103
 $$self{Model} =~ /^NIKON Z50_2\b/i and ($$self{AFAreaModeUsed} == 197 or $$self{AFAreaModeUsed} == 207)
+Condition 100
+$$self{Model} =~ /^NIKON Z6_3\b/i and $$self{FirmwareVersion} and $$self{FirmwareVersion} ge "02.00"
 Condition 100
 $$self{Model} =~ /^NIKON Z6_3\b/i and $$self{FirmwareVersion} and $$self{FirmwareVersion} lt "02.00"
 Condition 56
@@ -1706,8 +1743,8 @@ Condition 25
 $$valPt =~ /^(prof|rICC)/
 Condition 34
 $$valPt =~ /^(streamdata|vivo\{")/
-Condition 44
-$$valPt =~ /^(|QVGA\0|BGTH)\xff\xd8\xff\xdb/
+Condition 46
+$$valPt =~ /^(|QVGA\0|BGTH|XMTH.{5})\xff\xd8/s
 Condition 26
 $$valPt =~ /^....IJPEG\0/s
 Condition 30
@@ -2371,6 +2408,8 @@ Condition 12
 $count == 90
 Condition 12
 $count == 91
+Condition 11
+$count eq 1
 Condition 19
 $format =~ /^int16/
 Condition 19
@@ -2586,6 +2625,8 @@ Hook 233
                 delete $$self{Prop2Len};
             }
         
+Hook 60
+$$self{LensInfoSerial} = substr($$dataPt,$pos,4) ne "\0" x 4
 Hook 64
 $$self{MediaHeaderVersion} and $format = "int64u", $varSize += 4
 Hook 64
@@ -3653,6 +3694,8 @@ PrintConv 25
 $self->Printable($val, 0)
 PrintConv 70
 $val !~ /undef/ ?  Image::ExifTool::Exif::PrintFraction($val) : "n/a" 
+PrintConv 40
+$val & 0x800000 ? "Not supported" : $val
 PrintConv 28
 $val * 1e6 . " microseconds"
 PrintConv 8
@@ -3669,6 +3712,8 @@ PrintConv 65
 $val == 255 ? "Strobe or Misfire" : sprintf("%.0f%%", $val * 100)
 PrintConv 26
 $val == 255 ? "n/a" : $val
+PrintConv 45
+$val == 255 ? "n/a" : sprintf("20%.2d", $val)
 PrintConv 33
 $val == 4294965247 ? "n/a" : $val
 PrintConv 28
@@ -3733,6 +3778,8 @@ PrintConv 80
 $val > 42949 ? "Unknown (Bulb)" : Image::ExifTool::Exif::PrintExposureTime($val)
 PrintConv 33
 $val > 655.345 ? "inf" : "$val m"
+PrintConv 24
+$val ? "$val Hz" : "n/a"
 PrintConv 54
 $val ? "$val byte" . ($val==1 ? "" : "s") : "Variable"
 PrintConv 23
@@ -5077,6 +5124,36 @@ RawConv 613
             }
             return $reqTag ? $dataPt : undef;
         
+RawConv 137
+
+            my $lkup = { 0x15a => 1, 0x15e => 2 };
+            return Image::ExifTool::Canon::FindFirmVer($self, \$val, $lkup);
+        
+RawConv 137
+
+            my $lkup = { 0x15a => 1, 0x17e => 2 };
+            return Image::ExifTool::Canon::FindFirmVer($self, \$val, $lkup);
+        
+RawConv 137
+
+            my $lkup = { 0x1a8 => 1, 0x1ac => 2 };
+            return Image::ExifTool::Canon::FindFirmVer($self, \$val, $lkup);
+        
+RawConv 137
+
+            my $lkup = { 0x1e8 => 1, 0x1ed => 2 };
+            return Image::ExifTool::Canon::FindFirmVer($self, \$val, $lkup);
+        
+RawConv 173
+
+            my $lkup = { 0x22c => 1, 0x22d => 2, 0x23c => 3, 0x242 => 4, 0x247 => 5 };
+            return Image::ExifTool::Canon::FindFirmVer($self, \$val, $lkup);
+        
+RawConv 153
+
+            my $lkup = { 0x271=>1, 0x279=>2, 0x280=>3, 0x285=>4 };
+            return Image::ExifTool::Canon::FindFirmVer($self, \$val, $lkup);
+        
 RawConv 262
 
             my $printConv = $$self{TAG_INFO}{LensType}{PrintConv};
@@ -5147,76 +5224,6 @@ RawConv 1383
                 $str .= ' Notes=' . $self->Decode($1, 'UTF8');
             }
             return $str;
-        
-RawConv 461
-
-            my $t = substr($val, 0x15a, 6); # 1 = firmware 2.6.1
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 1, return undef;
-            $t = substr($val, 0x15e, 6);    # 2 = firmware 2.9.1/3.1.1/1.0.2/1.0.3
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 2, return undef;
-            $self->Warn('Unrecognized CameraInfo50D firmware version');
-            $$self{CanonFirm} = 0;
-            return undef;   # not a real tag
-        
-RawConv 458
-
-            my $t = substr($val, 0x15a, 6); # 1 = firmware 3.4.6/3.6.1
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 1, return undef;
-            $t = substr($val, 0x17e, 6);    # 2 = firmware 4.1.1/1.0.6
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 2, return undef;
-            $self->Warn('Unrecognized CameraInfo5DmkII firmware version');
-            $$self{CanonFirm} = 0;
-            return undef;   # not a real tag
-        
-RawConv 466
-
-            my $t = substr($val, 0x1a8, 6); # 1 = firmware 3.7.5
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 1, return undef;
-            $t = substr($val, 0x1ac, 6);    # 2 = firmware 1.0.7/1.0.8/1.1.0/1.2.1/1.2.2
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 2, return undef;
-            $self->Warn('Unrecognized CameraInfo7D firmware version');
-            $$self{CanonFirm} = 0;
-            return undef;   # not a real tag
-        
-RawConv 446
-
-            my $t = substr($val, 0x1e8, 6); # 1 = firmware 4.2.1
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 1, return undef;
-            $t = substr($val, 0x1ed, 6);    # 2 = firmware 1.0.4
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 2, return undef;
-            $self->Warn('Unrecognized CameraInfo1DmkIV firmware version');
-            $$self{CanonFirm} = 0;
-            return undef;   # not a real tag
-        
-RawConv 894
-
-            my $t = substr($val, 0x22c, 6); # 1 = firmware 4.5.4/4.5.6
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 1, return undef;
-            $t = substr($val, 0x22d, 6);    # 2 = firmware 5.2.2/5.3.1/5.4.2
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 2, return undef;
-            $t = substr($val, 0x23c, 6);    # 3 = firmware 1.0.3/1.0.7
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 3, return undef;
-            $t = substr($val, 0x242, 6);    # 4 = firmware 1.2.1
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 4, return undef;
-            $t = substr($val, 0x247, 6);    # 5 = firmware 1.3.5
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 5, return undef;
-            $self->Warn('Unrecognized CameraInfo5DmkIII firmware version');
-            $$self{CanonFirm} = 0;
-            return undef;   # not a real tag
-        
-RawConv 737
-
-            my $t = substr($val, 0x271, 6); # 1 = firmware 5.7.1
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 1, return undef;
-            $t = substr($val, 0x279, 6);    # 2 = firmware 6.5.1
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 2, return undef;
-            $t = substr($val, 0x280, 6);    # 3 = firmware 0.0.8/1.0.2/1.1.1
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 3, return undef;
-            $t = substr($val, 0x285, 6);    # 4 = firmware 2.1.0
-            $t =~ /^\d+\.\d+\.\d+/ and $$self{CanonFirm} = 4, return undef;
-            $self->Warn('Unrecognized CameraInfo1DX firmware version');
-            $$self{CanonFirm} = 0;
-            return undef;   # not a real tag
         
 RawConv 135
 
@@ -5510,6 +5517,11 @@ RawConv 509
             $v = ($v || $val[0]) . sprintf('%s%.2d:%.2d', $1, $2, $3);
         }
         return $v;
+    
+RawConv 103
+
+        my @a = split " ", $val;
+        return(($a[0] or $a[1]) && $a[2] < 1000 ? $val : undef);
     
 RawConv 29
 $$self{A100DataOffset} = $val
@@ -5925,6 +5937,8 @@ RawConv 30
 $$self{Prop1Len} = $val; undef
 RawConv 30
 $$self{Prop2Len} = $val; undef
+RawConv 25
+$$self{RFLensType} = $val
 RawConv 55
 $$self{RIFFStreamCodec}[$$self{RIFFStreamNum}-1] = $val
 RawConv 87
@@ -6101,12 +6115,16 @@ RawConv 27
 $val == 65535 ? undef: $val
 RawConv 53
 $val =~ / (\d+)/ and $$self{FacesDetected} = $1; $val
+RawConv 61
+$val =~ /(\d+\.\d+\.\d+)/ and $$self{CanonFirmVer} = $1; $val
 RawConv 35
 $val =~ /4294967295/ ? undef : $val
 RawConv 50
 $val =~ /^([^\0-\x1f\x7f-\xff]+)\0*$/ ? $1 : undef
 RawConv 31
 $val =~ /^-?\d+/ ? $val : undef
+RawConv 37
+$val =~ /^.{4}(.)$/ ? ord($1) : undef
 RawConv 28
 $val =~ /^\0/ ? undef : $val
 RawConv 35
@@ -6161,6 +6179,8 @@ RawConv 43
 $val eq "SBA" and $$self{HasSBA} = 1; undef
 RawConv 32
 $val eq "\0" x 16 ? undef : $val
+RawConv 31
+$val eq "\0\0\0" ? undef : $val
 RawConv 33
 $val eq "\0\0\0\0" ? undef : $val
 RawConv 13
@@ -6261,6 +6281,8 @@ RawConv 58
 GetByteOrder() eq "MM" ? $val : pack("N",unpack("V",$val))
 RawConv 70
 GetFloat(\$val,0) . " " . GetFloat(\$val,5) . " " . GetFloat(\$val,10)
+RawConv 49
+Image::ExifTool::Canon::FindFirmVer($self, \$val)
 RawConv 46
 Image::ExifTool::Canon::ReadODD($self,$val[0])
 RawConv 55
@@ -6321,6 +6343,10 @@ RawConv 32
 length($val) == 2 ? undef : $val
 RawConv 44
 length($val) == 4 ? unpack("N",$val) : undef
+RawConv 44
+length($val) == 8 ? Get32s(\$val, 4) : undef
+RawConv 44
+length($val) == 8 ? Get32u(\$val, 4) : undef
 RawConv 56
 length($val) > 8 ? join(" ",unpack("x8C*",$val)) : undef
 RawConv 33
@@ -7143,6 +7169,11 @@ ValueConv 220
         SetByteOrder($saveOrder);
         return $val;
     
+ValueConv 114
+
+        my @a = split " ", $val;
+        return ConvertUnixTime($a[0] + $a[1] * 65536 + $a[2] / 1000, 0, 3);
+    
 ValueConv 89
 
         my @a = split ' ', $val;
@@ -7401,6 +7432,8 @@ ValueConv 14
 $val / 100 - 3
 ValueConv 11
 $val / 1000
+ValueConv 12
+$val / 10000
 ValueConv 13
 $val / 100000
 ValueConv 14
@@ -8233,6 +8266,8 @@ ValueConv 42
 length $val ? ConvertUnixTime($val,1) : ""
 ValueConv 55
 length($val) <= 3 ? join(" ",unpack("C*",$val)) : \$val
+ValueConv 42
+length($val) == 8 ? substr($val,4) : undef
 ValueConv 56
 length($val) > 0x1c and $val = substr($val, 0x1c); \$val
 ValueConv 44
@@ -8387,6 +8422,8 @@ ValueConv 35
 sprintf("%d.%.2d", split(" ",$val))
 ValueConv 44
 sprintf("%d.%.4d",$val >> 16, $val & 0xffff)
+ValueConv 73
+sprintf("%d.%d.%d", ($val >> 16) & 0xff, ($val >> 8) & 0xff, $val & 0xff)
 ValueConv 62
 sprintf("%s:%s:%s %s:%s:%s.%s", unpack "H4H2H2H2H2H2H2", $val)
 ValueConv 40
@@ -8423,6 +8460,8 @@ ValueConv 17
 unpack("H*",$val)
 ValueConv 17
 unpack("N", $val)
+ValueConv 20
+unpack("N","\0$val")
 ValueConv 16
 unpack("N",$val)
 ValueConv 40
@@ -8738,6 +8777,15 @@ ValueConvInv 434
         $w and $h and $type and $type eq 'JPEG' or warn("Not a valid JPEG image\n"), return undef;
         my $wbytes = int(($w * 24 + 31) / 32) * 4;
         return pack('N6n2', 1, $w, $h, $wbytes, $wbytes * $h, length($val), 24, 1) . $val;
+    
+ValueConvInv 236
+
+        my $t = GetUnixTime($val);
+        return undef unless defined $t;
+        my $s = int($t);
+        my $ms = int(($t - $s) * 1000 + 0.5);
+        $ms = 999 if $ms > 999;
+        return join ' ', $s & 0xffff, $s >> 16, $ms;
     
 ValueConvInv 162
 
@@ -9320,6 +9368,8 @@ ValueConvInv 72
 my @a=split(" ",$val); hex($a[0])." 0 ".hex($a[1])." ".hex($a[2])." 0 0"
 ValueConvInv 59
 my @a=split(" ",$val); hex($a[0])." 0 ".hex($a[1])." 0 0 0"
+ValueConvInv 62
+my @v = split /\./, $val; ($v[0] << 16) | ($v[1] << 8) | $v[2]
 ValueConvInv 78
 my @v=split(" ",$val); $_=int($_/15+0.5) foreach @v; "$v[1] $v[0] $v[3] $v[2]"
 ValueConvInv 53
