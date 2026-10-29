@@ -609,6 +609,8 @@ pub struct Interp {
     native_locs: HashMap<usize, Option<(Rc<str>, u32)>>,
     /// STDOUT output waiting in perl's 8 KiB buffer (passthrough mode).
     stdout_pending: Vec<u8>,
+    /// Whether STDOUT is a terminal (asked once: a system call).
+    stdout_tty: std::cell::OnceCell<bool>,
     /// `END` blocks, run by `run_end_blocks`.
     end_blocks: Vec<(Rc<Block>, Rc<Scope>)>,
     /// Set by `exit`.
@@ -710,6 +712,7 @@ impl Interp {
             sub_files: HashMap::default(),
             native_locs: HashMap::default(),
             stdout_pending: Vec::new(),
+            stdout_tty: Default::default(),
             end_blocks: Vec::new(),
             exit_code: None,
             pending_aliases: None,
@@ -1074,7 +1077,7 @@ impl Interp {
     pub(crate) fn stdout_write(&mut self, data: &[u8]) {
         use std::io::{IsTerminal, Write};
         let mut o = std::io::stdout();
-        if o.is_terminal() || self.get_scalar("main::|").truthy() {
+        if *self.stdout_tty.get_or_init(|| o.is_terminal()) || self.get_scalar("main::|").truthy() {
             self.flush_stdout();
             let _ = o.write_all(data);
             let _ = o.flush();
