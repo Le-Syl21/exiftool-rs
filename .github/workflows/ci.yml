@@ -148,10 +148,10 @@ jobs:
           echo "EXIFTOOL_DIR=$(pwd -W 2>/dev/null || pwd)/target/exiftool/exiftool-$EXIFTOOL_VERSION" >> "$GITHUB_ENV"
 
       # Release matches how the binaries are built and run (debug panics on
-      # arithmetic overflow where Perl's numbers do not). LTO is off for this
-      # step only: under LTO every test executable repeats the library's
-      # whole optimisation at its own link, so the step would cost several
-      # times a release build. Nothing it builds is shipped: it writes to
+      # arithmetic overflow where Perl's numbers do not). LTO is off and the
+      # codegen units are back to 16 for this step only: under LTO every
+      # test executable repeats the library's whole optimisation at its own
+      # link, so the step would cost several times a release build. Nothing it builds is shipped: it writes to
       # target/release, the packages come from target/<triple>/release.
       # The integration tests run on Linux; on macOS and Windows, the unit
       # tests and the binaries' (the integration tests, which call perl and
@@ -161,12 +161,14 @@ jobs:
         if: runner.os == 'Linux'
         env:
           CARGO_PROFILE_RELEASE_LTO: "off"
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
         run: cargo test --release --features gui
 
       - name: Run unit tests (macOS, Windows)
         if: runner.os != 'Linux' && matrix.target != 'x86_64-apple-darwin'
         env:
           CARGO_PROFILE_RELEASE_LTO: "off"
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
         run: cargo test --release --features gui --lib --bins
 
       - name: Read the test images
@@ -230,6 +232,7 @@ jobs:
         if: matrix.label == 'linux-x86_64'
         env:
           CARGO_PROFILE_RELEASE_LTO: "off"
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
         run: |
           cargo package --locked
           size=$(stat -c %s target/package/exiftool-rs-*.crate)

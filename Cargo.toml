@@ -163,3 +163,23 @@ required-features = ["gui"]
 name = "parity"
 path = "src/bin/parity/main.rs"
 required-features = ["parity"]
+
+# The binaries we ship (a crate that depends on this one uses its own
+# profile). Measured on the CLI (Linux x86_64, -j2 build from scratch; CPU
+# time, best of 5, of -a -u -G1 -j over ExifTool's 194 t/images):
+#
+#   profile                          size     build   read
+#   default (opt 3, no LTO, 16 CGU)  43.4 MB  462 s   2.14-2.36 s
+#   strip, thin LTO                  39.4 MB  431 s   2.18-2.48 s
+#   strip, fat LTO, 1 CGU            39.4 MB  744 s   1.76-2.09 s
+#   same, opt-level "s"              32.8 MB  526 s   2.13-2.27 s
+#
+# Fat LTO over one codegen unit is the fastest by a fifth; "s" would save
+# 6.6 MB and lose that. Most of the size is code (.text, 23 MB: the natives
+# of src/modules) and the embedded dumps (data/, 12 MB); stripping the
+# symbols saves 4 MB, and a panic still reports its file and line. Panics
+# unwind, as before: the API catches the interpreter's (src/api/engine.rs).
+[profile.release]
+strip = true
+lto = "fat"
+codegen-units = 1
