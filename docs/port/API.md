@@ -17,7 +17,7 @@ read, convert or write metadata on its own.
 | `image_info(path)`, `exiftool_port::image_info` | the same, as a name→value map |
 | `set_new_value(tag, value)` | queued; replayed as `SetNewValue($tag, $value, Shift => 0, Protected => 1)` (`Protected` unless the name has a wildcard), as the exiftool application does for `-TAG=VALUE` |
 | `set_new_values_from_file(src, tags)` | queued; replayed as `SetNewValuesFromFile($src, @tags)`; returns the number of tags it sets, counted as the application counts them for `-tagsFromFile` |
-| `write_info(src, dst)` | a new ExifTool, the queued requests replayed in order, `WriteInfo($src, \$out)` |
+| `write_info(src, dst)` | the queued requests replayed in order (after `SetNewValue()` clears those of an earlier call), `WriteInfo($src, \$out)` |
 | `write_warnings()` | the warnings of `SetNewValue`, `SetNewValuesFromFile` and `WriteInfo` (the `Warning` tags) |
 | `get_file_type(path)`, `file_type::detect_from_magic` | `ImageInfo(..., 'FileType')` with `FastScan => 3` |
 | `file_type::detect_from_extension` | `GetFileType` |
@@ -30,7 +30,7 @@ turns it on), `fast_scan` → `FastScan`, `requested_tags` → the tag list of
 `ExtractEmbedded`, `show_unknown` → `Unknown`, `process_compressed` →
 `Compress`, `geolocation` → `Geolocation`, `struct_output` → `Struct`,
 `use_mwg` → `Image::ExifTool::MWG::Load`, `lang` → `Lang` (reading and
-writing). Extraction always runs with
+writing); `fresh_interpreter` is the facade's own (see Threads). Extraction always runs with
 `PrintConv` on: `print_conv` only chooses which of the two values
 `image_info` returns, as in the root crate.
 
@@ -96,17 +96,37 @@ alone ("Nothing to do.").
 
 ### Threads
 
-`ExifTool` is `Send + Sync`, and calls can run on several threads at once.
-Each call runs on an interpreter of its own (the interpreter is not `Send`),
-as each run of the exiftool application is a process of its own. ExifTool
-keeps state in its tables from one file to the next, in Perl too: in one
-process, XMP.xml gets an AutoFocus composite that a module loaded for an
-earlier file defines, and after writing Kodak.jpg's Make the output reads
-"Unrecognized MakerNoteUnknown" instead of "Unrecognized MakerNotes". A
-call therefore never depends on the ones before it. The price is the
-interpreter's start, about as long again as reading a small file
-(the root crate's regression suite: 7 s with interpreters kept per thread,
-15 s with one per call).
+An `ExifTool` keeps one interpreter, and one `Image::ExifTool` object on
+it, for all its calls, as a Perl program that makes one
+`Image::ExifTool->new` and reads (or writes) file after file with it, and
+as the exiftool application does for the files of one command. Each call
+starts with `ClearOptions()` and `SetNewValue()` (no option or new value
+stays from the call before), then sets its options. What ExifTool itself
+keeps from one file to the next stays, as in Perl: its tables, the modules
+loaded. With one `Image::ExifTool` object in Perl, as with one `ExifTool`
+here, XMP.xml has no AutoFocus composite read first, and has one ("On")
+read after Nikon.jpg, whose module defines it; after writing Kodak.jpg's
+Make, the output reads "Unrecognized MakerNoteUnknown" instead of
+"Unrecognized MakerNotes". Two `ExifTool` objects never share anything.
+
+`Options::fresh_interpreter` (off by default) runs each call on an
+interpreter of its own instead, with a new `Image::ExifTool` object, as
+each run of the exiftool application is a process of its own: no call
+then depends on the ones before it, at the price of the interpreter's
+start (about 16 ms) for each call. Reading ExifTool's 194 test images with
+one `ExifTool`: 4.46 s with `fresh_interpreter`, 2.57 s without (-42 %);
+the output is the same but for XMP.xml's AutoFocus above (and the order of
+some composite tags, as ExifTool's composite table grows).
+
+`ExifTool` is `Send + Sync`. The interpreter is not `Send` (it holds
+`Rc`s, some shared with caches of its thread), so it lives on a thread of
+its own, started on the object's first call and ended when the object is
+dropped, which runs the calls one at a time: threads that share an
+`ExifTool` take turns (one `ExifTool` per thread reads in parallel). A
+panic in a call is the caller's, and the interpreter it leaves is
+replaced. With `fresh_interpreter`, calls run on the caller's thread, in
+parallel. Turning `use_mwg` off after a call with it replaces the
+interpreter (MWG cannot be unloaded).
 
 ## The GUI
 

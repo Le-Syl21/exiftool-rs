@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use crate::interp::Want;
 use crate::perl::Value as PV;
 
-use super::engine::{self, call, pv_array, pv_path, pv_str, with_engine};
+use super::engine::{self, call, pv_array, pv_path, pv_str, Engine};
 use super::error::{Error, Result};
 use super::file_type::{self, FileType};
 use super::tag::Tag;
@@ -55,6 +55,16 @@ pub struct Options {
     /// `-lang` takes it. A language ExifTool does not have is ignored, as
     /// ExifTool ignores it. Writing takes values in this language too.
     pub lang: Option<String>,
+    /// Run each call on an interpreter of its own (with a new
+    /// Image::ExifTool object), as separate runs of the exiftool
+    /// application, so that no call depends on the ones before it. Off by
+    /// default: an `ExifTool` keeps one interpreter and one Image::ExifTool
+    /// object for all its calls, as a Perl program reusing one
+    /// `Image::ExifTool->new` object for file after file, with the state
+    /// ExifTool carries from one file to the next in Perl (see
+    /// `docs/port/API.md`), and without starting an interpreter (about
+    /// 16 ms) for each call.
+    pub fresh_interpreter: bool,
 }
 
 impl Default for Options {
@@ -71,6 +81,7 @@ impl Default for Options {
             geolocation: false,
             struct_output: false,
             lang: None,
+            fresh_interpreter: false,
         }
     }
 }
@@ -211,6 +222,14 @@ pub struct ExifTool {
     requests: Vec<Request>,
     /// What the last `write_info` call was warned about (see [`ExifTool::write_warnings`]).
     write_warnings: std::sync::Mutex<Vec<String>>,
+    /// The interpreter running Image::ExifTool for this object's calls.
+    engine: Engine,
+}
+
+/// What a read is of: a file, or data in memory.
+enum Source {
+    Path(PathBuf),
+    Data(Vec<u8>),
 }
 
 /// Result of metadata extraction: maps tag names to display values.
@@ -237,6 +256,7 @@ impl ExifTool {
             options,
             requests: Vec::new(),
             write_warnings: std::sync::Mutex::new(Vec::new()),
+            engine: Engine::default(),
         }
     }
 
@@ -290,9 +310,10 @@ impl ExifTool {
         let path = src_path.as_ref().to_path_buf();
         fs::File::open(&path).map_err(Error::Io)?;
         let tags: Vec<String> = tags_to_copy.unwrap_or(&[]).iter().map(|t| t.to_string()).collect();
-        let opts = self.options.write_options();
-        let (count, error) = with_engine(self.options.use_mwg, |it| -> Result<(u32, Option<String>)> {
-            let args = vec![pv_path(&path), pv_array(tags.iter().map(|t| pv_str(t)).collect()), pv_array(opts)];
+        let options = self.options.clone();
+        let (p, t) = (path.clone(), tags.clone());
+        let (count, error) = self.run(move |it| -> Result<(u32, Option<String>)> {
+            let args = vec![pv_path(&p), pv_array(t.iter().map(|t| pv_str(t)).collect()), pv_array(options.write_options())];
             let r = call(it, "CountCopy", args, Want::Scalar)?;
             let f = engine::array(r.first().unwrap_or(&PV::Undef));
             let n = f.first().map(PV::to_i64).unwrap_or(0).max(0) as u32;
@@ -363,17 +384,18 @@ impl ExifTool {
         self.set_write_warnings(Vec::new());
         fs::File::open(src_path).map_err(Error::Io)?;
 
-        let ops: Vec<PV> = self
-            .requests
-            .iter()
-            .map(|r| match r {
-                Request::Set(nv) => pv_array(vec![pv_str("set"), pv_str(&nv.name()), nv.value.as_deref().map(pv_str).unwrap_or(PV::Undef)]),
-                Request::Copy { path, tags } => pv_array(vec![pv_str("copy"), pv_path(path), pv_array(tags.iter().map(|t| pv_str(t)).collect())]),
-            })
-            .collect();
-        let opts = self.options.write_options();
-        let (rtn, output, warnings, error) = with_engine(self.options.use_mwg, |it| -> Result<_> {
-            let r = call(it, "Write", vec![pv_path(src_path), pv_path(dst_path), pv_array(ops), pv_array(opts)], Want::Scalar)?;
+        let requests = self.requests.clone();
+        let options = self.options.clone();
+        let (src, dst) = (src_path.to_path_buf(), dst_path.to_path_buf());
+        let (rtn, output, warnings, error) = self.run(move |it| -> Result<_> {
+            let ops: Vec<PV> = requests
+                .iter()
+                .map(|r| match r {
+                    Request::Set(nv) => pv_array(vec![pv_str("set"), pv_str(&nv.name()), nv.value.as_deref().map(pv_str).unwrap_or(PV::Undef)]),
+                    Request::Copy { path, tags } => pv_array(vec![pv_str("copy"), pv_path(path), pv_array(tags.iter().map(|t| pv_str(t)).collect())]),
+                })
+                .collect();
+            let r = call(it, "Write", vec![pv_path(&src), pv_path(&dst), pv_array(ops), pv_array(options.write_options())], Want::Scalar)?;
             let f = engine::array(r.first().unwrap_or(&PV::Undef));
             let rtn = f.first().map(PV::to_i64).unwrap_or(0);
             let output = match f.get(1) {
@@ -429,13 +451,17 @@ impl ExifTool {
                 Request::Copy { path, tags } => {
                     let later = &self.requests[i + 1..];
                     let overridden = |name: &str| later.iter().any(|r| matches!(r, Request::Set(nv) if nv.tag.eq_ignore_ascii_case(name) || is_all(&nv.tag)));
-                    let reader = ExifTool::with_options(Options {
+                    // (with MWG as the write has it: MWG adds composite
+                    // tags only, which are not copied)
+                    let reader = Options {
                         duplicates: true,
                         requested_tags: tags.clone(),
                         lang: self.options.lang.clone(),
+                        use_mwg: self.options.use_mwg,
+                        fresh_interpreter: self.options.fresh_interpreter,
                         ..Options::default()
-                    });
-                    let Ok(src) = reader.read(path) else { continue };
+                    };
+                    let Ok(src) = self.read_as(reader, path) else { continue };
                     for t in copied_tags(&src) {
                         if !overridden(&t.tag.name) {
                             out.push(NewValue {
@@ -459,13 +485,14 @@ impl ExifTool {
         let keep = |t: &ReadTag| !matches!(t.tag.group.family0.as_str(), "System" | "Composite" | "ExifTool");
         let read = |p: &Path| -> Vec<ReadTag> {
             // (in the language of the requested values)
-            let reader = ExifTool::with_options(Options {
+            let reader = Options {
                 duplicates: true,
                 use_mwg: self.options.use_mwg,
                 lang: self.options.lang.clone(),
+                fresh_interpreter: self.options.fresh_interpreter,
                 ..Options::default()
-            });
-            reader.read(p).map(|v| v.into_iter().filter(keep).collect()).unwrap_or_default()
+            };
+            self.read_as(reader, p).map(|v| v.into_iter().filter(keep).collect()).unwrap_or_default()
         };
         let after_tags = read(after);
         let before_tags = read(before);
@@ -535,19 +562,32 @@ impl ExifTool {
     /// only; `path` is not read.
     pub fn extract_info_from_bytes(&self, data: &[u8], path: &Path) -> Result<Vec<Tag>> {
         let _ = path;
-        Ok(self.read_source(PV::binary(data))?.into_iter().map(|t| t.tag).collect())
+        Ok(self.read_source(self.options.clone(), Source::Data(data.to_vec()))?.into_iter().map(|t| t.tag).collect())
     }
 
     fn read(&self, path: &Path) -> Result<Vec<ReadTag>> {
-        fs::File::open(path).map_err(Error::Io)?;
-        self.read_source(pv_path(path))
+        self.read_as(self.options.clone(), path)
     }
 
-    fn read_source(&self, source: PV) -> Result<Vec<ReadTag>> {
-        let opts = self.options.read_options();
-        let tags: Vec<PV> = self.options.requested_tags.iter().map(|t| pv_str(t)).collect();
-        with_engine(self.options.use_mwg, |it| {
-            let r = call(it, "Read", vec![source, pv_array(opts), pv_array(tags)], Want::Scalar)?;
+    /// Read a file with other options, on this object's interpreter.
+    fn read_as(&self, options: Options, path: &Path) -> Result<Vec<ReadTag>> {
+        fs::File::open(path).map_err(Error::Io)?;
+        self.read_source(options, Source::Path(path.to_path_buf()))
+    }
+
+    /// Run `f` on this object's interpreter (see [`Options::fresh_interpreter`]).
+    fn run<R: Send + 'static>(&self, f: impl FnOnce(&mut crate::interp::Interp) -> R + Send + 'static) -> R {
+        self.engine.run(self.options.fresh_interpreter, self.options.use_mwg, f)
+    }
+
+    fn read_source(&self, options: Options, source: Source) -> Result<Vec<ReadTag>> {
+        self.engine.run(options.fresh_interpreter, options.use_mwg, move |it| {
+            let source = match &source {
+                Source::Path(p) => pv_path(p),
+                Source::Data(d) => PV::binary(d),
+            };
+            let tags: Vec<PV> = options.requested_tags.iter().map(|t| pv_str(t)).collect();
+            let r = call(it, "Read", vec![source, pv_array(options.read_options()), pv_array(tags)], Want::Scalar)?;
             Ok(engine::array(r.first().unwrap_or(&PV::Undef))
                 .iter()
                 .map(|rec| {

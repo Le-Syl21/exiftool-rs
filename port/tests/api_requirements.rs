@@ -235,13 +235,46 @@ fn mwg_composites_are_loaded_on_request() {
             .any(|t| t.group.family0 == "Composite" && t.name == "DateTimeOriginal")
     };
     assert!(mwg(true));
-    // and only then: each call starts from a new ExifTool
+    // and only then: each object has an ExifTool of its own
     assert!(!mwg(false));
+    // nor once turned off on the same object (MWG cannot be unloaded: the
+    // object's interpreter is replaced)
+    let mut et = ExifTool::with_options(Options { use_mwg: true, ..Options::default() });
+    let has = |et: &ExifTool| et.extract_info(image("Canon.jpg")).unwrap().iter().any(|t| t.group.family0 == "Composite" && t.name == "DateTimeOriginal");
+    assert!(has(&et));
+    et.options_mut().use_mwg = false;
+    assert!(!has(&et));
+}
+
+#[test]
+fn one_interpreter_per_object() {
+    // An ExifTool reuses its interpreter and Image::ExifTool object, so
+    // ExifTool's tables carry from one file to the next as in Perl: with one
+    // Image::ExifTool object, `ImageInfo` gives XMP.xml no AutoFocus, then
+    // reads Nikon.jpg (Nikon.pm defines the AutoFocus composite), then gives
+    // XMP.xml AutoFocus "On".
+    let auto_focus = |et: &ExifTool| et.image_info(image("XMP.xml")).unwrap().get("AutoFocus").cloned();
+    let et = ExifTool::new();
+    assert_eq!(auto_focus(&et), None);
+    assert_eq!(et.image_info(image("Nikon.jpg")).unwrap().get("AutoFocus").map(String::as_str), Some("On"));
+    assert_eq!(auto_focus(&et).as_deref(), Some("On"));
+    // A new object starts from a new interpreter.
+    assert_eq!(auto_focus(&ExifTool::new()), None);
+    // With fresh_interpreter, every call does.
+    let et = ExifTool::with_options(Options { fresh_interpreter: true, ..Options::default() });
+    et.image_info(image("Nikon.jpg")).unwrap();
+    assert_eq!(auto_focus(&et), None);
+    // The options of one call do not stay for the next (ClearOptions).
+    let mut et = ExifTool::with_options(Options { requested_tags: vec!["Model".into()], ..Options::default() });
+    assert_eq!(et.extract_info(image("Canon.jpg")).unwrap().len(), 1);
+    et.options_mut().requested_tags.clear();
+    assert!(et.extract_info(image("Canon.jpg")).unwrap().len() > 50);
 }
 
 #[test]
 fn engines_are_per_thread() {
-    // ExifTool is Send + Sync: each thread reads with its own interpreter.
+    // ExifTool is Send + Sync: threads sharing one take turns on its
+    // interpreter.
     fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<ExifTool>();
     let et = std::sync::Arc::new(ExifTool::new());
