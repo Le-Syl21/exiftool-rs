@@ -21,9 +21,13 @@ fn bro(data: &[u8], quality: u8, lgwin: u8) -> Option<Vec<u8>> {
 /// `unbro($data, $maxsize)`: fails beyond maxsize, as the perl module.
 fn unbro(data: &[u8], max: usize) -> Option<Vec<u8>> {
     let mut d = Decompressor::new(DecoderConfig::default()).ok()?;
-    let mut out = vec![0u8; max];
-    let n = d.decompress_to_slice(data, &mut out).ok()?;
-    out.truncate(n);
+    // Room for `max` bytes, not zeroed: the callers pass 100 MB, which
+    // zeroing up front made the main cost of a small Brotli box.
+    let mut out = Vec::with_capacity(max);
+    let n = d.decompress_to_uninit(data, out.spare_capacity_mut()).ok()?;
+    // SAFETY: decompress_to_uninit initialized the first `n` spare bytes.
+    unsafe { out.set_len(n) };
+    out.shrink_to_fit();
     Some(out)
 }
 
