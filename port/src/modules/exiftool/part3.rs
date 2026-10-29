@@ -409,7 +409,7 @@ fn tag_table_keys_list(it: &mut Interp, tag_table_ptr: &Value) -> Vec<Value> {
 /// Return: Metadata path string
 pub fn metadata_path(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let self_ = arg(&a, 0);
-    pl::at(9100);
+    pl::at(9150);
     let parts: Vec<Vec<u8>> = pl::aderef(&self_.get("PATH"))?.iter().map(|v| v.to_bytes().to_vec()).collect();
     ret(Value::bytes(parts.join(&b'-')))
 }
@@ -521,7 +521,7 @@ pub fn do_escape(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// the caller writes back where `$_[0]` aliases).
 fn do_escape_value(it: &mut Interp, v: &Value, proc_: &Value) -> ER<Option<Value>> {
     if !v.is_ref() {
-        pl::at(9669);
+        pl::at(9719);
         return Ok(Some(scalar_of(call_code_strict(it, proc_, vec![v.clone()], Want::Scalar)?)));
     } else if ref_of(v) == "ARRAY" {
         let len = v.len();
@@ -894,7 +894,7 @@ pub fn process_directory(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     self_.get_or_new_hash("FOUND_DIR").set(dir_name.to_bytes(), n(1));
 
     // process the directory
-    pl::at(9084);
+    pl::at(9134);
     let rtn_val = scalar_of(call_code(it, &proc_, vec![self_.clone(), dir_info.clone(), tag_table_ptr.clone()], Want::Scalar)?);
 
     if let Value::ArrayRef(p) = self_.get_or_new_array("PATH") {
@@ -1006,7 +1006,7 @@ pub fn get_tag_table(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
         // use strict 'refs';
         let init = table.get("INIT_TABLE");
         if init.truthy() {
-            pl::at(8976);
+            pl::at(9026);
             call_code_strict(it, &init, vec![table.clone()], Want::Void)?;
         }
         table.set("TABLE_NAME", table_name.clone()); // set table name
@@ -1248,7 +1248,7 @@ fn add_tag_to_table_impl(it: &mut Interp, tag_table_ptr: &Value, tag_id: &Value,
             tag_info.get_or_new_hash("Groups").set(&k, table_groups.get(&k));
         }
     } else {
-        pl::at(9243);
+        pl::at(9293);
         tag_info.set("Groups", pl::hderef(&tag_table_ptr.get("GROUPS"))?.hash_copy());
     }
     if tag_info.get("Flags").truthy() {
@@ -1930,7 +1930,7 @@ pub fn process_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     let ttp = g(&tag_table_ptr);
     let data_pt = cell(di.get("DataPt"));
     let dp = g(&data_pt);
-    pl::at(9881);
+    pl::at(9931);
     let data_len = cell(len_of(&pl::sderef(&dp)?));
     let dir_start = cell(or(di.get("DirStart"), n(0)));
     let max_len = cell(pl::sub(&g(&data_len), &g(&dir_start)));
@@ -2276,7 +2276,7 @@ pub fn process_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
                 s(&off_adj, pl::sprintf_v(&fmt, &[tmp, g(&index)]));
             }
         }
-        if pl::gt(&g(&unknown), &n(1)) {
+        if pl::gt(&g(&unknown), &n(1)) && !g(&tag_info).get("LookAhead").truthy() {
             // calculate next valid index for unknown tag
             let mut ni = pl::int(&g(&index));
             if !g(&was_var).truthy() {
@@ -3091,6 +3091,8 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
     let dqt = Value::new_array(vec![]);
     let (mut sub_sampling, mut dump_end) = (Value::Undef, Value::Undef);
     let extended_xmp = Value::new_hash();
+    let xmth = Value::new_hash();
+    let xiaomi_mess = dir_info.get("XiaomiMess").truthy();
     let mk = |m: &Value, x: i64| pl::num_eq(m, &n(x));
     let method = |it: &mut Interp, name: &str, args: Vec<Value>| pl::method(it, &self_, name, args);
     let table = |it: &mut Interp, name: &str| pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s(name)]);
@@ -3101,9 +3103,13 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
     if !raf.truthy() {
         let class = pl::s("File::RandomAccess");
         raf = scalar_of(it.call_method(&class, "new", vec![class.clone(), dir_info.get("DataPt")], Want::Scalar)?);
-        pl::at(7291);
+        let start = or(dir_info.get("DirStart"), n(0));
+        if start.truthy() {
+            pl::method(it, &raf, "Seek", vec![start.clone(), n(0)])?;
+        }
+        pl::at(7294);
         let d = pl::sderef(&dir_info.get("DataPt"))?;
-        verbose_dir(it, vec![self_.clone(), pl::s("JPEG"), Value::Undef, len_of(&d)], Want::Void)?;
+        verbose_dir(it, vec![self_.clone(), pl::s("JPEG"), Value::Undef, pl::sub(&len_of(&d), &start)], Want::Void)?;
     }
     // get pointer to hash object if it exists and we are the top-level JPEG or JP2
     if re("^(JPEG|JP2)$", "").is_match(&self_.get("FILE_TYPE")) && !self_.get("DOC_NUM").truthy() {
@@ -3115,13 +3121,20 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
     s = b;
     if pl::num_eq(&r, &n(2)) && re("^\\xff[\\xd8\\x4f\\x01]", "").is_match(&s) {
         optional_tag_table = Value::Undef;
-    } else {
-        if !(optional_tag_table.truthy() && re("^\\xff[\\xe0-\\xef]", "").is_match(&s)) {
+    } else if optional_tag_table.truthy() {
+        if re("^\\xff[\\xe0-\\xef]", "").is_match(&s) {
+            if !pl::method(it, &raf, "Seek", vec![n(-2), n(1)])?.truthy() {
+                method(it, "Error", vec![pl::s("Seek error")])?;
+                return Ok(n(1));
+            }
+        } else if xiaomi_mess && pl::str_eq(&s, "\0\0") && {
+            let (r, b) = raf_read(it, &raf, s.clone(), &n(2))?;
+            s = b;
+            pl::num_eq(&r, &n(2)) && pl::str_eq(&s, "\0\x0a")
+        } {
+            optional_tag_table = Value::Undef; // (standard JPEG APP segments)
+        } else {
             return Ok(n(0));
-        }
-        if !pl::method(it, &raf, "Seek", vec![n(-2), n(1)])?.truthy() {
-            method(it, "Error", vec![pl::s("Seek error")])?;
-            return Ok(n(1));
         }
     }
     if &s.to_bytes()[..] == b"\xff\x01" {
@@ -3209,7 +3222,7 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
             let (r, b) = raf_readline(it, &raf, g(&buff))?;
             s_(&buff, b);
             if !r.truthy() {
-                if !optional_tag_table.truthy() {
+                if !(optional_tag_table.truthy() || xiaomi_mess) {
                     break 'marker;
                 }
                 next_marker = n(-1);
@@ -3221,13 +3234,28 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
             loop {
                 let (r, ch) = raf_read(it, &raf, Value::Undef, &n(1))?;
                 if !r.truthy() {
-                    break 'marker;
-                }
-                next_marker = n(ch.to_bytes().first().copied().unwrap_or(0) as i64);
-                if !mk(&next_marker, 0xff) {
+                    if !xiaomi_mess {
+                        break 'marker;
+                    }
+                    next_marker = n(-1);
+                    marker_len_bytes.set(next_marker.to_bytes(), n(0));
+                    success = n(1);
                     break;
+                } else {
+                    next_marker = n(ch.to_bytes().first().copied().unwrap_or(0) as i64);
+                    if !mk(&next_marker, 0xff) {
+                        break;
+                    }
+                    skipped = pl::add(&skipped, &n(1));
                 }
-                skipped = pl::add(&skipped, &n(1));
+            }
+            // ignore any extra junk between segments in the Xiaomi mess
+            if skipped.truthy() && xiaomi_mess && (mk(&next_marker, 0) || mk(&next_marker, -1) || {
+                pl::at(7385);
+                pl::warn_uninit(it, &marker, "$marker", "numeric eq (==)")?;
+                mk(&marker, 0)
+            }) {
+                skipped = n(0);
             }
             // read segment data if it exists
             let mlb = marker_len_bytes.get(next_marker.to_bytes());
@@ -3389,6 +3417,9 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
             }
             if found_sos.truthy() || pl::str_eq(&self_.get("FILE_TYPE"), "EXV") {
                 success = n(1);
+            } else if xiaomi_mess {
+                success = n(1);
+                continue 'marker; // continue parsing APP segments after EOI (crazy I know!)
             } else {
                 method(it, "Warn", vec![pl::s("Missing JPEG SOS")])?;
             }
@@ -4070,6 +4101,36 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
                 // Digilife DDC-690/Rollei="BGTH"
                 dump_type = pl::s("Preview Image");
                 preview = substr(it, &seg, &len_of(&cap(&m, 1)), None)?;
+            } else if is("^XMTH", "") {
+                // APP2 XMTH segment in XiaomiMess of HEIC file
+                dump_type = pl::s("Xiaomi Preview");
+                if xmth.len() > 0 {
+                    s_(&combined_seg_data, pl::concat(&g(&combined_seg_data), &substr(it, &seg, &n(4), None)?));
+                    xmth.set("Count", pl::add(&xmth.get("Count"), &n(1)));
+                } else if is("^XMTH.{5}\\xff\\xd8\\xff\\xe1", "s") {
+                    s_(&combined_seg_data, substr(it, &seg, &n(9), None)?);
+                    // Size includes JUNK (preview image trailer?)
+                    let up = crate::perl::pack::unpack(b"x4NC", &seg.to_bytes()).unwrap_or_default();
+                    xmth.set("Size", arg(&up, 0));
+                    xmth.set("Num", arg(&up, 1));
+                    xmth.set("Count", n(1));
+                } else {
+                    dump_type = pl::s("Xiaomi Junk");
+                }
+                if xmth.len() > 0 {
+                    tip = cat(&[&pl::s("Segment "), &xmth.get("Count"), &pl::s(" of "), &xmth.get("Num"), &pl::s("\nTotal Size: "), &xmth.get("Size")]);
+                    if pl::num_eq(&xmth.get("Count"), &xmth.get("Num")) {
+                        if !pl::num_eq(&xmth.get("Size"), &len_of(&g(&combined_seg_data))) {
+                            method(it, "Warn", vec![pl::s("Size error reding Xiaomi Preview")])?;
+                        } else {
+                            found_tag_call(it, &self_, vec![pl::s("PreviewImage"), g(&combined_seg_data)])?;
+                        }
+                        s_(&combined_seg_data, Value::Undef);
+                        if let Value::HashRef(h) = &xmth {
+                            h.borrow_mut().clear();
+                        }
+                    }
+                }
             } else if is("^urn:", "") {
                 // (found in Apple HDR images)
                 dump_type = pl::s("URN");
