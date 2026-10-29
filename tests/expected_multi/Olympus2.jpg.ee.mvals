@@ -134,7 +134,7 @@ WB_GLevel	0
 WB_RBLevels	536 390
 WhiteBalance	Auto
 WhiteBalance2	Auto
-WhiteBalanceBracket	0 0
+WhiteBalanceFineTune	0 0
 WhiteBalanceTemperature	Auto
 XResolution	314
 XResolution	72

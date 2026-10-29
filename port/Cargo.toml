@@ -2,7 +2,7 @@
 name = "exiftool-port"
 version = "0.0.0"
 edition = "2021"
-description = "Faithful Rust port of Perl ExifTool 13.59 (work in progress)"
+description = "Faithful Rust port of Perl ExifTool 13.60 (work in progress)"
 license = "GPL-3.0-or-later"
 publish = false
 

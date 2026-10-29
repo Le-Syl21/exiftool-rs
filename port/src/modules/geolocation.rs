@@ -151,7 +151,7 @@ pub fn read_database(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     };
     let rs = it.get_scalar("main::/");
     let mut line = f.read(&rs);
-    let Some(c) = re(r"^Geolocation(\d+\.\d+)\t(\d+)", "").m(&line) else {
+    let Some(c) = (if line.truthy() { re(r"^Geolocation(\d+\.\d+)\t(\d+)", "").m(&line) } else { None }) else {
         pl::warn(it, "Bad format Geolocation database\n")?;
         return ret(n(0));
     };
@@ -177,24 +177,25 @@ pub fn read_database(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     let is_end = |l: &Value| !l.is_undef() && l.to_bytes().len() == 6 && re(r"\0\0\0\0", "").is_match(l);
 
     // read city database
+    let mut err = false;
     let city_list = la(it, "cityList");
     let mut cities = Vec::new();
     loop {
         line = f.read(&rs);
+        if line.is_undef() {
+            err = true;
+            break;
+        }
         if is_end(&line) {
             break;
         }
-        let mut eof = false;
-        while line.is_undef() || pl::lt(&pl::length(&line), &n(14)) {
-            if f.pos >= f.data.len() {
-                // (perl loops here forever on a truncated database)
-                eof = true;
+        while pl::lt(&pl::length(&line), &n(14)) {
+            let more = f.read(&rs);
+            if more.is_undef() {
+                err = true;
                 break;
             }
-            line = pl::concat(&line, &f.read(&rs));
-        }
-        if eof {
-            break;
+            line = pl::concat(&line, &more);
         }
         cities.push(chomp(it, &line));
     }
@@ -209,6 +210,10 @@ pub fn read_database(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
         let num = lh(it, num_name);
         loop {
             line = f.read(&rs);
+            if line.is_undef() {
+                err = true;
+                break;
+            }
             if is_end(&line) {
                 break;
             }
@@ -222,11 +227,15 @@ pub fn read_database(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     }
     // read feature codes if available
     let feature_codes = la(it, "featureCodes");
-    if pl::str_eq(&line, "\0\0\0\0\x05\n") {
+    if !line.is_undef() && pl::str_eq(&line, "\0\0\0\0\x05\n") {
         set_items(&feature_codes, vec![]);
         let feature_types = lh(it, "featureTypes");
         loop {
             line = f.read(&rs);
+            if line.is_undef() {
+                err = true;
+                break;
+            }
             if is_end(&line) {
                 break;
             }
@@ -237,13 +246,19 @@ pub fn read_database(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
             feature_codes.push(line.clone());
         }
     }
-    // initialize featureCodes lookup
-    let fc_lookup = lh(it, "featureCodes");
-    clear_hash(&fc_lookup);
-    for (i, c) in feature_codes.items().iter().enumerate() {
-        hset(&fc_lookup, &pl::lc(c), n(i as i64));
+    if err {
+        pl::at(220);
+        pl::warn(it, &format!("Error reading {} (truncated file?)", datfile.to_text()))?;
+        ret(n(0))
+    } else {
+        // initialize featureCodes lookup
+        let fc_lookup = lh(it, "featureCodes");
+        clear_hash(&fc_lookup);
+        for (i, c) in feature_codes.items().iter().enumerate() {
+            hset(&fc_lookup, &pl::lc(c), n(i as i64));
+        }
+        ret(n(1))
     }
-    ret(n(1))
 }
 
 /// Read alternate-names database
@@ -649,7 +664,7 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     }
     let city_list = la(it, "cityList");
     if city_list.is_empty() {
-        pl::at(479);
+        pl::at(494);
         pl::warn(it, "No Geolocation database")?;
         return pl::ret_nothing(want);
     }
@@ -714,7 +729,7 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     for a_ in &args {
         // allow regular expressions optionally prefixed by "ci", "cc", "co", "re" or "sr"
         if let Some(c) = re(r"^(-)?(\w{2})?/(.*)/(i?)$", "").m(a_) {
-            pl::at(505);
+            pl::at(520);
             let rx = pl::re_dyn(&cap(&c, 3).to_bytes(), if cap(&c, 4).truthy() { "im" } else { "m" })?;
             let Some(mut idx) = ri(&cap(&c, 2).to_bytes()) else { continue };
             cargs.push(a_.clone());
@@ -830,7 +845,7 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
                     let mut p = b"^".to_vec();
                     p.extend_from_slice(&city_s);
                     p.push(b'$');
-                    pl::at(562);
+                    pl::at(577);
                     alt_re = Some(pl::re_dyn(&p, "im")?);
                 }
                 if !alt_re.as_ref().unwrap().is_match(&alt) {

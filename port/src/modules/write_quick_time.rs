@@ -110,6 +110,15 @@ fn raf_read(it: &mut Interp, raf: &Value, buff: &mut Value, len: Value) -> ER<Va
     Ok(r)
 }
 
+/// `$v || ''`
+fn or_empty(v: Value) -> Value {
+    if v.truthy() {
+        v
+    } else {
+        s("")
+    }
+}
+
 fn raf_seek(it: &mut Interp, raf: &Value, pos: Value, whence: i64) -> ER<bool> {
     Ok(m(it, raf, "Seek", vec![pos, n(whence)])?.truthy())
 }
@@ -893,7 +902,10 @@ fn write_item_info_v(it: &mut Interp, et: &Value, dir_info: &Value, outfile: &Va
                 continue;
             }
         }
-        let (hdr, sub_table, proc_);
+        let (mut hdr, sub_table, mut proc_);
+        proc_ = Value::Undef;
+        let more_dir_info = Value::new_hash(); // %moreDirInfo
+        let new_val2 = pl::sref(Value::Undef); // \$newVal2
         let mut strt = n(0);
         if name == "EXIF" {
             if !pl::length(&buff).truthy() {
@@ -905,24 +917,55 @@ fn write_item_info_v(it: &mut Interp, et: &Value, dir_info: &Value, outfile: &Va
             } else if pl::ge(&len_of(&buff), &n(4)) && pl::ge(&len_of(&buff), &pl::add(&n(4), &pl::unpack1("N", &buff)?)) {
                 hdr = pl::substr(&buff, 0, Some(pl::add(&n(4), &pl::unpack1("N", &buff)?).to_i64()));
                 strt = len_of(&hdr);
+                if pl::num_eq(&len_of(&hdr), &n(14)) && &pl::substr(&hdr, 4, Some(2)).to_bytes()[..] == b"\xff\xe1" {
+                    proc_ = Value::Code(it.sub_ref("Image::ExifTool::WriteJPEG"));
+                    // (use EXIF table so the group names will be correct for deleting as a group)
+                    more_dir_info.set("XiaomiMess", n(1));
+                    more_dir_info.set("OutFile", new_val2.clone());
+                    let class = s("File::RandomAccess");
+                    let new_raf = it.call_method(&class, "new", vec![class.clone(), pl::sref(buff.clone())], Want::Scalar)?.pop().unwrap_or_default();
+                    more_dir_info.set("RAF", new_raf);
+                    pl::set_deref(&new_val2, s(""))?;
+                    et.get_or_new_hash("EDIT_DIRS").set("APP1", s("JPEG")); // must parse into JPEG APP1
+                    raf_seek(it, &raf, n(4), 0)?; // (skip size)
+                    hdr = s("");
+                }
             } else {
                 warn(it, et, s("Invalid Exif header"))?;
                 continue;
             }
             sub_table = get_tag_table(it, s("Image::ExifTool::Exif::Main"))?;
-            proc_ = Value::Code(it.sub_ref("Image::ExifTool::WriteTIFF"));
+            if !proc_.truthy() {
+                proc_ = Value::Code(it.sub_ref("Image::ExifTool::WriteTIFF"));
+            }
         } else {
             hdr = s("");
             sub_table = get_tag_table(it, s("Image::ExifTool::XMP::Main"))?;
-            proc_ = Value::Undef;
         }
         let d_info = Value::new_hash();
         d_info.set("DataPt", pl::sref(buff.clone()));
         d_info.set("DataLen", len_of(&buff));
         d_info.set("DirStart", strt.clone());
         d_info.set("DirLen", pl::sub(&len_of(&buff), &strt));
+        for k in more_dir_info.keys() {
+            d_info.set(&k[..], more_dir_info.get(&k[..]));
+        }
         let changed = et.get("CHANGED");
+        et.set("DemoteErrors", n(1));
         let mut new_val = m(it, et, "WriteDirectory", vec![d_info.clone(), sub_table, proc_])?;
+        if pl::gt(&et.get("DemoteErrors"), &n(1)) {
+            // just copy existing subdirectory if a non-quicktime error occurred
+            new_val = Value::Undef;
+            et.set("CHANGED", changed.clone()); // nothing changed
+        }
+        et.set("DemoteErrors", Value::Undef);
+        if more_dir_info.get("OutFile").truthy() && !new_val.is_undef() {
+            if pl::str_eq(&new_val, "1") {
+                new_val = new_val2.deref(); // return OutFile buffer (from WriteJPEG)
+            } else if pl::str_eq(&new_val, "0") || pl::str_eq(&new_val, "-1") {
+                new_val = Value::Undef; // (shouldn't happen)
+            }
+        }
         if !new_val.is_undef() && changed.to_bytes() != et.get("CHANGED").to_bytes() &&
             // nothing changed if deleting an empty directory
             (d_info.get("DirLen").truthy() || pl::length(&new_val).truthy())
@@ -1252,7 +1295,7 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
     let mut del_grp = Value::Undef;
     let box_pos = Value::new_hash();
     let did_dir = Value::new_hash();
-    let mut write_last = Value::Undef;
+    let write_last = Value::new_hash(); // %writeLast
     let mut err = false;
     let mut atom_count = Value::Undef;
     let (mut last_pos, mut err_str, mut trailer, mut buf2) = (Value::Undef, Value::Undef, Value::Undef, Value::Undef);
@@ -1923,6 +1966,9 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                                                 // pack language and country codes
                                                 (ctry, lang) = pack_lang(&cap(&c, 1), &cap(&c, 2))?;
                                             }
+                                            if !lang.truthy() && et.get("OPTIONS").get("QuickTimeUndLang").truthy() {
+                                                lang = und_lang.clone();
+                                            }
                                             if new_data.is_undef() {
                                                 new_data = pl::substr(&buff, 0, Some(pos.to_i64()));
                                             }
@@ -2027,7 +2073,10 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                                         if new_data.is_undef() {
                                             new_data = pl::substr(&buff, 0, Some(pl::sub(&pos, &n(16)).to_i64()));
                                         }
-                                        let w_lang = if lang.to_bytes() == und_lang.to_bytes() { n(0) } else { lang.clone() };
+                                        let mut w_lang = lang.clone();
+                                        if w_lang.to_bytes() == und_lang.to_bytes() && !et.get("OPTIONS").get("QuickTimeUndLang").truthy() {
+                                            w_lang = n(0);
+                                        }
                                         let p = pl::pack("Na4Nnn", &[pl::add(&len_of(&new_val), &n(16)), type_.clone(), flags.clone(), ctry.clone(), w_lang])?;
                                         new_data = cat!(new_data, p, new_val);
                                         inc_changed(et);
@@ -2140,7 +2189,10 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                                     let e = if pl::lt(&lang, &n(0x400)) { charset_quick_time.clone() } else { s("UTF8") };
                                     new_data = m(it, et, "Encode", vec![new_data, e])?;
                                 }
-                                let w_lang = if lang.to_bytes() == und_lang.to_bytes() { n(0) } else { lang.clone() };
+                                let mut w_lang = lang.clone();
+                                        if w_lang.to_bytes() == und_lang.to_bytes() && !et.get("OPTIONS").get("QuickTimeUndLang").truthy() {
+                                            w_lang = n(0);
+                                        }
                                 if pl::lt(&itext, &n(6)) {
                                     new_data = pl::concat(&pl::pack("nn", &[len_of(&new_data), w_lang])?, &new_data);
                                 } else if pl::num_eq(&itext, &n(6)) {
@@ -2195,7 +2247,8 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                 }
                 if tag_info.get("WriteLast").truthy() {
                     let s32 = set32u(it, len.clone())?;
-                    write_last = cat!(if write_last.truthy() { write_last.clone() } else { s("") }, s32, tag, new_data);
+                    let ord = tag_info.get("WriteLast");
+                    write_last.set(ord.to_bytes(), cat!(or_empty(write_last.get(ord.to_bytes())), s32, tag, new_data));
                 } else {
                     box_pos.set(tag.to_bytes(), arr(vec![dlen(&outfile), pl::add(&len_of(&new_data), &n(8))]));
                     // write the updated directory with its atom header
@@ -2273,7 +2326,8 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
             }
         }
         if tag_info.truthy() && tag_info.get("WriteLast").truthy() {
-            write_last = cat!(if write_last.truthy() { write_last.clone() } else { s("") }, hdr, buff);
+            let ord = tag_info.get("WriteLast");
+            write_last.set(ord.to_bytes(), cat!(or_empty(write_last.get(ord.to_bytes())), hdr, buff));
         } else {
             // save position of this box in the output buffer
             box_pos.set(tag.to_bytes(), arr(vec![dlen(&outfile), pl::add(&len_of(&hdr), &len_of(&buff))]));
@@ -2436,6 +2490,9 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                     // pack language and country codes
                     (ctry, lang) = pack_lang(&cap(&c, 1), &cap(&c, 2))?;
                 }
+                if !lang.truthy() && et.get("OPTIONS").get("QuickTimeUndLang").truthy() {
+                    lang = und_lang.clone();
+                }
                 if dir_info.get("HasData").truthy() {
                     // add 'data' header
                     new_val = cat!(pl::pack("Na4Nnn", &[pl::add(&n(16), &len_of(&new_val)), s("data"), flags, ctry, lang])?, new_val);
@@ -2451,19 +2508,20 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                         if (len_of(&new_val).to_i64()) < k {
                             new_val = pl::concat(&new_val, &s(&" ".repeat(k.max(0) as usize)));
                         }
-                        new_val = cat!(b"\0\0\0\0"[..], pl::substr(&new_val, 0, Some(k)), pl::pack("n", &[n(0), lang])?, pl::substr(&new_val, k, None), b"\0"[..]);
+                        new_val = cat!(b"\0\0\0\0"[..], pl::substr(&new_val, 0, Some(k)), pl::pack("n", &[lang.clone()])?, pl::substr(&new_val, k, None), b"\0"[..]);
                     } else {
                         // add IText header
                         new_val = cat!(pl::pack("nn", &[len_of(&new_val), lang])?, new_val);
                     }
-                } else if ctry.truthy() || lang.truthy() {
+                } else if ctry.truthy() || (lang.truthy() && lang.to_bytes() != und_lang.to_bytes()) {
                     let grp = m(it, et, "GetGroup", vec![tag_info.clone(), n(1)])?;
                     warn(it, et, cat!("Can't use language code for ", grp, ":", tag_info.get("Name")))?;
                     continue;
                 }
                 let s32 = set32u(it, pl::add(&n(8), &len_of(&new_val)))?;
                 if tag_info.get("WriteLast").truthy() {
-                    write_last = cat!(if write_last.truthy() { write_last.clone() } else { s("") }, s32, tag, new_val);
+                    let ord = tag_info.get("WriteLast");
+                    write_last.set(ord.to_bytes(), cat!(or_empty(write_last.get(ord.to_bytes())), s32, tag, new_val));
                 } else {
                     box_pos.set(tag.to_bytes(), arr(vec![dlen(&outfile), pl::add(&n(8), &len_of(&new_val))]));
                     if !write(it, &outfile, &[s32, tag.clone(), new_val])? {
@@ -2530,7 +2588,8 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                 }
                 let new_hdr = cat!(set32u(it, pl::add(&pl::add(&n(8), &len_of(&new_data)), &len_of(&prefix)))?, tag, prefix);
                 if tag_info.get("WriteLast").truthy() {
-                    write_last = cat!(if write_last.truthy() { write_last.clone() } else { s("") }, new_hdr, new_data);
+                    let ord = tag_info.get("WriteLast");
+                    write_last.set(ord.to_bytes(), cat!(or_empty(write_last.get(ord.to_bytes())), new_hdr, new_data));
                 } else {
                     if pl::str_eq(&tag, "uuid") {
                         // add offset for new uuid (needed for CR3 CTBO offsets)
@@ -2597,7 +2656,7 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
 
     // return now if writing subdirectory
     if data_pt.truthy() {
-        if write_last.truthy() {
+        if write_last.len() > 0 {
             error(it, et, s("Internal error: WriteLast not on top-level atom!\n"))?;
         }
         return Ok(if err { Value::Undef } else { outfile.deref() });
@@ -2954,8 +3013,12 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
     }
 
     // write the stuff that must come last
-    if write_last.truthy() && !write(it, &outfile_real, &[write_last.clone()])? {
-        rtn_val = n(0);
+    let mut last_keys = write_last.keys();
+    last_keys.sort();
+    for k in last_keys {
+        if !write(it, &outfile_real, &[write_last.get(&k[..])])? {
+            rtn_val = n(0);
+        }
     }
 
     // copy trailers if necessary

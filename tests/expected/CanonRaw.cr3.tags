@@ -117,6 +117,7 @@ FilePermissions
 FileSize
 FileType
 FileTypeExtension
+FirmwareInfo
 FirmwareVersion
 FisheyeFilter
 Flash

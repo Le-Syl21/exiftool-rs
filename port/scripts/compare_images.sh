@@ -14,8 +14,8 @@ same=0; diff=0; bad=""
 for f in t/images/$glob; do
     [ -f "$f" ] || continue
     n=$(basename "$f")
-    perl -I"$src/lib" "$here/scripts/dump_info.pl" "$f" > "$work/perl/$n.txt" 2>&1
-    env -u EXIFTOOL_LIB timeout 300 "$bin" "$here/scripts/dump_info.pl" "$f" > "$work/port/$n.txt" 2>&1
+    prlimit --as=4000000000 -- timeout 300 perl -I"$src/lib" "$here/scripts/dump_info.pl" "$f" > "$work/perl/$n.txt" 2>&1
+    env -u EXIFTOOL_LIB prlimit --as=4000000000 -- timeout 300 "$bin" "$here/scripts/dump_info.pl" "$f" > "$work/port/$n.txt" 2>&1
     # FileAccessDate is the access time of the file, which the first of the
     # two reads may update (relatime does once a day): not a port difference.
     sed -i '/FileAccessDate = /d' "$work/perl/$n.txt" "$work/port/$n.txt"

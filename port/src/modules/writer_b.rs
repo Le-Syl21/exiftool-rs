@@ -525,7 +525,7 @@ pub fn dump_trailer(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
             break;
         }
         let out = self_.path(&["OPTIONS", "TextOut"]);
-        let line = pl::sprintf_v(&cat(&[&trailer, &s(" trailer (%d bytes at offset 0x%.4x):\n")]), &[size.clone(), pos.clone()]);
+        let line = pl::sprintf_v(&cat(&[&self_.get("INDENT"), &trailer, &s(" trailer (%d bytes at offset 0x%.4x):\n")]), &[size.clone(), pos.clone()]);
         print(it, &out, &[line])?;
         if !pl::gt(&verbose, &n(2)) {
             break;
@@ -551,10 +551,10 @@ pub fn dump_trailer(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
             buff = cat(&[&buff, &buf2]);
             buf2 = Value::Undef;
         }
-        hex_dump(it, vec![pl::sref(buff.clone()), Value::Undef, s("Addr"), pos.clone(), s("Out"), out.clone()], Want::Void)?;
+        hex_dump(it, vec![pl::sref(buff.clone()), Value::Undef, s("Addr"), pos.clone(), s("Out"), out.clone(), s("Prefix"), self_.get("INDENT")], Want::Void)?;
         if !buf2.is_undef() {
-            print(it, &out, &[s("    [snip "), pl::sub(&size, &pl::mul(&num, &n(2))), s(" bytes]\n")])?;
-            hex_dump(it, vec![pl::sref(buf2.clone()), Value::Undef, s("Addr"), pl::sub(&pl::add(&pos, &size), &num), s("Out"), out.clone()], Want::Void)?;
+            print(it, &out, &[self_.get("INDENT"), s("    [snip "), pl::sub(&size, &pl::mul(&num, &n(2))), s(" bytes]\n")])?;
+            hex_dump(it, vec![pl::sref(buf2.clone()), Value::Undef, s("Addr"), pl::sub(&pl::add(&pos, &size), &num), s("Out"), out.clone(), s("Prefix"), self_.get("INDENT")], Want::Void)?;
         }
         break;
     }
@@ -1813,7 +1813,7 @@ pub fn write_multi_xmp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
 /// Returns: error string or undef on success
 pub fn check_image(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (self_, val_ptr) = (arg(&a, 0), arg(&a, 1));
-    pl::at(6848);
+    pl::at(6863);
     let v = deref(&val_ptr)?;
     if pl::length(&v).to_i64() != 0 && !re(r"^\xff\xd8", "").is_match(&v) && !meth(it, &self_, "Options", vec![s("IgnoreMinorErrors")])?.truthy() {
         return ret(s("[Minor] Not a valid image"));
@@ -1834,7 +1834,7 @@ pub fn check_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         if !(count.truthy() && pl::gt(&count, &n(0))) {
             return pl::ret_undef();
         }
-        pl::at(6869);
+        pl::at(6884);
         let len = pl::length(&deref(&val_ptr)?);
         if pl::str_eq(&format, "string") {
             if pl::ge(&len, &count) {
@@ -1851,7 +1851,7 @@ pub fn check_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         return pl::ret_undef();
     }
     if count.truthy() && !pl::num_eq(&count, &n(1)) {
-        pl::at(6881);
+        pl::at(6896);
         vals = pl::split_ws(&deref(&val_ptr)?);
         if pl::lt(&count, &n(0)) {
             count = n(vals.len() as i64);
@@ -1861,7 +1861,7 @@ pub fn check_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         }
     } else {
         count = n(1);
-        pl::at(6885);
+        pl::at(6900);
         vals = vec![deref(&val_ptr)?];
     }
     if !pl::num_eq(&n(vals.len() as i64), &count) {
@@ -2179,7 +2179,7 @@ pub fn image_data_hash(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
             nn = if pl::gt(&size, &n(65536)) { n(65536) } else { size.clone() };
             size = pl::sub(&size, &nn);
         }
-        pl::at(7122);
+        pl::at(7137);
         if !raf_read(it, &raf, &mut buff, nn.clone())?.truthy() {
             if type_.truthy() && !size.is_undef() {
                 meth(it, &self_, "Warn", vec![s(&format!("Error reading {} data", type_.to_text()))])?;
@@ -2207,7 +2207,7 @@ pub fn copy_block(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             break;
         }
         let nn = if pl::gt(&size, &n(65536)) { n(65536) } else { size.clone() };
-        pl::at(7146);
+        pl::at(7161);
         if !pl::num_eq(&raf_read(it, &raf, &mut buff, nn.clone())?, &nn) {
             return ret(n(0));
         }
@@ -2232,16 +2232,16 @@ pub fn copy_image_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     let (self_, image_data_blocks, outfile) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     let raf = self_.get("RAF");
     let mut err: Option<&str> = None;
-    pl::at(7164);
+    pl::at(7179);
     let num = pl::aderef(&image_data_blocks)?.len();
     if num > 0 {
         meth(it, &self_, "VPrint", vec![n(0), s(&format!("  Copying {num} image data blocks\n"))])?;
     }
     for data_block in image_data_blocks.items() {
-        pl::at(7167);
+        pl::at(7182);
         pl::aderef(&data_block)?; // (my ($pos, $size, $pad) = @$dataBlock)
         let (pos, size, pad) = (data_block.at(0), data_block.at(1), data_block.at(2));
-        pl::at(7168);
+        pl::at(7183);
         if !raf_seek(it, &raf, pos, 0)? {
             err = Some("read");
             break;
@@ -2301,25 +2301,33 @@ pub fn write_jpeg(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut err = false;
     let mut is_exv = false;
     let mut creating_exv = false;
+    let xiaomi_mess = dir_info.get("XiaomiMess").truthy();
 
     // check to be sure this is a valid JPG or EXV file
     let ok = pl::num_eq(&raf_read(it, &raf, &mut s_, n(2))?, &n(2)) && s_.to_bytes()[..] == b"\xff\xd8"[..];
     if !ok {
-        if !s_.is_undef() && pl::length(&s_).to_i64() > 0 {
-            if !(s_.to_bytes()[..] == b"\xff\x01"[..] && pl::num_eq(&raf_read(it, &raf, &mut s_, n(5))?, &n(5)) && pl::str_eq(&s_, "Exiv2")) {
-                return ret(n(0));
+        if xiaomi_mess && pl::str_eq(&s_, "\0\0") && pl::num_eq(&raf_read(it, &raf, &mut s_, n(2))?, &n(2)) && pl::str_eq(&s_, "\0\x0a") {
+            // (starts with header length "\0\0\0\x0a")
+            if !write_v(it, &outfile, &[Value::bytes(b"\0\0")])? {
+                err = true;
             }
         } else {
-            if !pl::str_eq(&self_.get("FILE_TYPE"), "EXV") {
-                return ret(n(0));
+            if !s_.is_undef() && pl::length(&s_).to_i64() > 0 {
+                if !(s_.to_bytes()[..] == b"\xff\x01"[..] && pl::num_eq(&raf_read(it, &raf, &mut s_, n(5))?, &n(5)) && pl::str_eq(&s_, "Exiv2")) {
+                    return ret(n(0));
+                }
+            } else {
+                if !pl::str_eq(&self_.get("FILE_TYPE"), "EXV") {
+                    return ret(n(0));
+                }
+                s_ = s("Exiv2");
+                creating_exv = true;
             }
-            s_ = s("Exiv2");
-            creating_exv = true;
+            if !write_v(it, &outfile, &[Value::bytes(b"\xff\x01")])? {
+                err = true;
+            }
+            is_exv = true;
         }
-        if !write_v(it, &outfile, &[Value::bytes(b"\xff\x01")])? {
-            err = true;
-        }
-        is_exv = true;
     }
 
     self_.delete("PREVIEW_INFO"); // reset preview information
@@ -2343,6 +2351,7 @@ pub fn write_jpeg(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         verbose: self_.path(&["OPTIONS", "Verbose"]),
         out: self_.path(&["OPTIONS", "TextOut"]),
         rtn_val: 0,
+        xiaomi_mess,
         add_dirs: self_.get("ADD_DIRS"),
         edit_dirs: self_.get("EDIT_DIRS"),
         del_group: self_.get("DEL_GROUP"),
@@ -2371,6 +2380,7 @@ struct JpegState {
     verbose: Value,
     out: Value,
     rtn_val: i64,
+    xiaomi_mess: bool,
     add_dirs: Value,
     edit_dirs: Value,
     del_group: Value,
@@ -2390,7 +2400,7 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
     let del_group = st.del_group.clone();
     let path = st.path.clone();
     let pn = st.pn;
-    let (is_exv, creating_exv) = (st.is_exv, st.creating_exv);
+    let (is_exv, creating_exv, xiaomi_mess) = (st.is_exv, st.creating_exv, st.xiaomi_mess);
     let mut length;
     let mut write_buffer = Value::Undef; // used to buffer writing until PreviewImage position is known
     let mut old_outfile = Value::Undef;
@@ -2444,10 +2454,17 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
         let mut dir_name = Value::Undef;
         // stop pre-scan at SOS (end of meta information) or EOI (end of image)
         if marker == 0xda || marker == 0xd9 {
-            dir_name = jpeg_marker.get(marker.to_string());
-            dir_order.push(dir_name.clone());
-            dir_count.set(dir_name.to_bytes(), n(1));
-            break;
+            if xiaomi_mess {
+                dir_name = marker_name_of(it, marker)?;
+                bump(&dir_count, dir_name.to_bytes(), 1);
+                dir_order.push(dir_name);
+                continue;
+            } else {
+                dir_name = jpeg_marker.get(marker.to_string());
+                dir_order.push(dir_name.clone());
+                dir_count.set(dir_name.to_bytes(), n(1));
+                break;
+            }
         }
         // handle SOF markers: SOF0-SOF15, except DHT(0xc4), JPGA(0xc8) and DAC(0xcc)
         if sof(marker) {
@@ -2554,7 +2571,7 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
         bump(&dir_count, dir_name.to_bytes(), 1);
         dir_order.push(dir_name);
     }
-    if !(marker != 0 && marker == 0xda) {
+    if !(marker != 0 && marker == 0xda || xiaomi_mess) {
         if !is_exv {
             meth(it, &self_, "Error", vec![s("Corrupted JPEG image")])?;
             return ret(n(1));
@@ -2610,6 +2627,9 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
                 dir_order.push(s("EOI"));
                 dir_count.set("EOI", n(1));
                 break;
+            } else if xiaomi_mess {
+                st.rtn_val = 1;
+                break 'marker; // (ends with APP segment)
             } else {
                 meth(it, &self_, "Error", vec![s("Format error")])?;
                 return ret(n(1));
@@ -3160,11 +3180,14 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
                 trail_info = Value::Undef;
             }
             break 'marker; // all done parsing file
-        } else if marker == 0xd9 && is_exv {
+        } else if marker == 0xd9 && (is_exv || xiaomi_mess) {
             // write EXV EOI (any trailer will be lost)
             wr!(Value::bytes(b"\xff\xd9"));
             st.rtn_val = 1;
-            break 'marker;
+            if !xiaomi_mess {
+                break 'marker;
+            }
+            *seg_data.borrow_mut() = s("");
         } else if marker == 0x00 || marker == 0x01 || (0xd0..=0xd7).contains(&marker) {
             if verbose.truthy() && marker != 0 {
                 vout!(cat(&[&s("JPEG "), &marker_name, &s(":\n")]));
@@ -3908,7 +3931,7 @@ pub fn write_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     if !data_pt.truthy() {
         return pl::ret_undef();
     }
-    pl::at(7193);
+    pl::at(7208);
     let data_len = pl::length(&deref(&data_pt)?);
     let default_format = or(tag_table_ptr.get("FORMAT"), s("int8u"));
     let increment = c1(it, part2::format_size, vec![default_format.clone()])?;
@@ -3971,7 +3994,7 @@ pub fn write_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                 count = v;
                 let at = it.get_scalar("main::@");
                 if at.truthy() {
-                    pl::at(7241);
+                    pl::at(7256);
                     pl::warn(it, &at.to_text())?;
                     continue;
                 }
@@ -4010,7 +4033,7 @@ pub fn write_binary_data(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
         // set the size
         if tag_info.get("DataTag").truthy() && !tag_info.get("IsOffset").truthy() {
             if !pl::num_eq(&new_val, &n(0xfeedfeed)) {
-                pl::at(7264);
+                pl::at(7279);
                 pl::warn(it, "Internal error")?;
             }
             let data = meth(it, &self_, "GetNewValue", vec![tag_info.get("DataTag")])?;

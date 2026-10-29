@@ -1,6 +1,6 @@
 # Porting the exiftool application
 
-The `exiftool` script of ExifTool 13.59 (`../exiftool/exiftool`, 5076 lines
+The `exiftool` script of ExifTool 13.60 (`../exiftool/exiftool`, 5082 lines
 before `__END__`) is ported to Rust in `port/src/cli/`, with the method of
 PORTING.md: faithful, sub by sub, judged at every step against Perl.
 
@@ -32,20 +32,20 @@ makes the CLI judge run it.
 
 | File | Ports (script lines) |
 |---|---|
-| `subs_a.rs` | the small subs before the main program (329-399): `Image::ExifTool::EndDir`, `Image::ExifTool::End`, `Exit`, `Warn`, `Error`, `WarnOnce`, `SigInt`, `SigCont`, `Cleanup`; and the subs of 3682-4233 (after SetImageInfo, up to ProcessFiles) |
-| `set_image_info.rs` | `SetImageInfo` (3131-3681) |
-| `get_image_info.rs` | `GetImageInfo` (2109-3130) |
-| `subs_b.rs` | the subs of 4234-5075 (`ProcessFiles` ... `PrintErrors`) |
-| `options.rs` | the option chain of the argument loop (690-1449): `parse_option` |
-| `program.rs` | the rest of the main program: the BEGIN block and module loading (1-83), the lexicals' initial values (84-328), the command loop (400-689), the end of the argument loop and the processing of the command (1450-2108), as `main::<program>` |
+| `subs_a.rs` | the small subs before the main program (329-399): `Image::ExifTool::EndDir`, `Image::ExifTool::End`, `Exit`, `Warn`, `Error`, `WarnOnce`, `SigInt`, `SigCont`, `Cleanup`; and the subs of 3684-4235 (after SetImageInfo, up to ProcessFiles) |
+| `set_image_info.rs` | `SetImageInfo` (3133-3683) |
+| `get_image_info.rs` | `GetImageInfo` (2111-3132) |
+| `subs_b.rs` | the subs of 4236-5082 (`ProcessFiles` ... `PrintErrors`) |
+| `options.rs` | the option chain of the argument loop (691-1451): `parse_option` |
+| `program.rs` | the rest of the main program: the BEGIN block and module loading (1-83), the lexicals' initial values (84-328), the command loop (400-690), the end of the argument loop and the processing of the command (1452-2110), as `main::<program>` |
 
 ### The contract between `options.rs` and `program.rs`
 
-The argument loop (script lines 625-1471) is `for (;;) { ... }`. Its head
-(625-689: the `-execute` and end-of-arguments handling, then `$_ = shift`)
-and its tail (1450-1470: a file name) are `program.rs`'s; the option chain
+The argument loop (script lines 626-1473) is `for (;;) { ... }`. Its head
+(626-690: the `-execute` and end-of-arguments handling, then `$_ = shift`)
+and its tail (1452-1472: a file name) are `program.rs`'s; the option chain
 between them (`if (not $endOfOpts and s/^(-|\xe2\x88\x92)//) { ... }`,
-lines 690-1449) is
+lines 691-1451) is
 
 ```rust
 /// One argument that starts with "-" (already in `$_`, the dash removed by
@@ -88,7 +88,7 @@ where the script's `if` is.
 From `port/`, all three must pass before every commit:
 
 ```sh
-sh scripts/run_suite.sh /home/sylvain/dev/exiftool       # 114 scripts, 114 pass, 603/603 tests ok
+sh scripts/run_suite.sh /home/sylvain/dev/exiftool       # 114 scripts, 114 pass, 604/604 tests ok
 sh scripts/compare_images.sh /home/sylvain/dev/exiftool  # 194 identical, 0 different
 python3 -I scripts/compare_cli.py /home/sylvain/dev/exiftool   # no new differences
 ```
@@ -118,11 +118,11 @@ needs a Perl module the host's Perl lacks, are told apart by their kind:
 
 ### `-ver -v`
 
-`-ver` alone prints `13.59` as Perl does (scripts read it); with `-v` the
+`-ver` alone prints `13.60` as Perl does (scripts read it); with `-v` the
 lines that describe perl and its optional modules are the port's own:
 
 ```
-exiftool-rs version 0.0.0 (port of ExifTool 13.59)
+exiftool-rs version 0.0.0 (port of ExifTool 13.60)
 Rust version 1.99.1 (x86_64-unknown-linux-gnu)
 Platform: linux
 Included libraries:

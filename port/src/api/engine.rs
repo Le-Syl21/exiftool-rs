@@ -901,15 +901,16 @@ pub(crate) fn array(v: &PV) -> Vec<PV> {
 /// count), a float or rational one `F64`; anything else stays a string.
 fn raw_value(v: &PV, format: &str) -> Value {
     match v {
-        PV::ScalarRef(r) => {
-            let inner = r.borrow().to_bytes();
+        // (a SCALAR reference to an element, `\$$dict{Data}`, is binary
+        //  data too: PDF's EmbeddedImage)
+        PV::ScalarRef(_) | PV::LvRef(_) => {
+            let inner = v.deref().to_bytes();
             if is_binary_placeholder(&inner) {
                 Value::String(format!("({}, use -b option to extract)", String::from_utf8_lossy(&inner)))
             } else {
                 Value::Binary(inner.to_vec())
             }
         }
-        PV::LvRef(_) => Value::String(text(v)),
         PV::ArrayRef(a) => Value::List(a.borrow().iter().map(|x| raw_value(x, "")).collect()),
         PV::HashRef(h) => {
             let h = h.borrow();

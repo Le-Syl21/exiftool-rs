@@ -42,7 +42,7 @@ pub fn get_bytes(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (dir_info, nb) = (arg(&a, 0), arg(&a, 1));
     let data_pt = dir_info.get("DataPt");
     let pos = dir_info.get("Pos");
-    pl::at(43);
+    pl::at(46);
     if pl::gt(&pl::add(&pos, &nb), &pl::length(&pl::sderef(&data_pt)?)) {
         return pl::ret_undef();
     }
@@ -209,7 +209,7 @@ pub fn process_protobuf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         if v.truthy() {
             v
         } else {
-            pl::at(136);
+            pl::at(139);
             pl::sub(&pl::length(&pl::sderef(&data_pt)?), &dir_start)
         }
     };
@@ -311,7 +311,7 @@ pub fn process_protobuf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         }
         // format binary payload into a useful value
         let mut val;
-        let format = tag_info.get("Format");
+        let mut format = tag_info.get("Format");
         if format.truthy() {
             if pl::num_eq(&typ, &n(0)) {
                 val = buff.clone();
@@ -336,6 +336,9 @@ pub fn process_protobuf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
                     pl::s("err")
                 };
             } else {
+                if crate::runtime::lex_hash(it, MODULE, "protoOnly").get(format.to_bytes()).truthy() {
+                    format = pl::s("undef"); // (just in case)
+                }
                 val = call(
                     it,
                     "ReadValue",
@@ -518,7 +521,7 @@ pub fn process_protobuf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
                 pl::s("Extra"),
                 pl::concat(&pl::s(", type="), &typ),
                 pl::s("Format"),
-                tag_info.get("Format"),
+                format,
             ],
         )?;
     }

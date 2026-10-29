@@ -1,4 +1,4 @@
-//! The `exiftool` application (the script `exiftool` of ExifTool 13.59),
+//! The `exiftool` application (the script `exiftool` of ExifTool 13.60),
 //! ported sub by sub as the library is (see docs/port/CLI.md).
 //!
 //! While the port is under way, `run_t exiftool ARGS` runs the script with

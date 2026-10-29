@@ -1818,7 +1818,8 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                 if index.truthy() || re(r"^ILCE", "").is_match(&et.get("Model")) {
                     continue 'entry;
                 }
-                // $et->Warn(sprintf('Format code 0x%x encountered -- Possibly corrupted IFD'));
+                let msg = [&b"First entry for "[..], &dir_s(&dir), b" has an invalid format. Ignoring possibly corrupted IFD"].concat();
+                et_warn(it, &et, Value::bytes(msg), Some(Value::from(in_maker_notes)))?;
                 return ret(n(0));
             }
         }
@@ -2540,7 +2541,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                                 msg = Value::bytes([&msg.to_bytes()[..], b" (directory start ", &subdir_start.to_bytes(), b" is before EXIF start)"].concat());
                             } else {
                                 let end = pl::add(&subdir_start, &size);
-                                msg = Value::bytes([&msg.to_bytes()[..], b" (directory end is ", &end.to_bytes(), b" but EXIF size is only ", &subdir_data_len.to_bytes(), b")"].concat());
+                                msg = Value::bytes([&msg.to_bytes()[..], b" (end is ", &end.to_bytes(), b" but EXIF size is only ", &subdir_data_len.to_bytes(), b")"].concat());
                             }
                         }
                         et_warn(it, &et, msg, Some(Value::from(in_maker_notes)))?;

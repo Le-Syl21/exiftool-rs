@@ -161,7 +161,9 @@ fn print_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         let scope = Scope::new(None);
         outfile = it.eval_string(b"\\*STDOUT", "main", &scope, Want::Scalar).map_err(crate::interp::Flow::Die)?.pop().unwrap_or_default();
     }
-    if !title.truthy() {
+    if title.truthy() {
+        title = pl::call(it, "Image::ExifTool::HTML::EscapeHTML", vec![title.clone()])?;
+    } else {
         title = s("HtmlDump");
     }
     if !level.truthy() {

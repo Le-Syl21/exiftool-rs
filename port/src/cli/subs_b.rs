@@ -663,7 +663,7 @@ fn suggested_extension(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<Va
         return pl::ret(s("txt"));
     }
     let raw;
-    pl::at(4568);
+    pl::at(4570);
     let val = pl::sderef(&val_pt)?;
     let m = |p: &'static str, f: &'static str| re(p, f).is_match(&val);
     if m(r"^\xff\xd8\xff", "") {
@@ -847,7 +847,7 @@ fn filename_sprintf_body(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<
                     search = g[0].unwrap().1;
                 }
                 let idx = if gi.truthy() { gi.to_i64() } else { 0 };
-                pl::at(4683);
+                pl::at(4685);
                 let gv = match &groups {
                     Value::ArrayRef(_) => groups.at(idx),
                     v => {
@@ -1145,7 +1145,7 @@ fn slurp_file(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<Value>> {
     builtin(it, "binmode(INFILE)", &[], &[], Want::Scalar)?;
     // (CAREFUL!:  must clear buffer first to reset possible utf8 flag because the data
     //  would be corrupted if it was read into a buffer which had the utf8 flag set!)
-    pl::at(4871);
+    pl::at(4873);
     pl::sderef(&buff_pt)?;
     pl::set_deref(&buff_pt, Value::Undef)?;
     let mut bsize = 1024 * 1024;
@@ -1301,6 +1301,12 @@ fn read_stay_open(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<Value>>
             }
         } else if pl::num_eq(&result, &n(0)) {
             // (perl warns here if $result is undef, a sysread error)
+            if lex(it, "stayOpenStdin").truthy() {
+                // EOF on piped stdin means the parent closed its input channel
+                builtin(it, "close STAYOPEN", &[], &[], Want::Scalar)?;
+                set_lex(it, "stayOpen", n(0));
+                break;
+            }
             // sysread() didn't block (eg. when reading from a file),
             // so wait for a short time (1/100 sec) then try again
             // Note: may break out of this early if SIGCONT is received

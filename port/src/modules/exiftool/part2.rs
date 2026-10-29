@@ -674,9 +674,9 @@ fn skip_template(pos: &Value, fmt: &Value) -> Vec<u8> {
 pub fn do_unpack_std(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let fmt = unpack_std(it, &arg(&a, 0));
     if arg(&a, 2).truthy() {
-        return located(it, 6021, |_| unpack_ctx(&skip_template(&arg(&a, 2), &fmt), &deref_scalar(&arg(&a, 1))?.to_bytes(), want));
+        return located(it, 6022, |_| unpack_ctx(&skip_template(&arg(&a, 2), &fmt), &deref_scalar(&arg(&a, 1))?.to_bytes(), want));
     }
-    located(it, 6022, |_| unpack_ctx(&fmt.to_bytes(), &deref_scalar(&arg(&a, 1))?.to_bytes(), want))
+    located(it, 6023, |_| unpack_ctx(&fmt.to_bytes(), &deref_scalar(&arg(&a, 1))?.to_bytes(), want))
 }
 
 /// same, but with reversed byte order
@@ -684,9 +684,9 @@ pub fn do_unpack_rev(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
     let std = unpack_std(it, &arg(&a, 0));
     let fmt = my_hash(it, "unpackRev").get(std.to_bytes());
     if arg(&a, 2).truthy() {
-        return located(it, 6028, |_| unpack_ctx(&skip_template(&arg(&a, 2), &fmt), &deref_scalar(&arg(&a, 1))?.to_bytes(), want));
+        return located(it, 6029, |_| unpack_ctx(&skip_template(&arg(&a, 2), &fmt), &deref_scalar(&arg(&a, 1))?.to_bytes(), want));
     }
-    located(it, 6029, |_| unpack_ctx(&fmt.to_bytes(), &deref_scalar(&arg(&a, 1))?.to_bytes(), want))
+    located(it, 6030, |_| unpack_ctx(&fmt.to_bytes(), &deref_scalar(&arg(&a, 1))?.to_bytes(), want))
 }
 
 /// Pack value
@@ -720,7 +720,7 @@ pub fn do_unpack(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (mut bytes, template, data_pt, pos) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
     let val;
     if pkg_scalar(it, "swapBytes").borrow().truthy() {
-        let data = located(it, 6058, |_| deref_scalar(&data_pt))?;
+        let data = located(it, 6059, |_| deref_scalar(&data_pt))?;
         let mut v = Vec::new();
         loop {
             let old = bytes.clone();
@@ -732,7 +732,7 @@ pub fn do_unpack(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
         }
         val = Value::bytes(v);
     } else {
-        val = substr(&located(it, 6060, |_| deref_scalar(&data_pt))?, pos.to_i64(), Some(bytes.to_i64()));
+        val = substr(&located(it, 6061, |_| deref_scalar(&data_pt))?, pos.to_i64(), Some(bytes.to_i64()));
     }
     if val.is_undef() {
         return pl::ret_undef();
@@ -745,7 +745,7 @@ pub fn do_unpack(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 /// Returns: unpacked number
 pub fn do_unpack_dbl(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (template, data_pt, pos) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let val = substr(&located(it, 6072, |_| deref_scalar(&data_pt))?, pos.to_i64(), Some(8));
+    let val = substr(&located(it, 6073, |_| deref_scalar(&data_pt))?, pos.to_i64(), Some(8));
     if val.is_undef() {
         return pl::ret_undef();
     }
@@ -957,12 +957,12 @@ pub fn read_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
 
     let mut len = my_hash(it, "formatSize").get(format.to_bytes());
     if !len.truthy() {
-        let m = format!("Unknown format {}{}", format.to_text(), et_suffix(it, 6292));
+        let m = format!("Unknown format {}{}", format.to_text(), et_suffix(it, 6293));
         pl::warn(it, &m)?;
         len = n(1);
     }
     if size.is_undef() {
-        size = pl::sub(&n(located(it, 6295, |_| deref_scalar(&data_pt))?.to_bytes().len() as i64), &offset);
+        size = pl::sub(&n(located(it, 6296, |_| deref_scalar(&data_pt))?.to_bytes().len() as i64), &offset);
     }
     if !count.truthy() {
         if !count.is_undef() || pl::lt(&size, &len) {
@@ -988,7 +988,7 @@ pub fn read_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
     };
     if !proc_.truthy() {
         // handle undef/binary/string (also unsupported unicode/complex)
-        let mut v = substr(&located(it, 6309, |_| deref_scalar(&data_pt))?, offset.to_i64(), Some(pl::mul(&count, &len).to_i64()));
+        let mut v = substr(&located(it, 6310, |_| deref_scalar(&data_pt))?, offset.to_i64(), Some(pl::mul(&count, &len).to_i64()));
         // truncate string at null terminator if necessary
         if pl::str_eq(&format, "string") {
             re(r"\0.*", "s").subst(&mut v, false, |_| Vec::new());
@@ -1121,7 +1121,7 @@ pub fn decode_bits(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 /// Note: should be called from RawConv, not ValueConv
 pub fn validate_image(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (slf, image_pt, tag) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
-    let mut image = located(it, 6417, |_| deref_scalar(&image_pt))?;
+    let mut image = located(it, 6418, |_| deref_scalar(&image_pt))?;
     if pl::str_eq(&image, "none") {
         return pl::ret_undef();
     }
@@ -1249,7 +1249,7 @@ fn elem_ref(lv: crate::interp::eval::Lv) -> Value {
 
 fn filter_v(it: &mut Interp, slf: &Value, filter: &Value, val_pt: &Value) -> ER<Value> {
     // (`defined $$valPt` autovivifies an undefined $valPt; a string dies)
-    if filter.is_undef() || val_pt.is_undef() || located(it, 6510, |_| deref_scalar(val_pt))?.is_undef() {
+    if filter.is_undef() || val_pt.is_undef() || located(it, 6511, |_| deref_scalar(val_pt))?.is_undef() {
         return Ok(n(1));
     }
     let mut rtn_val = Value::Undef;
@@ -1991,7 +1991,7 @@ fn cat(parts: &[&Value]) -> Value {
 }
 
 fn expand_shortcuts_v(it: &mut Interp, tag_list: &Value, remove_suffix: bool) -> ER<()> {
-    if !tag_list.truthy() || located(it, 5671, |_| pl::aderef(tag_list))?.is_empty() {
+    if !tag_list.truthy() || located(it, 5672, |_| pl::aderef(tag_list))?.is_empty() {
         return Ok(());
     }
 
@@ -2640,7 +2640,7 @@ pub fn set_found_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Valu
                     // allow wildcards in tag names
                     re(r"\*", "").subst(&mut tag, true, |_| br"[-\w]*".to_vec());
                     re(r"\?", "").subst(&mut tag, true, |_| br"[-\w]".to_vec());
-                    matches = grep_re(&located(it, 5474, |_| re_full("^", &tag, "( |$)", "i"))?, &rtn_tags.items());
+                    matches = grep_re(&located(it, 5475, |_| re_full("^", &tag, "( |$)", "i"))?, &rtn_tags.items());
                 }
                 if group.truthy() && !matches.is_empty() {
                     matches = group_matches_v(it, &slf, &group, &Value::new_array(matches), Want::List)?;
@@ -3193,7 +3193,7 @@ pub fn is_utf8(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if str_pt.is_undef() {
         return ret(n(0));
     }
-    let s = located(it, 4676, |_| deref_scalar(&str_pt))?;
+    let s = located(it, 4677, |_| deref_scalar(&str_pt))?;
     let (r, pos) = is_utf8_v(&s.to_bytes(), trunc.truthy());
     // (a failed //g match resets the position)
     let p = pos.map(|p| n(p as i64)).unwrap_or_default();
@@ -3703,7 +3703,7 @@ pub fn do_auto_load(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
 pub fn autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let name = pkg_scalar(it, "AUTOLOAD").borrow().clone();
     // (DoAutoLoad's caller is this sub's statement)
-    pl::at(5596);
+    pl::at(5597);
     let (r, after) = do_auto_load_v(it, &name, a.clone(), want, crate::interp::eval::here_at())?;
     write_back(it, &a, &after, 0)?;
     Ok(r)
@@ -3764,7 +3764,7 @@ pub fn convert_date_time(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
             if t.truthy() {
                 // determine initial shift from specified tag
                 let keys: Vec<Value> = slf.get("VALUE").keys().into_iter().map(Value::Str).collect();
-                matches = if keys.is_empty() { Vec::new() } else { grep_re(&located(it, 6592, |_| re_full("^", &t, r"( \(|$)", "i"))?, &keys) };
+                matches = if keys.is_empty() { Vec::new() } else { grep_re(&located(it, 6593, |_| re_full("^", &t, r"( \(|$)", "i"))?, &keys) };
                 matches.sort_by(ops::str_cmp);
                 if g.truthy() && !matches.is_empty() {
                     re(":$", "").subst(&mut g, false, |_| Vec::new());
@@ -3777,7 +3777,7 @@ pub fn convert_date_time(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
                 while !req_date.is_empty() {
                     t = req_date.remove(0);
                     let keys: Vec<Value> = slf.get("VALUE").keys().into_iter().map(Value::Str).collect();
-                    matches = if keys.is_empty() { Vec::new() } else { grep_re(&located(it, 6603, |_| re_full("^", &t, r"( \(|$)", "i"))?, &keys) };
+                    matches = if keys.is_empty() { Vec::new() } else { grep_re(&located(it, 6604, |_| re_full("^", &t, r"( \(|$)", "i"))?, &keys) };
                     matches.sort_by(ops::str_cmp);
                     let ti = slf.get("TAG_INFO");
                     while !matches.is_empty() {

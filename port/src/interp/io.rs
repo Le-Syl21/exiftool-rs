@@ -501,6 +501,7 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
                         match target {
                             Target::Last => return Ok(it.last_stat.clone()),
                             Target::Path(p) => if name == "lstat" { std::fs::symlink_metadata(p) } else { std::fs::metadata(p) },
+                            Target::Meta(m) => m,
                         }
                     }
                     None => std::fs::metadata(it.read_scalar("_", scope).to_text()),
@@ -542,6 +543,9 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
 
 pub(super) enum Target {
     Path(String),
+    /// A handle on a file of the process (stdin, a pipe...): perl stats the
+    /// descriptor itself (fstat), whatever its name was.
+    Meta(std::io::Result<std::fs::Metadata>),
     /// `_`: the last stat
     Last,
 }
@@ -554,16 +558,19 @@ pub(super) fn file_target(it: &mut Interp, e: &Expr, scope: &Rc<Scope>) -> ER<Ta
         _ => {}
     }
     let v = it.scalar(e, scope)?;
-    if let Value::Handle(_) | Value::ScalarRef(_) = &v {
+    let is_handle = match &v {
+        Value::Handle(_) | Value::ScalarRef(_) => true,
+        Value::Str(s) | Value::UStr(s) => s.starts_with(b"*"),
+        _ => false,
+    };
+    if is_handle {
         if let Some(h) = it.handle_of(&v, false) {
-            return Ok(Target::Path(h.borrow().path.clone().unwrap_or_default()));
-        }
-    }
-    if let Value::Str(s) | Value::UStr(s) = &v {
-        if s.starts_with(b"*") {
-            if let Some(h) = it.handle_of(&v, false) {
-                return Ok(Target::Path(h.borrow().path.clone().unwrap_or_default()));
-            }
+            let fh = h.borrow();
+            return Ok(match (&fh.path, &fh.input) {
+                (Some(p), _) => Target::Path(p.clone()),
+                (None, Some(Input::File(f))) => Target::Meta(f.get_ref().metadata()),
+                (None, _) => Target::Path(String::new()),
+            });
         }
     }
     Ok(Target::Path(v.to_text()))
@@ -649,6 +656,7 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
         _ => None,
     };
     h.borrow_mut().name = name;
+    let two_arg = args.len() < 3;
     let (mode, target) = if args.len() >= 3 {
         (it.scalar(&args[1], scope)?.to_text(), it.scalar(&args[2], scope)?)
     } else {
@@ -696,7 +704,23 @@ fn open(it: &mut Interp, args: &[Expr], scope: &Rc<Scope>) -> ER<Vec<Value>> {
     fh.eof = false;
     fh.lines = 0;
     fh.path = if target.is_ref() { None } else { Some(target.to_text()) };
+    // 2-argument open of "-" is STDIN ("<-", "-") or STDOUT (">-")
+    let dash = two_arg && !target.is_ref() && &target.to_bytes()[..] == b"-";
+    if dash {
+        fh.path = None;
+    }
     let ok = match (mode_base.as_str(), &target) {
+        ("<", _) if dash => match std_stream_file(0) {
+            Some(f) => {
+                fh.input = Some(Input::File(BufReader::new(f)));
+                true
+            }
+            None => false,
+        },
+        (">" | ">>", _) if dash => {
+            fh.output = Some(Output::Stdout);
+            true
+        }
         ("<", Value::ScalarRef(c)) => {
             fh.input = Some(Input::Memory(Cursor::new(c.borrow().to_bytes().to_vec())));
             true

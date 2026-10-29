@@ -2212,6 +2212,7 @@ impl Interp {
                                 b'f' => boolean(mode & 0o170000 == 0o100000),
                                 b'd' => boolean(mode & 0o170000 == 0o040000),
                                 b'p' => boolean(mode & 0o170000 == 0o010000),
+                                b'S' => boolean(mode & 0o170000 == 0o140000),
                                 b's' => if size > 0 { Value::Int(size) } else { Value::Undef },
                                 b'z' => boolean(size == 0),
                                 _ => YES(),
@@ -2221,6 +2222,7 @@ impl Interp {
                     // (-l looks at the link itself)
                     io::Target::Path(p) if *op == b'l' => std::fs::symlink_metadata(&p),
                     io::Target::Path(p) => std::fs::metadata(&p),
+                    io::Target::Meta(m) => m,
                 };
                 if let Ok(md) = &m {
                     self.last_stat = io::stat_list(md);
@@ -2240,6 +2242,17 @@ impl Interp {
                         {
                             use std::os::unix::fs::FileTypeExt;
                             boolean(m.map(|m| m.file_type().is_fifo()).unwrap_or(false))
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            boolean(false)
+                        }
+                    }
+                    b'S' => {
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::FileTypeExt;
+                            boolean(m.map(|m| m.file_type().is_socket()).unwrap_or(false))
                         }
                         #[cfg(not(unix))]
                         {
@@ -2991,6 +3004,8 @@ impl Interp {
         // `$x += 1`, `$x .= "a"`, `$x |= 1`... on an undef $x do not warn
         let lhs = !(assign && a.is_undef() && matches!(op, BinOp::Add | BinOp::Sub | BinOp::Concat | BinOp::BitOr | BinOp::BitXor));
         match op {
+            // a logical xor takes its operands as booleans: nothing to warn
+            BinOp::Xor => {}
             BinOp::Concat | BinOp::StrEq | BinOp::StrNe | BinOp::StrLt | BinOp::StrGt | BinOp::StrLe | BinOp::StrGe | BinOp::StrCmp => {
                 if lhs {
                     self.use_str(a, l, scope, desc, many)?;

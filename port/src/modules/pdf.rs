@@ -2449,7 +2449,7 @@ fn read_pdf_xref(it: &mut Interp, et: &Value, raf: &Value, verbose: &Value, tag_
                     if !pl::num_eq(&raf_read(it, raf, &mut buff, n(20))?, &n(20)) {
                         return ret(n(-6));
                     }
-                    let Some(m) = re(r"^\s*(\d{10}) (\d{5}) (f|n)", "s").m(&buff) else { return ret(n(-4)) };
+                    let Some(m) = re(r"^\s*(\d+)\s+(\d+)\s+(f|n)\s*$", "s").m(&buff) else { return ret(n(-4)) };
                     let num = pl::add(&start, &n(i));
                     i += 1;
                     if pl::gt(&num, &xref_size) {

@@ -1,4 +1,4 @@
-//! The `exiftool` script (ExifTool 13.59), ported sub by sub (see
+//! The `exiftool` script (ExifTool 13.60), ported sub by sub (see
 //! docs/port/CLI.md). This part: the small subs before the main program
 //! (script lines 329-376: `Image::ExifTool::EndDir` ... `Cleanup`) and the
 //! subs between SetImageInfo and ProcessFiles (lines 3678-4231:
@@ -236,7 +236,7 @@ pub fn do_hard_link(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
     let or0 = |v: Value| if v.truthy() { v } else { n(0) };
     if !hard_link.is_undef() {
         hard_link = pl::call(it, "main::NextUnusedFilename", vec![hard_link])?;
-        pl::at(3687);
+        pl::at(3689);
         // (perl warns here if SetFileName returns undef)
         if pl::gt(&pl::method(it, &et, "SetFileName", vec![src.clone(), hard_link, pl::s("Link")])?, &n(0)) {
             count_link.set("Hard", pl::add(&or0(count_link.get("Hard")), &n(1)));
@@ -246,7 +246,7 @@ pub fn do_hard_link(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
     }
     if !sym_link.is_undef() {
         sym_link = pl::call(it, "main::NextUnusedFilename", vec![sym_link])?;
-        pl::at(3695);
+        pl::at(3697);
         if pl::gt(&pl::method(it, &et, "SetFileName", vec![src.clone(), sym_link, pl::s("SymLink")])?, &n(0)) {
             count_link.set("Sym", pl::add(&or0(count_link.get("Sym")), &n(1)));
         } else {
@@ -258,10 +258,10 @@ pub fn do_hard_link(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
         let used_file_name = super::lex_hash(it, "usedFileName");
         let tn = test_name.to_bytes();
         if used_file_name.get(&tn[..]).truthy() {
-            pl::at(3704);
+            pl::at(3706);
             pl::method(it, &et, "Warn", vec![pl::concat(&pl::concat(&pl::s("File '"), &test_name), &pl::s("' would exist"))])?;
         } else {
-            pl::at(3705);
+            pl::at(3707);
             let used = used_file_name.get(&tn[..]);
             // (perl warns here if SetFileName returns undef)
             if pl::num_eq(&pl::method(it, &et, "SetFileName", vec![src.clone(), test_name.clone(), pl::s("Test"), used])?, &n(1)) {
@@ -279,7 +279,7 @@ pub fn do_hard_link(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
 pub fn clean_xml(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let str_pt = arg(&a, 0);
     // translate control characters that are invalid in XML
-    pl::at(3719);
+    pl::at(3721);
     let mut s = pl::sderef(&str_pt)?;
     pl::tr(&mut s, r"\0-\x08\x0b\x0c\x0e-\x1f", ".", "");
     pl::set_deref(&str_pt, s)?;
@@ -299,7 +299,7 @@ pub fn clean_xml(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// Returns: encoding used (and input string is translated)
 pub fn encode_xml(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let str_pt = arg(&a, 0);
-    pl::at(3734);
+    pl::at(3736);
     let s = pl::sderef(&str_pt)?;
     if re(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "").is_match(&s)
         || (!sc(it, "altEnc").truthy() && pl::lt(&pl::call(it, "Image::ExifTool::IsUTF8", vec![str_pt.clone()])?, &n(0)))
@@ -524,7 +524,7 @@ pub fn format_csv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let quote = re("\"", "").subst(&mut val, true, |_| b"\"\"".to_vec()) > 0 || re(r"(^\s+|\s+$)", "").is_match(&val) || {
         let mut p = br"[\n\r]|".to_vec();
         p.extend_from_slice(&crate::perl::regex::quotemeta(&csv_delim.to_bytes()));
-        pl::at(3898);
+        pl::at(3900);
         pl::re_dyn(&p, "")?.is_match(&val)
     };
     if quote {
@@ -820,7 +820,7 @@ pub fn add_set_tags_file(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
     if !opts.truthy() {
         opts = Value::new_hash();
     }
-    pl::at(4107);
+    pl::at(4109);
     pl::hderef(&opts)?.set("ProtectSaved", save_count);
     let list = set_tags.get_or_new_array(&k[..]);
     list.push(opts);
@@ -855,7 +855,7 @@ pub fn infile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// Inputs: 0) ExifTool ref, 1) warning string
 pub fn warning(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
     let (et, s) = (arg(&a, 0), arg(&a, 1));
-    pl::at(4133);
+    pl::at(4135);
     let no_warn = pl::method(it, &et, "Options", vec![pl::s("NoWarning")])?;
     if no_warn.is_undef() || eval_match(it, &s, &no_warn)? != Some(true) {
         let msg = pl::concat(&pl::concat(&pl::s("Warning: "), &s), &pl::s("\n"));
@@ -872,13 +872,13 @@ pub fn do_set_from_file(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
         let (et, file, set_tags) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
         if sc(it, "verbose").truthy() {
             let vout = sc(it, "vout");
-            pl::at(4147);
+            pl::at(4149);
             pl::print_to(it, Some(&vout), &[pl::concat(&pl::concat(&pl::s("Setting new values from "), &file), &pl::s("\n"))])?;
         }
         let inf = infile(it, vec![file.clone(), n(1)], Want::Scalar)?.pop().unwrap_or_default();
         let mut args = vec![inf];
         args.extend(set_tags.items());
-        pl::at(4148);
+        pl::at(4150);
         let info = pl::method(it, &et, "SetNewValuesFromFile", args)?;
         let mut num_set = n(info.len() as i64);
         if info.get("Error").truthy() {
@@ -890,7 +890,7 @@ pub fn do_set_from_file(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             for k in &warns {
                 info.delete(&k.to_bytes()[..]);
             }
-            pl::at(4159);
+            pl::at(4161);
             let no_warn = pl::method(it, &et, "Options", vec![pl::s("NoWarning")])?;
             if !(!no_warn.is_undef() && eval_match(it, &err, &no_warn)? == Some(true)) {
                 info.set("Warning", err);
@@ -902,7 +902,7 @@ pub fn do_set_from_file(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             }
             num_set = pl::sub(&num_set, &warns);
         }
-        pl::at(4167);
+        pl::at(4169);
         if pl::call(it, "main::PrintErrors", vec![et.clone(), info, file.clone()])?.truthy() {
             pl::call(it, "main::EFile", vec![file])?;
             let c = pl::add(&sc(it, "countBadWr"), &n(1));

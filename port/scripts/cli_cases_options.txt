@@ -4,7 +4,7 @@
 # when run on a copy of the script whose option chain calls
 # main::<parse_option> (and whose command-loop locals are file lexicals).
 # Known differences that are not the chain's: -k/-pause (the prompt),
-# -lang zh-CN (character strings), "-" (reading an empty STDIN).
+# -lang zh-CN (character strings).
 
 # --- end of options, funny dashes
 R|-s -- t/images/Canon.jpg

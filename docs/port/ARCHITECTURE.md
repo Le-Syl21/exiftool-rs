@@ -1,4 +1,4 @@
-# exiftool-rs: faithful port of ExifTool 13.59
+# exiftool-rs: faithful port of ExifTool 13.60
 
 The goal is a Rust clone of Perl ExifTool. It must cover everything ExifTool
 does, give identical output for every command and every argument, and run
@@ -15,9 +15,9 @@ in tables) and `scan.pl` (the runtime table walker).
 
 ## 1. What there is to port
 
-ExifTool 13.59 has 239 files and 352k lines, of which 21 % is code in named
-subs (1,206 subs, about 72k lines). The other 79 % is tag tables, and those
-tables carry Perl code of their own.
+ExifTool 13.59 (the first release ported) had 239 files and 352k lines, of
+which 21 % is code in named subs (1,206 subs, about 72k lines). The other
+79 % is tag tables, and those tables carry Perl code of their own.
 
 | Kind | Volume | How it is ported |
 |---|---|---|

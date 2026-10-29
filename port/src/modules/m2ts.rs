@@ -1168,7 +1168,7 @@ pub fn process_m2ts(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     if m(it, &et, "Options", vec![pl::s("ExtractEmbedded")])?.truthy()
         && m(it, &raf, "Seek", vec![n(-8), n(2)])?.truthy()
         && pl::num_eq(&read(it, &raf, &mut buff, n(8))?, &n(8))
-        && re(r"^&&&&", "").is_match(&buff)
+        && re(r"^(&&&&|####)", "").is_match(&buff)
     {
         let len = pl::unpack1("x4N", &buff)?;
         if pl::lt(&len, &m(it, &raf, "Tell", vec![])?) && m(it, &raf, "Seek", vec![pl::neg(&len), n(2)])?.truthy() && pl::num_eq(&read(it, &raf, &mut buff, len.clone())?, &len) {

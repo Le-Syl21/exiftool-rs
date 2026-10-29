@@ -297,6 +297,7 @@ fn load_track_log_body(it: &mut Interp, et: Value, val: Value) -> ER<Value> {
         csv_delim = s(",");
     }
     let (mut save_fix, mut save_time, mut time_span): (Vec<Value>, Vec<Value>, Value) = (Vec::new(), Vec::new(), Value::Undef);
+    let mut done_fix = false;
     let set_has_cat = |has: &Value, fix: &Value, tag: &Value| {
         let kc = hget(&key_category, tag);
         if kc.truthy() {
@@ -315,6 +316,15 @@ fn load_track_log_body(it: &mut Interp, et: Value, val: Value) -> ER<Value> {
         }
     };
     loop {
+        // store our fix if complete
+        if done_fix {
+            is_date = true;
+            hset(&points, &time, fix.clone());
+            fix_times.push(time.clone());
+            fix = Value::new_hash();
+            num_points = pl::add(&num_points, &n(1));
+            done_fix = false;
+        }
         {
             let mut b = [line.clone()];
             let r = pl::method_mut(it, &raf, "ReadLine", &mut b, Want::Scalar)?.pop().unwrap_or_default();
@@ -454,7 +464,6 @@ fn load_track_log_body(it: &mut Interp, et: Value, val: Value) -> ER<Value> {
                 continue;
             }
         }
-        let mut done_fix = false;
         //
         // XML format (GPX, KML, Garmin XML/TCX etc)
         //
@@ -794,12 +803,6 @@ fn load_track_log_body(it: &mut Interp, et: Value, val: Value) -> ER<Value> {
             }
         }
         if done_fix {
-            // DoneFix:
-            is_date = true;
-            hset(&points, &time, fix.clone());
-            fix_times.push(time.clone());
-            fix = Value::new_hash();
-            num_points = pl::add(&num_points, &n(1));
             continue;
         }
         let fixh = Value::new_hash(); // %fix

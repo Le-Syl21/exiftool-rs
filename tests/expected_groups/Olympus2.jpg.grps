@@ -137,7 +137,7 @@ WB_GLevel	Olympus	Camera
 WB_RBLevels	Olympus	Camera
 WhiteBalance	ExifIFD	Camera
 WhiteBalance2	Olympus	Camera
-WhiteBalanceBracket	Olympus	Camera
+WhiteBalanceFineTune	Olympus	Camera
 WhiteBalanceTemperature	Olympus	Camera
 XResolution	IFD0	Image
 YCbCrPositioning	IFD0	Image
