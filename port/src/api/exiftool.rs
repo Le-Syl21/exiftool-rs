@@ -65,6 +65,16 @@ pub struct Options {
     /// `docs/port/API.md`), and without starting an interpreter (about
     /// 16 ms) for each call.
     pub fresh_interpreter: bool,
+    /// Extract binary data (ExifTool's `Binary` option, `-b`): a preview
+    /// image, a thumbnail, a JpgFromRaw... has its bytes as its `raw_value`
+    /// ([`Value::Binary`]) where ExifTool otherwise leaves them out (the raw
+    /// value is then the `(Binary data N bytes, use -b option to extract)`
+    /// text). A tag named in `requested_tags` has its bytes either way, as
+    /// with ExifTool. The printed value stays the `(Binary data N bytes,
+    /// ...)` text.
+    ///
+    /// [`Value::Binary`]: super::value::Value::Binary
+    pub binary: bool,
 }
 
 impl Default for Options {
@@ -82,6 +92,7 @@ impl Default for Options {
             struct_output: false,
             lang: None,
             fresh_interpreter: false,
+            binary: false,
         }
     }
 }
@@ -96,6 +107,9 @@ impl Options {
             // the TIFF format of each value (family 6 group), to type numbers
             ("SaveFormat", PV::Int(1)),
         ];
+        if self.binary {
+            o.push(("Binary", PV::Int(1)));
+        }
         if self.fast_scan > 0 {
             o.push(("FastScan", PV::Int(self.fast_scan as i64)));
         }

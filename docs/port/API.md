@@ -30,7 +30,8 @@ turns it on), `fast_scan` → `FastScan`, `requested_tags` → the tag list of
 `ExtractEmbedded`, `show_unknown` → `Unknown`, `process_compressed` →
 `Compress`, `geolocation` → `Geolocation`, `struct_output` → `Struct`,
 `use_mwg` → `Image::ExifTool::MWG::Load`, `lang` → `Lang` (reading and
-writing); `fresh_interpreter` is the facade's own (see Threads). Extraction always runs with
+writing), `binary` → `Binary`; `fresh_interpreter` is the facade's own
+(see Threads). Extraction always runs with
 `PrintConv` on: `print_conv` only chooses which of the two values
 `image_info` returns, as in the root crate.
 
@@ -70,6 +71,12 @@ works, and the `-lang` list does not show it.
   is a `String`. A list is a `List`, a structure a `Struct` (fields in
   ExifTool's order, `OrderedKeys`), binary data `Binary` (its bytes), or,
   when ExifTool did not extract them, the `(Binary data N bytes, ...)` text.
+  ExifTool leaves out the bytes of some binary tags (a preview image, a
+  JpgFromRaw: those it reads with `ExtractBinary`) unless its `Binary`
+  option is set or the tag is requested by name: set `Options::binary`
+  (`-b`), or name the tag in `requested_tags`, to have them. ExifTool.jpg's
+  PreviewImage is `(Binary data 1039273 bytes, ...)` without, its 5777
+  bytes with either. The printed value stays the text.
   `raw_value.to_display_string()` is what `exiftool -n` prints.
 - Groups are `GetGroup`'s; `family3` is `Main` or `DocN`.
 - `Tag::id` is the tag ID, `Numeric` when it is an integer of 16 bits,
@@ -166,8 +173,9 @@ Where the two differ, the facade is ExifTool's:
 - **`image_info` with duplicates** keys a duplicate `Name [Group0:Group1]`
   as before, but which instance is the plain `Name` is ExifTool's choice.
 - **Binary data** ExifTool does not extract unless asked (a preview image,
-  a thumbnail) is the `(Binary data N bytes, ...)` text; request the tag
-  (`requested_tags`) to get its bytes, as with ExifTool.
+  a JpgFromRaw) is the `(Binary data N bytes, ...)` text; set
+  `Options::binary` or request the tag (`requested_tags`) to get its bytes,
+  as with ExifTool.
 - **`extract_info_from_bytes`** identifies the data by its content only;
   the path is not used (no FileName/Directory tags, no type by extension).
 - **`get_file_type` and `detect_from_*`** give ExifTool's type; a type the

@@ -166,6 +166,38 @@ fn raw_values_are_typed_numbers() {
 }
 
 #[test]
+fn binary_data_is_extracted_with_the_binary_option() {
+    // As ImageInfo with and without `Binary => 1` (Perl ExifTool 13.59):
+    // ExifTool.jpg's PreviewImage is "Binary data 1039273 bytes" without it,
+    // 5777 bytes of JPEG with it; its ThumbnailImage is extracted either way.
+    let raw = |binary: bool, file: &str, name: &str, requested: &[&str]| -> Value {
+        let et = ExifTool::with_options(Options { binary, requested_tags: requested.iter().map(|t| t.to_string()).collect(), ..Options::default() });
+        let tags = et.extract_info(image(file)).unwrap();
+        let t = tags.iter().find(|t| t.name == name).unwrap_or_else(|| panic!("{file}: no {name}"));
+        assert!(t.print_value.starts_with("(Binary data "), "{file} {name}: {}", t.print_value);
+        t.raw_value.clone()
+    };
+    let bytes = |v: Value| match v {
+        Value::Binary(b) => b,
+        other => panic!("not binary: {other:?}"),
+    };
+    assert_eq!(raw(false, "ExifTool.jpg", "PreviewImage", &[]), Value::String("(Binary data 1039273 bytes, use -b option to extract)".into()));
+    let preview = bytes(raw(true, "ExifTool.jpg", "PreviewImage", &[]));
+    assert_eq!(preview.len(), 5777);
+    assert!(preview.starts_with(b"\xff\xd8\xff\xdb"));
+    assert_eq!(bytes(raw(false, "ExifTool.jpg", "ThumbnailImage", &[])).len(), 1558);
+    assert_eq!(raw(false, "Nikon.nef", "JpgFromRaw", &[]), Value::String("(Binary data 29 bytes, use -b option to extract)".into()));
+    assert_eq!(bytes(raw(true, "Nikon.nef", "JpgFromRaw", &[])).len(), 29);
+    // A tag requested by name has its bytes without the option, as with
+    // ExifTool.
+    assert_eq!(bytes(raw(false, "ExifTool.jpg", "PreviewImage", &["PreviewImage"])), preview);
+    // (a composite one needs the tags it is made from: ImageInfo gives
+    // nothing for Nikon.nef's PreviewImage requested alone, in Perl too)
+    let et = ExifTool::with_options(Options { requested_tags: vec!["PreviewImage".into()], ..Options::default() });
+    assert!(et.extract_info(image("Nikon.nef")).unwrap().is_empty());
+}
+
+#[test]
 fn lens_id_does_not_depend_on_duplicates() {
     let lens = |duplicates: bool| -> Vec<String> {
         ExifTool::with_options(Options { duplicates, ..Options::default() })
