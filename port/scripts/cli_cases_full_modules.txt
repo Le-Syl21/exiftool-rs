@@ -1,0 +1,42 @@
+# The second judge set: the cases where the optional modules the host's Perl
+# lacks change the output, against the Perl of scripts/full_modules (the
+# host's Perl plus Compress::Raw::Lzma and Unicode::LineBreak):
+#   PERL_CMD=scripts/full_modules/perl.sh CLI_CASES=scripts/cli_cases_full_modules.txt \
+#       python3 -I scripts/compare_cli.py /home/sylvain/dev/exiftool
+# (see docs/port/CLI.md). Same format as cli_cases.txt.
+
+# --- Compress::Raw::Lzma: encoded 7z headers (7z a -mhc=on); 7z/ holds the
+# archives (several files, a directory, UTF-8 names, empty files, stored
+# and bzip2 data, 300 files), plain.7z has an unencoded header
+R|-G1 -a 7z/multi.7z
+R|-G1 -a 7z/single.7z
+R|-G1 -a 7z/onlyempty.7z
+R|-G1 -a 7z/plain.7z
+R|-G1 -a 7z/store.7z
+R|-G1 -a 7z/ultra.7z
+R|-G1 -a 7z/bz.7z
+R|-G1 -a 7z/many.7z
+R|-v3 7z/multi.7z
+R|-j -ZIP:all 7z/many.7z
+R|-s -ArchivedFileName 7z/
+
+# --- Unicode::GCString: the columns of the plain output in other languages
+R|-lang ja t/images/Canon.jpg
+R|-lang ja -G1 -a t/images/Canon.jpg
+R|-lang ja -G1 -a t/images/Nikon.jpg
+R|-lang ja -G1 -a t/images/Sony.jpg
+R|-lang ja -G1 -a t/images/XMP.jpg
+R|-lang ja -G1 -a t/images/IPTC.jpg
+R|-lang ja -G1 -a t/images/GPS.jpg
+R|-lang zh_cn -G1 -a t/images/Canon.jpg
+R|-lang zh_cn -G1 -a t/images/Olympus.jpg
+R|-lang zh_tw -G1 -a t/images/Pentax.jpg
+R|-lang ko -G1 -a t/images/Canon.jpg
+R|-lang ko -G1 -a t/images/FujiFilm.jpg
+R|-lang ru -G1 -a t/images/Canon.jpg
+R|-lang ru t/images/Nikon.jpg
+R|-lang fr -G1 -a t/images/Olympus.jpg
+R|-lang de t/images/Canon.jpg
+R|-lang ja -s t/images/Canon.jpg
+R|-lang ja -h t/images/Nikon.jpg
+R|-lang ja -a -G0:1 -u t/images/Panasonic.rw2

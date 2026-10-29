@@ -128,7 +128,7 @@ R|-latin -Model t/images/Canon.jpg
 R|-lang
 R|-lang xx
 R|-lang en -Model t/images/Canon.jpg
-R|-lang zh-CN -Model t/images/Canon.jpg
+RM|-lang zh-CN -Model t/images/Canon.jpg
 R|-E -lang
 R|-q -lang
 R|-listItem x -Keywords t/images/XMP.jpg

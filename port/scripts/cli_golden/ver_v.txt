@@ -1,0 +1,23 @@
+rc=0
+--- stdout
+exiftool-rs version N.N (port of ExifTool 13.59)
+Rust version N.N (TARGET)
+Platform: linux
+Included libraries:
+  Perl interpreter             own Rust implementation (perl 5.38 semantics)
+  Perl regular expressions     own Rust implementation, based on pcre2 N.N (PCRE2 N.N, C, static)
+  Compress::Zlib               own Rust implementation, based on flate2 N.N + libz-sys N.N (zlib N.N, C, static)
+  IO::Compress::RawDeflate     own Rust implementation, based on flate2 N.N + libz-sys N.N (zlib N.N, C, static)
+  IO::Uncompress::RawInflate   own Rust implementation, based on flate2 N.N + libz-sys N.N (zlib N.N, C, static)
+  IO::Compress::Bzip2          own Rust implementation, based on bzip2 N.N (libbz2-rs-sys N.N)
+  IO::Compress::Brotli         own Rust implementation, based on mbrotli N.N
+  IO::Uncompress::Brotli       own Rust implementation, based on mbrotli N.N
+  Digest::MD5                  own Rust implementation, based on md-5 N.N
+  Digest::SHA                  own Rust implementation, based on sha1 N.N, sha2 N.N
+  Archive::Zip                 own Rust implementation
+  Time::Piece                  own Rust implementation
+  Time::Local                  own Rust implementation
+  Compress::Raw::Lzma          own Rust implementation
+  Unicode::LineBreak           own Rust implementation, based on unicode-width N.N
+  Memory allocator             rusty_alloc N.N
+--- stderr

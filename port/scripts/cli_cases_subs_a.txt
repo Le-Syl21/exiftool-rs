@@ -62,7 +62,7 @@ R|-diff t/images/Canon.jpg t/images/Nikon.jpg -ec
 R|-diff t/images/Canon.jpg t/images/Nikon.jpg -b
 R|-diff t/images/Canon.jpg t/images/CanonRaw.cr2 -a -u
 R|-lang de -a t/images/Nikon.jpg
-R|-lang ja -a -G1 t/images/Canon.jpg
+RM|-lang ja -a -G1 t/images/Canon.jpg
 R|-ec -a t/images/ExifTool.jpg
 
 # --- tags from files: AddSetTagsFile, DoSetFromFile, Infile, Warning

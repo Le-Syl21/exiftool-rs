@@ -5,6 +5,7 @@
 //! `docs/port/ARCHITECTURE.md`.
 
 pub mod api;
+pub mod build_info;
 pub mod cli;
 pub mod interp;
 pub mod modules;
