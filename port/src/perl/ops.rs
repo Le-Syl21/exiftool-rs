@@ -102,23 +102,83 @@ pub fn div(a: &Value, b: &Value) -> Result<Value, String> {
     Ok(Value::Num(x.as_f64() / y.as_f64()))
 }
 
-/// `%`: integer modulus with the sign of the right operand (perl's
-/// `pp_modulo`). Operands are truncated to integers.
+/// `%`: integer modulus with the sign of the right operand, as perl's
+/// `pp_modulo` computes it: on the magnitudes as UVs (operands truncated),
+/// or with fmod when one of them is past the UV range (an infinity, 1e30;
+/// the right one then rounded, as perl does).
 pub fn modulo(a: &Value, b: &Value) -> Result<Value, String> {
+    const UV_MAX_P1: f64 = 18446744073709551616.0;
     let (x, y) = (numeric(a), numeric(b));
-    let right = match iv_able(y) {
-        Some(j) => j,
-        None => y.as_f64().trunc() as i64,
+    let mut use_double = false;
+    let (mut right, mut dright, mut dright_valid) = (0u64, 0f64, false);
+    let right_neg = match y {
+        Number::Int(j) => {
+            right = j.unsigned_abs();
+            j < 0
+        }
+        Number::UInt(u) => {
+            right = u;
+            false
+        }
+        Number::Float(f) => {
+            dright = f.abs();
+            if dright < UV_MAX_P1 {
+                right = dright as u64;
+                dright_valid = true;
+            } else {
+                use_double = true;
+            }
+            f < 0.0
+        }
     };
+    let (mut left, mut dleft) = (0u64, 0f64);
+    let left_neg = match x {
+        Number::Int(i) if !use_double => {
+            left = i.unsigned_abs();
+            i < 0
+        }
+        Number::UInt(u) if !use_double => {
+            left = u;
+            false
+        }
+        _ => {
+            let f = x.as_f64();
+            dleft = f.abs();
+            if !use_double {
+                if dleft < UV_MAX_P1 {
+                    left = dleft as u64;
+                } else {
+                    use_double = true;
+                    dright = if dright_valid { (dright + 0.5).floor() } else { right as f64 };
+                }
+            }
+            f < 0.0
+        }
+    };
+    if use_double {
+        if dright == 0.0 {
+            return Err("Illegal modulus zero".into());
+        }
+        let mut ans = dleft % dright;
+        if left_neg != right_neg && ans != 0.0 {
+            ans = dright - ans;
+        }
+        return Ok(Value::Num(if right_neg { -ans } else { ans }));
+    }
     if right == 0 {
         return Err("Illegal modulus zero".into());
     }
-    let left = match iv_able(x) {
-        Some(i) => i,
-        None => x.as_f64().trunc() as i64,
-    };
-    let r = left.rem_euclid(right.abs());
-    Ok(Value::Int(if right < 0 && r != 0 { r + right } else { r }))
+    let mut ans = left % right;
+    if left_neg != right_neg && ans != 0 {
+        ans = right - ans;
+    }
+    Ok(if !right_neg {
+        from_uv(ans)
+    } else if ans <= 1 << 63 {
+        Value::Int((!ans).wrapping_add(1) as i64)
+    } else {
+        Value::Num(-(ans as f64))
+    })
 }
 
 /// `**`: integer when both are integers and the result is exact.

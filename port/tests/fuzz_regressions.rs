@@ -15,10 +15,15 @@ use exiftool_port::ExifTool;
 
 include!("../fuzz/interp_programs.rs");
 
+/// Held by the tests that allocate much (some inputs build hundreds of MB)
+/// and by the one that measures the memory, so that they never overlap.
+static MEMORY: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Run an `interp` input; returns its `$@` (without perl's " at ... line
 /// N." suffix), checking it ends in a reasonable time.
 fn interp(name: &str) -> String {
     let data = std::fs::read(Path::new("tests/fuzz/interp").join(name)).unwrap();
+    let _serial = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
     let start = Instant::now();
     let err = String::from_utf8_lossy(&run_interp_input(&data)).into_owned();
     assert!(start.elapsed() < Duration::from_secs(20), "{name}: {:?}", start.elapsed());
@@ -73,6 +78,56 @@ fn pack_limits() {
     for name in ["pack-count-huge", "pack-count-huge-2", "pack-count-huge-3", "pack-count-huge-4"] {
         assert_eq!(interp(name), "Out of memory in pack", "{name}");
     }
+    // 100 million characters unpacked: perl runs out of memory (4 GB)
+    assert_eq!(interp("unpack-values-huge"), "Out of memory in unpack");
+    // `%32C*` over 44 MB: summed as read (it made a value of each byte)
+    assert_eq!(interp("unpack-checksum-large"), "");
+    // a precision of 7 million: zeros put in front one by one took minutes
+    assert_eq!(interp("sprintf-precision-zeros"), "");
+}
+
+#[test]
+fn pack_values() {
+    use exiftool_port::perl::pack::{pack, unpack};
+    use exiftool_port::perl::Value;
+    let p = |t: &str, v: &[Value]| pack(t.as_bytes(), v).unwrap();
+    assert_eq!(p("H5", &[Value::str("abc")]), [0xab, 0xc0, 0x00]);
+    assert_eq!(p("h3", &[Value::str("abcd")]), [0xba, 0x0c]);
+    assert_eq!(p("B12", &[Value::str("101")]), [0xa0, 0x00]);
+    assert_eq!(p("b9", &[Value::str("1")]), [0x01, 0x00]);
+    assert_eq!(p("n3", &[Value::Int(1)]), [0, 1, 0, 0, 0, 0]);
+    assert_eq!(p("f>2", &[Value::Num(1.0)]), [0x3f, 0x80, 0, 0, 0, 0, 0, 0]);
+    assert_eq!(p("a4 Z3 A3", &[Value::str("ab"), Value::str("abc"), Value::str("x")]), b"ab\0\0ab\0x  ");
+    assert_eq!(p("U2", &[Value::Int(0x263a)]), "\u{263a}\0".as_bytes());
+    assert_eq!(p("(n)3", &[Value::Int(1), Value::Int(2)]), [0, 1, 0, 2, 0, 0]);
+    let u = |t: &str, d: &[u8]| unpack(t.as_bytes(), d).unwrap().iter().map(Value::to_text).collect::<Vec<_>>();
+    assert_eq!(u("%32n*", &[0, 1, 0xff, 0xff]), ["65536"]);
+    assert_eq!(u("%8C*", &[200, 100]), ["44"]);
+    assert_eq!(u("%32n2 C", &[0, 1, 0, 2, 0, 3, 9]), ["3", "0"]);
+    assert_eq!(u("%64Q", &[0xff; 8]), ["18446744073709551615"]);
+}
+
+/// The value of a Perl expression, run in the port's interpreter.
+fn perl(code: &str) -> String {
+    use exiftool_port::interp::{Scope, Want};
+    let mut it = exiftool_port::runtime::new_interp();
+    let r = it.eval_string(code.as_bytes(), "main", &Scope::new(None), Want::Scalar);
+    r.map(|v| v[0].to_text()).unwrap_or_else(|e| e.to_text())
+}
+
+/// `%` with an operand past the IV range (here -Inf, from a fuzzed "-inf")
+/// overflowed negating it. The values are perl 5.38's.
+#[test]
+fn modulus_of_large_operands() {
+    assert_eq!(
+        perl("join ' ', 7 % -9**9**9, -7 % -9**9**9, 7 % 9**9**9, -7 % 9**9**9, 7 % -9223372036854775808, 7 % -9.3e18, -7 % 3, 7 % -3, -7 % -3, 0 % -9**9**9"),
+        "-Inf -7 7 Inf -9223372036854775801 -9.3e+18 2 -2 -1 0"
+    );
+    assert_eq!(
+        perl("join ' ', 1e30 % 2.7, 1e30 % 2.2, 1e30 % 7, -1e30 % 7, 1e30 % -7, 7.9 % 2.9, -7.9 % 2.9, 18446744073709551615 % 10, -1 % 18446744073709551615, 'nan' % 3, 3 % 'nan', 9.3e18 % 7, 1e19 % 3.5"),
+        "1 0 5 2 -2 1 1 5 18446744073709551614 NaN NaN 3 1"
+    );
+    assert_eq!(interp("modulus-minus-inf"), "");
 }
 
 fn rss_kb() -> Option<u64> {
@@ -85,6 +140,7 @@ fn rss_kb() -> Option<u64> {
 /// global destruction). They used to leak, about 2.5 MB a JPEG.
 #[test]
 fn interpreters_are_freed() {
+    let _serial = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
     let et = ExifTool::new();
     let _ = et.extract_info("../tests/images/Canon.jpg");
     let Some(before) = rss_kb() else { return };
@@ -93,4 +149,23 @@ fn interpreters_are_freed() {
     }
     let after = rss_kb().unwrap();
     assert!(after < before + 10_000, "{before} kB -> {after} kB");
+}
+
+/// Replay the `interp` inputs of a directory (`FUZZ_INPUTS`), printing how
+/// long each takes and how it ends, to triage a fuzzing round in release:
+/// `FUZZ_INPUTS=fuzz/artifacts/interp-r2 cargo test --release --test
+/// fuzz_regressions -- --ignored --nocapture replay_interp`
+#[test]
+#[ignore]
+fn replay_interp() {
+    let Ok(dir) = std::env::var("FUZZ_INPUTS") else { return };
+    let mut paths: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().path()).collect();
+    paths.sort();
+    for path in paths {
+        let data = std::fs::read(&path).unwrap();
+        let start = Instant::now();
+        let err = String::from_utf8_lossy(&run_interp_input(&data)).into_owned();
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        eprintln!("{name}: {:.2} s, rss {} MB: {}", start.elapsed().as_secs_f64(), rss_kb().unwrap_or(0) / 1024, err.lines().next().unwrap_or(""));
+    }
 }

@@ -438,8 +438,8 @@ fn int_string(v: &Value, spec: &Spec) -> String {
         if p == 0 && digits == "0" {
             digits.clear();
         }
-        while digits.len() < p {
-            digits.insert(0, '0');
+        if digits.len() < p {
+            digits.insert_str(0, &"0".repeat(p - digits.len()));
         }
     }
     let sign = if neg {
@@ -481,8 +481,8 @@ fn unsigned_string(conv: u8, v: &Value, spec: &Spec) -> String {
         if p == 0 && u == 0 {
             digits.clear();
         }
-        while digits.len() < p {
-            digits.insert(0, '0');
+        if digits.len() < p {
+            digits.insert_str(0, &"0".repeat(p - digits.len()));
         }
     }
     if spec.alt && u != 0 {

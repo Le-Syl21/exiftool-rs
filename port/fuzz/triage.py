@@ -38,13 +38,12 @@ def cause(path):
     m = re.search(r"panicked at (\S+:\d+):\d+:\n(.*)", err)
     if m:
         return "panic " + m.group(1), m.group(2)[:200]
-    kind = "?"
-    for k in ("stack-overflow", "timeout", "out-of-memory", "malloc limit", "deadly signal", "SEGV", "heap-buffer-overflow", "leak"):
-        if k in err:
-            kind = k
-            break
-    if kind == "?" and p.returncode == 0:
+    if p.returncode == 0:
         return "no reproduction", ""
+    # (the kind from the error line only: an artifact's own name, printed
+    # too, may be "timeout-...")
+    m = re.search(r"ERROR: (?:libFuzzer|AddressSanitizer|LeakSanitizer): ([\w-]+(?: [\w-]+)?)", err)
+    kind = m.group(1) if m else ("stack overflow" if "has overflowed its stack" in err else "?")
     addrs = frame_re.findall(err)
     frames = []
     for fn, loc in symbolize(addrs[:200]):
