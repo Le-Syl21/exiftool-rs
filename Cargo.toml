@@ -112,6 +112,20 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Securit
 [target.'cfg(windows)'.build-dependencies]
 winres = { version = "0.1", optional = true }
 
+# What clippy's gate is (CI's lint job): its correctness and suspicious
+# lints are errors. Its style and complexity lints are only warnings: the
+# port follows the Perl line by line (late initialisation as `my $x;`, index
+# loops, nested ifs as ExifTool writes them), which they would rewrite.
+# Two correctness lints flag what the port does on purpose: a loop that
+# runs once and is left by `break` is Perl's bare block left by `last`, and
+# the digits of pi or e are the literals ExifTool writes (Perl's
+# `3.14159265358979`), whose value is part of the output.
+[lints.clippy]
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+never_loop = "allow"
+approx_constant = "allow"
+
 [features]
 # The built-in format extensions: writers for the types ExifTool reads and
 # does not write (ID3, Vorbis comments, Matroska; src/api/extra_writers/),

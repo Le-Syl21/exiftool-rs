@@ -241,7 +241,6 @@ fn elem_target(h: &Value) -> ER<()> {
 }
 
 /// `$$buffPt` as a value.
-
 fn buff_of(b: &Cell) -> Value {
     b.borrow().deref()
 }
