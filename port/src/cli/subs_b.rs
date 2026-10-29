@@ -444,9 +444,14 @@ fn scan_dir_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 
 /// `-l $path` (lstat: a symbolic link).
 fn is_symlink(path: &Value) -> bool {
-    use std::os::unix::ffi::OsStrExt;
-    let p = b(path);
-    std::fs::symlink_metadata(std::ffi::OsStr::from_bytes(&p)).map(|m| m.file_type().is_symlink()).unwrap_or(false)
+    #[cfg(unix)]
+    let p = {
+        use std::os::unix::ffi::OsStrExt;
+        std::path::PathBuf::from(std::ffi::OsStr::from_bytes(&b(path)))
+    };
+    #[cfg(not(unix))]
+    let p = std::path::PathBuf::from(path.to_text());
+    std::fs::symlink_metadata(p).map(|m| m.file_type().is_symlink()).unwrap_or(false)
 }
 
 //------------------------------------------------------------------------------

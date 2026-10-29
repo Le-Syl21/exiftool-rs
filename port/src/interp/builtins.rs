@@ -722,7 +722,10 @@ fn run(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>, want: Want
         }
         "chmod" => {
             let a = values(it, args, scope)?;
+            #[cfg_attr(not(unix), allow(unused_mut))]
             let mut n = 0;
+            #[cfg(not(unix))]
+            let _ = &a;
             #[cfg(unix)]
             for f in a.iter().skip(1) {
                 use std::os::unix::fs::PermissionsExt;
