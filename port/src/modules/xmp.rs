@@ -1770,7 +1770,8 @@ fn parse_xmp_element_body(it: &mut Interp, et: &Value, tag_table_ptr: &Value, da
             let mut pat = b"<(?:(/?)".to_vec();
             pat.extend_from_slice(&pre::quotemeta(&prop.to_bytes()));
             pat.extend_from_slice(br"([-\w:.\x80-\xff]*)(.*?(/?))>|(!\[CDATA\[|!--))");
-            let close_re = rx_dyn(&pat, "s")?;
+            // (one pattern per property name, matched a few times: no JIT)
+            let close_re = pre::compile_few(&pat, "s").or_else(die)?;
             loop {
                 // this match fails with perl 5.6.2 (perl bug!), but it works without
                 // the '(.*?)', so we must do it differently...

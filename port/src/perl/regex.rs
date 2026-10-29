@@ -51,6 +51,21 @@ thread_local! {
     /// The patterns compiled in UTF mode, by pattern, then whether the
     /// pattern is a character string (its UTF-8 form) and flags.
     static UTF_CACHE: RefCell<HashMap<Vec<u8>, Vec<(bool, String, Rc<PerlRegex>)>>> = RefCell::new(HashMap::default());
+    /// The patterns of `compile_few`, by pattern then flags.
+    static FEW_CACHE: RefCell<HashMap<Vec<u8>, Vec<(String, Rc<PerlRegex>)>>> = RefCell::new(HashMap::default());
+}
+
+/// `compile` without JIT, for a pattern built at run time that is matched
+/// a few times only (one per XMP property name): JIT compiling it cost
+/// more than the matches it would speed up.
+pub fn compile_few(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
+    let hit = FEW_CACHE.with(|c| c.borrow().get(pattern).and_then(|v| v.iter().find(|(f, _)| f == flags).map(|(_, re)| re.clone())));
+    if let Some(re) = hit {
+        return Ok(re);
+    }
+    let compiled = build_jit(pattern, false, flags, false, false)?;
+    FEW_CACHE.with(|c| c.borrow_mut().entry(pattern.to_vec()).or_default().push((flags.to_string(), compiled.clone())));
+    Ok(compiled)
 }
 
 /// Compile `pattern` with Perl modifiers (`i`, `m`, `s`, `x`; others such as
@@ -106,6 +121,10 @@ pub fn needs_utf(pattern: &[u8]) -> bool {
 }
 
 fn build(pattern: &[u8], pat_utf8: bool, flags: &str, utf: bool) -> Result<Rc<PerlRegex>, String> {
+    build_jit(pattern, pat_utf8, flags, utf, true)
+}
+
+fn build_jit(pattern: &[u8], pat_utf8: bool, flags: &str, utf: bool, jit: bool) -> Result<Rc<PerlRegex>, String> {
     let fixed = class_range_escapes(&never_quantifiers(pattern));
     // what perl allows and PCRE2 only with an option the crate does not
     // expose, set inline: duplicate group names (perl accepts
@@ -125,7 +144,7 @@ fn build(pattern: &[u8], pat_utf8: bool, flags: &str, utf: bool) -> Result<Rc<Pe
         .extended(flags.contains('x'))
         .utf(utf)
         .ucp(utf)
-        .jit_if_available(true);
+        .jit_if_available(jit);
     let re = b.build(&text).map_err(|e| perl_message_at(pattern, &e, prefix.len()))?;
     let names = re.capture_names().to_vec();
     let groups = re.captures_len().saturating_sub(1);
