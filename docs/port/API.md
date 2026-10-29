@@ -30,8 +30,8 @@ turns it on), `fast_scan` → `FastScan`, `requested_tags` → the tag list of
 `ExtractEmbedded`, `show_unknown` → `Unknown`, `process_compressed` →
 `Compress`, `geolocation` → `Geolocation`, `struct_output` → `Struct`,
 `use_mwg` → `Image::ExifTool::MWG::Load`, `lang` → `Lang` (reading and
-writing), `binary` → `Binary`; `fresh_interpreter` is the facade's own
-(see Threads). Extraction always runs with
+writing), `binary` → `Binary`; `fresh_interpreter` (see Threads) and
+`trim` (see Values) are the facade's own. Extraction always runs with
 `PrintConv` on: `print_conv` only chooses which of the two values
 `image_info` returns, as in the root crate.
 
@@ -78,6 +78,16 @@ works, and the `-lang` list does not show it.
   PreviewImage is `(Binary data 1039273 bytes, ...)` without, its 5777
   bytes with either. The printed value stays the text.
   `raw_value.to_display_string()` is what `exiftool -n` prints.
+- `Options::trim` (off by default: values are ExifTool's) strips, at the
+  start and end of each printed value and of each text raw value (each
+  item of a list, each field of a structure), white space and invisible
+  characters: ASCII white space, NUL and the other C0 controls, DEL, C1
+  controls, and Unicode white space, zero-width characters and BOM
+  (U+00A0, U+1680, U+180E, U+2000-U+200F, U+2028, U+2029, U+202F,
+  U+205F, U+2060, U+3000, U+FEFF). Numbers and binary data are not
+  touched. Olympus2.jpg's ImageDescription, `OLYMPUS DIGITAL CAMERA` and
+  nine spaces, becomes `OLYMPUS DIGITAL CAMERA`; GPS.jpg's IPTC City, one
+  space, becomes empty (the tag stays).
 - Groups are `GetGroup`'s; `family3` is `Main` or `DocN`.
 - `Tag::id` is the tag ID, `Numeric` when it is an integer of 16 bits,
   `Text` otherwise. `Tag::priority` is the tag's `Priority`, 1 when it has
@@ -168,7 +178,8 @@ Where the two differ, the facade is ExifTool's:
   and not warned about, as ExifTool says nothing.
 - **Printed values are not sanitized for a terminal**: trailing spaces,
   control characters and NULs stay as ExifTool has them (`exiftool -j`
-  keeps them; only its text output trims them). The root crate trimmed them.
+  keeps them; only its text output trims them). The root crate trimmed them;
+  `Options::trim` does.
 - **Tag order** is ExifTool's (`GetTagList`, as `exiftool` lists them).
 - **`image_info` with duplicates** keys a duplicate `Name [Group0:Group1]`
   as before, but which instance is the plain `Name` is ExifTool's choice.

@@ -13,6 +13,7 @@ use super::engine::{self, call, pv_array, pv_path, pv_str, Engine};
 use super::error::{Error, Result};
 use super::file_type::{self, FileType};
 use super::tag::Tag;
+use super::value::Value;
 
 /// Processing options for metadata extraction.
 #[derive(Debug, Clone)]
@@ -75,6 +76,14 @@ pub struct Options {
     ///
     /// [`Value::Binary`]: super::value::Value::Binary
     pub binary: bool,
+    /// Trim string values: strip the white space and invisible characters
+    /// at the start and end of each printed value and each text raw value
+    /// (in a list or a structure, of each item): ASCII white space, NUL and
+    /// the other C0 controls, DEL, C1 controls, and Unicode white space, zero-width
+    /// characters and BOM (U+00A0, U+2000-U+200F, U+2028, U+2029, U+202F,
+    /// U+205F, U+2060, U+3000, U+FEFF...). Binary values are never touched.
+    /// Off by default: values are ExifTool's, as `exiftool -j` gives them.
+    pub trim: bool,
 }
 
 impl Default for Options {
@@ -93,6 +102,7 @@ impl Default for Options {
             lang: None,
             fresh_interpreter: false,
             binary: false,
+            trim: false,
         }
     }
 }
@@ -605,7 +615,11 @@ impl ExifTool {
             Ok(engine::array(r.first().unwrap_or(&PV::Undef))
                 .iter()
                 .map(|rec| {
-                    let (key, tag, write_group, writable) = engine::record_to_tag(rec);
+                    let (key, mut tag, write_group, writable) = engine::record_to_tag(rec);
+                    if options.trim {
+                        tag.print_value = trim_text(&tag.print_value).to_string();
+                        tag.raw_value = trim_value(std::mem::replace(&mut tag.raw_value, Value::String(String::new())));
+                    }
                     ReadTag { key, tag, write_group, writable }
                 })
                 .collect())
@@ -639,6 +653,33 @@ fn copied_tags(src: &[ReadTag]) -> Vec<&ReadTag> {
         .filter(|t| !matches!(t.tag.group.family0.as_str(), "File" | "System" | "Composite" | "ExifTool"))
         .filter(|t| !t.tag.print_value.is_empty() && !t.tag.print_value.starts_with("(Binary data"))
         .collect()
+}
+
+/// Is `c` stripped by [`Options::trim`]: white space, a control
+/// character, or an invisible one?
+fn is_trimmed(c: char) -> bool {
+    c.is_whitespace()
+        || c.is_control()
+        || matches!(c, '\u{180E}' | '\u{200B}'..='\u{200F}' | '\u{2060}' | '\u{FEFF}')
+}
+
+/// `s` without what [`Options::trim`] strips at its ends.
+fn trim_text(s: &str) -> &str {
+    s.trim_matches(is_trimmed)
+}
+
+/// A value with its text trimmed ([`Options::trim`]): a string, the items
+/// of a list, the fields of a structure; anything else as it is.
+fn trim_value(v: Value) -> Value {
+    match v {
+        Value::String(s) => match trim_text(&s) {
+            t if t.len() == s.len() => Value::String(s),
+            t => Value::String(t.to_string()),
+        },
+        Value::List(items) => Value::List(items.into_iter().map(trim_value).collect()),
+        Value::Struct(fields) => Value::Struct(fields.into_iter().map(|(k, v)| (k, trim_value(v))).collect()),
+        other => other,
+    }
 }
 
 /// Detect the file type of a file: the `FileType` ExifTool finds for it
@@ -966,6 +1007,18 @@ impl Drop for TempFile {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn trim() {
+        assert_eq!(trim_text(" \t\0Canon\u{1}\u{7f}\r\n"), "Canon");
+        assert_eq!(trim_text("\u{feff}\u{200b}\u{a0}a b\u{3000}\u{2028}\u{2029}\u{202f}\u{205f}\u{2000}\u{200f}"), "a b");
+        assert_eq!(trim_text("  "), "");
+        assert_eq!(trim_text("x\u{a0}y"), "x\u{a0}y");
+        let v = Value::List(vec![Value::String(" a ".into()), Value::U8(1), Value::Struct(vec![("F".into(), Value::String("\0b\0".into()))])]);
+        assert_eq!(trim_value(v), Value::List(vec![Value::String("a".into()), Value::U8(1), Value::Struct(vec![("F".into(), Value::String("b".into()))])]));
+        assert_eq!(trim_value(Value::Binary(b" \0 ".to_vec())), Value::Binary(b" \0 ".to_vec()));
+        assert_eq!(trim_value(Value::Undefined(b" x ".to_vec())), Value::Undefined(b" x ".to_vec()));
+    }
 
     #[test]
     fn date_shift() {

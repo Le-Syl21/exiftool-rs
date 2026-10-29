@@ -198,6 +198,28 @@ fn binary_data_is_extracted_with_the_binary_option() {
 }
 
 #[test]
+fn values_are_trimmed_on_request() {
+    let tag = |trim: bool, file: &str, key: &str| -> (String, Value) {
+        let et = ExifTool::with_options(Options { trim, duplicates: true, ..Options::default() });
+        let tags = et.extract_info(image(file)).unwrap();
+        let t = tags.iter().find(|t| format!("{}:{}", t.group.family1, t.name) == key).unwrap_or_else(|| panic!("{file}: no {key}"));
+        (t.print_value.clone(), t.raw_value.clone())
+    };
+    // ExifTool's values by default, as `exiftool -j` gives them
+    let padded = "OLYMPUS DIGITAL CAMERA         ";
+    assert_eq!(tag(false, "Olympus2.jpg", "IFD0:ImageDescription"), (padded.to_string(), Value::String(padded.into())));
+    assert_eq!(tag(false, "GPS.jpg", "IPTC:City").0, " ");
+    // trimmed: the printed and the raw value
+    assert_eq!(tag(true, "Olympus2.jpg", "IFD0:ImageDescription"), ("OLYMPUS DIGITAL CAMERA".to_string(), Value::String("OLYMPUS DIGITAL CAMERA".into())));
+    assert_eq!(tag(true, "GPS.jpg", "IPTC:City"), (String::new(), Value::String(String::new())));
+    // numbers and binary data are left as they are
+    let (_, orientation) = tag(true, "NikonD70.jpg", "IFD0:Orientation");
+    assert_eq!(orientation, Value::U16(1));
+    let (_, thumbnail) = tag(true, "ExifTool.jpg", "JFXX:ThumbnailImage");
+    assert!(matches!(&thumbnail, Value::Binary(b) if b.len() == 1558), "{thumbnail:?}");
+}
+
+#[test]
 fn lens_id_does_not_depend_on_duplicates() {
     let lens = |duplicates: bool| -> Vec<String> {
         ExifTool::with_options(Options { duplicates, ..Options::default() })
