@@ -302,8 +302,126 @@ fn simple_tag(name: &str, value: &str) -> Result<Vec<u8>> {
     element(ID_SIMPLETAG, &p, 1)
 }
 
-/// The SimpleTag field name for a tag (`TagName`s are upper case).
+/// The standardized SimpleTag names of Matroska.pm `%StdTag` and the tag
+/// names ExifTool gives them, but for its structures (`ORIGINAL`, `SAMPLE`,
+/// `COUNTRY`) and the XMP it reads from `SPHERICAL-VIDEO`.
+const STD_TAGS: &[(&str, &str)] = &[
+    ("TOTAL_PARTS", "TotalParts"),
+    ("PART_NUMBER", "PartNumber"),
+    ("PART_OFFSET", "PartOffset"),
+    ("TITLE", "Title"),
+    ("SUBTITLE", "Subtitle"),
+    ("URL", "URL"),
+    ("SORT_WITH", "SortWith"),
+    ("INSTRUMENTS", "Instruments"),
+    ("EMAIL", "Email"),
+    ("ADDRESS", "Address"),
+    ("FAX", "FAX"),
+    ("PHONE", "Phone"),
+    ("ARTIST", "Artist"),
+    ("LEAD_PERFORMER", "LeadPerformer"),
+    ("ACCOMPANIMENT", "Accompaniment"),
+    ("COMPOSER", "Composer"),
+    ("ARRANGER", "Arranger"),
+    ("LYRICS", "Lyrics"),
+    ("LYRICIST", "Lyricist"),
+    ("CONDUCTOR", "Conductor"),
+    ("DIRECTOR", "Director"),
+    ("ASSISTANT_DIRECTOR", "AssistantDirector"),
+    ("DIRECTOR_OF_PHOTOGRAPHY", "DirectorOfPhotography"),
+    ("SOUND_ENGINEER", "SoundEngineer"),
+    ("ART_DIRECTOR", "ArtDirector"),
+    ("PRODUCTION_DESIGNER", "ProductionDesigner"),
+    ("CHOREGRAPHER", "Choregrapher"),
+    ("COSTUME_DESIGNER", "CostumeDesigner"),
+    ("ACTOR", "Actor"),
+    ("CHARACTER", "Character"),
+    ("WRITTEN_BY", "WrittenBy"),
+    ("SCREENPLAY_BY", "ScreenplayBy"),
+    ("EDITED_BY", "EditedBy"),
+    ("PRODUCER", "Producer"),
+    ("COPRODUCER", "Coproducer"),
+    ("EXECUTIVE_PRODUCER", "ExecutiveProducer"),
+    ("DISTRIBUTED_BY", "DistributedBy"),
+    ("MASTERED_BY", "MasteredBy"),
+    ("ENCODED_BY", "EncodedBy"),
+    ("MIXED_BY", "MixedBy"),
+    ("REMIXED_BY", "RemixedBy"),
+    ("PRODUCTION_STUDIO", "ProductionStudio"),
+    ("THANKS_TO", "ThanksTo"),
+    ("PUBLISHER", "Publisher"),
+    ("LABEL", "Label"),
+    ("GENRE", "Genre"),
+    ("MOOD", "Mood"),
+    ("ORIGINAL_MEDIA_TYPE", "OriginalMediaType"),
+    ("CONTENT_TYPE", "ContentType"),
+    ("SUBJECT", "Subject"),
+    ("DESCRIPTION", "Description"),
+    ("KEYWORDS", "Keywords"),
+    ("SUMMARY", "Summary"),
+    ("SYNOPSIS", "Synopsis"),
+    ("INITIAL_KEY", "InitialKey"),
+    ("PERIOD", "Period"),
+    ("LAW_RATING", "LawRating"),
+    ("DATE_RELEASED", "DateReleased"),
+    ("DATE_RECORDED", "DateTimeOriginal"),
+    ("DATE_ENCODED", "DateEncoded"),
+    ("DATE_TAGGED", "DateTagged"),
+    ("DATE_DIGITIZED", "CreateDate"),
+    ("DATE_WRITTEN", "DateWritten"),
+    ("DATE_PURCHASED", "DatePurchased"),
+    ("RECORDING_LOCATION", "RecordingLocation"),
+    ("COMPOSITION_LOCATION", "CompositionLocation"),
+    ("COMPOSER_NATIONALITY", "ComposerNationality"),
+    ("COMMENT", "Comment"),
+    ("PLAY_COUNTER", "PlayCounter"),
+    ("RATING", "Rating"),
+    ("ENCODER", "Encoder"),
+    ("ENCODER_SETTINGS", "EncoderSettings"),
+    ("BPS", "BPS"),
+    ("FPS", "FPS"),
+    ("BPM", "BPM"),
+    ("MEASURE", "Measure"),
+    ("TUNING", "Tuning"),
+    ("REPLAYGAIN_GAIN", "ReplaygainGain"),
+    ("REPLAYGAIN_PEAK", "ReplaygainPeak"),
+    ("ISRC", "ISRC"),
+    ("MCDI", "MCDI"),
+    ("ISBN", "ISBN"),
+    ("BARCODE", "Barcode"),
+    ("CATALOG_NUMBER", "CatalogNumber"),
+    ("LABEL_CODE", "LabelCode"),
+    ("LCCN", "Lccn"),
+    ("IMDB", "IMDB"),
+    ("TMDB", "TMDB"),
+    ("TVDB", "TVDB"),
+    ("PURCHASE_ITEM", "PurchaseItem"),
+    ("PURCHASE_INFO", "PurchaseInfo"),
+    ("PURCHASE_OWNER", "PurchaseOwner"),
+    ("PURCHASE_PRICE", "PurchasePrice"),
+    ("PURCHASE_CURRENCY", "PurchaseCurrency"),
+    ("COPYRIGHT", "Copyright"),
+    ("PRODUCTION_COPYRIGHT", "ProductionCopyright"),
+    ("LICENSE", "License"),
+    ("TERMS_OF_USE", "TermsOfUse"),
+];
+
+/// Is `tag` the segment Title or a standardized SimpleTag, as ExifTool
+/// names them? Those are the tags a request without a group writes:
+/// ExifTool writes a tag named without a group to the preferred group that
+/// has a tag of that name, and another name is no Matroska tag (copied
+/// from another format, `Vendor` or `BlockSizeMin` stay out of the Tags).
+pub fn is_std_tag(tag: &str) -> bool {
+    STD_TAGS.iter().any(|(_, t)| t.eq_ignore_ascii_case(tag))
+}
+
+/// The SimpleTag field name for a tag (`TagName`s are upper case): the
+/// standardized one for its name (`DateTimeOriginal` is `DATE_RECORDED`),
+/// or the name in capitals, a `_` before each inner capital.
 fn tag_name_for(tag: &str) -> String {
+    if let Some((field, _)) = STD_TAGS.iter().find(|(_, t)| t.eq_ignore_ascii_case(tag)) {
+        return field.to_string();
+    }
     let mut out = String::new();
     for (i, c) in tag.chars().enumerate() {
         if c.is_ascii_uppercase() && i > 0 {

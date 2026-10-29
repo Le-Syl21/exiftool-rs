@@ -513,9 +513,11 @@ impl ExifTool {
         }
     }
 
-    /// The requests as `write_info` counts them: a copy stands for each tag
-    /// it sets, with the value the source has, unless a later request is for
-    /// the same tag (or a whole group), which overrides it.
+    /// The requests as `write_info` counts them, and as an extension gets
+    /// them: a copy stands for each new value it queues, as ExifTool's
+    /// `SetNewValuesFromFile` queues it (see [`copy_edits`](Self::copy_edits)),
+    /// unless a later request is for the same tag (or a whole group), which
+    /// overrides it.
     fn counted_requests(&self) -> Vec<NewValue> {
         let mut out = Vec::new();
         for (i, r) in self.requests.iter().enumerate() {
@@ -524,28 +526,73 @@ impl ExifTool {
                 Request::Copy { path, tags } => {
                     let later = &self.requests[i + 1..];
                     let overridden = |name: &str| later.iter().any(|r| matches!(r, Request::Set(nv) if nv.tag.eq_ignore_ascii_case(name) || is_all(&nv.tag)));
-                    // (with MWG as the write has it: MWG adds composite
-                    // tags only, which are not copied)
-                    let reader = Options {
-                        duplicates: true,
-                        requested_tags: tags.clone(),
-                        lang: self.options.lang.clone(),
-                        use_mwg: self.options.use_mwg,
-                        fresh_interpreter: self.options.fresh_interpreter,
-                        ..Options::default()
-                    };
-                    let Ok(src) = self.read_as(reader, path) else { continue };
-                    for t in copied_tags(&src) {
-                        if !overridden(&t.tag.name) {
-                            out.push(NewValue {
-                                tag: t.tag.name.clone(),
-                                group: Some(t.tag.group.family1.clone()),
-                                value: Some(t.tag.print_value.clone()),
-                            });
+                    for nv in self.copy_edits(path, tags) {
+                        if !overridden(&nv.tag) {
+                            out.push(nv);
                         }
                     }
                 }
             }
+        }
+        out
+    }
+
+    /// The new values a copy from `path` queues: those `SetNewValuesFromFile`
+    /// sets, each with its destination group as ExifTool gives it. A tag
+    /// copied without one (`set_new_values_from_file(src, None)`, a tag list
+    /// of `Title`, `-all`) has none, and goes to the destination's preferred
+    /// group for its name, whatever group it had in the source; a group the
+    /// tag list names (`Vorbis:Title`, `Title>ID3:Title`, `all:all`) is
+    /// kept. The value is the one ExifTool copies (the printed value, or
+    /// the ValueConv value for a `#` tag), a list's items joined as ExifTool
+    /// lists them (", "). Not included: binary data and structures (an edit
+    /// is text), the tags of the source's file system and ExifTool groups,
+    /// composite tags, and list items to delete (`-<`). When a new value
+    /// replaces another of the same tag and group, as ExifTool replaces it,
+    /// only the last is kept.
+    fn copy_edits(&self, path: &Path, tags: &[String]) -> Vec<NewValue> {
+        // (read as the write reads it: MWG adds composite tags only)
+        let options = self.options.clone();
+        let (p, t) = (path.to_path_buf(), tags.to_vec());
+        // (group, tag, value) of each new value, in order
+        let recs = self.run(move |it| -> Result<Vec<(Option<String>, String, String)>> {
+            let args = vec![pv_path(&p), pv_array(t.iter().map(|t| pv_str(t)).collect()), pv_array(options.write_options())];
+            let r = call(it, "CopyEdits", args, Want::Scalar)?;
+            let mut recs = Vec::new();
+            for rec in engine::array(r.first().unwrap_or(&PV::Undef)) {
+                let f = engine::array(&rec);
+                let get = |i: usize| f.get(i).and_then(engine::opt_text);
+                let (Some(tag), Some(value)) = (get(1), f.get(2)) else { continue };
+                if get(3).is_some_and(|g0| matches!(g0.as_str(), "File" | "System" | "Composite" | "ExifTool")) || f.get(4).is_some_and(PV::truthy) {
+                    continue;
+                }
+                let text = |v: &PV| match v {
+                    PV::Undef | PV::ScalarRef(_) | PV::ArrayRef(_) | PV::HashRef(_) | PV::LvRef(_) | PV::Code(_) | PV::Handle(_) => None,
+                    v => Some(engine::text(v)),
+                };
+                let value = match value {
+                    PV::ArrayRef(items) => match items.borrow().iter().map(text).collect::<Option<Vec<_>>>() {
+                        Some(items) => items.join(", "),
+                        None => continue,
+                    },
+                    v => match text(v) {
+                        Some(v) => v,
+                        None => continue,
+                    },
+                };
+                recs.push((get(0), tag, value));
+            }
+            Ok(recs)
+        });
+        let mut out: Vec<NewValue> = Vec::new();
+        for (group, tag, value) in recs.unwrap_or_default() {
+            if value.is_empty() || value.starts_with("(Binary data") {
+                continue;
+            }
+            let group = group.filter(|g| !g.is_empty());
+            let same = |nv: &NewValue| nv.tag.eq_ignore_ascii_case(&tag) && nv.group.as_deref().map(str::to_ascii_lowercase) == group.as_deref().map(str::to_ascii_lowercase);
+            out.retain(|nv| !same(nv));
+            out.push(NewValue { tag, group, value: Some(value) });
         }
         out
     }
@@ -692,16 +739,6 @@ impl Default for ExifTool {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// The tags `SetNewValuesFromFile` copies from a source read with
-/// duplicates: those of the source's metadata (not its file system,
-/// composite or ExifTool tags), with a value.
-fn copied_tags(src: &[ReadTag]) -> Vec<&ReadTag> {
-    src.iter()
-        .filter(|t| !matches!(t.tag.group.family0.as_str(), "File" | "System" | "Composite" | "ExifTool"))
-        .filter(|t| !t.tag.print_value.is_empty() && !t.tag.print_value.starts_with("(Binary data"))
-        .collect()
 }
 
 /// Is `c` stripped by [`Options::trim`]: white space, a control

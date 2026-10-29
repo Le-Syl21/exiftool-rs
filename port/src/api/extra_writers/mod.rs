@@ -9,9 +9,20 @@
 //! - [`MatroskaWriter`]: the segment Title and the SimpleTags of MKV and
 //!   WebM files (the `Matroska` group, and `Info` for the Title).
 //!
-//! A request without a group goes to the writer of the file's type; one for
-//! another group (`EXIF:Artist` in an MP3) is left out. Each writer keeps
-//! everything it is not asked to change (see its module).
+//! A request without a group goes to the writer of the file's type, for a
+//! tag of that format, as ExifTool writes a tag named without a group to
+//! the preferred group that has it: a tag of ID3.pm (`Title`, `Year`,
+//! `Lyrics`...) for the ID3 writer, of the Vorbis.pm comments table
+//! (`Title`, `Date`, `TrackNumber`...) for the Vorbis one, the segment
+//! Title or a Matroska.pm standardized tag (`Artist`, `DateReleased`...)
+//! for the Matroska one; any other name is left out. That is how a copy
+//! from another format (`set_new_values_from_file`) gets here: a tag
+//! copied without a destination group comes without one, so a FLAC's
+//! `Vorbis:Title` copied to an MP3 is written as its ID3 Title, and
+//! nothing becomes a Vorbis comment or a SimpleTag that the format does
+//! not have. A request for another group (`EXIF:Artist` in an MP3, a copy
+//! to `Vorbis:Title`) is left out. Each writer keeps everything it is not
+//! asked to change (see its module).
 
 use std::sync::Arc;
 
@@ -88,7 +99,12 @@ impl FormatExtension for VorbisWriter {
     fn write(&self, input: &[u8], file_type: &str, edits: &[NewValue]) -> Result<Vec<u8>> {
         let mut changes = flac::VorbisChanges::default();
         for nv in edits {
-            if !matches!(group(nv).as_str(), "" | "*" | "all" | "vorbis") {
+            let g = group(nv);
+            if !matches!(g.as_str(), "" | "*" | "all" | "vorbis") {
+                continue;
+            }
+            // (without a group, only the tags of ExifTool's table)
+            if g != "vorbis" && !is_all(&nv.tag) && !flac::is_comment_tag(&nv.tag) {
                 continue;
             }
             match &nv.value {
@@ -125,6 +141,10 @@ impl FormatExtension for MatroskaWriter {
             // (the Title is in the Info group, as ExifTool reads it)
             let title = nv.tag.eq_ignore_ascii_case("Title");
             if !(matches!(g.as_str(), "" | "*" | "all" | "matroska") || (g == "info" && title)) {
+                continue;
+            }
+            // (without a group, only the Title and the standardized tags)
+            if matches!(g.as_str(), "" | "*" | "all") && !is_all(&nv.tag) && !matroska::is_std_tag(&nv.tag) {
                 continue;
             }
             match &nv.value {

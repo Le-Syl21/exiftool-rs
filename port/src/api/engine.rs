@@ -169,6 +169,460 @@ sub CountCopy {
     return [ scalar(keys %$info) - scalar(@msgs), $$info{Error} ];
 }
 
+# The new values a copy from FILE queues, for a writer that is not
+# ExifTool's (an extension): [ destination group (undef for none), tag,
+# value as ExifTool copies it (a list as an ARRAY, binary data as a SCALAR
+# reference), family 0 group of the source tag (undef for an expression or
+# an assignment), 1 for a deletion of a list item ('-<') ], one for each
+# SetNewValue call SetNewValuesFromFile makes.
+our @copied;
+sub CopyEdits {
+    my ($file, $tags, $opts) = @_;
+    my $et = Tool($opts);
+    @copied = ();
+    CopyNewValues($et, $file, @$tags);
+    my @edits = @copied;
+    @copied = ();
+    return \@edits;
+}
+
+# A SetNewValue call of CopyNewValues: recorded in @copied, not made.
+sub Record {
+    my ($src, $srcTag, $tag, $val, %opts) = @_;
+    my $g0 = defined $srcTag ? $src->GetGroup($srcTag, 0) : undef;
+    $tag =~ s/ .*//;    # (a tag key: "Title (1)")
+    push @copied, [ $opts{Group}, $tag, $val, $g0, $opts{DelValue} ? 1 : 0 ];
+    return (1);
+}
+
+# Writer.pl's SetNewValuesFromFile (ExifTool 13.59), verbatim but for its
+# SetNewValue calls, which are Record calls (and its calls of ExifTool's
+# functions, qualified): the new values a copy queues, each with the
+# destination group and tag name SetNewValuesFromFile gives SetNewValue.
+# (The port's SetNewValuesFromFile is native and calls its SetNewValue
+# directly, so it cannot be made to record them.)
+sub CopyNewValues
+{
+    local $_;
+    my ($self, $srcFile, @setTags) = @_;
+    my ($srcExifTool, $key, $tag, @exclude, @reqTags, $info);
+
+    # get initial SetNewValuesFromFile options
+    my %opts = ( Replace => 1 );    # replace existing list items by default
+    while (ref $setTags[0] eq 'HASH') {
+        $_ = shift @setTags;
+        foreach $key (keys %$_) {
+            $opts{$key} = $$_{$key};
+        }
+    }
+    # expand shortcuts
+    @setTags and Image::ExifTool::ExpandShortcuts(\@setTags);
+    # set options for our extraction tool
+    my $options = $$self{OPTIONS};
+    my $printConv = $$options{PrintConv};
+    if ($opts{Type}) {
+        # save source type separately because it may be different than dst Type
+        $opts{SrcType} = $opts{Type};
+        # override PrintConv option with initial Type if given
+        $printConv = ($opts{Type} eq 'PrintConv' ? 1 : 0);
+    }
+    my $srcType = $printConv ? 'PrintConv' : 'ValueConv';
+    my $structOpt = defined $$options{Struct} ? $$options{Struct} : 2;
+
+    if (ref $srcFile and UNIVERSAL::isa($srcFile,'Image::ExifTool')) {
+        $srcExifTool = $srcFile;
+        $info = $srcExifTool->GetInfo({ PrintConv => $printConv });
+    } else {
+        $srcExifTool = Image::ExifTool->new;
+        $srcExifTool->Options(PrintConv => $printConv);
+        # set flag to indicate we are being called from inside SetNewValuesFromFile()
+        $$srcExifTool{TAGS_FROM_FILE} = 1;
+        # synchronize and increment the file sequence number
+        $$srcExifTool{FILE_SEQUENCE} = $$self{FILE_SEQUENCE}++;
+        # copy both structured and flattened tags by default (but flattened tags are "unsafe")
+        # copy structures only if no tags specified (since flattened tags are "unsafe")
+        $structOpt = 1 if $structOpt eq '2' and not @setTags;
+        # +------------------------------------------+
+        # ! DON'T FORGET!!  Must consider each new   !
+        # ! option to decide how it is handled here. !
+        # +------------------------------------------+
+        foreach (qw(ByteUnit Charset CharsetEXIF CharsetFileName CharsetID3 CharsetIPTC
+                    CharsetPhotoshop Composite DateFormat Debug EncodeHangs Escape
+                    ExtendedXMP ExtractEmbedded FastScan Filter FixBase Geolocation
+                    GeolocAltNames GeolocFeature GeolocMinPop GeolocMaxDist
+                    GlobalTimeShift GPSQuadrant HexTagIDs IgnoreGroups IgnoreMinorErrors
+                    IgnoreTags ImageHashType KeepUTCTime Lang LargeFileSupport
+                    LigoGPSScale ListItem ListSep MDItemTags MissingTagValue NoPDFList
+                    NoWarning Password PrintConv QuickTimeUTC RequestTags SaveFormat
+                    SavePath ScanForXMP StructFormat SystemTags SystemTimeRes TimeZone
+                    Unknown UserParam Validate WindowsLongPath WindowsWideFile XAttrTags
+                    XMPAutoConv))
+        {
+            $srcExifTool->Options($_ => $$options{$_});
+        }
+        $srcExifTool->Options(
+            Binary          => 1,
+            CoordFormat     => $$options{CoordFormat} || '%d %d %.8f', # copy coordinates at high resolution unless otherwise specified
+            Duplicates      => 1,
+          # Exclude (set below)
+            LimitLongValues => 10000000, # (10 MB)
+            List            => 1,
+            MakerNotes      => $$options{FastScan} && $$options{FastScan} > 1 ? undef : 1,
+            RequestAll      => $$options{RequestAll} || 1, # (must request all because reqTags doesn't cover wildcards)
+            StrictDate      => defined $$options{StrictDate} ? $$options{StrictDate} : 1,
+            Struct          => $structOpt,
+        );
+        # reset Geolocation option if we aren't copying any geolocation tags
+        if ($$options{Geolocation} and not grep /\bGeolocation/i, @setTags) {
+            $self->VPrint(0, '(resetting unnecessary Geolocation option)');
+            $$srcExifTool{OPTIONS}{Geolocation} = undef;
+        }
+        $$srcExifTool{GLOBAL_TIME_OFFSET} = $$self{GLOBAL_TIME_OFFSET};
+        $$srcExifTool{ALT_EXIFTOOL} = $$self{ALT_EXIFTOOL};
+        foreach $tag (@setTags) {
+            next if ref $tag;
+            # avoid extracting tags that are excluded
+            $tag =~ /^-(.*)/ and push(@exclude, $1), next;
+            # add specified tags to list of requested tags
+            $_ = $tag;
+            if (/(.+?)\s*(>|<)\s*(.+)/) {
+                if ($2 eq '>') {
+                    $_ = $1;
+                } else {
+                    $_ = $3;
+                    /\$/ and push(@reqTags, /\$\{?(?:[-\w]+:)*([-\w?*]+)/g), next;
+                }
+            }
+            push @reqTags, $2 if /(^|:)([-\w?*]+)#?$/;
+        }
+        if (@exclude) {
+            Image::ExifTool::ExpandShortcuts(\@exclude, 1);
+            $srcExifTool->Options(Exclude => \@exclude);
+        }
+        $srcExifTool->Options(RequestTags => \@reqTags) if @reqTags;
+        # get all tags from source file (including MakerNotes block)
+        $info = $srcExifTool->ImageInfo($srcFile);
+    }
+    # (allow processing to continue if we have alternate files that may have been read OK)
+    return $info if $$info{Error} and $$info{Error} eq 'Error opening file' and not $$self{ALT_EXIFTOOL};
+    delete $$srcExifTool{VALUE}{Error}; # delete so we can check this later
+
+    # sort tags in file order with priority tags last
+    my (@tags, @prio);
+    foreach (sort { $$srcExifTool{FILE_ORDER}{$a} <=> $$srcExifTool{FILE_ORDER}{$b} } keys %$info) {
+        if (/ /) {
+            push @tags, $_;
+        } else {
+            push @prio, $_;
+        }
+    }
+    push @tags, @prio;
+#
+# simply transfer all tags from source image if no tags specified
+#
+    unless (@setTags) {
+        # transfer maker note information to this object
+        $$self{MAKER_NOTE_BYTE_ORDER} = $$srcExifTool{MAKER_NOTE_BYTE_ORDER};
+        my $tagExtra = $$srcExifTool{TAG_EXTRA};
+        foreach $tag (@tags) {
+            # don't try to set errors or warnings
+            next if $tag =~ /^(Error|Warning)\b/;
+            # get appropriate value type if necessary
+            if ($opts{SrcType} and $opts{SrcType} ne $srcType) {
+                $$info{$tag} = $srcExifTool->GetValue($tag, $opts{SrcType});
+            }
+            my $fixup = $$tagExtra{$tag}{Fixup};
+            $opts{Fixup} = $fixup if $fixup;
+            # set value for this tag
+            my ($n, $e) = Record($srcExifTool, $tag, $tag, $$info{$tag}, %opts);
+            # delete this tag if we couldn't set it
+            $n or delete $$info{$tag};
+            delete $opts{Fixup} if $fixup;
+        }
+        return $info;
+    }
+#
+# transfer specified tags in the proper order
+#
+    # 1) loop through input list of tags to set, and build @setList
+    my (@setList, $set, %setMatches, $t, %altFiles);
+    my $assign = 0;
+    foreach $t (@setTags) {
+        if (ref $t eq 'HASH') {
+            # update current options
+            foreach $key (keys %$t) {
+                $opts{$key} = $$t{$key};
+            }
+            next;
+        }
+        # make a copy of the current options for this setTag
+        # (also use this hash to store expression and wildcard flags, EXPR and WILD)
+        my $opts = { %opts };
+        $tag = lc $t;   # change tag/group names to all lower case
+        my (@fg, $grp, $dst, $dstGrp, $dstTag, $isExclude);
+        # handle redirection to another tag
+        if ($tag =~ /(.+?)\s*(>|<|=)(\s*)(.*)/) {
+            $dstGrp = '';
+            my ($opt, $op, $spc);
+            if ($2 eq '>') {
+                ($tag, $dstTag) = ($1, $4);
+                # flag add and delete (eg. '+<' and '-<') redirections
+                $opt = $1 if $tag =~ s/\s*([-+])$// or $dstTag =~ s/^([-+])\s*//;
+            } else {
+                ($dstTag, $op, $spc, $tag) = ($1, $2, $3, $4);
+                $opt = $1 if $dstTag =~ s/\s*([-+])$//;
+                if ($op eq '=') {
+                    # simple assignment ($tag will be the new value)
+                    $tag = $spc . $tag;
+                    undef $tag unless $dstTag =~ s/\^$// or length $tag;
+                    $$opts{ASSIGN} = ++$assign;
+                } elsif ($tag =~ /\$/) {    # handle expressions
+                    $tag = $t;  # restore original case
+                    # recover leading whitespace (except for initial single space)
+                    $tag =~ s/(.+?)\s*(>|<) ?//;
+                    $$opts{EXPR} = 1; # flag this expression
+                } else {
+                    # (not sure why this is here because sign should be before '<')
+                    # (--> allows "<+" or "<-", which is an undocumented feature)
+                    $opt = $1 if $tag =~ s/^([-+])\s*//;
+                }
+            }
+            $$opts{Replace} = 0 if $dstTag =~ s/^\+//;
+            # validate tag name(s)
+            unless ($$opts{EXPR} or $$opts{ASSIGN} or Image::ExifTool::ValidTagName($tag)) {
+                $self->Warn("Invalid tag name '${tag}'. Use '=' not '<' to assign a tag value");
+                next;
+            }
+            Image::ExifTool::ValidTagName($dstTag) or $self->Warn("Invalid tag name '${dstTag}'"), next;
+            # translate '+' and '-' to appropriate SetNewValue option
+            if ($opt) {
+                $$opts{{ '+' => 'AddValue', '-' => 'DelValue' }->{$opt}} = 1;
+                $$opts{Shift} = 0;  # shift if shiftable
+            }
+            ($dstGrp, $dstTag) = ($1, $2) if $dstTag =~ /(.*):(.+)/;
+            # ValueConv may be specified separately on the destination with '#'
+            $$opts{Type} = 'ValueConv' if $dstTag =~ s/#$//;
+            # replace tag name of 'all' with '*'
+            $dstTag = '*' if $dstTag eq 'all';
+        } else {
+            $$opts{Replace} = 0 if $tag =~ s/^\+//;
+        }
+        unless ($$opts{EXPR} or $$opts{ASSIGN}) {
+            $isExclude = ($tag =~ s/^-//);
+            if ($tag =~ /(.*):(.+)/) {
+                ($grp, $tag) = ($1, $2);
+                foreach (split /:/, $grp) {
+                    # save family/groups in list (ignoring 'all' and '*')
+                    next unless length($_) and /^(\d+)?(.*)/;
+                    my ($f, $g) = ($1, $2);
+                    $f = 7 if (not $f or $f eq '7') and $g =~ s/^ID-//i;
+                    if ($g =~ /^file\d+$/i and (not $f or $f eq '8')) {
+                        $f = 8;
+                        my $g8 = ucfirst $g;
+                        if ($$srcExifTool{ALT_EXIFTOOL}{$g8}) {
+                            $$opts{GROUP8} = $g8;
+                            $altFiles{$g8} or $altFiles{$g8} = [ ];
+                            # save list of requested tags for this alternate ExifTool object
+                            push @{$altFiles{$g8}}, "$grp:$tag";
+                        }
+                    }
+                    push @fg, [ $f, $g ] unless $g eq '*' or $g eq 'all';
+                }
+            }
+            # allow ValueConv to be specified by a '#' on the tag name
+            if ($tag =~ s/#$//) {
+                $$opts{SrcType} = 'ValueConv';
+                $$opts{Type} = 'ValueConv' unless $dstTag;
+            }
+            # replace 'all' with '*' in tag and group names
+            $tag = '*' if $tag eq 'all';
+            # allow wildcards in tag names (handle differently from all tags: '*')
+            if ($tag =~ /[?*]/ and $tag ne '*') {
+                $$opts{WILD} = 1;   # set flag indicating wildcards were used in source tag
+                $tag =~ s/\*/[-\\w]*/g;
+                $tag =~ s/\?/[-\\w]/g;
+            }
+        }
+        # redirect, exclude or set this tag (Note: @fg is empty if we don't care about the group)
+        if ($dstTag) {
+            # redirect this tag
+            $isExclude and return { Error => "Can't redirect excluded tag" };
+            # set destination group the same as source if necessary
+          # (removed in 7.72 so '-*:*<xmp:*' will preserve XMP family 1 groups)
+          # $dstGrp = $grp if $dstGrp eq '*' and $grp;
+            # write to specified destination group/tag
+            $dst = [ $dstGrp, $dstTag ];
+        } elsif ($isExclude) {
+            # implicitly assume '*' if first entry is an exclusion
+            unshift @setList, [ [ ], '*', [ '', '*' ], $opts ] unless @setList;
+            # exclude this tag by leaving $dst undefined
+        } else {
+            $dst = [ $grp || '', $$opts{WILD} ? '*' : $tag ]; # use same group name for dest
+        }
+        # save in reverse order so we don't set tags before an exclude
+        unshift @setList, [ \@fg, $tag, $dst, $opts ];
+    }
+    # 1b) copy requested tags for each alternate ExifTool object
+    my $g8;
+    foreach $g8 (sort keys %altFiles) {
+        # request specific alternate tags to load them from the alternate ExifTool object
+        my $altInfo = $srcExifTool->GetInfo($altFiles{$g8});
+        # add to tags list after dummy entry to signify start of tags for this alt file
+        if (%$altInfo) {
+            push @tags, 'Warning DUMMY', reverse sort keys %$altInfo;
+            $$info{$_} = $$altInfo{$_} foreach keys %$altInfo;
+        }
+    }
+    # 2) initialize lists of matching tags for each setTag
+    foreach $set (@setList) {
+        $$set[2] and $setMatches{$set} = [ ];
+    }
+    # no need to search source tags if doing only assignments
+    undef @tags if $assign == @setList;
+    # 3) loop through all tags in source image and save tags matching each setTag
+    my (%rtnInfo, $isAlt);
+    foreach $tag (@tags) {
+        # don't try to set errors or warnings
+        if ($tag =~ /^(Error|Warning)( |$)/) {
+            if ($tag eq 'Warning DUMMY') {
+                $isAlt = 1; # start of the alt tags
+            } else {
+                $rtnInfo{$tag} = $$info{$tag};
+            }
+            next;
+        }
+        # only set specified tags
+        my $lcTag = lc(Image::ExifTool::GetTagName($tag));
+        my (@grp, %grp);
+SET:    foreach $set (@setList) {
+            my $opts = $$set[3];
+            next if $$opts{EXPR};   # (expressions handled in step 4)
+            next if $$opts{GROUP8} xor $isAlt;
+            # check first for matching tag
+            unless ($$set[1] eq $lcTag or $$set[1] eq '*') {
+                # handle wildcards
+                next unless $$opts{WILD} and $lcTag =~ /^$$set[1]$/;
+            }
+            # then check for matching group
+            if (@{$$set[0]}) {
+                # get lower case group names if not done already
+                unless (@grp) {
+                    @grp = map(lc, $srcExifTool->GetGroup($tag));
+                    $grp{$_} = 1 foreach @grp;
+                }
+                foreach (@{$$set[0]}) {
+                    my ($f, $g) = @$_;
+                    if (not defined $f) {
+                        next SET unless $grp{$g};
+                    } elsif ($f == 7) {
+                        next SET unless Image::ExifTool::IsSameID($srcExifTool->GetTagID($tag), $g);
+                    } else {
+                        next SET unless defined $grp[$f] and $g eq $grp[$f];
+                    }
+                }
+            }
+            last unless $$set[2];   # all done if we hit an exclude
+            # add to the list of tags matching this setTag
+            push @{$setMatches{$set}}, $tag;
+        }
+    }
+    # 4) loop through each setTag in original order, setting new tag values
+    foreach $set (reverse @setList) {
+        # get options for SetNewValue
+        my $opts = $$set[3];
+        # handle expressions
+        if ($$opts{EXPR} or $$opts{ASSIGN}) {
+            my $val;
+            if ($$opts{EXPR}) {
+                $val = $srcExifTool->InsertTagValues($$set[1], \@tags, 'Error');
+                my $err = $$srcExifTool{VALUE}{Error};
+                if ($err) {
+                    # pass on any error as a warning unless it is suppressed
+                    my $noWarn = $$srcExifTool{OPTIONS}{NoWarning};
+                    unless ($noWarn and (eval { $err =~ /$noWarn/ } or
+                        # (also apply expression to warning without "[minor] " prefix)
+                        ($err =~ s/^\[minor\] //i and eval { $err =~ /$noWarn/ })))
+                    {
+                        $tag = Image::ExifTool::NextFreeTagKey(\%rtnInfo, 'Warning');
+                        $rtnInfo{$tag} = $$srcExifTool{VALUE}{Error};
+                    }
+                    delete $$srcExifTool{VALUE}{Error};
+                    next unless defined $val;
+                }
+            } else {
+                $val = $$set[1];
+            }
+            my ($dstGrp, $dstTag) = @{$$set[2]};
+            $$opts{Protected} = 1 unless $dstTag =~ /[?*]/ and $dstTag ne '*';
+            $$opts{Group} = $dstGrp if $dstGrp;
+            my @rtnVals = Record($srcExifTool, undef, $dstTag, $val, %$opts);
+            $rtnInfo{$dstTag} = $val if $rtnVals[0]; # tag was set successfully
+            # return warning if any
+            $rtnInfo{Image::ExifTool::NextFreeTagKey(\%rtnInfo, 'Warning')} = $rtnVals[1] if $rtnVals[1];
+            next;
+        }
+        foreach $tag (@{$setMatches{$set}}) {
+            my ($val, $noWarn);
+            if ($$opts{SrcType} and $$opts{SrcType} ne $srcType) {
+                $val = $srcExifTool->GetValue($tag, $$opts{SrcType});
+            } else {
+                $val = $$info{$tag};
+            }
+            my ($dstGrp, $dstTag) = @{$$set[2]};
+            if ($dstGrp) {
+                my @dstGrp = split /:/, $dstGrp;
+                # destination group of '*' writes to same group as source tag
+                # (family 1 unless otherwise specified)
+                foreach (@dstGrp) {
+                    next unless /^(\d*)(all|\*)$/i;
+                    $_ = $1 . $srcExifTool->GetGroup($tag, length $1 ? $1 : 1);
+                    $noWarn = 1;    # don't warn on wildcard destinations
+                }
+                $$opts{Group} = join ':', @dstGrp;
+            } else {
+                delete $$opts{Group};
+            }
+            # transfer maker note information if setting this tag
+            if ($$srcExifTool{TAG_INFO}{$tag}{MakerNotes}) {
+                $$opts{Fixup} = $$srcExifTool{TAG_EXTRA}{$tag}{Fixup};
+                $$self{MAKER_NOTE_BYTE_ORDER} = $$srcExifTool{MAKER_NOTE_BYTE_ORDER};
+            }
+            if ($dstTag eq '*') {
+                $dstTag = $tag;
+                $noWarn = 1;
+            }
+            if ($$set[1] eq '*' or $$set[3]{WILD}) {
+                # don't copy from protected binary tags when using wildcards
+                next if $$srcExifTool{TAG_INFO}{$tag}{Protected} and
+                        $$srcExifTool{TAG_INFO}{$tag}{Binary};
+                # don't copy to protected tags when using wildcards
+                delete $$opts{Protected};
+                # don't copy flattened tags if copying structures too when copying all
+                $$opts{NoFlat} = $structOpt eq '2' ? 1 : 0;
+            } else {
+                # allow protected tags to be copied if specified explicitly
+                $$opts{Protected} = 1 unless $dstTag =~ /[?*]/;
+                delete $$opts{NoFlat};
+            }
+            # set value(s) for this tag
+            my ($rtn, $wrn) = Record($srcExifTool, $tag, $dstTag, $val, %$opts);
+            # this was added in version 9.14, and allowed actions like "-subject<all" to
+            # write values of multiple tags into a list, but it had the side effect of
+            # duplicating items if there were multiple list tags with the same name
+            # (eg. -use mwg "-creator<creator"), so disable this as of ExifTool 9.36:
+            # $$opts{Replace} = 0;    # accumulate values from tags matching a single argument
+            if ($wrn and not $noWarn) {
+                # return this warning
+                $rtnInfo{Image::ExifTool::NextFreeTagKey(\%rtnInfo, 'Warning')} = $wrn;
+                $noWarn = 1;
+            }
+            delete $$opts{Fixup};
+            $rtnInfo{$tag} = $val if $rtn;  # tag was set successfully
+        }
+    }
+    return \%rtnInfo;   # return information that we set
+}
+
 # Write SRC with the queued requests into memory, for DST.
 # Returns [ WriteInfo's result, \$output, [ warnings ], error ].
 sub Write {

@@ -143,8 +143,20 @@ then goes through what any write goes through: a temporary file renamed
 over the destination, the requests that took effect counted by reading it
 back with ExifTool. Nothing changes for a type ExifTool writes. The edits
 are the queued requests in order, a copy (`set_new_values_from_file`)
-given as one edit per tag it copies, under the source tag's family 1
-group. A destination name ExifTool gives a type to must be one of the
+given as one edit per new value ExifTool's `SetNewValuesFromFile` queues
+(the facade runs Writer.pl's code for it, with each `SetNewValue` call
+recorded instead of made): the tag name, the value ExifTool copies (the
+printed value, the ValueConv value for a `TAG#`; a list joined with ", ";
+no binary data, structures, list-item deletions `-<`, or tags of the
+source's File, System, Composite and ExifTool groups), and the destination
+group ExifTool gives it. As in ExifTool, a tag copied without a destination
+group (the whole file, a tag list of `Title` or `-all`) goes to the
+destination's preferred group for its name, whatever group it had in the
+source: a FLAC's `Vorbis:Title` copied to an MP3 is an edit of `Title`,
+written as its ID3 Title. A group the tag list names is kept, as ExifTool
+keeps it (`Vorbis:Title` alone copies to `Vorbis:Title`; `all:all` to each
+tag's own group; `Vorbis:Title>ID3:Title` to ID3), so a copy that names a
+group the destination does not have writes nothing. A destination name ExifTool gives a type to must be one of the
 extension's types (`.opus` is `OGG`). The warnings of such a write are
 empty: ExifTool's (`Sorry, ID3:Title doesn't exist or isn't writable`) would be wrong
 there.
@@ -162,7 +174,25 @@ tests):
 | `VorbisWriter` | `FLAC`, `OGG`, `OPUS` | the Vorbis comments of FLAC, Ogg Vorbis, Ogg FLAC and Opus files (Ogg pages re-paginated, CRCs recomputed). Group `Vorbis`; a field is matched by the name ExifTool gives it (Vorbis.pm), a new one takes ExifTool's field for the name |
 | `MatroskaWriter` | `MKV`, `WEBM` | the segment Title (`Matroska:Title`, read as `Info:Title`) and SimpleTags, positions relocated (SeekHead, Cues, Clusters) |
 
-A request without a group goes to the writer of the file; one for another
+A request without a group goes to the writer of the file, for a tag of its
+format, as ExifTool writes a tag named without a group to the preferred
+group that has it; another name is left out, so that a copy from another
+format puts nothing in the file that its format does not have:
+
+| Writer | Tags written without a group (ExifTool's names) |
+|---|---|
+| `Id3Writer` | ID3.pm's: `Title`, `Artist`, `Album`, `Track`, `Year`, `Genre`, `Composer`, `EncodedBy`, `Grouping`, `Band`, `PartOfSet`, `Compilation`, `Subtitle`, `Conductor`, `Publisher`, `Copyright`, `BeatsPerMinute`, `Comment`, `Lyrics` (ID3v2 frames; `Title`, `Artist`, `Album`, `Year`, `Comment`, `Track`, `Genre` in ID3v1 too) |
+| `VorbisWriter` | the Vorbis.pm comments with a text value: `Title`, `Version`, `Album`, `TrackNumber`, `Artist`, `Performer`, `Copyright`, `License`, `Organization`, `Description`, `Genre`, `Date`, `Location`, `Contact`, `ISRCNumber`, `ReplayGain*`, `EncodedUsing`, `EncodedBy`, `Comment`, `Director`, `Producer`, `Composer`, `Actor`, `Encoder`, `EncoderOptions` (not `Vendor`, `CoverArt*`, `Picture`) |
+| `MatroskaWriter` | the segment `Title` and Matroska.pm's standardized SimpleTags (`%StdTag`, but for its structures): `Artist`, `Composer`, `Lyrics`, `Genre`, `Comment`, `Copyright`, `EncodedBy`, `Subtitle`, `Conductor`, `Director`, `Publisher`, `Description`, `License`, `Encoder`, `DateReleased`, `DateTimeOriginal` (`DATE_RECORDED`)... a new one under its standard field name |
+
+The tags two formats both have carry over in a copy (FLAC to MP3: Title,
+Copyright; MP3 to FLAC: Title, Artist, Album, Genre, Comment, Composer,
+Copyright...); a tag the formats name differently does not, as in
+ExifTool (ID3 `Year` is not Vorbis `Date`, ID3 `Track` is not Vorbis
+`TrackNumber`). A tag the source has under a name of the destination's
+format is copied whatever it is in the source, as ExifTool copies it to a
+format it writes (a Matroska track's `TrackNumber` becomes a Vorbis
+`TRACKNUMBER`, as it becomes an M4A's track number). A request for another
 group (`EXIF:Artist` in an MP3) is not written and not counted. Perl
 ExifTool reads the files they write back with the new values
 (`tests/api_media_write.rs` checks each case with the port's reader and,

@@ -137,6 +137,18 @@ fn field_for_tag(tag: &str) -> String {
         .map_or_else(|| tag.to_ascii_uppercase(), |(f, _)| f.to_string())
 }
 
+/// Is `tag` the name of a comment field of ExifTool's table, with a text
+/// value (not the vendor string, not a picture)? Those are the tags a
+/// request without a group writes: ExifTool writes a tag named without a
+/// group to the preferred group that has a tag of that name, and a name
+/// the table does not have is no Vorbis tag (copied from another format,
+/// `DocType` or `ImageWidth` stay out of the comments).
+pub fn is_comment_tag(tag: &str) -> bool {
+    FIELDS
+        .iter()
+        .any(|(f, t)| t.eq_ignore_ascii_case(tag) && !matches!(*f, "vendor" | "COVERART" | "COVERARTMIME" | "METADATA_BLOCK_PICTURE"))
+}
+
 fn le32(d: &[u8], at: usize) -> Option<usize> {
     let b = d.get(at..at + 4)?;
     Some(u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)

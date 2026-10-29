@@ -59,8 +59,15 @@ pub trait FormatExtension: Send + Sync {
     /// [`file_types`](Self::file_types)) with `edits` applied, in order.
     ///
     /// The edits are the requests queued on the `ExifTool`, a copy
-    /// (`set_new_values_from_file`) given as one edit per tag it copies,
-    /// under the tag's family 1 group. An edit the extension cannot apply
+    /// (`set_new_values_from_file`) given as one edit per new value it
+    /// queues, as ExifTool's `SetNewValuesFromFile` queues it: the tag name
+    /// and value it copies, and the destination group it gives, which is
+    /// none for a tag copied without one (the whole file, a tag list of
+    /// `Title` or `-all`): such an edit is for the destination's preferred
+    /// group for that name, whatever group the source had (a FLAC's Vorbis
+    /// Title copied to an MP3 is an edit of `Title`, for its ID3 Title). A
+    /// group the tag list names is kept (`Vorbis:Title`, `Title>ID3:Title`,
+    /// `all:all`). An edit the extension cannot apply
     /// (another group, a tag it does not write) is left out: it is not
     /// counted, as ExifTool does not count what it cannot place. An error
     /// fails the write, and nothing is written.
