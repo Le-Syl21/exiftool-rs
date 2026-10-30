@@ -7,7 +7,6 @@ description = "Read, write, and edit metadata in every format ExifTool handles â
 # as Perl (GPL or Artistic), and this port, a derived work, takes the GPL.
 license = "GPL-3.0-or-later"
 repository = "https://github.com/Le-Syl21/exiftool-rs"
-homepage = "https://github.com/Le-Syl21/exiftool-rs"
 documentation = "https://docs.rs/exiftool-rs"
 readme = "README.md"
 keywords = ["exif", "metadata", "jpeg", "tiff", "xmp"]

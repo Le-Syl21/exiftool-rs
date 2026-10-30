@@ -2,7 +2,7 @@
 
 All notable changes to `exiftool-rs` are documented here.
 
-## [1.0.0] - unreleased
+## [1.0.0] - 2026-10-30
 
 exiftool-rs becomes a faithful port of Perl ExifTool 13.60: ExifTool's own
 modules, embedded, run by a Perl interpreter written in Rust, with its subs

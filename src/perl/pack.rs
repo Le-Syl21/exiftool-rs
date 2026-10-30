@@ -433,20 +433,25 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
             None => item.count,
         };
         if let Some(g) = &item.group {
+            // (as pp_pack.c: a `*` repeats at most once per byte of the
+            //  string, and stops once a repetition ends at its end; a
+            //  repetition runs even at the end, to die there if it must)
             let n = match count {
                 Count::One => 1,
                 Count::N(n) => n,
-                Count::Star => usize::MAX,
+                Count::Star => data.len(),
             };
             let mut k = 0;
-            while k < n && (count != Count::Star || pos < data.len()) {
+            while k < n {
                 let (before, values) = (pos, out.len());
                 pos = unpack_items(g, data, pos, out)?;
                 k += 1;
                 room(out, 0)?;
+                if count == Count::Star && pos == data.len() {
+                    break;
+                }
                 // A repetition that read and gave nothing changed nothing:
-                // the others would do the same (perl does them all, which
-                // for a `*` never ends).
+                // the others would do the same.
                 if pos == before && out.len() == values {
                     break;
                 }
@@ -693,6 +698,9 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
             letter => {
                 let (size, signed) = int_size(letter, item.bang).ok_or_else(|| format!("Invalid type '{}' in unpack", letter as char))?;
                 let n = repeat(count, remaining / size).min(remaining / size);
+                if item.slash && n == 0 {
+                    return Err("length/code after end of string in unpack".into());
+                }
                 room(out, n)?;
                 for _ in 0..n {
                     if pos + size > data.len() {
@@ -788,7 +796,46 @@ fn zeros(cur: &mut Args, out: &mut Vec<u8>, absent: usize, size: usize) {
 }
 
 fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), String> {
-    for item in items {
+    // the count a length/code gave the item after it
+    let mut given: Option<usize> = None;
+    for (idx, item) in items.iter().enumerate() {
+        let counted;
+        let item = match given.take() {
+            Some(n) => {
+                counted = Item { count: Count::N(n), ..item.clone() };
+                &counted
+            }
+            None => item,
+        };
+        if item.slash {
+            // `N/a*` as pp_pack.c packs it: the length of the string (one
+            // more for Z) or the explicit count of a string item; for any
+            // other item, the arguments left (or its count, if fewer); that
+            // number is packed by the length item, then is the next one's
+            // count
+            let Some(next) = items.get(idx + 1) else {
+                return Err("Code missing after '/' in pack".into());
+            };
+            let count = if next.group.is_none() && matches!(next.letter, b'a' | b'A' | b'Z') {
+                match next.count {
+                    Count::N(n) => n,
+                    _ => {
+                        let len = if cur.remaining() > 0 { cur.v[cur.i].to_bytes().len() } else { 0 };
+                        len + usize::from(next.letter == b'Z')
+                    }
+                }
+            } else {
+                match next.count {
+                    Count::N(n) if n < cur.remaining() => n,
+                    _ => cur.remaining(),
+                }
+            };
+            let length = Item { slash: false, count: Count::One, ..item.clone() };
+            let value = [Value::Int(count as i64)];
+            pack_items(std::slice::from_ref(&length), &mut Args { v: &value, i: 0 }, out)?;
+            given = Some(count);
+            continue;
+        }
         if let Some(g) = &item.group {
             let n = match item.count {
                 Count::Star => usize::MAX,
@@ -1045,6 +1092,32 @@ mod tests {
         assert_eq!(up("s<", &[0xfe, 0xff]), ["-2"]);
         assert_eq!(up("l>", &[0xff, 0xff, 0xff, 0xfe]), ["-2"]);
         assert_eq!(up("C/a", &[2, b'h', b'i', b'x']), ["hi"]);
+    }
+
+    #[test]
+    fn pack_length_code() {
+        let pk = |t: &str, a: &[&str]| {
+            let v: Vec<Value> = a.iter().map(|s| Value::str(s)).collect();
+            pack(t.as_bytes(), &v).unwrap().iter().map(|b| format!("{b:02x}")).collect::<String>()
+        };
+        assert_eq!(pk("C/b", &[]), "00");
+        assert_eq!(pk("n/a* w/a", &["hello,", "world"]), "000668656c6c6f2c05776f726c64");
+        assert_eq!(pk("C/Z", &["ab"]), "03616200");
+        assert_eq!(pk("C/a2", &["abc"]), "026162");
+        assert_eq!(pk("C/(A)", &["x", "y"]), "027879");
+        assert_eq!(pk("C/C3", &["1", "2"]), "020102");
+    }
+
+    /// Found by fuzzing, answered as perl 5.38 answers.
+    #[test]
+    fn unpack_ends_as_perl() {
+        // a `*` group repeats once per byte at most: `@` takes it back to
+        // its start, which would otherwise never end
+        assert_eq!(up("(()bSSSSSS\t@)*", &[0]), ["0"]);
+        assert!(up("(a)*", b"").is_empty());
+        // a `*` group runs once at the end of the string, and dies there
+        assert_eq!(unpack(b"(a)2(x)*", b"ab").unwrap_err(), "'x' outside of string in unpack");
+        assert_eq!(unpack(b"C/a C/a", b"\x01a").unwrap_err(), "length/code after end of string in unpack");
     }
 
     #[test]
