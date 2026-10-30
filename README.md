@@ -5,6 +5,7 @@
 [![Parity](https://img.shields.io/badge/ExifTool%2013.60-parity%20report-1f8a4c)](https://le-syl21.github.io/exiftool-rs/)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Le--Syl21%20Tools-5865F2?logo=discord&logoColor=white)](https://discord.gg/T37DYHmt2j)
+[![Accessibility](https://img.shields.io/badge/accessibility-screen%20readers%20%C2%B7%20keyboard%20%C2%B7%20WCAG%20AA%20contrast-2b6cb0)](#accessibility)
 
 A faithful Rust port of [ExifTool](https://exiftool.org/) 13.60 — read, write, and edit metadata in image, audio, video, and document files. ExifTool's own modules are embedded in the program and run by a Perl interpreter written in Rust, with ExifTool's subs and the `exiftool` application ported to Rust one by one: the output is ExifTool's, and no Perl installation is needed. The C libraries it needs (PCRE2, zlib) are built in.
 
@@ -146,7 +147,25 @@ exiftool-rs-gui -lang fr
 - Double-click any writable tag to edit it
 - Copy all metadata to clipboard
 - Save edits back to the file
+- Light, dark or system theme, kept in the settings
 - 23 languages supported (CJK, Arabic, Hindi, Bengali fonts included via [noto-fonts-dl](https://crates.io/crates/noto-fonts-dl))
+
+### Accessibility
+
+The GUI follows the usual accessibility recommendations; it has not been
+tested end to end with a screen reader or a braille display, and reports
+from people who use them are welcome.
+
+- **Screen readers**: every control and every metadata row has an accessible
+  name and state (a value reads as its description, its value, and whether it
+  is writable or edited), exposed through [AccessKit](https://accesskit.dev/)
+  to Narrator and NVDA on Windows, VoiceOver on macOS and Orca on Linux. A
+  test walks the accessibility tree and fails on an unnamed control.
+- **Keyboard**: everything is reachable with Tab and Enter; Ctrl+O (⌘O) opens,
+  Ctrl+S (⌘S) saves, Alt+← and Alt+→ move between files (or ←, →, Home and
+  End when no field has the focus).
+- **Contrast**: every text and control color of the light and dark themes
+  meets WCAG 2 AA against its background (4.5:1), checked by the tests.
 
 ### Supported Languages (23)
 

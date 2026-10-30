@@ -21,6 +21,38 @@ and the `exiftool` application ported to Rust one by one. It replaces the
   Opus, Matroska) are kept, behind the `extra-writers` feature (default).
 - Building needs a C compiler (PCRE2 and zlib are built in).
 
+### Added
+
+- `Options::lang` (ExifTool's `-lang`: descriptions and values translated),
+  `Options::binary` (binary values extracted, as `-b`) and `Options::trim`
+  (off by default: leading and trailing spaces, tabs and invisible
+  characters stripped from printed values).
+- One interpreter per `ExifTool`, kept from file to file on a worker
+  thread (`ExifTool` is `Send + Sync`); `Options::fresh_interpreter` starts
+  a new one for each call.
+- `FormatExtension` and `ExifTool::register_extension`: a program can add a
+  writer for a type ExifTool does not write; the built-in ID3, Vorbis
+  (FLAC, Ogg, Opus) and Matroska writers are extensions.
+- `set_new_values_from_file` across formats: a tag copied into a type that
+  stores it elsewhere goes to the destination's preferred group (FLAC's
+  Vorbis Artist becomes ID3 in an MP3), with the audio
+  equivalences ExifTool has no table for (Year/Date, Track/TrackNumber...),
+  also given as an argfile for `exiftool` (`arg_files/audio2quicktime.args`).
+- `-ver -v` lists the included libraries: the port's own Rust
+  implementations of the Perl modules, and the crates and C libraries
+  (PCRE2, zlib, built in) they are based on.
+- The GUI: light, dark or system theme; every color meets WCAG 2 AA
+  contrast; accessible names for screen readers (AccessKit) and full
+  keyboard use.
+- The binaries use rusty_alloc as their allocator (`rusty-alloc` feature,
+  default; the library never sets one).
+
+### Changed (API)
+
+- `write_info` counts only the changes that take effect: writing a value a
+  tag already has counts 0 and leaves the file untouched (Perl ExifTool
+  rewrites it and reports it "updated").
+
 ### Removed
 
 - The internal modules 0.x exported (`formats`, `metadata`, `tags`,
