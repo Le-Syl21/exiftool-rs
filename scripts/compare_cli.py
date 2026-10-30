@@ -24,6 +24,9 @@ In the arguments, {SRC} is ExifTool's tree (the same files for both sides,
 for what differs between two copies: FileCreateDate), and "< FILE" at the
 end gives the command FILE (in its directory) on a pipe as its standard
 input, which is otherwise /dev/null.
+CLI_TIMES=FILE appends each case's times to FILE (case file, number, kind,
+arguments, Perl's seconds, the port's, identical), for
+scripts/timing_report.py.
 """
 import hashlib
 import os
@@ -194,6 +197,9 @@ def main():
     os.makedirs(env_perl["EXIFTOOL_HOME"], exist_ok=True)
     env_host = dict(env_port, EXIFTOOL_WITHOUT=HOST_LACKS)
     same, bad, skipped, tp, tr = 0, [], [], 0.0, 0.0
+    # CLI_TIMES=path: each case's times appended there (scripts/timing_report.py)
+    times = open(os.environ["CLI_TIMES"], "a") if os.environ.get("CLI_TIMES") else None
+    case_file = os.path.basename(os.environ.get("CLI_CASES") or "cli_cases.txt")
     for n, (kind, args) in enumerate(cases(), 1):
         argv = [a.replace("{SRC}", src) for a in shlex.split(args)]
         stdin = None
@@ -233,10 +239,13 @@ def main():
             continue
         tp += res["perl"][4]
         tr += res["port"][4]
-        if res["perl"][:4] == res["port"][:4]:
+        identical = res["perl"][:4] == res["port"][:4]
+        if identical:
             same += 1
         else:
             bad.append(f"{n}: {args}")
+        if times:
+            times.write(f"{case_file}\t{n}\t{kind}\t{args}\t{res['perl'][4]:.4f}\t{res['port'][4]:.4f}\t{int(identical)}\n")
     print(f"{same} identical, {len(bad)} different")
     for b in bad:
         print("different " + b)

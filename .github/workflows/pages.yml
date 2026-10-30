@@ -25,8 +25,69 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  # (as ci.yml: PCRE2 built in, and the ExifTool release the port follows)
+  PCRE2_SYS_STATIC: "1"
+  EXIFTOOL_VERSION: "13.60"
+
 jobs:
+  # The timing page: every CLI case of the judges, run by Perl's exiftool and
+  # by exiftool-rs, each side timed (scripts/timing_report.py). The host is
+  # set up as ci.yml's parity job sets it, the Perl modules the judges expect
+  # and the full-modules image.
+  timings:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4  # stable
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
+
+      - name: Install the host's Perl modules
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends perl libarchive-zip-perl \
+            libio-compress-brotli-perl libterm-readkey-perl util-linux rsync
+
+      - name: Fetch Perl ExifTool ${{ env.EXIFTOOL_VERSION }}
+        run: |
+          mkdir -p target/exiftool
+          curl -fsSL "https://github.com/exiftool/exiftool/archive/refs/tags/$EXIFTOOL_VERSION.tar.gz" | tar xz -C target/exiftool
+          echo "EXIFTOOL_DIR=$PWD/target/exiftool/exiftool-$EXIFTOOL_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: |
+          cargo build --release --example run_t --bin exiftool-rs
+          docker build -t exiftool-rs-fullperl:local scripts/full_modules
+
+      - name: Time every case
+        env:
+          PORT_BIN: ${{ github.workspace }}/target/release/exiftool-rs
+          CLI_TIMES: ${{ github.workspace }}/target/times.tsv
+        run: |
+          for f in scripts/cli_cases.txt scripts/cli_cases_*.txt; do
+            if [ "$f" = scripts/cli_cases_full_modules.txt ]; then
+              PERL_CMD=scripts/full_modules/perl.sh CLI_CASES=$f python3 -I scripts/compare_cli.py "$EXIFTOOL_DIR" | tail -1
+            else
+              CLI_CASES=$f python3 -I scripts/compare_cli.py "$EXIFTOOL_DIR" | tail -1
+            fi
+          done
+          mkdir -p _timings
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          python3 -I scripts/timing_report.py target/times.tsv --rs "$version" --exiftool "$EXIFTOOL_VERSION" > _timings/timings.html
+          grep -q 'Command by command' _timings/timings.html
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: timings
+          path: _timings
+
   build:
+    needs: timings
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -60,8 +121,14 @@ jobs:
           <?xml version="1.0" encoding="UTF-8"?>
           <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
           <url><loc>https://le-syl21.github.io/exiftool-rs/</loc></url>
+          <url><loc>https://le-syl21.github.io/exiftool-rs/timings.html</loc></url>
           </urlset>
           EOF
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: timings
+          path: _site
 
       - uses: actions/upload-pages-artifact@v5
         with:
