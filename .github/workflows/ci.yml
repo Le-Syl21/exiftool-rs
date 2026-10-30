@@ -12,6 +12,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # PCRE2 built into the binaries: pcre2-sys links the system's library when
+  # it finds one (Ubuntu's runners have it), which a release must not need
+  PCRE2_SYS_STATIC: "1"
   # The Perl ExifTool release the port follows (src/api/mod.rs,
   # EXIFTOOL_VERSION; the lint job checks the two agree). Its source tree is
   # what the tests that need one and the judges of the parity job read.

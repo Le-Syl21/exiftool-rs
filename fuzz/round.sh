@@ -10,7 +10,7 @@ set -eu
 cd "$(dirname "$0")"
 t=$1 n=$2
 mkdir -p "artifacts/$t-r$n" "corpus/$t"
-CARGO_BUILD_JOBS=2 timeout 1000 cargo +nightly fuzz run -s none "$t" -- -fork=3 \
+CARGO_BUILD_JOBS=8 timeout 1000 cargo +nightly fuzz run -s none "$t" -- -fork=3 \
     -ignore_crashes=1 -ignore_ooms=1 -ignore_timeouts=1 -max_total_time=900 \
     -rss_limit_mb=2048 -timeout=10 -artifact_prefix="artifacts/$t-r$n/" \
     > "artifacts/$t-r$n.log" 2>&1 || true
