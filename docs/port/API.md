@@ -365,6 +365,10 @@ Where the two differ, the facade is ExifTool's:
   control characters and NULs stay as ExifTool has them (`exiftool -j`
   keeps them; only its text output trims them). The root crate trimmed them;
   `Options::trim` does.
+- **Text that is not UTF-8** (an EXIF Copyright with a Latin-1 `©`, which
+  ExifTool passes through as read unless CharsetEXIF is set) is decoded as
+  Latin-1, as the root crate did, where `exiftool -j` would print the raw
+  byte: a `String` gets `©`, not a replacement character.
 - **Tag order** is ExifTool's (`GetTagList`, as `exiftool` lists them).
 - **`image_info` with duplicates** keys a duplicate `Name [Group0:Group1]`
   as before, but which instance is the plain `Name` is ExifTool's choice.

@@ -42,6 +42,8 @@ const EXCLUDE: &[&str] = &[
     "ExifToolVersion",
     "FileModifyDate",
     "FileAccessDate",
+    // the birth time, which Perl gives only with File::StatX (the port has it)
+    "FileCreateDate",
     "FileInodeChangeDate",
     "FilePermissions",
     "FileName",
@@ -514,10 +516,22 @@ fn read_ours(file: &Path) -> BTreeMap<String, String> {
     let mut m = BTreeMap::new();
     if let Ok(tags) = et.extract_info(file) {
         for t in tags {
-            m.insert(format!("{}:{}", t.group.family1, t.name), t.print_value);
+            m.insert(format!("{}:{}", t.group.family1, t.name), as_printed(&t.print_value));
         }
     }
     m
+}
+
+/// A value as the `exiftool` application prints it with `-s` (the API, as
+/// Image::ExifTool, gives it unchanged): `tr/\x01-\x1f\x7f/./`, the NULs
+/// removed and the trailing white space stripped.
+fn as_printed(v: &str) -> String {
+    let s: String = v
+        .chars()
+        .filter(|&c| c != '\0')
+        .map(|c| if ('\x01'..='\x1f').contains(&c) || c == '\x7f' { '.' } else { c })
+        .collect();
+    s.trim_end_matches([' ', '\t', '\n', '\r', '\x0c', '\x0b']).to_string()
 }
 
 fn read_perl(script: &Path, file: &Path) -> BTreeMap<String, String> {

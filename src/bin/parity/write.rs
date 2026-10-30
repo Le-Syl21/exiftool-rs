@@ -109,6 +109,23 @@ pub const DUMP_HEADER: &str =
 /// One re-read: `(Group0, Group1, Tag)` → printed value.
 type TagMap = BTreeMap<(String, String, String), String>;
 
+/// Adds a tag's value; the instances of a tag in the same groups (two EXIF
+/// blocks' ExifByteOrder) are kept together, in sorted order, as the two
+/// readers may list them in different orders.
+fn put(m: &mut TagMap, key: (String, String, String), value: String) {
+    match m.get_mut(&key) {
+        Some(v) => {
+            let mut all: Vec<&str> = v.split(" | ").collect();
+            all.push(&value);
+            all.sort_unstable();
+            *v = all.join(" | ");
+        }
+        None => {
+            m.insert(key, value);
+        }
+    }
+}
+
 fn g1_key(k: &(String, String, String)) -> String {
     format!("{}:{}", k.1, k.2)
 }
@@ -134,9 +151,10 @@ fn read_ours(file: &Path) -> TagMap {
     let mut m = TagMap::new();
     if let Ok(tags) = et.extract_info(file) {
         for t in tags {
-            m.insert(
+            put(
+                &mut m,
                 (t.group.family0.clone(), t.group.family1.clone(), t.name),
-                t.print_value,
+                crate::as_printed(&t.print_value),
             );
         }
     }
@@ -190,9 +208,7 @@ fn read_perl_many(script: &Path, files: &[PathBuf]) -> BTreeMap<PathBuf, TagMap>
             Some((a, b)) => (a.to_string(), b.to_string()),
             None => (groups.trim().to_string(), groups.trim().to_string()),
         };
-        res.entry(cur.clone())
-            .or_default()
-            .insert((g0, g1, name.trim().to_string()), value.to_string());
+        put(res.entry(cur.clone()).or_default(), (g0, g1, name.trim().to_string()), value.to_string());
     }
     res
 }
@@ -519,7 +535,7 @@ enum Verdict {
     Mismatch,
     /// Perl ExifTool cannot write this; our edits verified on their own.
     NoRef,
-    /// Neither tool writes this edit.
+    /// Neither tool writes this edit (an error, or nothing changed).
     BothRefuse,
     Iso,
 }
@@ -882,6 +898,12 @@ fn evaluate(case: &Case, c: &CaseCtx) -> CaseResult {
         }
     };
     r.ours = format!("Ok({n})");
+    // Nothing written where Perl leaves the file unchanged too (an edit
+    // ExifTool does not make on this type): write_info's count of 0.
+    if n == 0 && !c.perl.updated {
+        r.verdict = Verdict::BothRefuse;
+        return r;
+    }
     let out_bytes = std::fs::read(c.ours_out).unwrap_or_default();
     let identical = out_bytes == c.src_bytes;
     let Some(out_perl) = c.reread.get(c.ours_out) else {

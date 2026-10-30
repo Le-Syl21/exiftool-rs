@@ -873,12 +873,21 @@ pub(crate) fn pv_path(p: &std::path::Path) -> PV {
 }
 
 /// The text of a Perl string: a character string by its characters, a
-/// byte string (ExifTool's values are UTF-8 bytes) as UTF-8.
+/// byte string (ExifTool's values are UTF-8 bytes) as UTF-8, or, when it is
+/// not valid UTF-8, as Latin-1: ExifTool passes some text through as read
+/// (an EXIF Copyright's 0xA9 byte without CharsetEXIF), and a program is
+/// better served by the `©` than by a replacement character.
 pub(crate) fn text(v: &PV) -> String {
     match v {
         PV::Undef => String::new(),
         PV::UStr(s) => String::from_utf8_lossy(s).into_owned(),
-        other => String::from_utf8_lossy(&other.to_bytes()).into_owned(),
+        other => {
+            let b = other.to_bytes();
+            match std::str::from_utf8(&b) {
+                Ok(s) => s.to_string(),
+                Err(_) => b.iter().map(|&c| c as char).collect(),
+            }
+        }
     }
 }
 

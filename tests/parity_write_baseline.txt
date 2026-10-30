@@ -1,7 +1,2 @@
 # Live write-parity baseline: known failing write cases (file::case::verdict).
 # Refresh with `--update`. A failing case not listed here fails the run.
-GE.jpg::add-EXIF::mismatch
-GE.jpg::del-EXIF::mismatch
-GE.jpg::mixed::mismatch
-GE.jpg::set-EXIF::mismatch
-Ricoh.jpg::del-EXIF::mismatch
