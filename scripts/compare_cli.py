@@ -179,7 +179,7 @@ def run(cmd, cwd, env, stdin=None):
 
 
 def main():
-    subprocess.run(["cargo", "build", "--release", "--example", "run_t", "--bin", "exiftool-rs", "-j2"], cwd=here, capture_output=True)
+    subprocess.run(["cargo", "build", "--release", "--example", "run_t", "--bin", "exiftool-rs", "-j8"], cwd=here, capture_output=True)
     os.makedirs(work, exist_ok=True)
     env_perl = dict(os.environ)
     env_port = {k: v for k, v in os.environ.items() if k != "EXIFTOOL_LIB"}
@@ -187,6 +187,10 @@ def main():
     env_perl["EXIFTOOL_HOME"] = env_port["EXIFTOOL_HOME"] = os.path.join(work, "no_home")
     # (for scripts/full_modules/perl.sh: the tree to mount in its container)
     env_perl["EXIFTOOL_SRC"] = src
+    # one hash order for Perl, as some outputs (the -v of a copy to XMP)
+    # follow it from run to run
+    env_perl["PERL_HASH_SEED"] = "0"
+    env_perl["PERL_PERTURB_KEYS"] = "0"
     os.makedirs(env_perl["EXIFTOOL_HOME"], exist_ok=True)
     env_host = dict(env_port, EXIFTOOL_WITHOUT=HOST_LACKS)
     same, bad, skipped, tp, tr = 0, [], [], 0.0, 0.0

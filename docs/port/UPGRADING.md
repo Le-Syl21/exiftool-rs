@@ -95,7 +95,7 @@ of src/lib.rs and src/cli/, the docs here, and the golden output of
 ## 5. Judges
 
 All against NEW, from the repository's root, after `cargo build --release --example run_t
---bin exiftool-rs -j2`:
+--bin exiftool-rs -j8`:
 
 ```sh
 sh scripts/run_suite.sh NEW                 # NEW's own t/: same count or more, all pass
@@ -107,7 +107,7 @@ done
 EXIFTOOL_SRC=$PWD/target/scratch/etNEW PERL_CMD=scripts/full_modules/perl.sh \
     CLI_CASES=scripts/cli_cases_full_modules.txt \
     PORT_BIN=$PWD/target/release/exiftool-rs python3 -I scripts/compare_cli.py NEW
-cargo test -j2 --release --no-fail-fast
+cargo test -j8 --release --no-fail-fast
 python3 -I scripts/compare_corpus.py rawsamples NEW   # tests/corpus/README.md
 ```
 

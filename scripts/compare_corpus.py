@@ -48,7 +48,7 @@ def run(cmd):
 def main():
     if not os.path.isdir(corpus):
         sys.exit(f"no corpus at {corpus}: run scripts/fetch_corpus.sh {name}")
-    subprocess.run(["cargo", "build", "--release", "--bin", "exiftool-rs", "-j2"], cwd=here, capture_output=True)
+    subprocess.run(["cargo", "build", "--release", "--bin", "exiftool-rs", "-j8"], cwd=here, capture_output=True)
     env_note = {}
     files = set()
     bad = {}

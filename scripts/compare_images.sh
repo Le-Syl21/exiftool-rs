@@ -7,7 +7,7 @@ src=$(cd "${1:-${EXIFTOOL_DIR:-$here/../exiftool}}" && pwd)
 glob=${2:-*}
 work="$here/target/images"
 mkdir -p "$work/perl" "$work/port"
-cargo build --release --example run_t --manifest-path "$here/Cargo.toml" -j2 >/dev/null 2>&1
+cargo build --release --example run_t --manifest-path "$here/Cargo.toml" -j8 >/dev/null 2>&1
 bin="$here/target/release/examples/run_t"
 cd "$src"
 # the optional modules the host's Perl lacks, which the port then does

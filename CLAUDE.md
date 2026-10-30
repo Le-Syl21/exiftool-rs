@@ -50,14 +50,14 @@ assets/              # icons (GUI window, Windows resource)
 
 ## Key Commands
 
-Build and test with `-j2`. Every perl, run_t or exiftool-rs run of the
-judges goes under `prlimit --as=4000000000 -- timeout N` (the scripts do
+Build and test with `-j8` (`-j4` for a release build with the GUI). Every
+perl, run_t or exiftool-rs run of the judges goes under `prlimit --as=4000000000 -- timeout N` (the scripts do
 it). Scratch files go to `target/scratch/`, never to /tmp.
 
 ```bash
-cargo build -j2 --release                         # the CLI, target/release/exiftool-rs
-cargo build -j2 --release --features gui          # and the GUI, exiftool-rs-gui
-EXIFTOOL_DIR=~/dev/exiftool cargo test -j2 --release   # tests (skips those needing ExifTool without it)
+cargo build -j8 --release                         # the CLI, target/release/exiftool-rs
+cargo build -j8 --release --features gui          # and the GUI, exiftool-rs-gui
+EXIFTOOL_DIR=~/dev/exiftool cargo test -j8 --release   # tests (skips those needing ExifTool without it)
 
 # The judges (docs/port/CLI.md), all must pass before a commit:
 bash scripts/run_suite.sh ~/dev/exiftool          # 114 scripts, 114 pass, 604/604 tests ok
@@ -65,7 +65,7 @@ bash scripts/compare_images.sh ~/dev/exiftool     # 194 identical, 0 different
 PORT_BIN=$PWD/target/release/exiftool-rs python3 -I scripts/compare_cli.py ~/dev/exiftool
 
 # Windows type-check from Linux, without mingw:
-CC_x86_64_pc_windows_gnu=gcc cargo check -j2 --release --target x86_64-pc-windows-gnu --features gui
+CC_x86_64_pc_windows_gnu=gcc cargo check -j8 --release --target x86_64-pc-windows-gnu --features gui
 ```
 
 ## Rules

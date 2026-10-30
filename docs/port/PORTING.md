@@ -124,9 +124,9 @@ crate): if so, ask which branch to start from.
 
 All commands take the ExifTool checkout explicitly; use
 `/home/sylvain/dev/exiftool`, a tree of the release the port follows
-(`EXIFTOOL_VERSION`; UPGRADING.md for a new one). Build with `-j2`.
+(`EXIFTOOL_VERSION`; UPGRADING.md for a new one). Build with `-j8`.
 
-1. `cargo build --release --example run_t -j2`: no errors, no
+1. `cargo build --release --example run_t -j8`: no errors, no
    warnings.
 2. **The suite**: `sh scripts/run_suite.sh /home/sylvain/dev/exiftool` must
    print `114 scripts, 114 pass, 604/604 tests ok`.
