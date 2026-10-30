@@ -288,7 +288,8 @@ jobs:
   # full-modules set runs Perl in that image, with the modules it lacks.
   parity:
     needs: lint
-    if: startsWith(github.ref, 'refs/tags/v')
+    # (also run by hand, to try the judges before a tag)
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
