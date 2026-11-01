@@ -44,15 +44,18 @@ impl PerlRegex {
 /// group did not take part).
 pub type Spans = Vec<Option<(usize, usize)>>;
 
+/// A pattern cache: per pattern, its compiled forms by key (the flags).
+type Cache<K> = RefCell<HashMap<Vec<u8>, Vec<(K, Rc<PerlRegex>)>>>;
+
 thread_local! {
     /// The compiled patterns, by pattern then flags (looked up without
     /// copying the pattern).
-    static CACHE: RefCell<HashMap<Vec<u8>, Vec<(String, Rc<PerlRegex>)>>> = RefCell::new(HashMap::default());
+    static CACHE: Cache<String> = RefCell::new(HashMap::default());
     /// The patterns compiled in UTF mode, by pattern, then whether the
     /// pattern is a character string (its UTF-8 form) and flags.
-    static UTF_CACHE: RefCell<HashMap<Vec<u8>, Vec<(bool, String, Rc<PerlRegex>)>>> = RefCell::new(HashMap::default());
+    static UTF_CACHE: Cache<(bool, String)> = RefCell::new(HashMap::default());
     /// The patterns of `compile_few`, by pattern then flags.
-    static FEW_CACHE: RefCell<HashMap<Vec<u8>, Vec<(String, Rc<PerlRegex>)>>> = RefCell::new(HashMap::default());
+    static FEW_CACHE: Cache<String> = RefCell::new(HashMap::default());
 }
 
 /// The most patterns a cache keeps: ExifTool builds patterns from the data
@@ -99,12 +102,12 @@ pub fn compile(pattern: &[u8], flags: &str) -> Result<Rc<PerlRegex>, String> {
 /// case folding, as perl's rules for such strings. `pat_utf8`: the
 /// pattern is itself a character string, given in its UTF-8 form.
 pub fn compile_utf(pattern: &[u8], pat_utf8: bool, flags: &str) -> Result<Rc<PerlRegex>, String> {
-    let hit = UTF_CACHE.with(|c| c.borrow().get(pattern).and_then(|v| v.iter().find(|(u, f, _)| *u == pat_utf8 && f == flags).map(|(_, _, re)| re.clone())));
+    let hit = UTF_CACHE.with(|c| c.borrow().get(pattern).and_then(|v| v.iter().find(|((u, f), _)| *u == pat_utf8 && f == flags).map(|(_, re)| re.clone())));
     if let Some(re) = hit {
         return Ok(re);
     }
     let compiled = build(pattern, pat_utf8, flags, true)?;
-    UTF_CACHE.with(|c| with_room(&mut c.borrow_mut()).entry(pattern.to_vec()).or_default().push((pat_utf8, flags.to_string(), compiled.clone())));
+    UTF_CACHE.with(|c| with_room(&mut c.borrow_mut()).entry(pattern.to_vec()).or_default().push(((pat_utf8, flags.to_string()), compiled.clone())));
     Ok(compiled)
 }
 
@@ -307,7 +310,7 @@ fn perl_message_off(pattern: &[u8], e: &pcre2::Error, offset: Option<usize>) -> 
     // the PCRE2 message, from the Display text ("PCRE2: error compiling
     // pattern at offset N: MESSAGE")
     let full = e.to_string();
-    let msg = full.splitn(2, ": ").nth(1).map(|r| r.split_once(": ").map(|(_, m)| m.to_string()).unwrap_or_else(|| r.to_string())).unwrap_or(full.clone());
+    let msg = full.split_once(": ").map(|x| x.1).map(|r| r.split_once(": ").map(|(_, m)| m.to_string()).unwrap_or_else(|| r.to_string())).unwrap_or(full.clone());
     let off = offset.unwrap_or(len).min(len);
     let here = |at: usize, what: &str| {
         let at = at.min(len);

@@ -385,7 +385,7 @@ fn decode_from(name: &str, b: &[u8]) -> Option<Vec<u8>> {
     use crate::perl::utf8::{push_cp, upgrade};
     let units16 = |be: bool| -> Vec<u8> {
         let mut out = Vec::new();
-        let u: Vec<u16> = b.chunks_exact(2).map(|c| if be { u16::from_be_bytes([c[0], c[1]]) } else { u16::from_le_bytes([c[0], c[1]]) }).collect();
+        let u: Vec<u16> = b.as_chunks::<2>().0.iter().map(|c| if be { u16::from_be_bytes([c[0], c[1]]) } else { u16::from_le_bytes([c[0], c[1]]) }).collect();
         for r in char::decode_utf16(u) {
             push_cp(&mut out, r.map(|c| c as u32).unwrap_or(0xFFFD));
         }

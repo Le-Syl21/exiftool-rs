@@ -624,7 +624,7 @@ pub fn dump_table(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
         cols = band(&pos, 0x0f);
         append_at(&c, 1, if pl::num_eq(&cols, &n(8)) { b"  " } else { b" " });
     } else {
-        let addr = if pl::lt(&pos, &n(0)) { pl::sprintf("-%.4x", &[pl::neg(&pos)]) } else { pl::sprintf("%5.4x", &[pos.clone()]) };
+        let addr = if pl::lt(&pos, &n(0)) { pl::sprintf("-%.4x", &[pl::neg(&pos)]) } else { pl::sprintf("%5.4x", std::slice::from_ref(&pos)) };
         open_(it, &self_, "fgd", f0.clone(), &[0])?;
         open_(it, &self_, "fgd", s(""), &[3])?;
         append_at(&c, 0, &addr.to_bytes());

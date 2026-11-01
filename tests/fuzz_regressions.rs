@@ -19,6 +19,11 @@ include!("../fuzz/interp_programs.rs");
 /// and by the one that measures the memory, so that they never overlap.
 static MEMORY: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
+/// How long one input may take. Tests run the debug build, not the release
+/// one, and an old 2010 Xeon takes ~27 s on unpack-bits-huge: the limit is
+/// there to catch runaway inputs (hangs, endless loops), not to measure speed.
+const TIME_LIMIT: Duration = Duration::from_secs(60);
+
 /// Run an `interp` input; returns its `$@` (without perl's " at ... line
 /// N." suffix), checking it ends in a reasonable time.
 fn interp(name: &str) -> String {
@@ -26,7 +31,7 @@ fn interp(name: &str) -> String {
     let _serial = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
     let start = Instant::now();
     let err = String::from_utf8_lossy(&run_interp_input(&data)).into_owned();
-    assert!(start.elapsed() < Duration::from_secs(20), "{name}: {:?}", start.elapsed());
+    assert!(start.elapsed() < TIME_LIMIT, "{name}: {:?}", start.elapsed());
     match err.find(" at (eval") {
         Some(k) => err[..k].to_string(),
         None => err.trim_end().to_string(),
@@ -177,10 +182,11 @@ fn regex_caches_are_bounded() {
 #[test]
 fn extract_inputs() {
     let et = ExifTool::new();
-    for (name, tags) in [("real-meta-size-zero.rm", 10)] {
+    {
+        let (name, tags) = ("real-meta-size-zero.rm", 10);
         let start = Instant::now();
         let read = et.extract_info(Path::new("tests/fuzz/extract").join(name)).unwrap();
-        assert!(start.elapsed() < Duration::from_secs(20), "{name}: {:?}", start.elapsed());
+        assert!(start.elapsed() < TIME_LIMIT, "{name}: {:?}", start.elapsed());
         assert!(read.len() >= tags, "{name}: {} tags", read.len());
     }
 }

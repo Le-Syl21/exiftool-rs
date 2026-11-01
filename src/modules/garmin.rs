@@ -282,12 +282,11 @@ fn process_fit_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
         let buff_ref = pl::sref(buff.clone());
         let ts = the_msg.get("TS");
         if ts.truthy() && pl::num_eq(&ts.at(0), &n(253)) {
-            let val;
-            if !ts.at(2).is_undef() {
-                val = read_value(it, &buff_ref, ts.at(3), base_type.get(ts.at(2).to_bytes()).at(0), n(1), ts.at(1))?;
+            let val = if !ts.at(2).is_undef() {
+                read_value(it, &buff_ref, ts.at(3), base_type.get(ts.at(2).to_bytes()).at(0), n(1), ts.at(1))?
             } else {
-                val = ts.at(1);
-            }
+                ts.at(1)
+            };
             // save TimeStamp tag now for unknown or compressed message
             if !pl::num_eq(&timestamp, &val) {
                 timestamp = val.clone();

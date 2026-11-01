@@ -581,18 +581,18 @@ fn set_property_path_v(it: &mut Interp, tag_table_ptr: &Value, tag_id: &Value, p
             if flat_info.get("PropertyPath").truthy() {
                 return Ok(());
             }
-        } else if {
-            pl::at(312);
-            pl::aderef(prop_list)?.len() > 50
-        } {
-            return Ok(()); // avoid deep recursion
         } else {
-            // flattened tag doesn't exist, so create it now
-            // (could happen if we were just writing a structure)
-            flat_info = Value::new_hash();
-            flat_info.set("Name", pl::ucfirst(&flat_id));
-            flat_info.set("Flat", n(1));
-            pl::call(it, "Image::ExifTool::AddTagToTable", vec![tag_table_ptr.clone(), flat_id, flat_info.clone()])?;
+            pl::at(312);
+            if pl::aderef(prop_list)?.len() > 50 {
+                return Ok(()); // avoid deep recursion
+            } else {
+                // flattened tag doesn't exist, so create it now
+                // (could happen if we were just writing a structure)
+                flat_info = Value::new_hash();
+                flat_info.set("Name", pl::ucfirst(&flat_id));
+                flat_info.set("Flat", n(1));
+                pl::call(it, "Image::ExifTool::AddTagToTable", vec![tag_table_ptr.clone(), flat_id, flat_info.clone()])?;
+            }
         }
         if struct_ptr.get("TYPE").truthy() {
             is_type = n(1);

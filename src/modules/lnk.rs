@@ -143,7 +143,7 @@ pub fn process_item_id(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
         }
         let tag = call(it, "Get8u", vec![data_pt.clone(), pl::add(&pos, &n(2))])?; // get item ID
         if pl::gt(&pl::add(&pos, &size), &data_len) {
-            warn(it, &et, pl::sprintf("Truncated item with ID 0x%.2x", &[tag.clone()]))?;
+            warn(it, &et, pl::sprintf("Truncated item with ID 0x%.2x", std::slice::from_ref(&tag)))?;
             size = pl::sub(&data_len, &pos);
         }
         // 0x20-0x2f, 0x30-0x3f and 0x40-0x4f are ID ranges for the same tags
@@ -173,7 +173,7 @@ pub fn process_item_id(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Val
         }
         if !tag_table_ptr.get(tag.to_bytes()).truthy() {
             let ti = Value::new_hash();
-            ti.set("Name", pl::sprintf("Item_%.2x", &[tag.clone()]));
+            ti.set("Name", pl::sprintf("Item_%.2x", std::slice::from_ref(&tag)));
             let sd = Value::new_hash();
             sd.set("TagTable", pl::s("Image::ExifTool::LNK::UnknownData"));
             ti.set("SubDirectory", sd);

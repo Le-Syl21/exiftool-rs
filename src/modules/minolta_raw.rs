@@ -123,7 +123,7 @@ pub fn process_mrw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let offset = pl::add(&g32u(it, &pl::sref(data.clone()), n(4))?, &pos);
     let mut rtn_val = n(1);
     if verbose.truthy() {
-        pl::print_to(it, Some(&out), &[pl::sprintf("  [MRW Data Offset: 0x%x]\n", &[offset.clone()])])?;
+        pl::print_to(it, Some(&out), &[pl::sprintf("  [MRW Data Offset: 0x%x]\n", std::slice::from_ref(&offset))])?;
     }
     // loop through MRW segments (ref 1)
     while pl::lt(&pos, &offset) {

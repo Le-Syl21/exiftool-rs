@@ -28,7 +28,7 @@
 /// The UTF-16 code units of a wide string argument: its UTF-16LE bytes up
 /// to the first NUL character, with one NUL after them.
 pub fn wide(b: &[u8]) -> Vec<u16> {
-    let mut w: Vec<u16> = b.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).take_while(|&c| c != 0).collect();
+    let mut w: Vec<u16> = b.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes([c[0], c[1]])).take_while(|&c| c != 0).collect();
     w.push(0);
     w
 }

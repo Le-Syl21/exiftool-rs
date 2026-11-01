@@ -1187,6 +1187,8 @@ pub fn set_preferred_byte_order(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<
 /// Inputs: 0) numerator, 1) denominator
 ///         2-N) list of fraction denominators, deepest first
 /// Returns: numerator, denominator (in list context)
+// (registered as a native sub, so the signature is fixed; the Interp is only threaded through the recursion)
+#[allow(clippy::only_used_in_recursion)]
 pub fn assemble_rational(it: &mut Interp, mut a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     if a.len() < 3 {
         if want != Want::List {
@@ -3020,15 +3022,14 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
                     set_deref(&write_buffer, cat(&[&wb, &pad, &deref(&data_pt)?]))?; // keep padding for now
                 }
                 if self_.get("LeicaTrailer").truthy() {
-                    let trail_len;
-                    if trail_info.truthy() {
-                        trail_len = pl::sub(&trail_info.get("DataPos"), &end_pos);
+                    let trail_len = if trail_info.truthy() {
+                        pl::sub(&trail_info.get("DataPos"), &end_pos)
                     } else {
                         if !raf_seek(it, &raf, n(0), 2)? {
                             st.err = true;
                         }
-                        trail_len = pl::sub(&raf_tell(it, &raf)?, &end_pos);
-                    }
+                        pl::sub(&raf_tell(it, &raf)?, &end_pos)
+                    };
                     let lt = self_.get("LeicaTrailer");
                     let fixup = lt.get("Fixup");
                     lt.set("TrailPos", end_pos.clone());
@@ -3141,17 +3142,16 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
             }
             // copy over preview image (or other data) if necessary
             if !del_preview.truthy() {
-                let extra_len;
-                if trail_info.truthy() {
+                let extra_len = if trail_info.truthy() {
                     // copy everything up to start of first processed trailer
-                    extra_len = if !trail_info.get("DataPos").is_undef() { pl::sub(&trail_info.get("DataPos"), &end_pos) } else { n(0) };
+                    if !trail_info.get("DataPos").is_undef() { pl::sub(&trail_info.get("DataPos"), &end_pos) } else { n(0) }
                 } else {
                     // copy everything up to end of file
                     if !raf_seek(it, &raf, n(0), 2)? {
                         st.err = true;
                     }
-                    extra_len = pl::sub(&raf_tell(it, &raf)?, &end_pos);
-                }
+                    pl::sub(&raf_tell(it, &raf)?, &end_pos)
+                };
                 if pl::gt(&extra_len, &n(0)) {
                     if del_group.get("Trailer").truthy() {
                         if verbose.truthy() {
@@ -3193,7 +3193,9 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
                 vout!(cat(&[&s("JPEG "), &marker_name, &s(":\n")]));
             }
             // handle stand-alone markers 0x00, 0x01 and 0xd0-0xd7 (NULL, TEM, RST0-RST7)
-            wr!(hdr.clone());
+            if !write_v(it, &st.outfile, std::slice::from_ref(&hdr))? {
+                st.err = true;
+            }
             continue 'marker;
         }
         //
@@ -3370,192 +3372,192 @@ fn write_jpeg_body(it: &mut Interp, st: &mut JpegState) -> ER<Vec<Value>> {
                     set_deref(&seg_data_pt, Value::Undef)?;
                     continue 'marker;
                 // check for XMP data
-                } else if {
+                } else {
                     let mut p = b"^(".to_vec();
                     p.extend_from_slice(&xmp_app1hdr.to_bytes());
                     p.push(b'|');
                     p.extend_from_slice(&xmp_ext_app1hdr.to_bytes());
                     p.push(b')');
-                    pl::re_dyn(&p, "")?.is_match(&sd)
-                } {
-                    seg_type = s("XMP");
-                    if del_group.get("XMP").truthy() {
-                        del = true;
-                        break 'edit;
-                    }
-                    bump(&done_dir, "XMP", 1);
-                    if !edit_dirs.get("XMP").truthy() {
-                        break 'edit;
-                    }
-                    if pl::gt(&pl::add(&done_dir.get("XMP"), &dir_count.get("XMP")), &n(1)) {
-                        // must assemble all XMP segments before writing
-                        let mut ext_xmp;
-                        let sd = deref(&seg_data_pt)?;
-                        if re_hdr(&xmp_ext_app1hdr)?.is_match(&sd) {
-                            // save extended XMP data
-                            if pl::lt(&pl::length(&sd), &n(75)) {
-                                extended_xmp.set("Error", s("Truncated data"));
-                            } else {
-                                let v = pl::unpack("x67N2", &sd)?;
-                                let (size, off) = (arg(&v, 0), arg(&v, 1));
-                                let guid = substr(&sd, &n(35), Some(&n(32)));
-                                if re(r"[^A-Za-z0-9]", "").is_match(&guid) {
-                                    // (technically, should be uppercase)
-                                    extended_xmp.set("Error", s("Invalid GUID"));
+                    if pl::re_dyn(&p, "")?.is_match(&sd) {
+                        seg_type = s("XMP");
+                        if del_group.get("XMP").truthy() {
+                            del = true;
+                            break 'edit;
+                        }
+                        bump(&done_dir, "XMP", 1);
+                        if !edit_dirs.get("XMP").truthy() {
+                            break 'edit;
+                        }
+                        if pl::gt(&pl::add(&done_dir.get("XMP"), &dir_count.get("XMP")), &n(1)) {
+                            // must assemble all XMP segments before writing
+                            let mut ext_xmp;
+                            let sd = deref(&seg_data_pt)?;
+                            if re_hdr(&xmp_ext_app1hdr)?.is_match(&sd) {
+                                // save extended XMP data
+                                if pl::lt(&pl::length(&sd), &n(75)) {
+                                    extended_xmp.set("Error", s("Truncated data"));
                                 } else {
-                                    // remember extended data for each GUID
-                                    ext_xmp = extended_xmp.get(guid.to_bytes());
-                                    if ext_xmp.truthy() {
-                                        if !pl::num_eq(&size, &ext_xmp.get("Size")) {
-                                            extended_xmp.set("Error", s("Inconsistent size"));
-                                        }
+                                    let v = pl::unpack("x67N2", &sd)?;
+                                    let (size, off) = (arg(&v, 0), arg(&v, 1));
+                                    let guid = substr(&sd, &n(35), Some(&n(32)));
+                                    if re(r"[^A-Za-z0-9]", "").is_match(&guid) {
+                                        // (technically, should be uppercase)
+                                        extended_xmp.set("Error", s("Invalid GUID"));
                                     } else {
-                                        ext_xmp = Value::new_hash();
-                                        extended_xmp.set(guid.to_bytes(), ext_xmp.clone());
+                                        // remember extended data for each GUID
+                                        ext_xmp = extended_xmp.get(guid.to_bytes());
+                                        if ext_xmp.truthy() {
+                                            if !pl::num_eq(&size, &ext_xmp.get("Size")) {
+                                                extended_xmp.set("Error", s("Inconsistent size"));
+                                            }
+                                        } else {
+                                            ext_xmp = Value::new_hash();
+                                            extended_xmp.set(guid.to_bytes(), ext_xmp.clone());
+                                        }
+                                        ext_xmp.set("Size", size);
+                                        ext_xmp.set(off.to_bytes(), substr(&sd, &n(75), None));
                                     }
-                                    ext_xmp.set("Size", size);
-                                    ext_xmp.set(off.to_bytes(), substr(&sd, &n(75), None));
                                 }
-                            }
-                        } else {
-                            // save all main XMP segments (should normally be only one)
-                            extended_xmp.get_or_new_array("Main").push(substr(&sd, &pl::length(&xmp_app1hdr), None));
-                        }
-                        // continue processing only if we have read all the segments
-                        if dir_count.get("XMP").truthy() {
-                            continue 'marker;
-                        }
-                        // reconstruct an XMP super-segment
-                        let mut super_ = xmp_app1hdr.to_bytes().to_vec();
-                        let mut good_guid = s("");
-                        for x in extended_xmp.get("Main").items() {
-                            // get the HasExtendedXMP GUID if it exists
-                            if let Some(m) = re(r#":HasExtendedXMP\s*(=\s*['"]|>)(\w{32})"#, "").m(&x) {
-                                // warn of subsequent XMP blocks specifying a different
-                                // HasExtendedXMP (have never seen this)
-                                if good_guid.truthy() && !is(&good_guid, &cap(&m, 2).to_bytes()) {
-                                    meth(it, &self_, "Warn", vec![s("Multiple XMP segments specifying different extended XMP GUID")])?;
-                                }
-                                good_guid = cap(&m, 2); // GUID for the standard extended XMP
-                            }
-                            super_.extend_from_slice(&x.to_bytes());
-                        }
-                        set_deref(&seg_data_pt, Value::bytes(super_))?;
-                        // GUID of the extended XMP that we want to read
-                        let mut read_guid = or(self_.path(&["OPTIONS", "ExtendedXMP"]), n(0));
-                        if pl::str_eq(&read_guid, "1") {
-                            read_guid = good_guid.clone();
-                        }
-                        let mut keys: Vec<Rc<[u8]>> = extended_xmp.keys();
-                        keys.sort();
-                        for guid in keys {
-                            if guid.len() != 32 {
-                                continue; // ignore other (internal) keys
-                            }
-                            let guid_v = Value::Str(guid.clone());
-                            if !is(&guid_v, &read_guid.to_bytes()) && !pl::str_eq(&read_guid, "2") {
-                                let non = if is(&guid_v, &good_guid.to_bytes()) { "" } else { "non-" };
-                                meth(it, &self_, "Warn", vec![s(&format!("Ignored {non}standard extended XMP (GUID {})", guid_v.to_text()))])?;
-                                continue;
-                            }
-                            if !is(&guid_v, &good_guid.to_bytes()) {
-                                meth(it, &self_, "Warn", vec![s(&format!("Reading non-standard extended XMP (GUID {})", guid_v.to_text()))])?;
-                            }
-                            ext_xmp = extended_xmp.get(&guid);
-                            if ext_xmp.ref_type() != "HASH" {
-                                continue; // (just to be safe)
-                            }
-                            let size = ext_xmp.get("Size");
-                            let mut offsets: Vec<Value> = Vec::new();
-                            let mut off = n(0);
-                            while pl::lt(&off, &size) {
-                                if ext_xmp.get(off.to_bytes()).is_undef() {
-                                    break;
-                                }
-                                offsets.push(off.clone());
-                                off = pl::add(&off, &pl::length(&ext_xmp.get(off.to_bytes())));
-                            }
-                            if pl::num_eq(&off, &size) {
-                                // add all XMP to super-segment
-                                let mut b = deref(&seg_data_pt)?.to_bytes().to_vec();
-                                for o in &offsets {
-                                    b.extend_from_slice(&ext_xmp.get(o.to_bytes()).to_bytes());
-                                }
-                                set_deref(&seg_data_pt, Value::bytes(b))?;
                             } else {
-                                meth(it, &self_, "Error", vec![s(&format!("Incomplete extended XMP (GUID {})", guid_v.to_text())), n(1)])?;
+                                // save all main XMP segments (should normally be only one)
+                                extended_xmp.get_or_new_array("Main").push(substr(&sd, &pl::length(&xmp_app1hdr), None));
                             }
-                        }
-                        if extended_xmp.get("Error").truthy() {
-                            meth(it, &self_, "Error", vec![cat(&[&extended_xmp.get("Error"), &s(" in extended XMP")]), n(1)])?;
-                        }
-                    }
-                    let start = pl::length(&xmp_app1hdr);
-                    let tag_table_ptr = get_tag_table(it, "Image::ExifTool::XMP::Main")?;
-                    // limit XMP size and create extended XMP if necessary
-                    let dir_info = hash_from(&[s("DataPt"), seg_data_pt.clone(), s("DirStart"), start, s("Parent"), marker_name.clone(), s("MaxDataLen"), pl::sub(&max_xmp_len, &pl::length(&xmp_app1hdr))]);
-                    let new_data = meth(it, &self_, "WriteDirectory", vec![dir_info.clone(), tag_table_ptr])?;
-                    if !new_data.is_undef() {
-                        extended_xmp = Value::new_hash();
-                        if pl::length(&new_data).to_i64() > 0 {
-                            // write multi-segment XMP (XMP plus extended XMP if necessary)
-                            if !c1(it, write_multi_xmp, vec![self_.clone(), st.outfile.clone(), pl::sref(new_data), dir_info.get("ExtendedXMP"), dir_info.get("ExtendedGUID")])?.truthy() {
-                                st.err = true;
+                            // continue processing only if we have read all the segments
+                            if dir_count.get("XMP").truthy() {
+                                continue 'marker;
                             }
-                            set_deref(&seg_data_pt, Value::Undef)?; // free the old buffer
-                            continue 'marker;
-                        } else {
-                            set_deref(&seg_data_pt, s(""))?; // delete the XMP
-                        }
-                    } else {
-                        if verbose.truthy() {
-                            vout!(s("    [XMP rewritten with no changes]\n"));
-                        }
-                        if pl::gt(&done_dir.get("XMP"), &n(1)) {
-                            // re-write original multi-segment XMP
-                            for dat in extended_xmp.get("Main").items() {
-                                // main XMP
-                                if pl::length(&dat).to_i64() == 0 {
-                                    continue;
+                            // reconstruct an XMP super-segment
+                            let mut super_ = xmp_app1hdr.to_bytes().to_vec();
+                            let mut good_guid = s("");
+                            for x in extended_xmp.get("Main").items() {
+                                // get the HasExtendedXMP GUID if it exists
+                                if let Some(m) = re(r#":HasExtendedXMP\s*(=\s*['"]|>)(\w{32})"#, "").m(&x) {
+                                    // warn of subsequent XMP blocks specifying a different
+                                    // HasExtendedXMP (have never seen this)
+                                    if good_guid.truthy() && !is(&good_guid, &cap(&m, 2).to_bytes()) {
+                                        meth(it, &self_, "Warn", vec![s("Multiple XMP segments specifying different extended XMP GUID")])?;
+                                    }
+                                    good_guid = cap(&m, 2); // GUID for the standard extended XMP
                                 }
-                                st.s_ = pl::pack("n", &[pl::add(&pl::add(&pl::length(&xmp_app1hdr), &pl::length(&dat)), &n(2))])?;
-                                wr!(hdr.clone(), st.s_.clone(), xmp_app1hdr.clone(), dat);
+                                super_.extend_from_slice(&x.to_bytes());
+                            }
+                            set_deref(&seg_data_pt, Value::bytes(super_))?;
+                            // GUID of the extended XMP that we want to read
+                            let mut read_guid = or(self_.path(&["OPTIONS", "ExtendedXMP"]), n(0));
+                            if pl::str_eq(&read_guid, "1") {
+                                read_guid = good_guid.clone();
                             }
                             let mut keys: Vec<Rc<[u8]>> = extended_xmp.keys();
                             keys.sort();
                             for guid in keys {
-                                // extended XMP
                                 if guid.len() != 32 {
+                                    continue; // ignore other (internal) keys
+                                }
+                                let guid_v = Value::Str(guid.clone());
+                                if !is(&guid_v, &read_guid.to_bytes()) && !pl::str_eq(&read_guid, "2") {
+                                    let non = if is(&guid_v, &good_guid.to_bytes()) { "" } else { "non-" };
+                                    meth(it, &self_, "Warn", vec![s(&format!("Ignored {non}standard extended XMP (GUID {})", guid_v.to_text()))])?;
                                     continue;
                                 }
-                                let ext_xmp = extended_xmp.get(&guid);
+                                if !is(&guid_v, &good_guid.to_bytes()) {
+                                    meth(it, &self_, "Warn", vec![s(&format!("Reading non-standard extended XMP (GUID {})", guid_v.to_text()))])?;
+                                }
+                                ext_xmp = extended_xmp.get(&guid);
                                 if ext_xmp.ref_type() != "HASH" {
-                                    continue;
+                                    continue; // (just to be safe)
                                 }
                                 let size = ext_xmp.get("Size");
-                                if !size.truthy() {
-                                    continue;
-                                }
+                                let mut offsets: Vec<Value> = Vec::new();
                                 let mut off = n(0);
-                                while !ext_xmp.get(off.to_bytes()).is_undef() {
-                                    let chunk = ext_xmp.get(off.to_bytes());
-                                    st.s_ = pl::pack("n", &[pl::add(&pl::add(&pl::length(&xmp_ext_app1hdr), &pl::length(&chunk)), &n(42))])?;
-                                    let n2 = pl::pack("N2", &[size.clone(), off.clone()])?;
-                                    wr!(hdr.clone(), st.s_.clone(), xmp_ext_app1hdr.clone(), Value::Str(guid.clone()), n2, chunk.clone());
-                                    off = pl::add(&off, &pl::length(&chunk));
+                                while pl::lt(&off, &size) {
+                                    if ext_xmp.get(off.to_bytes()).is_undef() {
+                                        break;
+                                    }
+                                    offsets.push(off.clone());
+                                    off = pl::add(&off, &pl::length(&ext_xmp.get(off.to_bytes())));
+                                }
+                                if pl::num_eq(&off, &size) {
+                                    // add all XMP to super-segment
+                                    let mut b = deref(&seg_data_pt)?.to_bytes().to_vec();
+                                    for o in &offsets {
+                                        b.extend_from_slice(&ext_xmp.get(o.to_bytes()).to_bytes());
+                                    }
+                                    set_deref(&seg_data_pt, Value::bytes(b))?;
+                                } else {
+                                    meth(it, &self_, "Error", vec![s(&format!("Incomplete extended XMP (GUID {})", guid_v.to_text())), n(1)])?;
                                 }
                             }
-                            set_deref(&seg_data_pt, Value::Undef)?; // free the old buffer
-                            extended_xmp = Value::new_hash();
-                            continue 'marker;
+                            if extended_xmp.get("Error").truthy() {
+                                meth(it, &self_, "Error", vec![cat(&[&extended_xmp.get("Error"), &s(" in extended XMP")]), n(1)])?;
+                            }
                         }
-                        // continue on to re-write original single-segment XMP
+                        let start = pl::length(&xmp_app1hdr);
+                        let tag_table_ptr = get_tag_table(it, "Image::ExifTool::XMP::Main")?;
+                        // limit XMP size and create extended XMP if necessary
+                        let dir_info = hash_from(&[s("DataPt"), seg_data_pt.clone(), s("DirStart"), start, s("Parent"), marker_name.clone(), s("MaxDataLen"), pl::sub(&max_xmp_len, &pl::length(&xmp_app1hdr))]);
+                        let new_data = meth(it, &self_, "WriteDirectory", vec![dir_info.clone(), tag_table_ptr])?;
+                        if !new_data.is_undef() {
+                            extended_xmp = Value::new_hash();
+                            if pl::length(&new_data).to_i64() > 0 {
+                                // write multi-segment XMP (XMP plus extended XMP if necessary)
+                                if !c1(it, write_multi_xmp, vec![self_.clone(), st.outfile.clone(), pl::sref(new_data), dir_info.get("ExtendedXMP"), dir_info.get("ExtendedGUID")])?.truthy() {
+                                    st.err = true;
+                                }
+                                set_deref(&seg_data_pt, Value::Undef)?; // free the old buffer
+                                continue 'marker;
+                            } else {
+                                set_deref(&seg_data_pt, s(""))?; // delete the XMP
+                            }
+                        } else {
+                            if verbose.truthy() {
+                                vout!(s("    [XMP rewritten with no changes]\n"));
+                            }
+                            if pl::gt(&done_dir.get("XMP"), &n(1)) {
+                                // re-write original multi-segment XMP
+                                for dat in extended_xmp.get("Main").items() {
+                                    // main XMP
+                                    if pl::length(&dat).to_i64() == 0 {
+                                        continue;
+                                    }
+                                    st.s_ = pl::pack("n", &[pl::add(&pl::add(&pl::length(&xmp_app1hdr), &pl::length(&dat)), &n(2))])?;
+                                    wr!(hdr.clone(), st.s_.clone(), xmp_app1hdr.clone(), dat);
+                                }
+                                let mut keys: Vec<Rc<[u8]>> = extended_xmp.keys();
+                                keys.sort();
+                                for guid in keys {
+                                    // extended XMP
+                                    if guid.len() != 32 {
+                                        continue;
+                                    }
+                                    let ext_xmp = extended_xmp.get(&guid);
+                                    if ext_xmp.ref_type() != "HASH" {
+                                        continue;
+                                    }
+                                    let size = ext_xmp.get("Size");
+                                    if !size.truthy() {
+                                        continue;
+                                    }
+                                    let mut off = n(0);
+                                    while !ext_xmp.get(off.to_bytes()).is_undef() {
+                                        let chunk = ext_xmp.get(off.to_bytes());
+                                        st.s_ = pl::pack("n", &[pl::add(&pl::add(&pl::length(&xmp_ext_app1hdr), &pl::length(&chunk)), &n(42))])?;
+                                        let n2 = pl::pack("N2", &[size.clone(), off.clone()])?;
+                                        wr!(hdr.clone(), st.s_.clone(), xmp_ext_app1hdr.clone(), Value::Str(guid.clone()), n2, chunk.clone());
+                                        off = pl::add(&off, &pl::length(&chunk));
+                                    }
+                                }
+                                set_deref(&seg_data_pt, Value::Undef)?; // free the old buffer
+                                extended_xmp = Value::new_hash();
+                                continue 'marker;
+                            }
+                            // continue on to re-write original single-segment XMP
+                        }
+                        if pl::length(&deref(&seg_data_pt)?).to_i64() == 0 {
+                            del = true;
+                        }
+                    } else if re(r"^http", "").is_match(&sd) || re(r"<exif:", "").is_match(&sd) {
+                        meth(it, &self_, "Warn", vec![s("Ignored APP1 XMP segment with non-standard header"), n(1)])?;
                     }
-                    if pl::length(&deref(&seg_data_pt)?).to_i64() == 0 {
-                        del = true;
-                    }
-                } else if re(r"^http", "").is_match(&sd) || re(r"<exif:", "").is_match(&sd) {
-                    meth(it, &self_, "Warn", vec![s("Ignored APP1 XMP segment with non-standard header"), n(1)])?;
                 }
             } else if marker == 0xe2 {
                 // APP2 (ICC Profile, FPXR, MPF)

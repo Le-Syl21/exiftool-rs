@@ -588,6 +588,8 @@ pub fn print_csv(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 /// Add tag groups from structure fields to a list for xmlns
 /// Inputs: 0) tag value, 1) parent group, 2) group hash ref, 3) group list ref
+// (registered as a native sub, so the signature is fixed; the Interp is only threaded through the recursion)
+#[allow(clippy::only_used_in_recursion)]
 pub fn add_groups(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
     let (val, grp, group_hash, group_list) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
     if ref_is(&val, "HASH") {
@@ -676,6 +678,8 @@ pub fn convert_binary(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
 /// Compare ValueConv and PrintConv values of a tag to see if they are equal
 /// Inputs: 0) value1, 1) value2, 2) flag to return true for any scalar references
 /// Returns: true if they are equal
+// (registered as a native sub, so the signature is fixed; the Interp is only threaded through the recursion)
+#[allow(clippy::only_used_in_recursion)]
 pub fn is_equal(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (va, vb, true_scalar) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
     // (scalar values are not print-converted)

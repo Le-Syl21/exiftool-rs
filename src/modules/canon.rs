@@ -356,9 +356,9 @@ pub fn print_lens_id(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>>
     }
     let mut str = pl::s("");
     if short_focal.truthy() {
-        str = pl::concat(&str, &pl::sprintf(" %d", &[short_focal.clone()]));
+        str = pl::concat(&str, &pl::sprintf(" %d", std::slice::from_ref(&short_focal)));
         if long_focal.truthy() && !pl::num_eq(&long_focal, &short_focal) {
-            str = pl::concat(&str, &pl::sprintf("-%d", &[long_focal.clone()]));
+            str = pl::concat(&str, &pl::sprintf("-%d", std::slice::from_ref(&long_focal)));
         }
         str = pl::concat(&str, &pl::s("mm"));
     }
@@ -541,7 +541,7 @@ pub fn print_af_points_1d(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         }
     }
     if !focusing.truthy() {
-        focusing = if pl::num_eq(&focus, &n(0xff)) { pl::s("Auto") } else { pl::sprintf("Unknown (0x%.2x)", &[focus.clone()]) };
+        focusing = if pl::num_eq(&focus, &n(0xff)) { pl::s("Auto") } else { pl::sprintf("Unknown (0x%.2x)", std::slice::from_ref(&focus)) };
     }
     ret(pl::concat(&pl::concat(&focusing, &pl::s(" (")), &pl::concat(&join(",", &points), &pl::s(")"))))
 }

@@ -2028,17 +2028,17 @@ fn write_exif_v(it: &mut Interp, et: &Value, dir_info0: &Value, tag_table_ptr: &
                             new_format = fnum(&new_form_name);
                             val_fixups.push(source_dir.get("Fixup"));
                         }
-                    } else if {
+                    } else {
                         autoviv(&mut new_info);
-                        new_info.get("Format").truthy() && new_info.get("Writable").truthy() && !new_info.get("Writable").eq_str("1")
-                    } {
-                        // use specified write format
-                        new_form_name = new_info.get("Writable");
-                        new_format = fnum(&new_form_name);
-                    } else if add_dirs.get(new_id.to_bytes()).truthy() && !seq(&new_info, &add_dirs.get(new_id.to_bytes())) {
-                        // this can happen if we are trying to add a directory that doesn't exist
-                        // in this type of file (eg. try adding a SubIFD tag to an A100 image)
-                        is_new = -1;
+                        if new_info.get("Format").truthy() && new_info.get("Writable").truthy() && !new_info.get("Writable").eq_str("1") {
+                            // use specified write format
+                            new_form_name = new_info.get("Writable");
+                            new_format = fnum(&new_form_name);
+                        } else if add_dirs.get(new_id.to_bytes()).truthy() && !seq(&new_info, &add_dirs.get(new_id.to_bytes())) {
+                            // this can happen if we are trying to add a directory that doesn't exist
+                            // in this type of file (eg. try adding a SubIFD tag to an A100 image)
+                            is_new = -1;
+                        }
                     }
                 }
                 if is_new < 0 {
@@ -2544,16 +2544,15 @@ fn write_exif_v(it: &mut Interp, et: &Value, dir_info0: &Value, tag_table_ptr: &
                             let data_tag = if dt.truthy() { dt } else { pl::s("") };
                             if data_tag.eq_str("CanonVRD") {
                                 // must decide now if we will write CanonVRD information
-                                let has_vrd;
                                 let extra = pl::pkg_hash(it, "Image::ExifTool::Extra");
-                                if et.get("NEW_VALUE").get(extra.get("CanonVRD").to_bytes()).truthy() {
+                                let has_vrd = if et.get("NEW_VALUE").get(extra.get("CanonVRD").to_bytes()).truthy() {
                                     // adding or deleting as a block
-                                    has_vrd = pl::method(it, &et, "GetNewValue", vec![pl::s("CanonVRD")])?.truthy();
+                                    pl::method(it, &et, "GetNewValue", vec![pl::s("CanonVRD")])?.truthy()
                                 } else if et.get("DEL_GROUP").get("CanonVRD").truthy() || et.get("DEL_GROUP").get("Trailer").truthy() {
-                                    has_vrd = false; // deleting as a group
+                                    false // deleting as a group
                                 } else {
-                                    has_vrd = !new_value_pt.deref().eq_str("\0\0\0\0");
-                                }
+                                    !new_value_pt.deref().eq_str("\0\0\0\0")
+                                };
                                 if has_vrd {
                                     // add a fixup, and set this offset later
                                     pl::method(it, &dir_fixup, "AddFixup", vec![pl::add(&len(&get(&dir_buff)), &n(8)), data_tag.clone()])?;

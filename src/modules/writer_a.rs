@@ -1762,63 +1762,63 @@ pub fn get_new_value(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
                 let tag_info;
                 if tag.is_ref() {
                     nv_hash = gnvh(it, vec![self_.clone(), tag.clone()])?;
-                } else if {
-                    tag_info = pl::pkg_hash(it, "Image::ExifTool::Extra").get(tag.to_bytes());
-                    !tag_info.is_undef() && tag_info.get("Writable").truthy()
-                } {
-                    nv_hash = gnvh(it, vec![self_.clone(), tag_info])?;
                 } else {
-                    // separate group from tag name
-                    let mut tag = tag.clone();
-                    let mut groups: Vec<Value> = Vec::new();
-                    let mut g1 = Value::Undef;
-                    if re(r"(.*):", "").subst(&mut tag, false, |c| {
-                        g1 = cap(c, 1);
-                        Vec::new()
-                    }) > 0
-                    {
-                        groups = split_on(":", &g1);
-                    }
-                    let tag_info_list = pl::call_list(it, "Image::ExifTool::TagLookup::FindTagInfo", vec![tag.clone()])?;
-                    // decide which tag we want
-                    'gnv_tag_info: for tag_info in tag_info_list {
-                        let mut nvh = gnvh(it, vec![self_.clone(), tag_info.clone()])?;
-                        if !nvh.truthy() {
-                            continue;
+                    tag_info = pl::pkg_hash(it, "Image::ExifTool::Extra").get(tag.to_bytes());
+                    if !tag_info.is_undef() && tag_info.get("Writable").truthy() {
+                        nv_hash = gnvh(it, vec![self_.clone(), tag_info])?;
+                    } else {
+                        // separate group from tag name
+                        let mut tag = tag.clone();
+                        let mut groups: Vec<Value> = Vec::new();
+                        let mut g1 = Value::Undef;
+                        if re(r"(.*):", "").subst(&mut tag, false, |c| {
+                            g1 = cap(c, 1);
+                            Vec::new()
+                        }) > 0
+                        {
+                            groups = split_on(":", &g1);
                         }
-                        // select tag in specified group(s) if necessary
-                        for g in &groups {
-                            if eq(g, &nvh.get("WriteGroup")) {
+                        let tag_info_list = pl::call_list(it, "Image::ExifTool::TagLookup::FindTagInfo", vec![tag.clone()])?;
+                        // decide which tag we want
+                        'gnv_tag_info: for tag_info in tag_info_list {
+                            let mut nvh = gnvh(it, vec![self_.clone(), tag_info.clone()])?;
+                            if !nvh.truthy() {
                                 continue;
                             }
-                            let grps = pl::method_list(it, &self_, "GetGroup", vec![tag_info.clone()])?;
-                            if eq(&arg(&grps, 0), &nvh.get("WriteGroup")) {
-                                // check family 1 group only if WriteGroup is not specific
-                                if eq(g, &arg(&grps, 1)) {
+                            // select tag in specified group(s) if necessary
+                            for g in &groups {
+                                if eq(g, &nvh.get("WriteGroup")) {
                                     continue;
                                 }
-                            } else {
-                                // otherwise check family 0 group
-                                if eq(g, &arg(&grps, 0)) {
-                                    continue;
+                                let grps = pl::method_list(it, &self_, "GetGroup", vec![tag_info.clone()])?;
+                                if eq(&arg(&grps, 0), &nvh.get("WriteGroup")) {
+                                    // check family 1 group only if WriteGroup is not specific
+                                    if eq(g, &arg(&grps, 1)) {
+                                        continue;
+                                    }
+                                } else {
+                                    // otherwise check family 0 group
+                                    if eq(g, &arg(&grps, 0)) {
+                                        continue;
+                                    }
+                                }
+                                // also check family 7
+                                if let Some(c) = re(r"^ID-(.*)", "i").m(g) {
+                                    if pl::call(it, "Image::ExifTool::IsSameID", vec![tag_info.get("TagID"), cap(&c, 1)])?.truthy() {
+                                        continue;
+                                    }
+                                }
+                                // step to next entry in list
+                                nvh = nvh.get("Next");
+                                if !nvh.truthy() {
+                                    continue 'gnv_tag_info;
                                 }
                             }
-                            // also check family 7
-                            if let Some(c) = re(r"^ID-(.*)", "i").m(g) {
-                                if pl::call(it, "Image::ExifTool::IsSameID", vec![tag_info.get("TagID"), cap(&c, 1)])?.truthy() {
-                                    continue;
-                                }
+                            nv_hash = nvh;
+                            // give priority to the one we are creating
+                            if !nv_hash.get("IsCreating").is_undef() {
+                                break;
                             }
-                            // step to next entry in list
-                            nvh = nvh.get("Next");
-                            if !nvh.truthy() {
-                                continue 'gnv_tag_info;
-                            }
-                        }
-                        nv_hash = nvh;
-                        // give priority to the one we are creating
-                        if !nv_hash.get("IsCreating").is_undef() {
-                            break;
                         }
                     }
                 }
@@ -2582,11 +2582,10 @@ pub fn write_directory(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                         method_void(it, &self_, "Warn", vec![cat(&[&s("Can't delete IFD0 from "), &type_]), n(1)])?;
                     }
                     grp1 = Value::Undef;
-                } else if pl::str_eq(&grp0, "EXIF") && del_group.get(grp0.to_bytes()).truthy() {
-                    if !(del_group.get(grp1.to_bytes()).truthy() || pl::str_eq(&grp1, "ExifIFD")) {
+                } else if pl::str_eq(&grp0, "EXIF") && del_group.get(grp0.to_bytes()).truthy()
+                    && !(del_group.get(grp1.to_bytes()).truthy() || pl::str_eq(&grp1, "ExifIFD")) {
                         grp1 = Value::Undef;
                     }
-                }
             }
             if grp1.truthy() {
                 if data_pt.truthy() || dir_info.get("RAF").truthy() {
@@ -3172,15 +3171,14 @@ pub fn set_system_tags(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
         } else {
             let mut wide = false;
             let mut zfile = [pl::concat(&file, &s(":Zone.Identifier"))];
-            let wattr;
-            if pl::method_mut(it, &self_, "EncodeFileName", &mut zfile, Want::Scalar)?.pop().unwrap_or_default().truthy() {
+            let wattr = if pl::method_mut(it, &self_, "EncodeFileName", &mut zfile, Want::Scalar)?.pop().unwrap_or_default().truthy() {
                 wide = true;
                 let z = zfile[0].clone();
-                wattr = pl::eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributesW", vec![z]))?.unwrap_or_default();
+                pl::eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributesW", vec![z]))?.unwrap_or_default()
             } else {
                 let z = zfile[0].clone();
-                wattr = pl::eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributes", vec![z]))?.unwrap_or_default();
-            }
+                pl::eval_block(it, |it| pl::call(it, "Win32API::File::GetFileAttributes", vec![z]))?.unwrap_or_default()
+            };
             let inv = pl::call(it, "Win32API::File::INVALID_FILE_ATTRIBUTES", vec![])?;
             let ro = pl::call(it, "Win32API::File::FILE_ATTRIBUTE_READONLY", vec![])?;
             if pl::num_eq(&wattr, &inv) {
@@ -3563,8 +3561,7 @@ fn insert_tag_values_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 if let Value::ArrayRef(arr) = &val_arr {
                     scope.declare(b'@', "val", Binding::Array(arr.clone()));
                 }
-                let new_val;
-                if as_list {
+                let new_val = if as_list {
                     let saved = it.get_scalar("main::_");
                     for i in 0..val_arr.len() {
                         it.set_scalar("main::_", val_arr.at(i as i64));
@@ -3583,7 +3580,7 @@ fn insert_tag_values_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                     // join back together if any values are still defined
                     let items: Vec<Value> = val_arr.items().into_iter().filter(|v| !v.is_undef()).collect();
                     array_assign(&val_arr, items.clone());
-                    new_val = if items.is_empty() { Value::Undef } else { Value::bytes(items.iter().map(|x| x.to_bytes().to_vec()).collect::<Vec<_>>().join(&sep[..])) };
+                    if items.is_empty() { Value::Undef } else { Value::bytes(items.iter().map(|x| x.to_bytes().to_vec()).collect::<Vec<_>>().join(&sep[..])) }
                 } else {
                     it.set_scalar("main::_", val.clone());
                     //### eval advanced formatting expression ($_, $self, @val, $tag, $advFmtSelf)
@@ -3593,8 +3590,8 @@ fn insert_tag_values_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                         it.set_scalar(EVAL_WARNING, e);
                     }
                     let t = it.get_scalar("main::_");
-                    new_val = if t.rtype() == "ARRAY" { Value::bytes(t.items().iter().map(|x| x.to_bytes().to_vec()).collect::<Vec<_>>().join(&sep[..])) } else { t };
-                }
+                    if t.rtype() == "ARRAY" { Value::bytes(t.items().iter().map(|x| x.to_bytes().to_vec()).collect::<Vec<_>>().join(&sep[..])) } else { t }
+                };
                 if it.get_scalar(EVAL_WARNING).truthy() {
                     let g3 = if doc_grp.truthy() && !re(r"\b(main|doc\d+):", "i").is_match(&var) { pl::concat(&doc_grp, &s(":")) } else { s("") };
                     let str = cat(&[&clean_warning(it)?, &s(" for '"), &g3, &var, &s("'")]);

@@ -197,8 +197,7 @@ pub fn apply_shift(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// Returns: updated shift string, or undef on error (and may update shift)
 pub fn check_shift(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (type_, mut shift) = (arg(&a, 0), arg(&a, 1));
-    let err;
-    if pl::str_eq(&type_, "Time") {
+    let err = if pl::str_eq(&type_, "Time") {
         let mut c1 = Value::Undef;
         if re(r"^(\+|-)", "").subst(&mut shift, false, |c| {
             c1 = cap(c, 1);
@@ -210,10 +209,10 @@ pub fn check_shift(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         // do a test shift to validate the shift string
         let test_time = pl::s("2005:11:02 09:00:13.25-04:00");
         let d = if pl::str_eq(&c1, "+") { n(1) } else { n(-1) };
-        err = shift_time_impl(it, &[test_time, shift, d])?.0;
+        shift_time_impl(it, &[test_time, shift, d])?.0
     } else {
-        err = pl::s(&format!("Unknown shift type ({})", type_.to_text()));
-    }
+        pl::s(&format!("Unknown shift type ({})", type_.to_text()))
+    };
     ret(err)
 }
 
@@ -518,7 +517,6 @@ fn shift_time_impl(it: &mut Interp, a: &[Value]) -> ER<(Value, Option<Value>)> {
     let time = Value::new_array(vec![]);
     let shift_l = Value::new_array(vec![]);
     let to_time = Value::new_array(vec![]);
-    let mode;
     let mut need_shift_offset = false;
     let dec;
 
@@ -546,16 +544,16 @@ fn shift_time_impl(it: &mut Interp, a: &[Value]) -> ER<(Value, Option<Value>)> {
         return Ok((pl::s(&format!("Invalid time string ({})", val.to_text())), None));
     }
     let t = |i: i64| time.at(i);
-    if !t(0).is_undef() {
+    let mode = if !t(0).is_undef() {
         if pl::str_eq(&t(0), "0000") {
             return Ok((pl::s("Can't shift from year 0000"), None));
         }
-        mode = if !t(3).is_undef() { "DateTime" } else { "Date" };
+        if !t(3).is_undef() { "DateTime" } else { "Date" }
     } else if !t(3).is_undef() {
-        mode = "Time";
+        "Time"
     } else {
-        mode = "";
-    }
+        ""
+    };
     // get number of digits after the seconds decimal point
     let m5 = if t(5).is_undef() { None } else { re(r"\.(\d+)", "").m(&t(5)) };
     if let Some(c) = m5 {

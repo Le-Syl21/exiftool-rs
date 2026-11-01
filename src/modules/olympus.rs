@@ -95,7 +95,7 @@ pub fn print_af_areas(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
         if let Some(name) = af_point_names(pt) {
             val = pl::concat(&val, &pl::s(&format!("{name} ")));
         }
-        let coords = pl::unpack("C4", &pl::pack("N", &[pt.clone()])?)?;
+        let coords = pl::unpack("C4", &pl::pack("N", std::slice::from_ref(pt))?)?;
         let c = |i: usize| arg(&coords, i);
         let s = pl::concat(
             &pl::concat(&pl::concat(&pl::concat(&pl::s("("), &c(0)), &pl::concat(&pl::s(","), &c(1))), &pl::concat(&pl::s(")-("), &c(2))),

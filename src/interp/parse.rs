@@ -696,16 +696,15 @@ impl<'a> Parser<'a> {
                     max = None;
                     continue;
                 }
-                '\\' => {
+                '\\'
                     // one slot: \X or \[...]
-                    if chars.next() == Some('[') {
+                    if chars.next() == Some('[') => {
                         for d in chars.by_ref() {
                             if d == ']' {
                                 break;
                             }
                         }
                     }
-                }
                 _ => {}
             }
             if !optional {

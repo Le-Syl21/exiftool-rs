@@ -98,14 +98,17 @@ pub fn set_line(line: u32) {
     LOCATION.with(|l| l.borrow_mut().1 = line);
 }
 
+/// One `caller` frame: the caller's package, file and line, and the sub's name.
+pub type CallerFrame = (Rc<str>, Option<Rc<str>>, u32, Rc<str>);
+
 thread_local! {
     /// perl's call stack for `caller`: per sub call, the caller's package,
     /// file and line, and the sub's name.
-    static CALLERS: RefCell<Vec<(Rc<str>, Option<Rc<str>>, u32, Rc<str>)>> = const { RefCell::new(Vec::new()) };
+    static CALLERS: RefCell<Vec<CallerFrame>> = const { RefCell::new(Vec::new()) };
 }
 
 /// `caller(level)`: the caller's package, file, line and the sub's name.
-pub fn caller_frame(level: usize) -> Option<(Rc<str>, Option<Rc<str>>, u32, Rc<str>)> {
+pub fn caller_frame(level: usize) -> Option<CallerFrame> {
     CALLERS.with(|c| {
         let c = c.borrow();
         c.len().checked_sub(level + 1).map(|i| c[i].clone())
@@ -544,6 +547,10 @@ impl Globals {
 pub type GlobalHook = Rc<dyn Fn(&mut Interp, u8, &str) -> Option<Binding>>;
 pub type RequireHook = Rc<dyn Fn(&mut Interp, &str) -> ER<()>>;
 
+/// `Interp::numified`: by storage (address and element key), the string
+/// it held when numified, with the storage kept alive.
+type Numified = HashMap<(usize, Vec<u8>), (warnings::Keep, Rc<[u8]>)>;
+
 pub struct Interp {
     /// Package variables, by their sigil followed by the fully qualified
     /// name (`$main::_`), so that a name is looked up as a `&str` built on
@@ -636,7 +643,7 @@ pub struct Interp {
     warn_quiet: bool,
     /// Variables whose string was numified (warned "isn't numeric"), by
     /// storage, with the string they held: perl does not warn again.
-    numified: HashMap<(usize, Vec<u8>), (warnings::Keep, Rc<[u8]>)>,
+    numified: Numified,
 }
 
 impl Default for Interp {
@@ -2760,7 +2767,7 @@ impl Interp {
                         _ => Lv::Skip,
                     });
                 }
-                return Ok(if out.len() == 1 && !matches!(vars.first(), None) { out.pop().unwrap() } else { Lv::List(out) });
+                return Ok(if out.len() == 1 && !vars.is_empty() { out.pop().unwrap() } else { Lv::List(out) });
             }
         }
         let mut out = Vec::new();
@@ -2784,7 +2791,7 @@ impl Interp {
                 _ => Lv::Skip,
             });
         }
-        Ok(if out.len() == 1 && !matches!(vars.first(), None) { out.pop().unwrap() } else { Lv::List(out) })
+        Ok(if out.len() == 1 && !vars.is_empty() { out.pop().unwrap() } else { Lv::List(out) })
     }
 
     /// `local`: save the current value, restored when the block ends.

@@ -545,6 +545,7 @@ pub fn fix_base(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// - dirInfo may contain TagInfo reference for tag associated with directory
 /// - on success, updates DirStart, DirLen, Base and DataPos in dirInfo
 /// - also sets Relative flag in dirInfo if offsets are relative to IFD
+///
 /// Note: Changes byte ordering!
 pub fn locate_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));
@@ -802,7 +803,7 @@ pub fn process_canon(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
         if re(r"^(II\x2a\0|MM\0\x2a)", "").is_match(&footer) && substr(&footer, 0, Some(2)).to_bytes() == get_byte_order(it)?.to_bytes() {
             let old_offset = get32u(it, &new_ref(footer.clone()), n(4))?;
             let new_offset = pl::add(&dir_start, &data_pos);
-            let mut str = pl::sprintf("Original maker note offset: 0x%.4x", &[old_offset.clone()]);
+            let mut str = pl::sprintf("Original maker note offset: 0x%.4x", std::slice::from_ref(&old_offset));
             if !pl::num_eq(&old_offset, &new_offset) {
                 str = pl::concat(&str, &pl::sprintf("\nCurrent maker note offset: 0x%.4x", &[new_offset]));
             }

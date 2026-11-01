@@ -954,7 +954,7 @@ pub fn get_tag_list(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
         let fo = |t: &Value| file_order.get(t.to_bytes());
         let mut tags = found_tags.items();
         if pl::str_eq(&sort, "Tag") || pl::str_eq(&sort, "Alpha") {
-            return ret_sorted(sort_str(tags), want);
+            ret_sorted(sort_str(tags), want)
         } else if let Some(c) = re(r"^Group(\d*(:\d+)*)", "").m(&sort) {
             let mut family = cap(&c, 1);
             if !family.truthy() {
@@ -1768,8 +1768,8 @@ fn get_value_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
                             v = match r {
                                 Ok(mut x) => x.pop().unwrap_or_default(),
                                 Err(e) => {
-                                    if it.exit_code.is_some() {
-                                        return Err(Flow::Exit(it.exit_code.unwrap()));
+                                    if let Some(code) = it.exit_code {
+                                        return Err(Flow::Exit(code));
                                     }
                                     if e.truthy() {
                                         it.set_scalar(EVAL_WARNING, e);
@@ -2207,11 +2207,7 @@ fn re_interp(pat: &Value, flags: &str) -> ER<pl::Re> {
     if bytes.is_empty() {
         bytes = b"(?:)".to_vec();
     }
-    match pl::re_dyn(&bytes, flags) {
-        Ok(r) => Ok(r),
-        // (the message is perl's already: see regex::perl_message)
-        Err(e) => Err(e),
-    }
+    pl::re_dyn(&bytes, flags)
 }
 
 /// Get/set ExifTool options

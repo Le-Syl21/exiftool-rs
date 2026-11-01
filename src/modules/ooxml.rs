@@ -65,6 +65,14 @@ pub fn get_tag_id(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     Ok(vec![tag, ns])
 }
 
+/// True if %Image::ExifTool::XMP::Main has a SubDirectory entry for this
+/// namespace (kept as a function so the lookup stays lazy in the elsif chain).
+fn has_std_xmp_table(it: &mut Interp, ns: &Value) -> bool {
+    let xmp_main = pl::pkg_hash(it, "Image::ExifTool::XMP::Main");
+    let e = xmp_main.get(ns.to_bytes());
+    pl::ref_of(&e) == "HASH" && e.get("SubDirectory").truthy()
+}
+
 //------------------------------------------------------------------------------
 // We found an XMP property name/value
 // Inputs: 0) ExifTool object ref, 1) tag table ref
@@ -148,11 +156,7 @@ pub fn found_tag(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     } else if pl::str_eq(&tag, "xmlns") {
         // ignore namespaces (for now)
         return ret(n(0));
-    } else if {
-        let xmp_main = pl::pkg_hash(it, "Image::ExifTool::XMP::Main");
-        let e = xmp_main.get(ns.to_bytes());
-        pl::ref_of(&e) == "HASH" && e.get("SubDirectory").truthy()
-    } {
+    } else if has_std_xmp_table(it, &ns) {
         // use standard XMP table if it exists
         let xmp_main = pl::pkg_hash(it, "Image::ExifTool::XMP::Main");
         let table = xmp_main.get(ns.to_bytes()).get("SubDirectory").get("TagTable");

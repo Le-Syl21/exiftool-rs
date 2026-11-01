@@ -227,11 +227,8 @@ impl Interp {
         let r = fh.input.as_mut()?.reader();
         let mut c = Vec::new();
         let mut byte = [0u8];
-        loop {
-            match r.read(&mut byte) {
-                Ok(1) => c.push(byte[0]),
-                _ => break,
-            }
+        while let Ok(1) = r.read(&mut byte) {
+            c.push(byte[0]);
             // a UTF-8 character's length, from its first byte
             let want = if !utf8 { 1 } else { crate::perl::utf8::char_len(c[0]) };
             if c.len() >= want {
@@ -322,7 +319,7 @@ impl Interp {
         let Some(h) = self.handle_of(&hv, false) else { return Ok(if want == Want::List { vec![] } else { vec![Value::Undef] }) };
         let sep = self.get_scalar("main::/");
         // the handle perl names after "at FILE line N" in die/warn messages
-        let chunk = !(sep.is_undef() == false && &*sep.to_bytes() == b"\n");
+        let chunk = !(!sep.is_undef() && &*sep.to_bytes() == b"\n");
         super::set_last_read(&h, chunk);
         let mut out = Vec::new();
         loop {
@@ -482,7 +479,7 @@ pub(super) fn call(it: &mut Interp, name: &str, args: &[Expr], scope: &Rc<Scope>
                 Ok(match (fh.input.as_mut(), fh.output.as_mut()) {
                     (Some(Input::File(f)), _) => f.stream_position().map(|p| p as i64).unwrap_or(-1),
                     (Some(Input::Memory(m)), _) => m.position() as i64,
-                    (Some(Input::Rw(f)), _) => f.seek(SeekFrom::Current(0)).map(|p| p as i64).unwrap_or(-1),
+                    (Some(Input::Rw(f)), _) => f.stream_position().map(|p| p as i64).unwrap_or(-1),
                     (None, Some(Output::File(w))) => w.stream_position().map(|p| p as i64).unwrap_or(-1),
                     (None, Some(Output::Scalar(c))) => c.borrow().to_bytes().len() as i64,
                     _ => -1,

@@ -191,7 +191,7 @@ fn keys(h: &Value) -> Vec<Value> {
 
 fn sorted_keys(h: &Value) -> Vec<Value> {
     let mut k = keys(h);
-    k.sort_by(|a, b| a.to_bytes().cmp(&b.to_bytes()));
+    k.sort_by_key(|a| a.to_bytes());
     k
 }
 
@@ -561,20 +561,20 @@ fn format_qt_value_v(it: &mut Interp, et: &Value, val_pt: &Value, tag_info: &Val
             let f = qt_format.get(k.to_bytes());
             flags = if f.truthy() { f } else { n(0) };
         }
-    } else if {
+    } else {
         pl::at(341);
         v = pl::sderef(&val_pt)?;
-        re(r"^\xff\xd8\xff", "").is_match(&v)
-    } {
-        flags = n(0x0d); // JPG
-    } else if re(r"^(\x89P|\x8aM|\x8bJ)NG\r\n\x1a\n", "").is_match(&v) {
-        flags = n(0x0e); // PNG
-    } else if re(r"^BM.{15}\0", "s").is_match(&v) {
-        flags = n(0x1b); // BMP
-    } else {
-        flags = n(0x01); // UTF8
-        let e = m(it, et, "Encode", vec![v, s("UTF8")])?;
-        pl::set_deref(&val_pt, e)?;
+        if re(r"^\xff\xd8\xff", "").is_match(&v) {
+            flags = n(0x0d); // JPG
+        } else if re(r"^(\x89P|\x8aM|\x8bJ)NG\r\n\x1a\n", "").is_match(&v) {
+            flags = n(0x0e); // PNG
+        } else if re(r"^BM.{15}\0", "s").is_match(&v) {
+            flags = n(0x1b); // BMP
+        } else {
+            flags = n(0x01); // UTF8
+            let e = m(it, et, "Encode", vec![v, s("UTF8")])?;
+            pl::set_deref(&val_pt, e)?;
+        }
     }
     if val_pt.deref().is_undef() {
         warn(it, et, cat!("Error converting value for ", tag_info.get("Name")))?;
@@ -1707,16 +1707,10 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
             let _ = keys_index;
         }
         // delete all ItemList tags when deleting group, but take care not to delete UserData Meta
-        if del_grp.truthy() {
-            if pl::str_eq(&dir_name, "ItemList") {
-                del_count = pl::add(&if del_count.truthy() { del_count.clone() } else { n(0) }, &n(1));
-                inc_changed(et);
-                continue;
-            } else if pl::str_eq(&dir_name, "UserData") && (!tag_info.truthy() || !tag_info.get("SubDirectory").truthy()) {
-                del_count = pl::add(&if del_count.truthy() { del_count.clone() } else { n(0) }, &n(1));
-                inc_changed(et);
-                continue;
-            }
+        if del_grp.truthy() && (pl::str_eq(&dir_name, "ItemList") || (pl::str_eq(&dir_name, "UserData") && (!tag_info.truthy() || !tag_info.get("SubDirectory").truthy()))) {
+            del_count = pl::add(&if del_count.truthy() { del_count.clone() } else { n(0) }, &n(1));
+            inc_changed(et);
+            continue;
         }
         if tag_info.truthy() && tag_info.get("AddedUnknown").truthy() {
             tag_info = Value::Undef;
@@ -2123,13 +2117,12 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                         if !lang.truthy() {
                             lang = und_lang.clone(); // treat both 0 and 'und' as 'und'
                         }
-                        let enc;
-                        if pl::lt(&lang, &n(0x400)) && !re(r"^\xfe\xff", "").is_match(&val) {
+                        let enc = if pl::lt(&lang, &n(0x400)) && !re(r"^\xfe\xff", "").is_match(&val) {
                             charset_quick_time = m(it, et, "Options", vec![s("CharsetQuickTime")])?;
-                            enc = charset_quick_time.clone();
+                            charset_quick_time.clone()
                         } else {
-                            enc = if re(r"^\xfe\xff", "").subst(&mut val, false, |_| Vec::new()) > 0 { s("UTF16") } else { s("UTF8") };
-                        }
+                            if re(r"^\xfe\xff", "").subst(&mut val, false, |_| Vec::new()) > 0 { s("UTF16") } else { s("UTF8") }
+                        };
                         if !tag_info.get("NoDecode").truthy() {
                             val = m(it, et, "Decode", vec![val, enc])?;
                             re(r"\0+$", "").subst(&mut val, false, |_| Vec::new()); // remove trailing nulls if they exist
@@ -2356,16 +2349,15 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
                 s("Unknown")
             };
             // determine length of this trailer
-            let len;
-            if trailer.truthy() {
-                len = pl::sub(&trailer.at(1), &last_pos); // runs to start of next trailer
+            let len = if trailer.truthy() {
+                pl::sub(&trailer.at(1), &last_pos) // runs to start of next trailer
             } else {
                 if !raf_seek(it, &raf, n(0), 2)? {
                     error(it, et, s("Seek error"))?;
                     return Ok(if data_pt.truthy() { Value::Undef } else { n(1) });
                 }
-                len = pl::sub(&raf_tell(it, &raf)?, &last_pos); // runs to end of file
-            }
+                pl::sub(&raf_tell(it, &raf)?, &last_pos) // runs to end of file
+            };
             // add to start of linked list of trailers
             trailer = arr(vec![type_, last_pos.clone(), len, trailer]);
         } else {
@@ -2399,7 +2391,7 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
         // make sorted list of new tags to be added
         let mut add_tags: Vec<Value> = keys(&dirs);
         add_tags.extend(keys(&new_tags));
-        add_tags.sort_by(|a, b| a.to_bytes().cmp(&b.to_bytes()));
+        add_tags.sort_by_key(|a| a.to_bytes());
         // add Keys tags if necessary
         if create_keys.truthy() {
             if cur_path.to_bytes() == keys_path.to_bytes() {
@@ -2641,7 +2633,7 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
         if is_empty {
             if !box_pos.is_empty() {
                 let mut names: Vec<Value> = keys(&box_pos).iter().map(|k| empty_meta.get(k.to_bytes())).collect();
-                names.sort_by(|a, b| a.to_bytes().cmp(&b.to_bytes()));
+                names.sort_by_key(|a| a.to_bytes());
                 vprint(it, et, 0, cat!("  Deleting ", pl::join("+", &names)))?;
             }
             pl::set_deref(&outfile, s(""))?;
@@ -2656,7 +2648,7 @@ fn write_quick_time_v(it: &mut Interp, et: &Value, dir_info: &Value, tag_table_p
 
     // return now if writing subdirectory
     if data_pt.truthy() {
-        if write_last.len() > 0 {
+        if !write_last.is_empty() {
             error(it, et, s("Internal error: WriteLast not on top-level atom!\n"))?;
         }
         return Ok(if err { Value::Undef } else { outfile.deref() });

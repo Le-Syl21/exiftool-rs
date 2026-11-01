@@ -255,7 +255,7 @@ fn process_local_set_body(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
         let extra;
         let (mut val, mut type_, mut lang_info) = (Value::Undef, Value::Undef, Value::Undef);
         if tag.truthy() && tag_table_ptr.get(tag.to_bytes()).truthy() {
-            extra = pl::sprintf(", Local 0x%.4x", &[loc.clone()]);
+            extra = pl::sprintf(", Local 0x%.4x", std::slice::from_ref(&loc));
         } else {
             tag = loc.clone();
             // $et->Warn('Missing local key for at least one tag');

@@ -131,7 +131,7 @@ fn process_entry(it: &mut Interp, et_: &Value, dir_info: &Value, raw_tag_table: 
             name = tag_info.get("Name");
         }
         if !name.truthy() {
-            name = pl::sprintf("CanonRaw_0x%.4x", &[tag.clone()]);
+            name = pl::sprintf("CanonRaw_0x%.4x", std::slice::from_ref(&tag));
         }
         let subdir_info = Value::new_hash();
         subdir_info.set("DirName", name.clone());

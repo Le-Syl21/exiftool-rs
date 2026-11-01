@@ -266,6 +266,8 @@ pub fn mult(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
 //------------------------------------------------------------------------------
 // Mix the columns of the state matrix
+// (column-wise access across the four rows of the state: no iterator form)
+#[allow(clippy::needless_range_loop)]
 fn mix_columns_st(s: &mut St) {
     let st = &mut s.state;
     for i in 0..4 {
@@ -291,6 +293,8 @@ pub fn mix_columns(it: &mut Interp, _a: Vec<Value>, want: Want) -> ER<Vec<Value>
     pl::ret_nothing(want)
 }
 
+// (column-wise access across the four rows of the state: no iterator form)
+#[allow(clippy::needless_range_loop)]
 fn inv_mix_columns_st(s: &mut St) {
     let st = &mut s.state;
     for i in 0..4 {

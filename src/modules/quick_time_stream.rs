@@ -559,17 +559,17 @@ fn new_time(it: &mut Interp, et: &Value, time: &Value, tag_tbl: &Value, tags: &V
         if et.get("LastTime").to_bytes() == time.to_bytes() {
             // combine with the previous NMEA sentence
             et.set("DOC_NUM", et.get("LastDoc"));
-        } else if {
+        } else {
             pl::at(1037);
-            pl::hderef(tags)?.len() > 0
-        } {
-            // handle existing tags and start a new document
-            // (see https://exiftool.org/forum/index.php?msg=75422)
-            handle_text(it, et, tag_tbl, tags)?;
-            // increment document number and update document count if necessary
-            let dn = pre_inc(et, "DOC_NUM");
-            if pl::lt(&et.get("DOC_COUNT"), &dn) {
-                et.set("DOC_COUNT", dn);
+            if !pl::hderef(tags)?.is_empty() {
+                // handle existing tags and start a new document
+                // (see https://exiftool.org/forum/index.php?msg=75422)
+                handle_text(it, et, tag_tbl, tags)?;
+                // increment document number and update document count if necessary
+                let dn = pre_inc(et, "DOC_NUM");
+                if pl::lt(&et.get("DOC_COUNT"), &dn) {
+                    et.set("DOC_COUNT", dn);
+                }
             }
         }
     }
@@ -1980,8 +1980,8 @@ pub fn process_free_gps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
                 // unpack and validate date/time
                 let mut now = pl::unpack("x13C3x28vC2", &b)?; // (H-1,M,S,Y,m,d)
                 now[0] = ops::bit_and(&pl::add(&now[0], &n(1)), &n(0xff)); // increment hour
-                for i in 0..date_max.len() {
-                    if pl::le(&now[i], &date_max.at(i as i64)) {
+                for (i, v) in now[..date_max.len()].iter().enumerate() {
+                    if pl::le(v, &date_max.at(i as i64)) {
                         continue;
                     }
                     warn(it, &et, s("Invalid GPS date/time"))?;
@@ -3078,11 +3078,10 @@ pub fn process_riff_trailer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
                 // lat/long are in DDDMM.MMMM format
                 let mut lat = get_double(it, &bp, n(pos + 4))?;
                 let mut lon = get_double(it, &bp, n(pos + 12))?;
-                if pl::gt(&pl::abs(&lat), &n(9000)) || pl::gt(&pl::abs(&lon), &n(18000)) {
-                    if warn(it, &et, s("Bad gps0 record"))?.truthy() {
+                if (pl::gt(&pl::abs(&lat), &n(9000)) || pl::gt(&pl::abs(&lon), &n(18000)))
+                    && warn(it, &et, s("Bad gps0 record"))?.truthy() {
                         break;
                     }
-                }
                 convert_lat_lon(&mut lat, &mut lon)?;
                 if pl::num_eq(&get8u(it, &bp, n(pos + 0x21))?, &n(2)) {
                     lat = pl::neg(&lat); // wild guess
@@ -3635,7 +3634,7 @@ fn process_insta360_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
             let ln = len.to_i64();
             if pl::modulo(&len, &dlen)?.truthy() && idn != 0x700 {
                 // (have seen one 0x700 record which was expected format but not multiple of 53 bytes)
-                warn(it, &et, pl::sprintf("Unexpected Insta360 record 0x%x length", &[id.clone()]))?;
+                warn(it, &et, pl::sprintf("Unexpected Insta360 record 0x%x length", std::slice::from_ref(&id)))?;
             } else if idn == 0x200 {
                 // there are 4 types of record 0x200
                 // 1. JPEG preview (starts with ff d8 ff e1)
@@ -4134,7 +4133,7 @@ fn scan_media_data_impl(it: &mut Interp, et: &Value) -> ER<()> {
             }
             let max_len = pl::sub(&data_len, &pl::sub(&start, &et.get("MediaDataOffset")));
             runtime::require(it, "Image::ExifTool::GoPro")?;
-            m(it, et, "VPrint", vec![n(0), pl::sprintf("Unreferenced GoPro record at 0x%x\n", &[file_pos.clone()])])?;
+            m(it, et, "VPrint", vec![n(0), pl::sprintf("Unreferenced GoPro record at 0x%x\n", std::slice::from_ref(&file_pos))])?;
             let size = pl::call(it, "Image::ExifTool::GoPro::ProcessGP6", vec![et.clone(), hash_of(vec![("RAF", raf.clone()), ("DirLen", max_len)])])?;
             if size.truthy() {
                 if !found.truthy() {

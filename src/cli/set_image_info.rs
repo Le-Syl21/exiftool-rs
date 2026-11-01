@@ -641,33 +641,32 @@ pub fn set_image_info(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<Val
                             call_void(it, "main::SigInt", vec![])?; // issue delayed SIGINT if necessary
                         }
                         //..........................................................
-
-                    // simply rename temporary file to replace original
-                    // (if we didn't already rename it to add "_original")
-                    } else if {
-                        let tmp = get(it, "tmpFile");
-                        pl::method(it, &et, "Rename", vec![tmp, dst_file.clone()])?.truthy()
-                    } {
-                        efile(it, &infile, Some(3))?;
-                        inc(it, "countGoodWr");
                     } else {
-                        let new_file = get(it, "tmpFile");
-                        set(it, "tmpFile", Value::Undef); // (avoid deleting file if we get interrupted)
-                        // unlink may fail if already renamed or no permission
-                        if !pl::method(it, &et, "Unlink", vec![file.clone()])?.truthy() {
-                            warn_(it, cat(&[s("Error renaming temporary file to "), dst_file.clone(), s("\n")]))?;
-                            efile(it, &infile, None)?;
-                            meth_void(it, &et, "Unlink", vec![new_file])?;
-                            inc(it, "countBadWr");
-                        // try renaming again now that the target has been deleted
-                        } else if !pl::method(it, &et, "Rename", vec![new_file, dst_file.clone()])?.truthy() {
-                            warn_(it, cat(&[s("Error renaming temporary file to "), dst_file.clone(), s("\n")]))?;
-                            efile(it, &infile, None)?;
-                            // (don't delete tmp file now because it is all we have left)
-                            inc(it, "countBadWr");
-                        } else {
+                        // simply rename temporary file to replace original
+                        // (if we didn't already rename it to add "_original")
+                        let tmp = get(it, "tmpFile");
+                        if pl::method(it, &et, "Rename", vec![tmp, dst_file.clone()])?.truthy() {
                             efile(it, &infile, Some(3))?;
                             inc(it, "countGoodWr");
+                        } else {
+                            let new_file = get(it, "tmpFile");
+                            set(it, "tmpFile", Value::Undef); // (avoid deleting file if we get interrupted)
+                            // unlink may fail if already renamed or no permission
+                            if !pl::method(it, &et, "Unlink", vec![file.clone()])?.truthy() {
+                                warn_(it, cat(&[s("Error renaming temporary file to "), dst_file.clone(), s("\n")]))?;
+                                efile(it, &infile, None)?;
+                                meth_void(it, &et, "Unlink", vec![new_file])?;
+                                inc(it, "countBadWr");
+                            // try renaming again now that the target has been deleted
+                            } else if !pl::method(it, &et, "Rename", vec![new_file, dst_file.clone()])?.truthy() {
+                                warn_(it, cat(&[s("Error renaming temporary file to "), dst_file.clone(), s("\n")]))?;
+                                efile(it, &infile, None)?;
+                                // (don't delete tmp file now because it is all we have left)
+                                inc(it, "countBadWr");
+                            } else {
+                                efile(it, &infile, Some(3))?;
+                                inc(it, "countGoodWr");
+                            }
                         }
                     }
                 } else if overwrite_orig.truthy() {

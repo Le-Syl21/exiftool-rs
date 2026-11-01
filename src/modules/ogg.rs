@@ -127,7 +127,7 @@ pub fn process_ogg(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                 break;
             }
             let mut keys: Vec<Value> = val.keys().into_iter().map(Value::from).collect();
-            keys.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+            keys.sort_by_key(|x| x.to_bytes());
             stream = keys[0].clone(); // take a stream
             flag = n(0); // no continuation
             raf = Value::Undef; // flag for done reading

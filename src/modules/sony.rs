@@ -391,9 +391,8 @@ pub fn print_inv_lens_spec(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
     }
     let li = pl::call_list(it, "Image::ExifTool::Exif::GetLensInfo", vec![v.clone()])?;
     let (sf, mut lf, sa, mut la) = (arg(&li, 0), arg(&li, 1), arg(&li, 2), arg(&li, 3));
-    let s;
-    if features.truthy() {
-        s = pl::s("");
+    let s = if features.truthy() {
+        pl::s("")
     } else if sf.truthy() {
         // fixed focal length and aperture have zero for 2nd number
         if pl::num_eq(&lf, &sf) {
@@ -402,10 +401,10 @@ pub fn print_inv_lens_spec(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<V
         if pl::num_eq(&la, &sa) {
             la = n(0);
         }
-        s = pl::concat(&pl::s(" "), &pl::join(" ", &[sf, lf, sa, la]));
+        pl::concat(&pl::s(" "), &pl::join(" ", &[sf, lf, sa, la]))
     } else {
         return pl::ret_undef();
-    }
+    };
     let mut flags = n(0);
     let lens_features = crate::runtime::lex_array(it, MODULE, "lensFeatures");
     for feature in lens_features.items() {
@@ -549,7 +548,7 @@ pub fn process_more_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
         }
         // generate binary tables for unknown tags if -U option used
         if tag_table_ptr.get(tag.to_bytes()).is_undef() && pl::gt(&unknown, &n(1)) {
-            let name = pl::sprintf("MoreInfo%.4x", &[tag.clone()]);
+            let name = pl::sprintf("MoreInfo%.4x", std::slice::from_ref(&tag));
             let table = pl::concat(&pl::s("Image::ExifTool::Sony::"), &name);
             let t = pl::pkg_hash(it, &table.to_text());
             if let Value::HashRef(h) = &t {
@@ -794,11 +793,9 @@ fn decrypt_rs(data_pt: &Value, start: &Value, len: &Value, key: &Value) -> ER<()
     if data.len() < nw {
         data.resize(nw, 0); // (undef ^ pad, as perl)
     }
-    let mut i = 0x7f;
-    for d in data.iter_mut().take(nw) {
+    for (i, d) in (0x7f..).zip(data.iter_mut().take(nw)) {
         pad[i & 0x7f] = pad[(i + 1) & 0x7f] ^ pad[(i + 65) & 0x7f];
         *d ^= pad[i & 0x7f];
-        i += 1;
     }
     let packed: Vec<Value> = data.iter().map(|&x| ops::from_uv(x)).collect();
     let packed = pl::pack("N*", &packed)?;

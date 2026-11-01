@@ -44,7 +44,7 @@ pub fn decompress_rtf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
     }
     let comp = pl::unpack1("x8V", &cdat)?;
 
-    if pl::num_eq(&comp, &n(0x414c454D)) {
+    if pl::num_eq(&comp, &n(0x414c454d)) {
         return ret(pl::substr(&cdat, 16, None));
     } else if !pl::num_eq(&comp, &n(0x75465a4c)) {
         let msg = pl::sprintf("Unknown RTF compression 0x%x", &[comp]);
@@ -85,14 +85,13 @@ pub fn decompress_rtf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
                 }
                 let r#ref = ((cd[cpos] as usize) << 8) | cd[cpos + 1] as usize;
                 cpos += 2;
-                let mut off = r#ref >> 4;
+                let off = r#ref >> 4;
                 let len = (r#ref & 0x0f) + 2;
                 if off == dpos % 4096 || off % 4096 >= dict.len() {
                     return ret(Value::bytes(rtn_val));
                 }
-                for _ in 0..len {
+                for off in (off..).take(len) {
                     let ch = dict[off % 4096];
-                    off += 1;
                     put(&mut dict, dpos % 4096, ch);
                     dpos += 1;
                     rtn_val.push(ch);

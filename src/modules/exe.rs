@@ -304,7 +304,7 @@ fn process_pe_resources_impl(it: &mut Interp, et: &Value, dir_info: &Value) -> E
             if !level.truthy() {
                 // set resource type if this is the 0th level directory
                 let rt = resource_type.get(name.to_bytes());
-                let res_type = if rt.truthy() { rt } else { pl::sprintf("Unknown (0x%x)", &[name.clone()]) };
+                let res_type = if rt.truthy() { rt } else { pl::sprintf("Unknown (0x%x)", std::slice::from_ref(&name)) };
                 // ignore everything but the Version resource unless verbose
                 if verbose.truthy() {
                     pl::method(it, et, "VPrint", vec![n(0), cat(&[&res_type, &pl::s(" resource:\n")])])?;

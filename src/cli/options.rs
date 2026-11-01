@@ -1407,7 +1407,7 @@ fn charset(it: &mut Interp) -> ER<bool> {
             }
         }
         let mut keys: Vec<Value> = charsets.keys().iter().map(|k| Value::bytes(&**k)).collect();
-        keys.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+        keys.sort_by_key(|x| x.to_bytes());
         let mut args = vec![s("Available character sets")];
         args.extend(keys);
         vcall(it, "main::PrintTagList", args)?;

@@ -21,7 +21,7 @@ fn my_hash(it: &mut Interp, name: &str) -> Value {
 /// `sort keys %$h` (string order).
 fn sorted_keys(h: &Value) -> Vec<Value> {
     let mut k: Vec<Value> = h.keys().into_iter().map(|k| Value::bytes(&k[..])).collect();
-    k.sort_by(|a, b| a.to_bytes().cmp(&b.to_bytes()));
+    k.sort_by_key(|a| a.to_bytes());
     k
 }
 
@@ -248,14 +248,12 @@ pub fn validate_exif(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
                     warn(it, m, None)?;
                 }
             }
-        } else if !os_ft.truthy() || (!hget(&os_ft, &tag).truthy() && !os_ft.get("All").truthy()) {
-            if is_main || ti.get("Unknown").truthy() {
-                if !hget(&other_spec, &ifd).truthy() {
+        } else if (!os_ft.truthy() || (!hget(&os_ft, &tag).truthy() && !os_ft.get("All").truthy()))
+            && (is_main || ti.get("Unknown").truthy())
+                && !hget(&other_spec, &ifd).truthy() {
                     let m = pl::sprintf("Non-standard %s tag 0x%.4x %s", &[ifd.clone(), tag.clone(), ti.get("Name")]);
                     warn(it, m, Some(n(1)))?;
                 }
-            }
-        }
         // change expected count from read Format to Writable size
         let mut ti_count = ti.get("Count");
         if ti_count.truthy() {
@@ -272,12 +270,11 @@ pub fn validate_exif(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
                 warn(it, m, None)?;
             }
         }
-    } else if !os_ft.truthy() || (!hget(&os_ft, &tag).truthy() && !os_ft.get("All").truthy()) {
-        if !hget(&other_spec, &ifd).truthy() {
+    } else if (!os_ft.truthy() || (!hget(&os_ft, &tag).truthy() && !os_ft.get("All").truthy()))
+        && !hget(&other_spec, &ifd).truthy() {
             let m = pl::sprintf("Unknown %s tag 0x%.4x", &[ifd.clone(), tag.clone()]);
             warn(it, m, Some(n(1)))?;
         }
-    }
     pl::ret_nothing(want)
 }
 
@@ -444,14 +441,13 @@ fn finish_validate_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
                     if ct.is_undef() || pl::num_eq(&ct, &n(1)) || pl::ge(&ver, &ct) {
                         continue;
                     }
-                    let vstr;
-                    if pl::str_eq(&ver_tag, "GPSVersionID") {
+                    let vstr = if pl::str_eq(&ver_tag, "GPSVersionID") {
                         let mut v = ct.clone();
                         re(r"^(\d)(\d)(\d)", "").subst(&mut v, false, |c| format!("{}.{}.{}.", cap(c, 1).to_text(), cap(c, 2).to_text(), cap(c, 3).to_text()).into_bytes());
-                        vstr = v;
+                        v
                     } else {
-                        vstr = pl::sprintf("%.4d", &[ct.clone()]);
-                    }
+                        pl::sprintf("%.4d", std::slice::from_ref(&ct))
+                    };
                     let m = pl::sprintf("%s tag 0x%.4x %s requires %s %s or higher", &[grp.clone(), tag.clone(), ti.get("Name"), ver_tag.clone(), vstr]);
                     pl::method(it, &et, "Warn", vec![m])?;
                 }
@@ -482,9 +478,8 @@ fn finish_validate_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
                         post = pl::s(&format!("is not allowed in {ft}"));
                         minor = n(1);
                     }
-                    let name;
-                    if hget(&info, &tag).truthy() {
-                        name = hget(&info, &tag).get("Name");
+                    let name = if hget(&info, &tag).truthy() {
+                        hget(&info, &tag).get("Name")
                     } else {
                         let table = format!("Image::ExifTool::{}::Main", if pl::str_eq(&grp, "GPS") { "GPS" } else { "Exif" });
                         let tt = pl::call(it, "Image::ExifTool::GetTagTable", vec![pl::s(&table)])?;
@@ -492,8 +487,8 @@ fn finish_validate_body(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
                         if pl::ref_of(&tag_info) == "ARRAY" {
                             tag_info = tag_info.at(0);
                         }
-                        name = if tag_info.truthy() { tag_info.get("Name") } else { pl::s("<unknown>") };
-                    }
+                        if tag_info.truthy() { tag_info.get("Name") } else { pl::s("<unknown>") }
+                    };
                     let wf = et.get("WrongFormat");
                     if wf.truthy() && wf.get(format!("{}:{}", grp.to_text(), name.to_text())).truthy() {
                         continue;

@@ -132,7 +132,7 @@ fn write_pdf_value_v(it: &mut Interp, et: &Value, mut val: Value, format: &Value
 /// Encode PDF string (the string held by a reference, updated in place).
 fn encode_string_ref(it: &mut Interp, str_pt: &Value) -> ER<()> {
     pl::at(112);
-    let s = pl::sderef(&str_pt)?;
+    let s = pl::sderef(str_pt)?;
     if s.is_array() {
         let items = s.items();
         for (i, item) in items.into_iter().enumerate() {
@@ -145,10 +145,10 @@ fn encode_string_ref(it: &mut Interp, str_pt: &Value) -> ER<()> {
     let ke = get(&key_ext(it));
     pl::call(it, "Image::ExifTool::PDF::Crypt", vec![str_pt.clone(), ke, n(1)])?; // encrypt if necessary
     // encode as hex if we have any control characters (except tab)
-    if re(r"[\x00-\x08\x0a-\x1f\x7f\xff]", "").is_match(&pl::sderef(&str_pt)?) {
+    if re(r"[\x00-\x08\x0a-\x1f\x7f\xff]", "").is_match(&pl::sderef(str_pt)?) {
         // encode as hex
         let mut st = pl::s("");
-        let l = len(&pl::sderef(&str_pt)?);
+        let l = len(&pl::sderef(str_pt)?);
         let mut i = n(0);
         loop {
             let mut nn = pl::sub(&l, &i);
@@ -161,13 +161,13 @@ fn encode_string_ref(it: &mut Interp, str_pt: &Value) -> ER<()> {
             if i.truthy() {
                 st = pl::concat(&st, &irs(it));
             }
-            let part = substr(it, &pl::sderef(&str_pt)?, &i, Some(&nn))?;
+            let part = substr(it, &pl::sderef(str_pt)?, &i, Some(&nn))?;
             st = pl::concat(&st, &pl::unpack1("H*", &part)?);
             i = pl::add(&i, &nn);
         }
         pl::set_deref(str_pt, cat(&[pl::s("<"), st, pl::s(">")]))?;
     } else {
-        let mut v = pl::sderef(&str_pt)?;
+        let mut v = pl::sderef(str_pt)?;
         re(r"([()\\])", "").subst(&mut v, true, |c| [b"\\", &cap(c, 1).to_bytes()[..]].concat()); // must escape round brackets and backslashes
         pl::set_deref(str_pt, cat(&[pl::s("("), v, pl::s(")")]))?;
     }
@@ -251,14 +251,13 @@ fn get_free_entries_v(it: &mut Interp, dict: &Value) -> ER<Value> {
         let sep = it.get_scalar("main::\"");
         let parts: Vec<Vec<u8>> = w.items().iter().map(|v| v.to_bytes().to_vec()).collect();
         let bytes = Value::bytes(parts.join(&sep.to_bytes()[..]));
-        let fmt;
-        if bytes.eq_str("1 4 2") {
-            fmt = "CNn";
+        let fmt = if bytes.eq_str("1 4 2") {
+            "CNn"
         } else if bytes.eq_str("1 8 2") {
-            fmt = "CNNn";
+            "CNNn"
         } else {
             return Ok(xref_free);
-        }
+        };
         let size = dict.get("_entry_size"); // this will be 7 for 'CNn' or 11 for 'CNNn'
         let index = dict.get("Index");
         let l = len(&dict.get("_stream"));
@@ -852,14 +851,13 @@ pub fn write_pdf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 
             // must insert free xref entries from previous exiftool update if applicable
             if prev_update.truthy() {
-                let main_free;
                 // extract free entries from our previous Main xref stream
-                if main_dict.get("Type").truthy() && main_dict.get("Type").eq_str("/XRef") {
-                    main_free = get_free_entries_v(it, &xref.get("dicts").at(0))?;
+                let main_free = if main_dict.get("Type").truthy() && main_dict.get("Type").eq_str("/XRef") {
+                    get_free_entries_v(it, &xref.get("dicts").at(0))?
                 } else {
                     // free entries from Main xref table already captured for us
-                    main_free = capture.get("mainFree");
-                }
+                    capture.get("mainFree")
+                };
                 let mut ids = keys(&main_free);
                 sort_num(&mut ids);
                 for i in ids {

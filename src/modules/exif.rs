@@ -196,16 +196,16 @@ pub fn calculate_lv(it: &mut Interp, mut a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     if a.len() < 3 {
         return pl::ret_undef();
     }
-    for i in 0..a.len() {
-        if !a[i].truthy() {
+    for (i, ai) in a.iter_mut().enumerate() {
+        if !ai.truthy() {
             return pl::ret_undef();
         }
-        let Some(m) = re(FLOAT_RE, "").m(&a[i]) else { return pl::ret_undef() };
+        let Some(m) = re(FLOAT_RE, "").m(ai) else { return pl::ret_undef() };
         let f = cap(&m, 1);
         if !pl::gt(&f, &n(0)) {
             return pl::ret_undef();
         }
-        a[i] = f.clone(); // extract float from any other garbage
+        *ai = f.clone(); // extract float from any other garbage
         it.set_arg(i, f)?;
     }
     // (A light value of 0 is defined as f/1.0 at 1 second with ISO 100)
@@ -1102,21 +1102,21 @@ pub fn print_lens_id(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
                 continue;
             }
             // now determine the best match for this aperture
-            let aa; // approximate maximum aperture at this focal length
-            if pl::num_eq(&sf, &lf) || pl::num_eq(&sa, &la) || pl::le(&focal_length, &sf) {
+             // approximate maximum aperture at this focal length
+            let aa = if pl::num_eq(&sf, &lf) || pl::num_eq(&sa, &la) || pl::le(&focal_length, &sf) {
                 // either 1) prime lens, 2) fixed-aperture zoom, or 3) zoom at min focal
-                aa = sa.clone();
+                sa.clone()
             } else if pl::ge(&focal_length, &lf) {
-                aa = la.clone();
+                la.clone()
             } else {
                 // assume a log-log variation of max aperture with focal length
                 // (see http://regex.info/blog/2006-10-05/263)
                 pl::at(6024);
                 let t = pl::div(&pl::sub(&log(&la)?, &log(&sa)?), &pl::sub(&log(&lf)?, &log(&sf)?))?;
-                aa = exp(&pl::add(&log(&sa)?, &pl::mul(&t, &pl::sub(&log(&focal_length)?, &log(&sf)?))));
+                exp(&pl::add(&log(&sa)?, &pl::mul(&t, &pl::sub(&log(&focal_length)?, &log(&sf)?))))
                 // a linear relationship between 1/FocalLength and 1/MaxAperture fits Sony better (ref 27)
                 //$aa = 1 / (1/$sa + (1/$focalLength - 1/$sf) * (1/$la - 1/$sa) / (1/$lf - 1/$sf));
-            }
+            };
             let d = pl::abs(&pl::sub(&max_aperture, &aa));
             if !diff.is_undef() {
                 if pl::gt(&d, &pl::add(&diff, &Value::Num(0.15))) {
@@ -1319,11 +1319,11 @@ pub fn rebuild_tiff(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
         let off = pl::split_ws(&vals.get("StripOffsets"));
         let len = pl::split_ws(&vals.get("StripByteCounts"));
         // read the image data
-        for j in 0..off.len() {
+        for (j, o) in off.iter().enumerate() {
             if !pl::num_eq(&arg(&len, j), &pl::mul(&row_bytes, &vals.get("RowsPerStrip"))) {
                 continue 'sub_file;
             }
-            let tmp = pl::method(it, &et, "ExtractBinary", vec![off[j].clone(), arg(&len, j)])?;
+            let tmp = pl::method(it, &et, "ExtractBinary", vec![o.clone(), arg(&len, j)])?;
             if tmp.is_undef() {
                 continue 'sub_file;
             }
@@ -1746,7 +1746,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                 None => pl::s("Next IFD"),
             };
             let off = get32u(it, &data_pt, &dir_end)?;
-            tip = pl::sprintf_v(&pl::concat(&nxt, &pl::s(" offset: 0x%.4x")), &[off.clone()]);
+            tip = pl::sprintf_v(&pl::concat(&nxt, &pl::s(" offset: 0x%.4x")), std::slice::from_ref(&off));
             if off.truthy() {
                 let (o, i, _) = next_offset_name_impl(&et, &off_name);
                 next_off_name = o;
@@ -1983,7 +1983,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                             buff = ra[0].clone();
                             if !pl::num_eq(&r, &size) {
                                 let f = [&b"Error reading value for "[..], &dir_s(&dir), b" entry ", &index.to_bytes(), b", ID 0x%.4x"].concat();
-                                wrn = pl::sprintf_v(&Value::bytes(f), &[tag_id.clone()]);
+                                wrn = pl::sprintf_v(&Value::bytes(f), std::slice::from_ref(&tag_id));
                                 if tag_info.truthy() && !tag_info.get("Unknown").truthy() {
                                     wrn = pl::concat(&wrn, &pl::concat(&pl::s(" "), &tag_info.get("Name")));
                                     trunc_ok = tag_info.get("TruncateOK");
@@ -2032,7 +2032,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                         value_ptr = pl::add(&value_ptr, &new_base);
                     }
                     if !tag_str.truthy() {
-                        tag_str = pl::sprintf("tag 0x%.4x", &[tag_id.clone()]);
+                        tag_str = pl::sprintf("tag 0x%.4x", std::slice::from_ref(&tag_id));
                     }
                     // allow PreviewImage to run outside EXIF data
                     let et_raf = et.get("RAF");
@@ -2077,7 +2077,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             }
             // warn about suspect offsets if they didn't already cause another warning
             if !suspect.is_undef() && pl::num_eq(&suspect, &warn_count) {
-                let tag_str = if tag_info.truthy() { tag_info.get("Name") } else { pl::sprintf("tag 0x%.4x", &[tag_id.clone()]) };
+                let tag_str = if tag_info.truthy() { tag_info.get("Name") } else { pl::sprintf("tag 0x%.4x", std::slice::from_ref(&tag_id)) };
                 let msg = [&b"Suspicious "[..], &dir_s(&dir), b" offset for ", &tag_str.to_bytes()].concat();
                 if et_warn(it, &et, Value::bytes(msg), Some(Value::from(in_maker_notes)))?.truthy() {
                     warn_count = pl::add(&warn_count, &n(1));
@@ -2182,7 +2182,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             let mut warned = Value::Undef;
             let not_bin = !re(r"^(undef|string|binary)$", "").is_match(&format_str);
             if pl::gt(&count, &n(100000)) && not_bin {
-                let tag_name = if tag_info.truthy() { tag_info.get("Name") } else { pl::sprintf("tag 0x%.4x", &[tag_id.clone()]) };
+                let tag_name = if tag_info.truthy() { tag_info.get("Name") } else { pl::sprintf("tag 0x%.4x", std::slice::from_ref(&tag_id)) };
                 // (count of 196608 is typical for ColorMap)
                 if !tag_name.eq_str("TransferFunction") || !pl::num_eq(&count, &n(196608)) {
                     let minor = if pl::gt(&count, &n(2000000)) { n(0) } else { n(2) };
@@ -2236,9 +2236,9 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                 } else if pl::num_eq(&tag_id, &n(0x927c)) && dir_name.eq_str("ExifIFD") {
                     tag_name = pl::s("MakerNotes");
                 } else {
-                    tag_name = pl::sprintf("Tag 0x%.4x", &[tag_id.clone()]);
+                    tag_name = pl::sprintf("Tag 0x%.4x", std::slice::from_ref(&tag_id));
                 }
-                let dname = pl::sprintf_v(&Value::bytes([&dir_s(&dir)[..], b"-%.2d"].concat()), &[index.clone()]);
+                let dname = pl::sprintf_v(&Value::bytes([&dir_s(&dir)[..], b"-%.2d"].concat()), std::slice::from_ref(&index));
                 // build our tool tip
                 if pl::lt(&size, &n(0)) {
                     size = pl::mul(&count, &format_size.at(format.to_i64()));
@@ -2250,7 +2250,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                 if wrong_format.truthy() {
                     fstr = pl::concat(&fstr, &pl::s(" <-- WRONG"));
                 }
-                let mut tip = pl::concat(&pl::sprintf("Tag ID: 0x%.4x\n", &[tag_id.clone()]), &Value::bytes([&b"Format: "[..], &fstr.to_bytes(), b"\nSize: ", &size.to_bytes(), b" bytes\n"].concat()));
+                let mut tip = pl::concat(&pl::sprintf("Tag ID: 0x%.4x\n", std::slice::from_ref(&tag_id)), &Value::bytes([&b"Format: "[..], &fstr.to_bytes(), b"\nSize: ", &size.to_bytes(), b" bytes\n"].concat()));
                 if pl::gt(&size, &n(4)) {
                     let off_pt = get32u(it, &data_pt, &pl::add(&entry, &n(8)))?;
                     // (test this with ../pics/{CanonEOS-1D_XMarkIII.hif,PanasonicDC-G9.rw2,*.raf})
@@ -2264,11 +2264,11 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                         }
                     };
                     let act_pt = pl::add(&pl::sub(&pl::add(&pl::add(&value_ptr, &value_data_pos), &base), &exif_pos), &fudge);
-                    tip = pl::concat(&tip, &pl::sprintf("Value offset: 0x%.4x\n", &[off_pt.clone()]));
+                    tip = pl::concat(&tip, &pl::sprintf("Value offset: 0x%.4x\n", std::slice::from_ref(&off_pt)));
                     // highlight tag name (red for bad size)
                     let mut style = if bad.truthy() || tval.is_undef() { "V" } else { "H" };
                     if !pl::num_eq(&act_pt, &off_pt) {
-                        tip = pl::concat(&tip, &pl::sprintf("Actual offset: 0x%.4x\n", &[act_pt.clone()]));
+                        tip = pl::concat(&tip, &pl::sprintf("Actual offset: 0x%.4x\n", std::slice::from_ref(&act_pt)));
                         let sign = if pl::lt(&act_pt, &off_pt) { "-" } else { "" };
                         tip = pl::concat(&tip, &pl::sprintf(&format!("Offset base: {sign}0x%.4x\n"), &[pl::abs(&pl::sub(&act_pt, &off_pt))]));
                         if style == "H" {
@@ -2315,7 +2315,7 @@ pub fn process_exif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                             };
                             let act_pt = pl::add(&pl::sub(&pl::add(&val, &base), &exif_pos), &fudge);
                             if !pl::num_eq(&act_pt, &val) {
-                                tval = pl::concat(&tval, &pl::sprintf("\nActual offset: 0x%.4x", &[act_pt.clone()]));
+                                tval = pl::concat(&tval, &pl::sprintf("\nActual offset: 0x%.4x", std::slice::from_ref(&act_pt)));
                                 let sign = if pl::lt(&act_pt, &val) { "-" } else { "" };
                                 tval = pl::concat(&tval, &pl::sprintf(&format!("\nOffset base: {sign}0x%.4x"), &[pl::abs(&pl::sub(&act_pt, &val))]));
                             }

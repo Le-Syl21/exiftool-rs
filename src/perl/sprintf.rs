@@ -104,7 +104,7 @@ fn format_number(digits: &[u8]) -> Result<usize, Error> {
 fn sv_iv(v: &Value) -> i64 {
     match v.to_number() {
         Number::Float(f) if f.is_nan() => 0,
-        Number::Float(f) if f >= 9.223372036854775808e18 => crate::perl::ops::to_uv(v) as i64,
+        Number::Float(f) if f >= 9.223_372_036_854_776e18 => crate::perl::ops::to_uv(v) as i64,
         Number::UInt(u) => u as i64,
         _ => v.to_i64(),
     }
@@ -523,7 +523,7 @@ fn fixed(n: f64, prec: usize) -> String {
         return format!("{:.*}", prec, n);
     }
     let mut s = format!("{:.*}", EXACT_DIGITS, n);
-    s.extend(std::iter::repeat('0').take(prec - EXACT_DIGITS));
+    s.extend(std::iter::repeat_n('0', prec - EXACT_DIGITS));
     s
 }
 
@@ -536,7 +536,7 @@ fn sci(n: f64, prec: usize) -> String {
     let (m, e) = s.split_once('e').unwrap_or((&s, "0"));
     let mut out = String::with_capacity(prec + 8);
     out.push_str(m);
-    out.extend(std::iter::repeat('0').take(prec - EXACT_DIGITS));
+    out.extend(std::iter::repeat_n('0', prec - EXACT_DIGITS));
     out.push('e');
     out.push_str(e);
     out
@@ -632,7 +632,7 @@ fn pad(spec: &Spec, body: Vec<u8>, numeric: bool) -> Vec<u8> {
     let fill = w - len;
     if spec.left {
         let mut b = body;
-        b.extend(std::iter::repeat(b' ').take(fill));
+        b.extend(std::iter::repeat_n(b' ', fill));
         return b;
     }
     if spec.zero && numeric {
@@ -645,7 +645,7 @@ fn pad(spec: &Spec, body: Vec<u8>, numeric: bool) -> Vec<u8> {
             prefix += 2;
         }
         let mut b = body[..prefix].to_vec();
-        b.extend(std::iter::repeat(b'0').take(fill));
+        b.extend(std::iter::repeat_n(b'0', fill));
         b.extend_from_slice(&body[prefix..]);
         return b;
     }

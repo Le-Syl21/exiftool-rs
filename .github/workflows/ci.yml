@@ -76,13 +76,13 @@ jobs:
       # --all-targets so the tests are linted too: without it the gate covered
       # the library and the binaries only, and a lint error sitting in a test
       # stayed invisible until someone ran clippy differently. What fails is
-      # set in Cargo.toml ([lints.clippy]: the correctness and suspicious
-      # lints); the style lints the Perl-shaped code raises are warnings.
+      # set in Cargo.toml ([lints.clippy]) and by -D warnings here: every
+      # clippy warning fails the gate.
       - name: Clippy (CLI)
-        run: cargo clippy --release --all-targets
+        run: cargo clippy --release --all-targets -- -D warnings
 
       - name: Clippy (GUI, parity auditor)
-        run: cargo clippy --release --features gui,parity --all-targets
+        run: cargo clippy --release --features gui,parity --all-targets -- -D warnings
 
   build:
     needs: lint

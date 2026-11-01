@@ -90,7 +90,7 @@ pub(crate) fn display_arg(s: &[u8]) -> Vec<u8> {
     let mut i = 0;
     while i < s.len() && d.len() < 56 {
         let mut ch = s[i];
-        if ch >= 0x80 && ch < 0xa0 {
+        if (0x80..0xa0).contains(&ch) {
             d.extend_from_slice(b"M-");
             ch &= 127;
         }
@@ -529,14 +529,13 @@ impl Interp {
                     self.report_uninit(n, op)?;
                 }
             }
-            Value::Str(s) | Value::UStr(s) if num && !numeric_string(s) => {
-                if !origin.is_empty() {
+            Value::Str(s) | Value::UStr(s) if num && !numeric_string(s)
+                && !origin.is_empty() => {
                     // a variable keeps its number, as for use_num
                     let i = origin.iter().rposition(|&st| st <= j).unwrap_or(0);
                     let single = j - origin[i] == 0 && !matches!(args[i], Expr::Array(_) | Expr::List(_));
                     self.not_numeric_slow(s, if single { Some(&args[i]) } else { None }, scope, op)?;
                 }
-            }
             _ => {}
         }
         Ok(())

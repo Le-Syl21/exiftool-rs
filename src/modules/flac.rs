@@ -46,7 +46,7 @@ pub fn process_bit_stream(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
         pl::method(it, &et, "VPrint", vec![n(0), Value::from(msg)])?;
     }
     let mut keys: Vec<Value> = tag_table_ptr.keys().into_iter().map(Value::from).collect();
-    keys.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+    keys.sort_by_key(|x| x.to_bytes());
     for tag in keys {
         let Some(m) = re(r"^Bit(\d+)-?(\d+)?", "").m(&tag) else { continue };
         let b1 = cap(&m, 1);

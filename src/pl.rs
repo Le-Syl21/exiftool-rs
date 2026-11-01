@@ -121,12 +121,16 @@ pub fn sprintf_v(fmt: &Value, args: &[Value]) -> Value {
 /// A compiled pattern (cached), for `=~`.
 pub struct Re(Rc<PerlRegex>);
 
+/// The key of a literal pattern in `re`'s cache: the address and length of
+/// its text, then of its flags.
+type LiteralKey = (usize, usize, usize, usize);
+
 /// `qr/PAT/FLAGS`: dies like perl on a bad pattern.
 pub fn re(pat: &'static str, flags: &'static str) -> Re {
     thread_local! {
         /// The patterns of `re`, by the address of their text: a literal
         /// in the code, found without hashing the pattern itself.
-        static BY_ADDR: std::cell::RefCell<rustc_hash::FxHashMap<(usize, usize, usize, usize), Rc<PerlRegex>>> = Default::default();
+        static BY_ADDR: std::cell::RefCell<rustc_hash::FxHashMap<LiteralKey, Rc<PerlRegex>>> = Default::default();
     }
     let key = (pat.as_ptr() as usize, pat.len(), flags.as_ptr() as usize, flags.len());
     if let Some(r) = BY_ADDR.with(|c| c.borrow().get(&key).cloned()) {

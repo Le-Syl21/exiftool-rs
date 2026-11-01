@@ -125,9 +125,9 @@ pub fn process_leica_leic(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<
 /// - may be called twice for a file if the first call doesn't succeed
 /// - must leave RAF position unchanged
 /// - uses information from LeicaTrailer member:
-///      TagInfo = tag info ref for MakerNote SubDirectory
-///      Offset/Size = value offset/size from MakerNote IFD
-///      TrailStart/TrailLen = actual JPEG trailer position/size (2nd call only)
+///   - TagInfo = tag info ref for MakerNote SubDirectory
+///   - Offset/Size = value offset/size from MakerNote IFD
+///   - TrailStart/TrailLen = actual JPEG trailer position/size (2nd call only)
 /// - deletes LeicaTrailer member and sets LeicaTrailerPos when successful
 pub fn process_leica_trailer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, new_pos) = (arg(&a, 0), arg(&a, 1));
@@ -185,7 +185,7 @@ pub fn process_leica_trailer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
         pl::method(it, &et, "HDump", vec![pl::add(&pos, &start), pl::sub(&len, &start), pl::concat(&name, &pl::s(" value")), pl::s("Leica MakerNote trailer"), n(4)])?;
         pl::method(it, &et, "HDump", vec![pl::add(&pos, &start), hdr_len.clone(), pl::s("MakerNotes header"), name])?;
     } else if pl::method(it, &et, "Options", vec![pl::s("Verbose")])?.truthy() {
-        let where_ = pl::sprintf("at offset 0x%x", &[pos.clone()]);
+        let where_ = pl::sprintf("at offset 0x%x", std::slice::from_ref(&pos));
         let msg = cat(&[pl::s("Leica MakerNote trailer ("), len.clone(), pl::s(" bytes "), where_, pl::s("):\n")]);
         pl::method(it, &et, "VPrint", vec![n(0), msg])?;
     }

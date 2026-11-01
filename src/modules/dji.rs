@@ -72,8 +72,7 @@ pub fn process_dji_info(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
     }
     let rx = crate::perl::regex::compile(br"\G\[(.*?)\](?=(\[|$))", "s").expect("pattern");
     let subject = data_pt.deref().to_bytes();
-    loop {
-        let Ok(Some(sp)) = rx.match_at(&subject, start) else { break };
+    while let Ok(Some(sp)) = rx.match_at(&subject, start) {
         // (the match is never empty: it holds the brackets)
         start = sp[0].unwrap().1;
         let one = sp[1].map(|(s, e)| Value::bytes(&subject[s..e])).unwrap_or_default();

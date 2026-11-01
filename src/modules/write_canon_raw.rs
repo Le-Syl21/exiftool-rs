@@ -397,7 +397,7 @@ pub fn write_canon_raw(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                 name = tag_info.get("Name");
             }
             if !name.truthy() {
-                name = pl::sprintf("CanonRaw_0x%.4x", &[tag_id.clone()]);
+                name = pl::sprintf("CanonRaw_0x%.4x", std::slice::from_ref(&tag_id));
             }
             let subdir_info = Value::new_hash();
             subdir_info.set("DirName", name);

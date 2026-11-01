@@ -522,7 +522,7 @@ fn parse_pid_gps(it: &mut Interp, et: &Value, pid: &Value, data_pt: &Value) -> E
         let dir_info = Value::new_hash();
         dir_info.set("DataPt", data_pt.clone());
         dir_info.set("DirStart", n(8));
-        dir_info.set("DirName", pl::sprintf("Ligo0x%.4x", &[pid.clone()]));
+        dir_info.set("DirName", pl::sprintf("Ligo0x%.4x", std::slice::from_ref(pid)));
         pl::call(it, "Image::ExifTool::LigoGPS::ProcessLigoGPS", vec![et.clone(), dir_info, tbl, n(1)])?;
         et.set("FoundGoodGPS", n(1));
     } else if et.get("FoundGoodGPS").truthy() {
@@ -1145,7 +1145,7 @@ pub fn process_m2ts(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             }
         }
         if !need.is_empty() {
-            need.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+            need.sort_by_key(|x| x.to_bytes());
             out_print(it, &out, cat(&[&pl::s("End of file.  Missing PID(s): "), &pl::join(" ", &need), &pl::s("\n")]))?;
         } else {
             let what = if eof { "of file" } else { "scan" };
@@ -1155,7 +1155,7 @@ pub fn process_m2ts(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 
     // parse any remaining partial PID streams
     let mut keys: Vec<Value> = data.keys().into_iter().map(Value::from).collect();
-    keys.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+    keys.sort_by_key(|x| x.to_bytes());
     for pid in keys {
         let k = pid.to_bytes();
         let dr = data_ref(it, &data, &k)?;

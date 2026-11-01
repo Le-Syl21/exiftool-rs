@@ -208,6 +208,8 @@ fn aelem(r: &Value, i: i64) -> ER<Value> {
 // Recover strings which were truncated by IPTC dataset length limit
 // Inputs: 0) IPTC value, 1) XMP value, 2) length limit
 // Notes: handles the case where IPTC and/or XMP values are lists
+// (registered as a native sub, so the signature is fixed; the Interp and Want are only threaded through the recursion)
+#[allow(clippy::only_used_in_recursion)]
 pub fn recover_truncated_iptc(it: &mut Interp, a: Vec<Value>, w: Want) -> ER<Vec<Value>> {
     let (iptc, mut xmp, limit) = (arg(&a, 0), arg(&a, 1), arg(&a, 2));
 

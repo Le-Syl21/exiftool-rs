@@ -103,7 +103,7 @@ fn read_more_core(
     }
     if nb.truthy() {
         pl::at(96);
-        let rest = pl::substr(&pl::sderef(&data_pt)?, pos.unwrap_or(0) as i64, None);
+        let rest = pl::substr(&pl::sderef(data_pt)?, pos.unwrap_or(0) as i64, None);
         assign(data_pt, pl::concat(&rest, &buf2), pos)?;
     }
     Ok(nb)

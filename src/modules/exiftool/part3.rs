@@ -1197,7 +1197,7 @@ fn get_tag_info_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
             // limit length of printout (can be very long)
             code_ref(it, "Image::ExifTool::LimitLongValues")
         };
-        let hex = pl::sprintf("0x%.4x", &[tag_id.clone()]);
+        let hex = pl::sprintf("0x%.4x", std::slice::from_ref(&tag_id));
         let prefix = tag_table_ptr.get("TAG_PREFIX");
         let ti = Value::new_hash();
         ti.set("Name", cat(&[&prefix, &pl::s("_"), &hex]));
@@ -3367,7 +3367,7 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
             let mut i = 0i64;
             while pl::lt(&n(i), &nc) {
                 let sf = pl::call(it, "Image::ExifTool::Get8u", vec![seg_data_pt.clone(), n(7 + 3 * i)])?;
-                sub_sampling = pl::concat(&sub_sampling, &pl::sprintf("%.2x", &[sf.clone()]));
+                sub_sampling = pl::concat(&sub_sampling, &pl::sprintf("%.2x", std::slice::from_ref(&sf)));
                 // isolate horizontal and vertical components
                 let (hf, vf) = (ops::shift_right(&sf, &n(4)), ops::bit_and(&sf, &n(0x0f)));
                 if i == 0 {
@@ -3454,7 +3454,6 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
                     let (r, b) = raf_read(it, &raf, g(&buff), &scan_len)?;
                     s_(&buff, b);
                     if r.truthy() {
-                        let m2;
                         if re("^.{4}ftyp", "s").is_match(&g(&buff)) {
                             let mut val = Value::Undef;
                             if pl::method(it, &raf, "Seek", vec![n(0), n(2)])?.truthy() {
@@ -3478,8 +3477,8 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
                             } else {
                                 method(it, "Warn", vec![pl::s("Error seeking to end of file")])?;
                             }
-                        } else if {
-                            m2 = match match_g(b"\\xff\\xd8\\xff.", "", &g(&buff))? {
+                        } else {
+                            let m2 = match match_g(b"\\xff\\xd8\\xff.", "", &g(&buff))? {
                                 Some(x) => Some(x),
                                 None => {
                                     if re("(Minolta|Sony)", "i").is_match(&self_.get("Make")) {
@@ -3489,32 +3488,32 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
                                     }
                                 }
                             };
-                            m2.is_some()
-                        } {
-                            // adjust PreviewImageStart to this location
-                            let p = m2.unwrap().0;
-                            let actual = pl::sub(&pl::add(&pos, &n(p as i64)), &n(4));
-                            if start.truthy() && !seq(&start, &actual) && pl::gt(&verbose, &n(1)) {
-                                print(it, &[&indent, &pl::s("(Fixed PreviewImage location: "), &start, &pl::s(" -> "), &actual, &pl::s(")\n")])?;
-                            }
-                            // update preview image offsets
-                            if start.truthy() {
-                                if vget(&self_, &[b"VALUE", b"PreviewImageStart"]).truthy() {
-                                    self_.get("VALUE").set("PreviewImageStart", actual.clone());
+                            if let Some(m2) = m2 {
+                                // adjust PreviewImageStart to this location
+                                let p = m2.0;
+                                let actual = pl::sub(&pl::add(&pos, &n(p as i64)), &n(4));
+                                if start.truthy() && !seq(&start, &actual) && pl::gt(&verbose, &n(1)) {
+                                    print(it, &[&indent, &pl::s("(Fixed PreviewImage location: "), &start, &pl::s(" -> "), &actual, &pl::s(")\n")])?;
                                 }
-                                self_.set("PreviewImageStart", actual.clone());
-                            }
-                            // load preview now if we tried and failed earlier
-                            if self_.get("PreviewError").truthy() && self_.get("PreviewImageLength").truthy() {
-                                let mut ok = false;
-                                if pl::method(it, &raf, "Seek", vec![actual.clone(), n(0)])?.truthy() {
-                                    let (r, b) = raf_read(it, &raf, g(&buff), &self_.get("PreviewImageLength"))?;
-                                    s_(&buff, b);
-                                    ok = r.truthy();
+                                // update preview image offsets
+                                if start.truthy() {
+                                    if vget(&self_, &[b"VALUE", b"PreviewImageStart"]).truthy() {
+                                        self_.get("VALUE").set("PreviewImageStart", actual.clone());
+                                    }
+                                    self_.set("PreviewImageStart", actual.clone());
                                 }
-                                if ok {
-                                    found_tag_call(it, &self_, vec![pl::s("PreviewImage"), g(&buff)])?;
-                                    self_.delete("PreviewError");
+                                // load preview now if we tried and failed earlier
+                                if self_.get("PreviewError").truthy() && self_.get("PreviewImageLength").truthy() {
+                                    let mut ok = false;
+                                    if pl::method(it, &raf, "Seek", vec![actual.clone(), n(0)])?.truthy() {
+                                        let (r, b) = raf_read(it, &raf, g(&buff), &self_.get("PreviewImageLength"))?;
+                                        s_(&buff, b);
+                                        ok = r.truthy();
+                                    }
+                                    if ok {
+                                        found_tag_call(it, &self_, vec![pl::s("PreviewImage"), g(&buff)])?;
+                                        self_.delete("PreviewError");
+                                    }
                                 }
                             }
                         }
@@ -4104,7 +4103,7 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
             } else if is("^XMTH", "") {
                 // APP2 XMTH segment in XiaomiMess of HEIC file
                 dump_type = pl::s("Xiaomi Preview");
-                if xmth.len() > 0 {
+                if !xmth.is_empty() {
                     s_(&combined_seg_data, pl::concat(&g(&combined_seg_data), &substr(it, &seg, &n(4), None)?));
                     xmth.set("Count", pl::add(&xmth.get("Count"), &n(1)));
                 } else if is("^XMTH.{5}\\xff\\xd8\\xff\\xe1", "s") {
@@ -4117,7 +4116,7 @@ fn process_jpeg_impl(it: &mut Interp, a: Vec<Value>) -> ER<Value> {
                 } else {
                     dump_type = pl::s("Xiaomi Junk");
                 }
-                if xmth.len() > 0 {
+                if !xmth.is_empty() {
                     tip = cat(&[&pl::s("Segment "), &xmth.get("Count"), &pl::s(" of "), &xmth.get("Num"), &pl::s("\nTotal Size: "), &xmth.get("Size")]);
                     if pl::num_eq(&xmth.get("Count"), &xmth.get("Num")) {
                         if !pl::num_eq(&xmth.get("Size"), &len_of(&g(&combined_seg_data))) {

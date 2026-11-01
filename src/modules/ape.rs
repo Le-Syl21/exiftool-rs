@@ -43,6 +43,7 @@ pub fn make_tag(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// Extract information from an APE file
 /// Inputs: 0) ExifTool object reference, 1) dirInfo reference
 /// - Just looks for APE trailer if FileType is already set
+///
 /// Returns: 1 on success, 0 if this wasn't a valid APE file
 pub fn process_ape(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));

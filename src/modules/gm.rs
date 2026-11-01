@@ -204,7 +204,7 @@ pub fn process_mrld(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
         }
         a[5] = call(it, "Get64u", vec![pl::sref(a[5].clone()), n(0)])?; // convert 64-bit int
         let chan = n(a[0].to_i64() & 0x0fffffff);
-        let tag = pl::sprintf("Channel%.2d", &[chan.clone()]);
+        let tag = pl::sprintf("Channel%.2d", std::slice::from_ref(&chan));
         let mut tag_info = tag_table_ptr.get(tag.to_bytes());
         let hash = Value::new_hash();
         for (i, v) in a.iter().enumerate().skip(1) {

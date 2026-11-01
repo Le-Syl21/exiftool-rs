@@ -19,5 +19,5 @@ fn bmp_tables_load() {
     assert_eq!(eval(&mut it, "$Image::ExifTool::fileTypeLookup{BMP}[0]"), "BMP");
     assert_eq!(eval(&mut it, "$Image::ExifTool::magicNumber{BMP}"), "BM");
     // A file lexical of ExifTool.pm.
-    assert_eq!(eval(&mut it, "scalar keys %{'Image::ExifTool::<my>::moduleName'}") != "0", true);
+    assert!(eval(&mut it, "scalar keys %{'Image::ExifTool::<my>::moduleName'}") != "0");
 }

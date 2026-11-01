@@ -95,16 +95,15 @@ pub fn process_ind(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         // take the most current master page
         let cur_page = if pl::gt(&seq2, &seq1) { Value::ScalarRef(buf2.clone()) } else { Value::ScalarRef(buff.clone()) };
         // byte order of stream data may be different than headers
-        let stream_int32u;
         let sb = call(it, "Get8u", vec![cur_page.clone(), n(24)])?;
-        if pl::num_eq(&sb, &n(1)) {
-            stream_int32u = "V"; // little-endian int32u
+        let stream_int32u = if pl::num_eq(&sb, &n(1)) {
+            "V" // little-endian int32u
         } else if pl::num_eq(&sb, &n(2)) {
-            stream_int32u = "N"; // big-endian int32u
+            "N" // big-endian int32u
         } else {
             err = s("Invalid stream byte order");
             break 'done;
-        }
+        };
         let pages = call(it, "Get32u", vec![cur_page.clone(), n(280)])?;
         if pl::lt(&pages, &n(2)) {
             err = s("Invalid page count");

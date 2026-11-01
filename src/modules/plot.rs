@@ -368,7 +368,7 @@ pub fn get_grid_spacing(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
 }
 
 fn grid_spacing(nom: &Value, inc: &Value) -> Value {
-    let mut div_ = pl::sprintf("%.3e", &[nom.clone()]);
+    let mut div_ = pl::sprintf("%.3e", std::slice::from_ref(nom));
     let mut num = pl::substr(&div_, 0, Some(1));
     let mut exp = if re(".*e", "").subst(&mut div_, false, |_| Vec::new()) > 0 { div_.clone() } else { n(0) };
     if inc.truthy() {

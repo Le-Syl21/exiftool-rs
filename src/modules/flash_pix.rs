@@ -350,7 +350,7 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
                     if pl::le(&pl::add(&pl::add(val_pos, &pad), &size), dir_end) {
                         // skip padding if all zeros
                         pl::at(1332);
-                        let d = substr(it, &pl::sderef(&data_pt)?, val_pos, Some(&pad))?;
+                        let d = substr(it, &pl::sderef(data_pt)?, val_pos, Some(&pad))?;
                         let zeros = Value::bytes(vec![0u8; pad.to_i64().max(0) as usize]);
                         if d.to_bytes() == zeros.to_bytes() {
                             *val_pos = pl::add(val_pos, &pad);
@@ -382,7 +382,7 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
                         if pl::lt(&val, &n(0)) || pl::gt(&val, &sec100yr) {
                             // some software writes the wrong byte order (but the proper word order)
                             pl::at(1356);
-                            let w = pl::unpack(&format!("x{}NN", val_pos.to_text()), &pl::sderef(&data_pt)?)?;
+                            let w = pl::unpack(&format!("x{}NN", val_pos.to_text()), &pl::sderef(data_pt)?)?;
                             let v2 = pl::sub(&pl::mul(&pl::add(&arg(&w, 0), &pl::mul(&arg(&w, 1), &n(4294967296))), &Value::Num(1e-7)), &unix_time_zero);
                             if pl::gt(&v2, &n(0)) && pl::lt(&v2, &sec100yr) {
                                 val = v2;
@@ -410,7 +410,7 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
                         break;
                     }
                     pl::at(1379);
-                    val = substr(it, &pl::sderef(&data_pt)?, &add(val_pos, 4), Some(&len))?;
+                    val = substr(it, &pl::sderef(data_pt)?, &add(val_pos, 4), Some(&len))?;
                     if format.eq_str("VT_LPWSTR") {
                         // convert wide string from Unicode
                         val = pl::method(it, et, "Decode", vec![val, s("UTF16")])?;
@@ -435,7 +435,7 @@ fn read_fpx_value_impl(it: &mut Interp, et: &Value, data_pt: &Value, val_pos: &m
                         break;
                     }
                     pl::at(1402);
-                    val = substr(it, &pl::sderef(&data_pt)?, &add(val_pos, 4), Some(&len))?;
+                    val = substr(it, &pl::sderef(data_pt)?, &add(val_pos, 4), Some(&len))?;
                     // update position for data length plus padding
                     // (does this padding disappear in arrays too?)
                     *val_pos = pl::add(val_pos, &and(&add(&len, 3), 0xfffffffc));
@@ -928,7 +928,7 @@ pub fn process_properties(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
                 let flags = and(&type_, 0xf000);
                 let mut form_str = or(ole_format.get(format.to_bytes()), cat(&[s("Type "), format.clone()]));
                 if flags.truthy() {
-                    let f = or(ole_flags.get(flags.to_bytes()), pl::sprintf("0x%x", &[flags.clone()]));
+                    let f = or(ole_flags.get(flags.to_bytes()), pl::sprintf("0x%x", std::slice::from_ref(&flags)));
                     form_str = cat(&[form_str, s("|"), f]);
                 }
                 let mut tag_info = Value::Undef;
@@ -1028,7 +1028,7 @@ fn load_chain_impl(it: &mut Interp, raf: &Value, mut sect: Value, fat_pt: &Value
         chain.extend_from_slice(&buff.borrow().to_bytes());
         // step to next sector in chain
         pl::at(1836);
-        if pl::gt(&pl::mul(&sect, &n(4)), &pl::sub(&pl::length(&pl::sderef(&fat_pt)?), &n(4))) {
+        if pl::gt(&pl::mul(&sect, &n(4)), &pl::sub(&pl::length(&pl::sderef(fat_pt)?), &n(4))) {
             return Ok(Value::Undef);
         }
         sect = get32u(it, fat_pt, pl::mul(&sect, &n(4)))?;
@@ -1236,7 +1236,7 @@ pub fn process_fpxr(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 /// the `$1` of the first alternative that holds.
 fn base_id(tag_table_ptr: &Value, tag: &Value, pats: &[&'static str]) -> Option<Value> {
     for pat in pats {
-        if let Some(m) = re(*pat, "s").m(tag) {
+        if let Some(m) = re(pat, "s").m(tag) {
             let id = cap(&m, 1);
             if tag_table_ptr.get(id.to_bytes()).truthy() {
                 return Some(id);

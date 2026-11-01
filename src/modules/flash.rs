@@ -49,7 +49,7 @@ fn amf_type_name(it: &mut Interp, t: &Value, fmt: &str) -> Value {
     if name.truthy() {
         name
     } else {
-        pl::sprintf(fmt, &[t.clone()])
+        pl::sprintf(fmt, std::slice::from_ref(t))
     }
 }
 

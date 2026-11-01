@@ -124,14 +124,14 @@ pub fn calculate_rgb_levels(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec
     }
     let mut cam_mul: Vec<Value> = Vec::new();
     let mut nn = 0usize;
-    for c in 0..3 {
+    for m in &mul[..3] {
         let mut num = n(0);
         for i in 0..4 {
             num = pl::add(&num, &pl::mul(&coefs[nn], &ops::pow(&wbtemp100, &n(i))));
             nn += 1;
         }
         pl::at(3137);
-        cam_mul.push(pl::div(&n(2048), &pl::mul(&num, &mul[c]))?);
+        cam_mul.push(pl::div(&n(2048), &pl::mul(&num, m))?);
     }
     ret(pl::join(" ", &cam_mul))
 }

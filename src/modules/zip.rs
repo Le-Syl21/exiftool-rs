@@ -492,8 +492,9 @@ fn process_no_struct_warn(it: &mut Interp, et: &Value, dir_info: Value, table: &
 /// The part of ProcessZIP's `for (;;)` loop body that runs with
 /// `local $SIG{'__WARN__'} = \&WarnProc` (from that statement to the end
 /// of the body; every path leaves the loop with `last`).
-fn zip_body(it: &mut Interp, et: &Value, dir_info: &Value, raf: &Value, fh: &mut Value, zip: &mut Value, doc_num: &mut i64, tag_table_ptr: &Value) -> ER<()> {
+fn zip_body(it: &mut Interp, et: &Value, dir_info: &Value, fh: &mut Value, zip: &mut Value, doc_num: &mut i64, tag_table_ptr: &Value) -> ER<()> {
     let mut buff;
+    let raf = &dir_info.get("RAF"); // (the caller's $raf)
     let mut status = pl::method(it, zip, "readFromFileHandle", vec![fh.clone()])?;
     if pl::str_eq(&status, "4") && pl::ge(&raf.get("TESTED"), &n(0)) && eval_require(it, "IO::String")? && seek(it, raf, n(0), 2)? && pl::lt(&tell(it, raf)?, &n(100000000)) {
         // try again, reading it ourself this time in an attempt to avoid
@@ -805,7 +806,7 @@ pub fn process_zip(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         zip = pl::method(it, &s("Archive::Zip"), "new", vec![])?;
         // catch all warnings! (Archive::Zip is bad for this)
         let handler = Value::Code(it.sub_ref("Image::ExifTool::ZIP::WarnProc"));
-        pl::local_sig_warn(it, handler, |it| zip_body(it, &et, &dir_info, &raf, &mut fh, &mut zip, &mut doc_num, &tag_table_ptr))?;
+        pl::local_sig_warn(it, handler, |it| zip_body(it, &et, &dir_info, &mut fh, &mut zip, &mut doc_num, &tag_table_ptr))?;
         break;
     }
     // all done if we processed this using Archive::Zip

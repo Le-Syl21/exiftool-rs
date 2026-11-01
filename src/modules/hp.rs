@@ -119,7 +119,7 @@ pub fn process_hp(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     }
     // scan for other tag ID's
     let mut keys = pl::call_list(it, "Image::ExifTool::TagTableKeys", vec![tag_table_ptr.clone()])?;
-    keys.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+    keys.sort_by_key(|x| x.to_bytes());
     for tag_id in keys {
         if pl::str_eq(&tag_id, "PreviewImage") {
             continue;

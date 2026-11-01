@@ -167,10 +167,9 @@ fn process_body(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<()> {
         }
         // get the file contents if necessary
         // (CAREFUL! $buff MUST be local since we hand off a value ref to PreviewImage)
-        let buff_pt: Value;
-        if index_file.truthy() && index_file.to_bytes() == file.to_bytes() {
+        let buff_pt: Value = if index_file.truthy() && index_file.to_bytes() == file.to_bytes() {
             // use the index file we already loaded
-            buff_pt = Value::ScalarRef(index.clone());
+            Value::ScalarRef(index.clone())
         } else {
             let r = pl::method_list(it, &zip, "contents", vec![member.clone()])?;
             let (buff, status) = (arg(&r, 0), arg(&r, 1));
@@ -178,8 +177,8 @@ fn process_body(it: &mut Interp, et: &Value, dir_info: &Value) -> ER<()> {
                 pl::method(it, et, "Warn", vec![cat(&[s("Error extracting "), file.clone()])])?;
                 continue;
             }
-            buff_pt = pl::sref(buff);
-        }
+            pl::sref(buff)
+        };
         // extract JPEG as PreviewImage (should only be QuickLook/Thumbnail.jpg)
         if re(r"\.jpg$", "").is_match(&file) {
             let t = match re(r"preview-(\w+)", "").m(&file) {

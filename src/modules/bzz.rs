@@ -441,9 +441,9 @@ fn decode_zp(z: &mut Zp, self_: &Value) -> Value {
     }
     // Compute sorted char positions
     let mut last: i64 = 1;
-    for i in 0..256 {
-        let tmp = count[i];
-        count[i] = last;
+    for c in count.iter_mut() {
+        let tmp = *c;
+        *c = last;
         last += tmp;
     }
     // Undo the sort transform

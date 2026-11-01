@@ -160,7 +160,7 @@ pub fn autoload(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 /// Inputs: 0) angle in degrees
 /// Returns: 9-element rotation matrix as a string (with 0 x/y offsets)
 pub fn get_rotation_matrix(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    let ang = pl::div(&pl::mul(&Value::Num(3.14159265358979323846264), &arg(&a, 0)), &n(180))?;
+    let ang = pl::div(&pl::mul(&Value::Num(3.141_592_653_589_793), &arg(&a, 0)), &n(180))?;
     let mut cos = Value::Num(ang.to_f64().cos());
     let mut sin = Value::Num(ang.to_f64().sin());
     // round to zero
@@ -311,7 +311,7 @@ fn fix_wrong_format_impl(val: &Value) -> ER<Value> {
         return Ok(Value::Undef);
     }
     if ops::bit_and(val, &n(0xfff00000)).truthy() {
-        pl::unpack1("n", &pl::pack("N", &[val.clone()])?)
+        pl::unpack1("n", &pl::pack("N", std::slice::from_ref(val))?)
     } else {
         Ok(val.clone())
     }
@@ -2037,10 +2037,7 @@ fn process_mov_impl(it: &mut Interp, a: &[Value]) -> ER<Vec<Value>> {
                     et.get("OPTIONS").set("Unknown", n(1)); // temporarily enable "Unknown" option
                 }
             }
-        } else if pl::gt(&ee, &n(1)) && ee_box2.truthy() && ee_box2.get(tag.to_bytes()).truthy() {
-            ee_tag = true;
-            et.get("OPTIONS").set("Unknown", n(1));
-        } else if hash.truthy() && hash_box.truthy() && hash_box.get(tag.to_bytes()).truthy() {
+        } else if (pl::gt(&ee, &n(1)) && ee_box2.truthy() && ee_box2.get(tag.to_bytes()).truthy()) || (hash.truthy() && hash_box.truthy() && hash_box.get(tag.to_bytes()).truthy()) {
             ee_tag = true;
             et.get("OPTIONS").set("Unknown", n(1));
         }

@@ -1855,15 +1855,15 @@ fn process_command(it: &mut Interp) -> ER<()> {
         // print summary and delete requested files
         if !t(it, "quiet") {
             if count_dir.truthy() {
-                printf(it, None, "%5d directories scanned\n", &[count_dir.clone()])?;
+                printf(it, None, "%5d directories scanned\n", std::slice::from_ref(&count_dir))?;
             }
             if count_new_dir.truthy() {
-                printf(it, None, "%5d directories created\n", &[count_new_dir.clone()])?;
+                printf(it, None, "%5d directories created\n", std::slice::from_ref(&count_new_dir))?;
             }
             if count_failed.truthy() {
-                printf(it, None, "%5d files failed condition\n", &[count_failed.clone()])?;
+                printf(it, None, "%5d files failed condition\n", std::slice::from_ref(&count_failed))?;
             }
-            printf(it, None, "%5d image files found\n", &[count.clone()])?;
+            printf(it, None, "%5d image files found\n", std::slice::from_ref(&count))?;
         }
         if has(it, "delFiles") {
             // verify deletion unless "-delete_original!" was specified
@@ -1924,16 +1924,16 @@ fn process_command(it: &mut Interp) -> ER<()> {
             let (count_good_cr, count_bad_cr, count_copy_wr) = (sv(it, "countGoodCr"), sv(it, "countBadCr"), sv(it, "countCopyWr"));
             let (count_good_wr, count_same_wr, count_bad_wr) = (sv(it, "countGoodWr"), sv(it, "countSameWr"), sv(it, "countBadWr"));
             if count_dir.truthy() {
-                printf(it, o, "%5d directories scanned\n", &[count_dir.clone()])?;
+                printf(it, o, "%5d directories scanned\n", std::slice::from_ref(&count_dir))?;
             }
             if count_new_dir.truthy() {
-                printf(it, o, "%5d directories created\n", &[count_new_dir.clone()])?;
+                printf(it, o, "%5d directories created\n", std::slice::from_ref(&count_new_dir))?;
             }
             if count_failed.truthy() {
-                printf(it, o, "%5d files failed condition\n", &[count_failed.clone()])?;
+                printf(it, o, "%5d files failed condition\n", std::slice::from_ref(&count_failed))?;
             }
             if count_good_cr.truthy() {
-                printf(it, o, "%5d image files created\n", &[count_good_cr.clone()])?;
+                printf(it, o, "%5d image files created\n", std::slice::from_ref(&count_good_cr))?;
             }
             // if $totWr - $countGoodCr - $countBadCr - $countCopyWr;
             if pl::sub(&pl::sub(&pl::sub(&tot_wr, &count_good_cr), &count_bad_cr), &count_copy_wr).truthy() {
@@ -1954,10 +1954,10 @@ fn process_command(it: &mut Interp) -> ER<()> {
             }
             // if ($tot+$countFailed)>1 or ($countDir and not $totWr);
             if pl::gt(&pl::add(&tot, &count_failed), &n(1)) || (count_dir.truthy() && !tot_wr.truthy()) {
-                printf(it, o, "%5d image files read\n", &[count.clone()])?;
+                printf(it, o, "%5d image files read\n", std::slice::from_ref(&count))?;
             }
             if count_bad.truthy() {
-                printf(it, o, "%5d files could not be read\n", &[count_bad.clone()])?;
+                printf(it, o, "%5d files could not be read\n", std::slice::from_ref(&count_bad))?;
             }
             if t(it, "textOut") || t(it, "textOut2") {
                 let created = hv(it, "created").borrow().len();

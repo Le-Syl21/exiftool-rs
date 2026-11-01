@@ -691,7 +691,7 @@ fn sorted_keys(h: &Value) -> Vec<Value> {
 }
 
 fn sort_values(v: &mut [Value]) {
-    v.sort_by(|a, b| a.to_bytes().cmp(&b.to_bytes()));
+    v.sort_by_key(|a| a.to_bytes());
 }
 
 fn delete_struct_v(it: &mut Interp, et: &Value, capture: &Value, path_pt: &Value, nv_hash: &Value, changed: &Value) -> ER<(Value, Value, Value)> {
@@ -728,7 +728,7 @@ fn delete_struct_v(it: &mut Interp, et: &Value, capture: &Value, path_pt: &Value
                 }
                 let cap_h = Value::new_hash();
                 let match_h = Value::new_hash();
-                if add_new_struct_v(it, &Value::Undef, &Value::Undef, &cap_h, &path_pt.deref(), &val, &str_table)? == 0 {
+                if add_new_struct_v(it, &Value::Undef, &cap_h, &path_pt.deref(), &val, &str_table)? == 0 {
                     continue;
                 }
                 for p in cap_h.keys().into_iter().map(Value::from) {
@@ -897,14 +897,14 @@ fn add_new_tag_v(it: &mut Interp, et: &Value, tag_info: &Value, capture: &Value,
 /// Returns: number of tags changed
 /// Notes: Escapes values for XML
 pub fn add_new_struct(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
-    ret(n(add_new_struct_v(it, &arg(&a, 0), &arg(&a, 1), &arg(&a, 2), &arg(&a, 3), &arg(&a, 4), &arg(&a, 5))?))
+    ret(n(add_new_struct_v(it, &arg(&a, 0), &arg(&a, 2), &arg(&a, 3), &arg(&a, 4), &arg(&a, 5))?))
 }
 
 fn conform(it: &mut Interp, et: &Value, p: &Value) -> ER<Value> {
     pl::call(it, "Image::ExifTool::XMP::ConformPathToNamespace", vec![et.clone(), p.clone()])
 }
 
-fn add_new_struct_v(it: &mut Interp, et: &Value, tag_info: &Value, capture: &Value, base_path: &Value, struct_: &Value, str_table: &Value) -> ER<i64> {
+fn add_new_struct_v(it: &mut Interp, et: &Value, capture: &Value, base_path: &Value, struct_: &Value, str_table: &Value) -> ER<i64> {
     let verbose = if et.truthy() { pl::method(it, et, "Options", vec![pl::s("Verbose")])? } else { n(0) };
     let lang_idx = Value::new_hash();
 
@@ -945,7 +945,7 @@ fn add_new_struct_v(it: &mut Interp, et: &Value, tag_info: &Value, capture: &Val
             if !sub_struct.truthy() {
                 continue;
             }
-            changed += add_new_struct_v(it, et, tag_info, capture, &path, &val, &sub_struct)?;
+            changed += add_new_struct_v(it, et, capture, &path, &val, &sub_struct)?;
         } else if val.ref_type() == "ARRAY" {
             if !field_info.get("List").truthy() {
                 continue;
@@ -954,22 +954,21 @@ fn add_new_struct_v(it: &mut Interp, et: &Value, tag_info: &Value, capture: &Val
             let level = rx(r" \d+", "").match_all(&prop_path.to_bytes(), 0).map(|v| v.len()).unwrap_or(0);
             // loop through all list items (note: can't yet write multi-dimensional lists)
             for item in val.items() {
-                let p;
-                if i != 0 {
+                let p = if i != 0 {
                     // update first index in field property (may be list of lang-alt lists)
                     let mut pc = conform(it, et, &prop_path)?;
                     let idx = cat!(n(i.to_string().len() as i64), n(i));
                     subst(&rx(r" \d+", ""), &mut pc, false, |_| Ok(cat!(" ", idx).to_bytes().to_vec()))?;
-                    p = cat!(base_path, "/", pc);
+                    cat!(base_path, "/", pc)
                 } else {
-                    p = path.clone();
-                }
+                    path.clone()
+                };
                 if item.ref_type() == "HASH" {
                     let sub_struct = field_info.get("Struct");
                     if !sub_struct.truthy() {
                         continue;
                     }
-                    if add_new_struct_v(it, et, tag_info, capture, &p, &item, &sub_struct)? == 0 {
+                    if add_new_struct_v(it, et, capture, &p, &item, &sub_struct)? == 0 {
                         continue;
                     }
                 // don't write empty items in upper-level list

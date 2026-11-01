@@ -628,8 +628,7 @@ fn my_convert_file_name(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<V
 // Inputs: 0) expression string
 fn add_print_format(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let mut expr = arg(&a, 0);
-    let typ;
-    if re(r"^#", "").is_match(&expr) {
+    let typ = if re(r"^#", "").is_match(&expr) {
         let mut t = Value::Undef;
         if re(r"^#\[(HEAD|SECT|IF|BODY|ENDS|TAIL)\]", "").subst(&mut expr, false, |c| {
             t = cap(c, 1);
@@ -638,10 +637,10 @@ fn add_print_format(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
         {
             return pl::ret_nothing(want); // ignore comments
         }
-        typ = t;
+        t
     } else {
-        typ = s("BODY");
-    }
+        s("BODY")
+    };
     let print_fmt = super::lex_hash(it, "printFmt");
     if !print_fmt.get(b(&typ)).truthy() {
         print_fmt.set(b(&typ), Value::new_array(vec![]));
@@ -805,7 +804,7 @@ fn filename_sprintf_body(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<
     let mut dd = get(&part, b'd');
     re(r"/+$", "").subst(&mut dd, false, |_| Vec::new());
     part.insert(b'D', dd);
-    for (i, k) in [b't', b'g', b's', b'o'].iter().enumerate() {
+    for (i, k) in b"tgso".iter().enumerate() {
         part.insert(*k, arg(&extra, i));
     }
     if get(&part, b'o').truthy() {
@@ -834,11 +833,10 @@ fn filename_sprintf_body(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<
         let code = span_cap(&fmt_b, &sp, 7);
         let ck = b(&code)[0];
         let mut path: Vec<Value> = Vec::new();
-        let len;
-        if pl::str_eq(&pl::lc(&code), "d") && dot.truthy() && pl::str_eq(&dot, ":") {
+        let len = if pl::str_eq(&pl::lc(&code), "d") && dot.truthy() && pl::str_eq(&dot, ":") {
             // field width applies to directory levels instead of characters
             path = pl::split(&re("/", ""), &get(&part, ck), 0);
-            len = n(path.len() as i64);
+            n(path.len() as i64)
         } else {
             if ck == b'g' {
                 let mut groups = get(&part, b'g');
@@ -867,8 +865,8 @@ fn filename_sprintf_body(it: &mut Interp, a: Vec<Value>, _want: Want) -> ER<Vec<
             if get(&part, ck).is_undef() {
                 part.insert(ck, s(""));
             }
-            len = pl::length(&get(&part, ck));
-        }
+            pl::length(&get(&part, ck))
+        };
         if !pl::lt(&skip, &len) {
             continue;
         }

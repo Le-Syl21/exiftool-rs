@@ -120,9 +120,8 @@ pub fn process_kandao(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
             }
             et.delete("DOC_NUM");
         } else {
-            let val;
-            if fmt.eq_str("U8") && pl::gt(&num, &n(1)) && !tag_info.get("Format").truthy() {
-                val = buff_ref.clone();
+            let val = if fmt.eq_str("U8") && pl::gt(&num, &n(1)) && !tag_info.get("Format").truthy() {
+                buff_ref.clone()
             } else {
                 // override format if necessary
                 if tag_info.get("Format").truthy() {
@@ -132,8 +131,8 @@ pub fn process_kandao(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
                     pl::at(337);
                     num = pl::int(&pl::div(&size, &fs)?);
                 }
-                val = read_value(it, &buff_ref, n(0), format.clone(), num.clone(), size.clone())?;
-            }
+                read_value(it, &buff_ref, n(0), format.clone(), num.clone(), size.clone())?
+            };
             let key = m(it, &et, "HandleTag", vec![tag_tbl.clone(), tag.clone(), val, s("DataPt"), buff_ref.clone(), s("DataPos"), parms_data_pos.clone(), s("Index"), i.clone(), s("Format"), parms_format.clone()])?;
             if !dir_name.eq_str("KVAR") {
                 m(it, &et, "SetGroup", vec![key, dir_name.clone()])?;

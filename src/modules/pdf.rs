@@ -261,19 +261,19 @@ pub fn locate_any_object(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Va
                 c.reverse(); // (shifted from the end)
                 // extract values from this table entry
                 // (can be 1, 2, 3, 4, etc.. bytes per value)
-                let mut t = vec![Value::Undef, Value::Undef, Value::Undef];
+                let mut t = [Value::Undef, Value::Undef, Value::Undef];
                 let w = dict.get("W");
-                for j in 0..3usize {
+                for (j, tj) in t.iter_mut().enumerate() {
                     // use default value if W entry is 0 (as per spec)
                     // - 0th element defaults to 1, others default to 0
                     if !w.at(j as i64).truthy() {
-                        t[j] = n(if j != 0 { 0 } else { 1 });
+                        *tj = n(if j != 0 { 0 } else { 1 });
                         continue;
                     }
-                    t[j] = c.pop().unwrap_or_default();
+                    *tj = c.pop().unwrap_or_default();
                     let mut k = 1i64;
                     while pl::lt(&n(k), &w.at(j as i64)) {
-                        t[j] = pl::add(&pl::mul(&n(256), &t[j]), &c.pop().unwrap_or_default());
+                        *tj = pl::add(&pl::mul(&n(256), tj), &c.pop().unwrap_or_default());
                         k += 1;
                     }
                 }
@@ -524,30 +524,29 @@ fn read_value(it: &mut Interp, mut str_: Value) -> ER<Value> {
             pos = m[0].unwrap().1;
             let nn = pos - 2;
             let mut c = sp(&st, &m, 1).to_bytes().to_vec();
-            let r: Vec<u8>;
-            if c[0].is_ascii_digit() && c[0] <= b'7' {
+            let r: Vec<u8> = if c[0].is_ascii_digit() && c[0] <= b'7' {
                 // get up to 2 more octal digits
                 if let Some(m2) = m_at(&oct2, &st, pos) {
                     c.extend_from_slice(&sp(&st, &m2, 1).to_bytes());
                 }
                 // convert octal escape code
                 let v = c.iter().fold(0u32, |acc, d| acc * 8 + (d - b'0') as u32);
-                r = vec![(v & 0xff) as u8];
+                vec![(v & 0xff) as u8]
             } else if c[0] == 0x0d {
                 // the string is continued if the line ends with '\'
                 // (also remove "\x0d\x0a")
                 if let Some(m2) = m_at(&lf, &st, pos) {
                     c.extend_from_slice(&sp(&st, &m2, 1).to_bytes());
                 }
-                r = Vec::new();
+                Vec::new()
             } else if c[0] == 0x0a {
-                r = Vec::new();
+                Vec::new()
             } else {
                 // convert escaped characters
                 let mut x = Value::bytes(&c);
                 pl::tr(&mut x, "nrtbf", "\n\r\t\x08\x0c", "");
-                r = x.to_bytes().to_vec();
-            }
+                x.to_bytes().to_vec()
+            };
             st.splice(nn..nn + c.len() + 1, r.iter().copied());
             // continue search after this character
             pos = nn + r.len();
@@ -669,8 +668,7 @@ pub fn extract_object(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         let item = rx(r"\s*(\S[^[(/<>\s]*)", "s");
         let refp = rx(r"\G\s+(\d+)\s+R", "");
         let mut pos = 0usize;
-        loop {
-            let Some(m) = m_at(&item, &data, pos) else { break };
+        while let Some(m) = m_at(&item, &data, pos) {
             pos = m[0].unwrap().1;
             let mut val = sp(&data, &m, 1);
             if re(r"^(<{1,2}|\[|\()", "").is_match(&val) {
@@ -904,7 +902,7 @@ pub fn decode_lzw(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut mask: u64 = 0x01ff; // mask for least-significant 9 bits
     let mut padded = data.to_vec();
     padded.push(0);
-    let dat: Vec<u64> = padded.chunks_exact(2).map(|c| ((c[0] as u64) << 8) | c[1] as u64).collect();
+    let dat: Vec<u64> = padded.as_chunks::<2>().0.iter().map(|c| ((c[0] as u64) << 8) | c[1] as u64).collect();
     let mut word: u64 = (dat[0] << 16) | dat[1];
     let (mut bit, mut pos, mut bits, mut out): (i64, usize, i64, Vec<u8>) = (0, 2, 9, Vec::new());
     let mut last_val: Option<Vec<u8>> = None;
@@ -1548,23 +1546,21 @@ pub fn decrypt_init(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                 }
                 rep += 50; // repeat MD5 50 more times if revision is 3 or greater
             }
-            let len;
-            if pl::num_eq(&ver, &n(1)) {
-                len = n(5);
+            let len = if pl::num_eq(&ver, &n(1)) {
+                n(5)
             } else {
                 let l = if encrypt.get("Length").truthy() { encrypt.get("Length") } else { n(40) };
                 if !pl::ge(&l, &n(40)) {
                     return ret(s("Bad Encrypt Length"));
                 }
-                len = pl::int(&pl::div(&l, &n(8))?);
-            }
+                pl::int(&pl::div(&l, &n(8))?)
+            };
             for _ in 0..rep {
                 let md = pl::call(it, "Digest::MD5::md5", vec![key])?;
                 key = pl::substr(&md, 0, Some(len.to_i64()));
             }
             // decrypt U to see if a user password is required
-            let dat;
-            if pl::ge(&rev, &n(3)) {
+            let dat = if pl::ge(&rev, &n(3)) {
                 let dr = pl::sref(pl::call(it, "Digest::MD5::md5", vec![pl::concat(&pad, &id)])?);
                 rc4_crypt(it, vec![dr.clone(), key.clone()], Want::Void)?;
                 for i in 1..=19i64 {
@@ -1572,12 +1568,12 @@ pub fn decrypt_init(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
                     let kp = pl::pack("C*", &k)?;
                     rc4_crypt(it, vec![dr.clone(), kp], Want::Void)?;
                 }
-                dat = pl::concat(&dr.deref(), &pl::substr(&u, 16, None));
+                pl::concat(&dr.deref(), &pl::substr(&u, 16, None))
             } else {
                 let dr = pl::sref(pad.clone());
                 rc4_crypt(it, vec![dr.clone(), key.clone()], Want::Void)?;
-                dat = dr.deref();
-            }
+                dr.deref()
+            };
             if dat.to_bytes() == u.to_bytes() {
                 break; // all done if this was the correct key
             }
@@ -1750,6 +1746,8 @@ pub fn process_af(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> 
 /// Expand array into a string
 /// Inputs: 0) array ref
 /// Return: string
+// (registered as a native sub, so the signature is fixed; the Interp is only threaded through the recursion)
+#[allow(clippy::only_used_in_recursion)]
 pub fn expand_array(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let val = arg(&a, 0);
     pl::at(1816);

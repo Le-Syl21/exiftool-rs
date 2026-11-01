@@ -189,9 +189,7 @@ pub fn strftime(fmt: &str, tm: &[i64]) -> String {
                 let t = days * 86400 + hour * 3600 + min * 60 + sec;
                 let utc = local_to_utc(t as f64) as i64;
                 let off = t - utc;
-                match c {
-                    _ => {}
-                }
+                {}
                 out.push_str(&format!("{}{:02}{:02}", if off < 0 { '-' } else { '+' }, off.abs() / 3600, off.abs() % 3600 / 60));
             }
             Some(other) => {

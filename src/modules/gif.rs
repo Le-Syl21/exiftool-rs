@@ -145,7 +145,7 @@ pub fn process_gif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if outfile.truthy() {
         // add any user-defined writable app extensions to the list
         let mut keys: Vec<Value> = ext_table.keys().into_iter().map(Value::from).collect();
-        keys.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+        keys.sort_by_key(|x| x.to_bytes());
         for ext in keys {
             let ext_info = ext_table.get(ext.to_bytes());
             if !ext_info.is_hash() {
@@ -237,7 +237,7 @@ pub fn process_gif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             }
             // add application extensions if necessary
             let mut new: Vec<Value> = new_ext.keys().into_iter().map(Value::from).collect();
-            new.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+            new.sort_by_key(|x| x.to_bytes());
             let mut list = app_extensions.items();
             list.extend(new);
             for ext in list {
@@ -479,7 +479,7 @@ pub fn process_gif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             } else if outfile.truthy() {
                 just_copy = n(1);
             }
-            if just_copy.truthy() && !write(it, &outfile, &[hdr.clone()])? {
+            if just_copy.truthy() && !write(it, &outfile, std::slice::from_ref(&hdr))? {
                 err = n(1);
             }
 
@@ -561,7 +561,7 @@ pub fn process_gif(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                 pl::method(it, &et, "HandleTag", vec![ext_table.clone(), tag.clone(), dat.clone()])?;
                 continue;
             }
-            if !write(it, &outfile, &[hdr.clone()])? {
+            if !write(it, &outfile, std::slice::from_ref(&hdr))? {
                 err = n(1); // write extension header
             }
             if incl_len.truthy() {

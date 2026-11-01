@@ -597,10 +597,9 @@ fn load_track_log_body(it: &mut Interp, et: Value, val: Value) -> ER<Value> {
                                 save_fix.push(Value::new_array(vec![fix.get("lon"), fix.get("lat"), fix.get("alt")]));
                             }
                             let nsave = save_fix.len() as i64;
-                            for i in 0..save_fix.len() {
+                            for (i, sf) in save_fix.iter().enumerate() {
                                 let mut t = pl::add(&begin, &pl::mul(&pl::sub(&time, &begin), &pl::div(&n(i as i64), &n(nsave))?));
                                 let f = Value::new_hash();
-                                let sf = &save_fix[i];
                                 f.set("lon", sf.at(0));
                                 f.set("lat", sf.at(1));
                                 f.set("alt", sf.at(2));
@@ -1493,7 +1492,7 @@ pub fn set_geo_values(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
             let out = opt(it, &et, "TextOut")?;
             let mut st = s("");
             if !sync.is_undef() {
-                st = pl::concat(&st, &pl::sprintf(" (incl. Geosync offset of %+.3f sec)", &[sync.clone()]));
+                st = pl::concat(&st, &pl::sprintf(" (incl. Geosync offset of %+.3f sec)", std::slice::from_ref(&sync)));
             }
             if !tz.truthy() {
                 let tm = Value::new_array(vec![sec.clone(), min.clone(), hr.clone(), day.clone(), pl::sub(&mon, &n(1)), pl::sub(&year, &n(1900))]);
@@ -1591,7 +1590,7 @@ pub fn set_geo_values(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
                 } else {
                     fix = hget(&points, &tn);
                     if pl::gt(&verbose, &n(2)) {
-                        let p = print_fix_v(it, &points, &[tn.clone()])?;
+                        let p = print_fix_v(it, &points, std::slice::from_ref(&tn))?;
                         vp(it, vec![s("  Taking pos from fix:\n"), p])?;
                     }
                 }

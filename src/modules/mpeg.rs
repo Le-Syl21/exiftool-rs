@@ -61,7 +61,7 @@ pub fn process_frame_header(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Ve
     let (et, tag_table_ptr) = (arg(&a, 0), arg(&a, 1));
     let data: Vec<Value> = a.iter().skip(2).cloned().collect();
     let mut keys: Vec<Value> = tag_table_ptr.keys().into_iter().map(Value::from).collect();
-    keys.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+    keys.sort_by_key(|x| x.to_bytes());
     for tag in keys {
         let Some(c) = re(r"^Bit(\d{2})-?(\d{2})?", "").m(&tag) else { continue };
         let b1 = cap(&c, 1);
@@ -216,13 +216,11 @@ pub fn parse_mpeg_audio(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
             let mut lib = pl::substr(&data, pos.to_i64(), Some(4));
             if !(pl::str_eq(&lib, "LAME") || pl::str_eq(&lib, "GOGO")) {
                 // attempt to identify other encoders
-                let mut nn;
+                // (index() is pure, so evaluating it up front is equivalent)
+                let mut nn = index(&data, &pl::s("THOMSON mp3PRO Encoder"), None);
                 if index(&data, &pl::s("RCA mp3PRO Encoder"), None).to_i64() >= 0 {
                     lib = pl::s("RCA mp3PRO");
-                } else if {
-                    nn = index(&data, &pl::s("THOMSON mp3PRO Encoder"), None);
-                    nn.to_i64() >= 0
-                } {
+                } else if nn.to_i64() >= 0 {
                     lib = pl::s("Thomson mp3PRO");
                     nn = pl::add(&nn, &n(22));
                     if pl::ge(&pl::sub(&pl::length(&data), &nn), &n(6)) {

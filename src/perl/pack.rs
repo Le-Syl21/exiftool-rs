@@ -529,7 +529,7 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
                     Count::Star => 0,
                 };
                 if item.bang {
-                    if n > 0 && pos % n != 0 {
+                    if n > 0 && !pos.is_multiple_of(n) {
                         if n - pos % n > remaining {
                             return Err("'x' outside of string in unpack".into());
                         }
@@ -638,8 +638,8 @@ fn unpack_items(items: &[Item], data: &[u8], start: usize, out: &mut Vec<Value>)
                     let mut got = 0;
                     while got < len && pos < data.len() {
                         let mut q = [0u8; 4];
-                        for k in 0..4 {
-                            q[k] = data.get(pos + k).map(|c| c.wrapping_sub(32) & 0x3f).unwrap_or(0);
+                        for (k, qk) in q.iter_mut().enumerate() {
+                            *qk = data.get(pos + k).map(|c| c.wrapping_sub(32) & 0x3f).unwrap_or(0);
                         }
                         let b = [(q[0] << 2) | (q[1] >> 4), (q[1] << 4) | (q[2] >> 2), (q[2] << 6) | q[3]];
                         for &x in &b {
@@ -949,14 +949,14 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
             b'x' => {
                 let n = repeat(item.count, 0);
                 if item.bang {
-                    if n > 0 && out.len() % n != 0 {
+                    if n > 0 && !out.len().is_multiple_of(n) {
                         let pad = n - out.len() % n;
                         grow(out, pad)?;
-                        out.extend(std::iter::repeat(0).take(pad));
+                        out.extend(std::iter::repeat_n(0, pad));
                     }
                 } else {
                     grow(out, n)?;
-                    out.extend(std::iter::repeat(0).take(n));
+                    out.extend(std::iter::repeat_n(0, n));
                 }
             }
             b'X' => {
@@ -1067,6 +1067,55 @@ fn pack_items(items: &[Item], cur: &mut Args, out: &mut Vec<u8>) -> Result<(), S
     Ok(())
 }
 
+/// The `%<bits>` checksum of the values unpacked by an item, as perl's
+/// unpack computes it: an integer item's sum is a UV (modulo 2**bits) up
+/// to 64 bits, a float item's (or a wider checksum's) a floating sum taken
+/// modulo 2**bits.
+fn checksum_of(vals: &[Value], bits: usize, letter: u8) -> Value {
+    let mut sum = Checksum::default();
+    for v in vals {
+        sum.add(v);
+    }
+    sum.value(bits, letter)
+}
+
+/// A `%<bits>` checksum, value by value (an integer item's is summed as it
+/// is read, without making its values).
+struct Checksum {
+    uv: u64,
+    nv: f64,
+    all_int: bool,
+}
+
+impl Default for Checksum {
+    fn default() -> Self {
+        Checksum { uv: 0, nv: 0.0, all_int: true }
+    }
+}
+
+impl Checksum {
+    fn add(&mut self, v: &Value) {
+        match v {
+            Value::Int(i) => self.uv = self.uv.wrapping_add(*i as u64),
+            Value::UInt(u) => self.uv = self.uv.wrapping_add(*u),
+            _ => self.all_int = false,
+        }
+        self.nv += v.to_f64();
+    }
+
+    fn value(&self, bits: usize, letter: u8) -> Value {
+        let int_item = b"cCsSiIlLnNUWvVqQjJw".contains(&letter);
+        let float = b"fFdD".contains(&letter) || (int_item && bits > 64) || (!int_item && (!self.all_int || bits >= 64));
+        if !float {
+            let mask = if bits >= 64 { u64::MAX } else if bits == 0 { 0 } else { (1u64 << bits) - 1 };
+            return from_uv(self.uv & mask);
+        }
+        let sum = self.nv;
+        let m = 2f64.powi(bits.min(1023) as i32);
+        Value::Num(sum - (sum / m).floor() * m)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1129,54 +1178,5 @@ mod tests {
         assert_eq!(pack(b"a4", &[Value::str("ab")]).unwrap(), b"ab\0\0");
         assert_eq!(pack(b"C*", &[Value::Int(1), Value::Int(300)]).unwrap(), [1, 44]);
         assert_eq!(pack(b"U*", &[Value::Int(0xe9)]).unwrap(), "é".as_bytes());
-    }
-}
-
-/// The `%<bits>` checksum of the values unpacked by an item, as perl's
-/// unpack computes it: an integer item's sum is a UV (modulo 2**bits) up
-/// to 64 bits, a float item's (or a wider checksum's) a floating sum taken
-/// modulo 2**bits.
-fn checksum_of(vals: &[Value], bits: usize, letter: u8) -> Value {
-    let mut sum = Checksum::default();
-    for v in vals {
-        sum.add(v);
-    }
-    sum.value(bits, letter)
-}
-
-/// A `%<bits>` checksum, value by value (an integer item's is summed as it
-/// is read, without making its values).
-struct Checksum {
-    uv: u64,
-    nv: f64,
-    all_int: bool,
-}
-
-impl Default for Checksum {
-    fn default() -> Self {
-        Checksum { uv: 0, nv: 0.0, all_int: true }
-    }
-}
-
-impl Checksum {
-    fn add(&mut self, v: &Value) {
-        match v {
-            Value::Int(i) => self.uv = self.uv.wrapping_add(*i as u64),
-            Value::UInt(u) => self.uv = self.uv.wrapping_add(*u),
-            _ => self.all_int = false,
-        }
-        self.nv += v.to_f64();
-    }
-
-    fn value(&self, bits: usize, letter: u8) -> Value {
-        let int_item = b"cCsSiIlLnNUWvVqQjJw".contains(&letter);
-        let float = b"fFdD".contains(&letter) || (int_item && bits > 64) || (!int_item && (!self.all_int || bits >= 64));
-        if !float {
-            let mask = if bits >= 64 { u64::MAX } else if bits == 0 { 0 } else { (1u64 << bits) - 1 };
-            return from_uv(self.uv & mask);
-        }
-        let sum = self.nv;
-        let m = 2f64.powi(bits.min(1023) as i32);
-        Value::Num(sum - (sum / m).floor() * m)
     }
 }

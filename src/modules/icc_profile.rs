@@ -50,7 +50,7 @@ pub fn hex_id(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     }
     val = pl::s("");
     for v in &vals {
-        val = pl::concat(&val, &pl::sprintf("%.2x", &[v.clone()]));
+        val = pl::concat(&val, &pl::sprintf("%.2x", std::slice::from_ref(v)));
     }
     ret(val)
 }
@@ -310,7 +310,7 @@ pub fn write_icc_profile(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
 fn validate_icc_impl(it: &mut Interp, val_ptr: &Value) -> ER<Value> {
     let mut err = Value::Undef;
     pl::at(1194);
-    let v = pl::sderef(&val_ptr)?;
+    let v = pl::sderef(val_ptr)?;
     if pl::lt(&pl::length(&v), &n(24)) {
         return Ok(pl::s("Invalid ICC profile"));
     }

@@ -14,7 +14,7 @@ fn iv_able(n: Number) -> Option<i64> {
         Number::Int(i) => Some(i),
         Number::UInt(_) => None,
         Number::Float(f) => {
-            if f.fract() == 0.0 && f >= -9.223372036854776e18 && f < 9.223372036854776e18 {
+            if f.fract() == 0.0 && (-9.223372036854776e18..9.223372036854776e18).contains(&f) {
                 Some(f as i64)
             } else {
                 None
@@ -34,7 +34,7 @@ fn int_able(n: Number) -> Option<i128> {
         Number::Int(i) => Some(i as i128),
         Number::UInt(u) => Some(u as i128),
         Number::Float(f) => {
-            if f.fract() == 0.0 && f >= -9.223372036854776e18 && f < 1.8446744073709552e19 {
+            if f.fract() == 0.0 && (-9.223372036854776e18..1.8446744073709552e19).contains(&f) {
                 Some(f as i128)
             } else {
                 None

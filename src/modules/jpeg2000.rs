@@ -72,7 +72,7 @@ fn eval_call(it: &mut Interp, func: &str, args: Vec<Value>) -> ER<Option<Value>>
 /// The keys of a hash, sorted (`sort keys %$h`).
 fn sorted_keys(h: &Value) -> Vec<Value> {
     let mut k: Vec<Value> = h.keys().into_iter().map(Value::from).collect();
-    k.sort_by(|x, y| x.to_bytes().cmp(&y.to_bytes()));
+    k.sort_by_key(|x| x.to_bytes());
     k
 }
 
@@ -635,13 +635,12 @@ pub fn process_jpeg2000_box(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
                 inc_changed(&et);
                 continue;
             } else if tag_info.get("Writable").truthy() {
-                let is_overwriting;
-                if et.get("DEL_GROUP").get("Jpeg2000").truthy() {
-                    is_overwriting = n(1);
+                let is_overwriting = if et.get("DEL_GROUP").get("Jpeg2000").truthy() {
+                    n(1)
                 } else {
                     let nv_hash = m(it, &et, "GetNewValueHash", vec![tag_info.clone()])?;
-                    is_overwriting = m(it, &et, "IsOverwriting", vec![nv_hash])?;
-                }
+                    m(it, &et, "IsOverwriting", vec![nv_hash])?
+                };
                 if is_overwriting.truthy() {
                     let val = pl::substr(&pl::sderef(&data_pt)?, value_ptr.to_i64(), Some(box_len.to_i64()));
                     m(it, &et, "VerboseValue", vec![cat(&[&pl::s("- Jpeg2000:"), &tag_info.get("Name")]), val])?;

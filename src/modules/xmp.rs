@@ -529,8 +529,7 @@ pub fn fix_utf8(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let mut s: Vec<u8> = str_pt.deref().to_bytes().to_vec();
     let mut p = 0usize; // start at beginning of string
     let hi = rx(r"([\x80-\xff])", "");
-    loop {
-        let Some(sp) = m_at(&hi, &s, p) else { break };
+    while let Some(sp) = m_at(&hi, &s, p) {
         let ch = s[sp[1].unwrap().0];
         let pos = end_of(&sp);
         p = pos;
@@ -1873,7 +1872,7 @@ fn parse_xmp_element_body(it: &mut Interp, et: &Value, tag_table_ptr: &Value, da
                 let Some(sp) = m_at(&rx(r#"=\s*(['"])"#, ""), &ab, apos) else { break };
                 apos = end_of(&sp);
                 quote = caps_of(&ab, &sp)[1].clone().unwrap_or_default();
-                let p = if apos > 1000 { apos - 1000 } else { 0 };
+                let p = apos.saturating_sub(1000);
                 let tmp = Value::bytes(&ab[p..apos]);
                 let mut pat = br"(\S+)\s*=\s*".to_vec();
                 pat.extend_from_slice(&quote.to_bytes());
@@ -2653,11 +2652,10 @@ pub(crate) fn process_xmp_v(it: &mut Interp, et: &Value, dir_info: &Value, mut t
             // assume that character data has been re-encoded in UTF, so re-pack
             // as characters and look for warnings indicating a false assumption
             let bv = buff.borrow().clone();
-            let buf2;
-            if double.to_bytes()[..] == b"\xef\xbb\xbf"[..] {
+            let buf2 = if double.to_bytes()[..] == b"\xef\xbb\xbf"[..] {
                 require(it, "Image::ExifTool::Charset")?;
                 let uni = pl::call(it, "Image::ExifTool::Charset::Decompose", vec![Value::Undef, bv, pl::s("UTF8")])?;
-                buf2 = pack("C*", &uni.items())?;
+                pack("C*", &uni.items())?
             } else {
                 let db = double.to_bytes();
                 let f = if db.len() == 2 {
@@ -2673,8 +2671,8 @@ pub(crate) fn process_xmp_v(it: &mut Interp, et: &Value, dir_info: &Value, mut t
                 };
                 let mut t = f.as_bytes().to_vec();
                 t.push(b'*');
-                buf2 = pack("C*", &unpack(&t, &bv.to_bytes())?)?;
-            }
+                pack("C*", &unpack(&t, &bv.to_bytes())?)?
+            };
             if pl::call(it, "Image::ExifTool::GetWarning", vec![])?.truthy() {
                 if !dir_info.get("RAF").truthy() {
                     pl::method(it, et, "Warn", vec![pl::s("Superfluous BOM at start of XMP")])?;

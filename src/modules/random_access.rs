@@ -260,15 +260,14 @@ pub fn seek_test(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 }
 
 fn tell_impl(it: &mut Interp, self_: &Value) -> ER<Value> {
-    let rtn_val;
-    if pl::lt(&self_.get("TESTED"), &n(0)) {
-        rtn_val = pl::add(&self_.get("POS"), &self_.get("BASE"));
+    let rtn_val = if pl::lt(&self_.get("TESTED"), &n(0)) {
+        pl::add(&self_.get("POS"), &self_.get("BASE"))
     } else {
         let fp = cell(self_.get("FILE_PT"));
         pl::at(131);
         fh_check(&fp.borrow())?;
-        rtn_val = perl_eval1(it, "tell($fp)", "File::RandomAccess", &[("fp", &fp)])?;
-    }
+        perl_eval1(it, "tell($fp)", "File::RandomAccess", &[("fp", &fp)])?
+    };
     Ok(rtn_val)
 }
 
@@ -283,17 +282,16 @@ fn seek_impl(it: &mut Interp, self_: &Value, num: &Value, whence: &Value) -> ER<
     let whence = if whence.is_undef() { n(0) } else { whence.clone() };
     let mut rtn_val = Value::Undef;
     if pl::lt(&self_.get("TESTED"), &n(0)) {
-        let new_pos;
-        if pl::num_eq(&whence, &n(0)) {
-            new_pos = pl::sub(num, &self_.get("BASE")); // from start of file
+        let new_pos = if pl::num_eq(&whence, &n(0)) {
+            pl::sub(num, &self_.get("BASE")) // from start of file
         } else if pl::num_eq(&whence, &n(1)) {
-            new_pos = pl::add(num, &self_.get("POS")); // relative to current position
+            pl::add(num, &self_.get("POS")) // relative to current position
         } else if self_.get("NoBuffer").truthy() && self_.get("FILE_PT").truthy() {
-            new_pos = n(-1); // (can't seek relative to end if no buffering)
+            n(-1) // (can't seek relative to end if no buffering)
         } else {
             slurp_impl(it, self_)?; // read whole file into buffer
-            new_pos = pl::add(num, &self_.get("LEN")); // relative to end of file
-        }
+            pl::add(num, &self_.get("LEN")) // relative to end of file
+        };
         if pl::ge(&new_pos, &n(0)) &&
             // can't go backwards in unbuffered non-seekable file
             (!self_.get("NoBuffer").truthy() || pl::ge(&new_pos, &self_.get("POS")))

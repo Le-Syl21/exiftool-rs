@@ -199,7 +199,7 @@ pub fn print_af_points_inv(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<
     let is_hash = pl::ref_of(&af_points) == "HASH";
     pl::at(13550);
     let num = if is_hash { af_points.keys().len() } else { pl::aderef(&af_points)?.len() };
-    let size = (num + 7) / 8;
+    let size = num.div_ceil(8);
     let mut dat: Vec<Value> = vec![n(0); size];
     if !points.is_empty() {
         let bit_num_h = Value::new_hash();
@@ -751,7 +751,7 @@ pub fn process_nikon_mov(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
             if !fmt_str.truthy() {
                 if pass != 0 {
                     let f = [&b"Unknown format ("[..], &fmt.to_bytes(), b") for ", &dir_name.to_bytes(), b" tag 0x%x"].concat();
-                    let msg = pl::sprintf_v(&Value::bytes(f), &[tag.clone()]);
+                    let msg = pl::sprintf_v(&Value::bytes(f), std::slice::from_ref(&tag));
                     pl::method(it, &et, "Warn", vec![msg])?;
                 }
                 break;
@@ -760,7 +760,7 @@ pub fn process_nikon_mov(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
             if pl::gt(&pl::add(&pos, &size), &end) {
                 if pass != 0 {
                     let f = [&b"Truncated data for "[..], &dir_name.to_bytes(), b" tag 0x%x"].concat();
-                    let msg = pl::sprintf_v(&Value::bytes(f), &[tag.clone()]);
+                    let msg = pl::sprintf_v(&Value::bytes(f), std::slice::from_ref(&tag));
                     pl::method(it, &et, "Warn", vec![msg])?;
                 }
                 break;
@@ -991,7 +991,7 @@ fn prepare_nikon_offsets_rs(it: &mut Interp, et: &Value, data_pt: &Value, tag_ta
             }
         } else if pl::gt(&unknown, &n(1)) {
             // create new table for unknown information
-            let tbl = pl::sprintf("Image::ExifTool::Nikon::UnknownInfo%.2x", &[pos.clone()]);
+            let tbl = pl::sprintf("Image::ExifTool::Nikon::UnknownInfo%.2x", std::slice::from_ref(&pos));
             let h = pl::pkg_hash(it, &tbl.to_text());
             if h.is_empty() {
                 if let Value::HashRef(hr) = &h {
@@ -1010,7 +1010,7 @@ fn prepare_nikon_offsets_rs(it: &mut Interp, et: &Value, data_pt: &Value, tag_ta
             }
             // add unknown entry in offset table for this subdirectory
             let ti = Value::new_hash();
-            ti.set("Name", pl::sprintf("UnknownOffset%.2x", &[pos.clone()]));
+            ti.set("Name", pl::sprintf("UnknownOffset%.2x", std::slice::from_ref(&pos)));
             ti.set("Format", s("int32u"));
             let sd = Value::new_hash();
             sd.set("TagTable", tbl);

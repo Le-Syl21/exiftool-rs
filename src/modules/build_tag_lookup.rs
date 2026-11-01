@@ -325,10 +325,9 @@ fn new_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         is_plugin_h.set(t.to_bytes(), n(1));
     }
 
-    let mut table_num = 0i64;
     let et = pl::method(it, &s(ET), "new", vec![])?;
     // create lookup for short table names
-    for table_name in &table_names {
+    for (table_num, table_name) in table_names.iter().enumerate() {
         let mut short = table_name.clone();
         strip(&mut short, r"^Image::ExifTool::", "");
         strip(&mut short, r"::Main$", "");
@@ -341,8 +340,7 @@ fn new_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         // (we used underlines just because Perl variables can't contain dashes)
         re(r"^XMP mwg_", "").subst(&mut short, false, |_| b"XMP mwg-".to_vec());
         short_name.set(table_name.to_bytes(), short); // remember short name
-        table_num_h.set(table_name.to_bytes(), n(table_num));
-        table_num += 1;
+        table_num_h.set(table_name.to_bytes(), n(table_num as i64));
     }
     // validate DICOM UID values
     let uid = pl::pkg_hash(it, "Image::ExifTool::DICOM::uid");
@@ -460,8 +458,7 @@ fn new_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
             let mut require: Vec<Value> = Vec::new();
             let mut write_group_l: Vec<Value> = Vec::new();
             let mut writable_l: Vec<Value> = Vec::new();
-            let info_array: Vec<Value>;
-            if shortcut {
+            let info_array: Vec<Value> = if shortcut {
                 // must build a dummy tagInfo list since Shortcuts is not a normal table
                 let tag_info = Value::new_hash();
                 tag_info.set("Name", tag_id.clone());
@@ -472,10 +469,10 @@ fn new_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 for (i, e) in entries.items().into_iter().enumerate() {
                     tag_info.get("Require").set(i.to_string(), e);
                 }
-                info_array = vec![tag_info];
+                vec![tag_info]
             } else {
-                info_array = get_tag_info_list(it, &table, &tag_id)?;
-            }
+                get_tag_info_list(it, &table, &tag_id)?
+            };
             for tag_info in &info_array {
                 if binary_table && tag_info.get("Writable").truthy() && !pl::str_eq(&tag_info.get("Writable"), "1") {
                     pl::warn(it, &format!("{} {} Writable should be 1, not {}\n", table_name.to_text(), tag_info.get("Name").to_text(), tag_info.get("Writable").to_text()))?;
@@ -748,7 +745,7 @@ fn new_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                             if !re(r"^\d+$", "").is_match(&k) || pl::num_eq(&ops::bit_and(&k, &val), &k) {
                                 continue;
                             }
-                            let hx = pl::sprintf("0x%.2x", &[k.clone()]);
+                            let hx = pl::sprintf("0x%.2x", std::slice::from_ref(&k));
                             pl::warn(it, &format!("{} {} PrintConv value {} is not in Mask!\n", short.to_text(), name.to_text(), hx.to_text()))?;
                         }
                     }
@@ -1381,15 +1378,13 @@ fn write_tag_lookup_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
     let all_tables = pl::pkg_hash(it, "Image::ExifTool::allTables");
     let table_names = sorted_keys(&all_tables);
     let wr_num = Value::new_hash(); // translate from allTables index to writable tables index
-    let mut count = 0i64;
     let mut num = 0i64;
-    for table_name in &table_names {
+    for (count, table_name) in table_names.iter().enumerate() {
         if table_writable.get(table_name.to_bytes()).truthy() {
             out(it, cat(&[&s("\t'"), table_name, &s("',\n")]))?;
             wr_num.set(count.to_string(), n(num));
             num += 1;
         }
-        count += 1;
     }
 //
 // write the tag lookup table
@@ -1414,8 +1409,7 @@ fn write_tag_lookup_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
         for table_num in table_nums {
             let mut tag_id = tag_lookup.get(tag.to_bytes()).get(table_num.to_bytes());
             let root_id = viv(&flattened, tag.to_bytes()).get(table_num.to_bytes());
-            let entry;
-            if rtype(&tag_id) == "HASH" || root_id.truthy() {
+            let entry = if rtype(&tag_id) == "HASH" || root_id.truthy() {
                 if rtype(&tag_id) != "HASH" {
                     let h = Value::new_hash();
                     h.set(tag_id.to_bytes(), n(1));
@@ -1424,7 +1418,7 @@ fn write_tag_lookup_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 let mut tag_ids = sorted_keys(&tag_id);
                 for t in tag_ids.iter_mut() {
                     if re(r"^\d+$", "").is_match(t) {
-                        *t = pl::sprintf("0x%x", &[t.clone()]);
+                        *t = pl::sprintf("0x%x", std::slice::from_ref(t));
                     } else {
                         let mut quot = s("'");
                         // escape non-printable characters in tag ID if necessary
@@ -1439,17 +1433,17 @@ fn write_tag_lookup_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
                 if root_id.truthy() {
                     tag_ids.insert(0, cat(&[&s("\\'"), &root_id, &s("'")]));
                 }
-                entry = cat(&[&s("["), &pl::join(",", &tag_ids), &s("]")]);
+                cat(&[&s("["), &pl::join(",", &tag_ids), &s("]")])
             } else if re(r"^\d+$", "").is_match(&tag_id) {
-                entry = pl::sprintf("0x%x", &[tag_id.clone()]);
+                pl::sprintf("0x%x", &[tag_id.clone()])
             } else {
                 let mut quot = s("'");
                 // escape non-printable characters in tag ID if necessary
                 if esc_re.subst(&mut tag_id, true, esc) > 0 {
                     quot = s("\"");
                 }
-                entry = cat(&[&quot, &tag_id, &quot]);
-            }
+                cat(&[&quot, &tag_id, &quot])
+            };
             let wn = wr_num.get(table_num.to_bytes());
             entries.push(cat(&[&wn, &s(" => "), &entry]));
         }
@@ -1549,9 +1543,9 @@ fn write_tag_lookup_body(it: &mut Interp, a: Vec<Value>) -> ER<Vec<Value>> {
 /// Sort numbers first numerically, then strings alphabetically
 /// - case-insensitive sorting set by global variable $caseInsensitive
 /// - two global variables are used to change the sort algorithm:
-///   $numbersFirst: -1 = put numbers after other strings
-///                   1 = put numbers before other strings
-///                   2 = put numbers first, but negative numbers last
+///   $numbersFirst: -1 = put numbers after other strings,
+///   1 = put numbers before other strings,
+///   2 = put numbers first, but negative numbers last
 pub fn numbers_first(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let nf = my_scalar(it, "numbersFirst");
     let ci = my_scalar(it, "caseInsensitive").truthy();
@@ -2225,9 +2219,8 @@ pub fn write_tag_names(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     }
     table_names = table_index_names;
     // print html index of headings only
-    let mut count = 0i64;
     let lines = (headings.len() as i64 + columns - 1) / columns;
-    for table_name in &headings {
+    for (count, table_name) in (0i64..).zip(&headings) {
         if count != 0 {
             if count % lines != 0 {
                 hp(it, s("<br>\n"))?;
@@ -2248,7 +2241,6 @@ pub fn write_tag_names(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
             url = cat(&[&short, &s(".html")]);
         }
         hp(it, cat(&[&s("<a href='"), &url, &s("'>"), &short, &s("</a>")]))?;
-        count += 1;
     }
     hp(it, s("\n</td></tr></table></td></tr></table></blockquote>\n"))?;
     let d = doc2html_rs(it, &docs.get("ExifTool2"))?;
@@ -2565,7 +2557,7 @@ pub fn write_tag_names(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
         } else {
             "Tag Name"
         });
-        line = pl::concat(&line, &sprintf_dyn(&format!(" %-{w_tag}s"), &[tag_name_heading.clone()]));
+        line = pl::concat(&line, &sprintf_dyn(&format!(" %-{w_tag}s"), std::slice::from_ref(&tag_name_heading)));
         if composite != 0 {
             line = pl::concat(&line, &sprintf_dyn(&format!(" %-{w_req}s"), &[s(if composite == 2 { "Refers To" } else { "Derived From" })]));
         }

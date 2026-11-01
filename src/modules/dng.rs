@@ -686,7 +686,7 @@ pub fn process_adobe_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Val
             // warn unless the IFD was just padded with zeros
             if format.truthy() {
                 let f = cat(&[&s("Unknown format ("), &format, &s(") for "), &dir_info.get("DirName"), &s(" tag 0x%x")]);
-                warn(it, &et, pl::sprintf_v(&f, &[tag_id.clone()]))?;
+                warn(it, &et, pl::sprintf_v(&f, std::slice::from_ref(&tag_id)))?;
             }
             return ret(n(0)); // must be corrupted
         }

@@ -106,8 +106,7 @@ pub fn to_dms(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         val = pl::abs(&val);
         r = pl::s("");
     }
-    let num;
-    if do_print_conv.truthy() {
+    let num = if do_print_conv.truthy() {
         if pl::str_eq(&do_print_conv, "1") {
             fmt = pl::method(it, &et, "Options", vec![pl::s("CoordFormat")])?;
             if !fmt.truthy() {
@@ -136,10 +135,10 @@ pub fn to_dms(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
                 break;
             }
         }
-        num = fmts.len();
+        fmts.len()
     } else {
-        num = 3;
-    }
+        3
+    };
     let mut c: Vec<Value> = vec![val.clone()]; // coordinates (D) or (D,M) or (D,M,S)
     if num > 1 {
         c[0] = pl::int(&c[0]);

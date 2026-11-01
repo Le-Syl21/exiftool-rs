@@ -423,20 +423,20 @@ pub fn write_ps(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             s32u_at(it, l, &rf(&dos), n(20))?; // set TIFF pointer
             let l = len(&get(&buff));
             s32u_at(it, l, &rf(&dos), n(24))?; // set TIFF length
-        } else if {
-            base = g32u(it, &rf(&dos), n(12))?;
-            !pl::num_eq(&base, &n(0))
-        } {
-            // copy over metafile section
-            let l = g32u(it, &rf(&dos), n(16))?;
-            if !(seek(it, &raf, base.clone(), 0)? && read_eq(it, &raf, &buff, &l)?) {
-                pl::method(it, &et, "Error", vec![pl::s("Error reading metafile section")])?;
-                return ret(n(1));
-            }
-            let l = len(&get(&dos));
-            s32u_at(it, l, &rf(&dos), n(12))?; // set metafile pointer
         } else {
-            put(&buff, pl::s(""));
+            base = g32u(it, &rf(&dos), n(12))?;
+            if !pl::num_eq(&base, &n(0)) {
+                // copy over metafile section
+                let l = g32u(it, &rf(&dos), n(16))?;
+                if !(seek(it, &raf, base.clone(), 0)? && read_eq(it, &raf, &buff, &l)?) {
+                    pl::method(it, &et, "Error", vec![pl::s("Error reading metafile section")])?;
+                    return ret(n(1));
+                }
+                let l = len(&get(&dos));
+                s32u_at(it, l, &rf(&dos), n(12))?; // set metafile pointer
+            } else {
+                put(&buff, pl::s(""));
+            }
         }
         ps_new_start = pl::add(&len(&get(&dos)), &len(&get(&buff)));
         s32u_at(it, ps_new_start.clone(), &rf(&dos), n(4))?; // set pointer to start of PS

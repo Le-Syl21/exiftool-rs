@@ -49,8 +49,7 @@ pub fn process_mett(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
     while pos + 4 < dir_end {
         let u = pl::unpack(&format!("x{pos}a2n"), &data)?;
         let (mut id, nwords) = (arg(&u, 0), arg(&u, 1));
-        let size;
-        if !re(r"^[EP]\d", "").is_match(&id) {
+        let size = if !re(r"^[EP]\d", "").is_match(&id) {
             // no ID so this should be a 60-byte V1 recording record, otherwise give up
             if dir_end != 60 {
                 break;
@@ -60,15 +59,15 @@ pub fn process_mett(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
             // the other V1 records (unfortunately, this means that we won't
             // decode the V1 recording frame timestamp, but oh well)
             pos += 4;
-            size = n(dir_end - pos);
+            n(dir_end - pos)
         // must override size for P3 and P3 records since it includes the extensions (augh!)
         } else if id.eq_str("P2") {
-            size = n(56);
+            n(56)
         } else if id.eq_str("P3") {
-            size = n(72);
+            n(72)
         } else {
-            size = pl::add(&pl::mul(&nwords, &n(4)), &n(4));
-        }
+            pl::add(&pl::mul(&nwords, &n(4)), &n(4))
+        };
         if pl::gt(&pl::add(&n(pos), &size), &n(dir_end)) {
             break;
         }

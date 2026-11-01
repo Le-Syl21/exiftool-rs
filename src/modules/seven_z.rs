@@ -399,9 +399,9 @@ fn retrieve_coders_info_rs(it: &mut Interp, et: &Value, raf: &Value, folders_ref
                 crcs.push(read_uint32_rs(it, raf)?);
             }
         }
-        for i in 0..numfolders as usize {
-            folders[i].set("digestdefined", defined.get(i).cloned().unwrap_or_default());
-            folders[i].set("crc", crcs.get(i).cloned().unwrap_or_default());
+        for (i, folder) in folders.iter().enumerate() {
+            folder.set("digestdefined", defined.get(i).cloned().unwrap_or_default());
+            folder.set("crc", crcs.get(i).cloned().unwrap_or_default());
         }
         read(it, raf, &mut buff, n(1))?;
         pid = ord(&buff).to_i64();
@@ -598,20 +598,16 @@ fn is_native_coder_rs(coder: &Value) -> Value {
     let m = coder.get("method").to_bytes();
     let o = |k: usize| m.get(k).map_or(0, |b| *b as i64); // ord(substr($coder->{"method"}, k, 1))
     if o(0) == 3 {
-        if o(1) == 1 {
-            if o(2) == 1 {
+        if o(1) == 1
+            && o(2) == 1 {
                 return s("LZMA");
             }
-        }
-    } else if o(0) == 6 {
-        if o(1) == 0xf1 {
-            if o(2) == 7 {
-                if o(3) == 1 {
+    } else if o(0) == 6
+        && o(1) == 0xf1
+            && o(2) == 7
+                && o(3) == 1 {
                     return s("7zAES");
                 }
-            }
-        }
-    }
     // (falls off the end: the value of the last condition evaluated, false)
     Value::from(false)
 }

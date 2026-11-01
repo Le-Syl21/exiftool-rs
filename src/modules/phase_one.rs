@@ -83,12 +83,12 @@ pub fn html_dump(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
             count = pl::div(&size, &fs)?;
         }
     } else {
-        tag_name = pl::sprintf("Tag 0x%.4x", &[tag_id.clone()]);
+        tag_name = pl::sprintf("Tag 0x%.4x", std::slice::from_ref(&tag_id));
     }
     let dname = pl::sprintf_v(&pl::concat(&dir_name, &pl::s("-%.2d")), &[index]);
     // build our tool tip
     let fstr = cat(&[format_str.clone(), pl::s("["), count.clone(), pl::s("]")]);
-    let mut tip = pl::concat(&pl::sprintf("Tag ID: 0x%.4x\n", &[tag_id.clone()]), &cat(&[pl::s("Format: "), fstr, pl::s("\nSize: "), size.clone(), pl::s(" bytes\n")]));
+    let mut tip = pl::concat(&pl::sprintf("Tag ID: 0x%.4x\n", std::slice::from_ref(&tag_id)), &cat(&[pl::s("Format: "), fstr, pl::s("\nSize: "), size.clone(), pl::s(" bytes\n")]));
     if pl::gt(&size, &n(4)) {
         tip = pl::concat(&tip, &pl::sprintf("Value offset: 0x%.4x\n", &[pl::sub(&value_ptr, &base)]));
         tip = pl::concat(&tip, &pl::sprintf("Actual offset: 0x%.4x\n", &[pl::add(&value_ptr, &data_pos)]));

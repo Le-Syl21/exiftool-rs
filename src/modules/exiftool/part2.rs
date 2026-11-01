@@ -582,7 +582,7 @@ pub fn is_rational(_it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> 
 
 fn round_float_v(val: &Value, sig: &Value) -> Value {
     let fmt = pl::concat(&pl::concat(&pl::s("%."), sig), &pl::s("g"));
-    pl::sprintf_v(&fmt, &[val.clone()])
+    pl::sprintf_v(&fmt, std::slice::from_ref(val))
 }
 
 /// round floating point value to specified number of significant digits
@@ -718,8 +718,7 @@ pub fn do_pack_rev(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
 /// - uses value of $swapBytes to determine byte ordering
 pub fn do_unpack(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let (mut bytes, template, data_pt, pos) = (arg(&a, 0), arg(&a, 1), arg(&a, 2), arg(&a, 3));
-    let val;
-    if pkg_scalar(it, "swapBytes").borrow().truthy() {
+    let val = if pkg_scalar(it, "swapBytes").borrow().truthy() {
         let data = located(it, 6059, |_| deref_scalar(&data_pt))?;
         let mut v = Vec::new();
         loop {
@@ -730,10 +729,10 @@ pub fn do_unpack(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
             }
             v.extend_from_slice(&substr(&data, pl::add(&pos, &bytes).to_i64(), Some(1)).to_bytes());
         }
-        val = Value::bytes(v);
+        Value::bytes(v)
     } else {
-        val = substr(&located(it, 6061, |_| deref_scalar(&data_pt))?, pos.to_i64(), Some(bytes.to_i64()));
-    }
+        substr(&located(it, 6061, |_| deref_scalar(&data_pt))?, pos.to_i64(), Some(bytes.to_i64()))
+    };
     if val.is_undef() {
         return pl::ret_undef();
     }
@@ -911,17 +910,16 @@ pub fn set_byte_order(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>
         return ret(n(0));
     }
     let val = unpack_ctx(b"S", b"A ", Want::Scalar)?.pop().unwrap_or_default();
-    let native_order;
-    if pl::num_eq(&val, &n(0x4120)) {
+    let native_order = if pl::num_eq(&val, &n(0x4120)) {
         // big endian
-        native_order = pl::s("MM");
+        pl::s("MM")
     } else if pl::num_eq(&val, &n(0x2041)) {
         // little endian
-        native_order = pl::s("II");
+        pl::s("II")
     } else {
         pl::warn(it, &pl::sprintf("Unknown native byte order! (pattern %x)\n", &[val]).to_text())?;
         return ret(n(0));
-    }
+    };
     *pkg_scalar(it, "currentByteOrder").borrow_mut() = order.clone(); // save current byte order
 
     // swap bytes if our native CPU byte ordering is not the same as the EXIF
@@ -2866,7 +2864,7 @@ pub fn done_extract(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>
     // generate geolocation tags if requested
     if opts.get("Geolocation").truthy() {
         let mut arg_v = Value::Undef;
-        let (mut defaults, mut tags, mut coord, mut refs, mut city): (Vec<Value>, Vec<Value>, Vec<Value>, Vec<Value>, Vec<Value>) = Default::default();
+        let (mut defaults, mut tags, mut coord, mut refs, mut city) = (Vec::<Value>::new(), Vec::<Value>::new(), Vec::<Value>::new(), Vec::<Value>::new(), Vec::<Value>::new());
         let (mut done_city, mut both) = (false, false);
         let args = pl::split(&re(r"\s*,\s*", ""), &opts.get("Geolocation"), 0);
         for mut x in args {
@@ -3134,7 +3132,7 @@ fn is_utf8_v(s: &[u8], trunc: bool) -> (i64, Option<usize>) {
         // minimum lead byte for 2-byte sequence is 0xc2 (overlong sequences
         // not allowed), 0xf8-0xfd are restricted by RFC 3629 (no 5 or 6 byte
         // sequences), and 0xfe and 0xff are not valid in UTF-8 strings
-        if ch < 0xc2 || ch >= 0xf8 {
+        if !(0xc2..0xf8).contains(&ch) {
             return (-1, Some(pos));
         }
         // determine number of bytes remaining in sequence
@@ -4018,6 +4016,7 @@ pub fn identify_trailer(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Valu
 /// - OutFile is a scalar reference for writing
 /// - scans from current file position for each trailer if ScanForTrailer is set
 ///   (current file position is just after JPEG EOF for a JPEG image)
+///
 /// Returns: 1 if trailer was processed or couldn't be processed (or written OK)
 ///          0 if trailer was recognized but offsets need fixing (or write error)
 /// - DirName, DirLen, DataPos, Offset, Fixup and OutFile are updated

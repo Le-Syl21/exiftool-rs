@@ -346,15 +346,14 @@ fn unescape_loop(s: &mut Value, cont: bool) {
         let nn = p - 2;
         let (cs, ce) = sp[1].unwrap();
         let mut c = s.to_bytes()[cs..ce].to_vec();
-        let r: Vec<u8>;
-        if c[0].is_ascii_digit() && c[0] < b'8' {
+        let r: Vec<u8> = if c[0].is_ascii_digit() && c[0] < b'8' {
             // get up to 2 more octal digits
             if let Some(sp2) = match_g(br"\G([0-7]{1,2})", "", s, &mut pos) {
                 let (a, b) = sp2[1].unwrap();
                 c.extend_from_slice(&s.to_bytes()[a..b]);
             }
             // convert octal escape code
-            r = vec![(oct(&c) & 0xff) as u8];
+            vec![(oct(&c) & 0xff) as u8]
         } else if cont && c[0] == 0x0d {
             // the string is continued if the line ends with '\'
             // (also remove "\x0d\x0a")
@@ -362,15 +361,15 @@ fn unescape_loop(s: &mut Value, cont: bool) {
                 let (a, b) = sp2[1].unwrap();
                 c.extend_from_slice(&s.to_bytes()[a..b]);
             }
-            r = Vec::new();
+            Vec::new()
         } else if cont && c[0] == 0x0a {
-            r = Vec::new();
+            Vec::new()
         } else {
             // convert escaped characters
             let mut rv = Value::bytes(&c);
             pl::tr(&mut rv, "nrtbf", "\n\r\t\x08\x0c", "");
-            r = rv.to_bytes().to_vec();
-        }
+            rv.to_bytes().to_vec()
+        };
         *s = replace(s, nn, c.len() + 1, &r);
         // continue search after this character
         pos = Some(nn + r.len());

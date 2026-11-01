@@ -213,18 +213,17 @@ pub fn process_syn_text(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Va
         let np = arg(&r, 1).to_i64();
         let mut text = pl::substr(&data_pt.deref(), pos.to_i64(), Some(np - pos.to_i64() - 4 - term_len));
         text = decode_string1(it, &et, text, Some(enc.clone()))?;
-        let time_str;
-        if pl::num_eq(&time_code, &n(2)) {
+        let time_str = if pl::num_eq(&time_code, &n(2)) {
             // time in ms
-            time_str = pl::sprintf("%.3f", &[pl::div(&time, &n(1000))?]);
+            pl::sprintf("%.3f", &[pl::div(&time, &n(1000))?])
         } else {
             // time in MPEG frames
             let mut t = pl::sprintf("%.4d", &[time]);
             if !pl::num_eq(&time_code, &n(1)) {
                 t = pl::concat(&t, &pl::s("?"));
             }
-            time_str = t;
-        }
+            t
+        };
         let v = cat(&[&pl::s("["), &time_str, &pl::s("]"), &text]);
         m(it, &et, "HandleTag", vec![tag_table_ptr.clone(), pl::s("text"), v, pl::s("TagInfo"), tag_info.clone()])?;
     }
@@ -768,12 +767,10 @@ pub fn process_id3v2(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value
             let c = caps.unwrap_or_default();
             let mut attrs = vec![cap(&c, 1), n(cap(&c, 2).to_bytes().first().copied().unwrap_or(0) as i64)];
             attrs.extend(decode_string_list(it, &et, cap(&c, 3), Some(enc))?);
-            let mut i = 1;
-            for attr in attrs {
+            for (i, attr) in (1..).zip(attrs) {
                 // must store descriptions even if they are empty to maintain
                 // sync between copy numbers when multiple images
                 m(it, &et, "HandleTag", vec![tag_table_ptr.clone(), pl::s(&format!("{}-{}", id.to_text(), i)), attr])?;
-                i += 1;
             }
         } else if id.eq_str("POP") || id.eq_str("POPM") {
             // _email, 00, rating(1), counter(4-N)

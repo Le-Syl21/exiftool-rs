@@ -33,6 +33,7 @@ fn ord(v: &Value) -> i64 {
 /// Extract information from an MPC file
 /// Inputs: 0) ExifTool object reference, 1) dirInfo reference
 /// - Just looks for MPC trailer if FileType is already set
+///
 /// Returns: 1 on success, 0 if this wasn't a valid MPC file
 pub fn process_mpc(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     let (et, dir_info) = (arg(&a, 0), arg(&a, 1));

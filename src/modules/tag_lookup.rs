@@ -111,10 +111,8 @@ pub fn add_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
 
     // generate lookup for table numbers if not done already
     if table_num_hash.keys().is_empty() {
-        let mut tnum = 0i64;
-        for tbl in table_list.items() {
+        for (tnum, tbl) in (0i64..).zip(table_list.items()) {
             table_num_hash.set(tbl.to_bytes(), n(tnum));
-            tnum += 1;
         }
     }
     let mut more_tables: Vec<Value> = Vec::new();
@@ -170,16 +168,16 @@ pub fn add_tags(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
                             ids.unshift(tag_id.clone());
                         }
                     // only add new tag ID if it didn't already exist
-                    } else if {
+                    } else {
                         pl::at(13999);
                         let r = pl::re_dyn(&anchored(&tag_id), "")?;
-                        ids.items().iter().any(|v| r.is_match(v))
-                    } {
-                        if !is_flat {
-                            existed = true;
+                        if ids.items().iter().any(|v| r.is_match(v)) {
+                            if !is_flat {
+                                existed = true;
+                            }
+                        } else {
+                            ids.push(tag_id.clone());
                         }
-                    } else {
-                        ids.push(tag_id.clone());
                     }
                     // only update lookup if there is now more than one entry
                     if ids.len() > 1 {

@@ -483,8 +483,8 @@ pub fn add_entry(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
         alt_names = chomp(it, &alt_names); // (just in case)
         pl::tr(&mut alt_names, ",", "\n", "");
         // add any more arguments in case altNames were passed separately (undocumented)
-        for i in 11..a.len() {
-            let c = chomp(it, &a[i]);
+        for (i, ai) in a.iter().enumerate().skip(11) {
+            let c = chomp(it, ai);
             it.set_arg(i, c.clone())?;
             alt_names = pl::concat(&alt_names, &pl::concat(&pl::s("\n"), &c));
         }
@@ -813,17 +813,16 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
             put(&last_args, cargs_s);
         }
         // read alternate names database if an exact city match is specified
-        let alt_list: Vec<Value>;
-        if alt_names.truthy() {
+        let alt_list: Vec<Value> = if alt_names.truthy() {
             if city_v.truthy() && it.get_scalar(&format!("{MODULE}::altDir")).truthy() {
                 read_alt_names(it, vec![], Want::Scalar)?;
             }
             alt_names = la(it, "altNames");
-            alt_list = alt_names.items();
+            alt_names.items()
         } else {
             alt_names = Value::new_array(vec![]); // (don't search alt names)
-            alt_list = alt_names.items();
-        }
+            alt_names.items()
+        };
         let mut alt_re: Option<pl::Re> = None;
         let countries = country_list.items();
         let regions = region_list.items();
@@ -879,7 +878,7 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
                 // make quick lookup for all names at this location
                 let geo_lkup: Vec<Vec<u8>> = geo.iter().filter(|g| g.truthy()).map(|g| pl::lc(g).to_bytes().to_vec()).collect();
                 for e in &exact {
-                    if !geo_lkup.iter().any(|g| &g[..] == &e.to_bytes()[..]) {
+                    if !geo_lkup.iter().any(|g| g[..] == e.to_bytes()[..]) {
                         continue 'entry;
                     }
                 }
@@ -1010,7 +1009,7 @@ pub fn geolocate(it: &mut Interp, a: Vec<Value>, want: Want) -> ER<Vec<Value>> {
     let entry_of = |iv: &Value| -> std::rc::Rc<[u8]> { cities.get(iv.to_i64() as usize).map(|v| v.to_bytes()).unwrap_or_else(|| std::rc::Rc::from(&b""[..])) };
     while n1 - n0 > 1 {
         let nn = (n0 + n1) / 2;
-        if &coord[..] < &entry_of(&pick(nn))[..] {
+        if coord[..] < entry_of(&pick(nn))[..] {
             n1 = nn;
         } else {
             n0 = nn;

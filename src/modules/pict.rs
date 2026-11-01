@@ -147,17 +147,16 @@ pub fn read_pict_value(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
     // no size if count is 0
     let mut size = if count.truthy() { call(it, "FormatSize", vec![format.clone()])? } else { n(0) };
     if !size.is_undef() || pl::str_eq(&format, "null") {
-        let val;
-        if size.truthy() {
+        let val = if size.truthy() {
             let mut buff = Value::Undef;
             size = pl::mul(&size, &count);
             if !read_eq(it, &raf, &mut buff, &size)? {
                 return pl::ret_undef();
             }
-            val = call(it, "ReadValue", vec![pl::sref(buff), n(0), format.clone(), count.clone(), size.clone()])?;
+            call(it, "ReadValue", vec![pl::sref(buff), n(0), format.clone(), count.clone(), size.clone()])?
         } else {
-            val = s("");
-        }
+            s("")
+        };
         if verbose.truthy() {
             pl::print_to(it, Some(&out), &[cat(&[get(&indent_c), tag.clone(), s(" ("), format.clone(), cnt_str.clone(), s(")")])])?;
             if size.truthy() {

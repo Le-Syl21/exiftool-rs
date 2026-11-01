@@ -713,11 +713,10 @@ fn extract(it: &mut Interp, st: &mut St) -> ER<bool> {
             let f = pl::call(it, "Image::ExifTool::HTML::EscapeHTML", vec![st.file.clone()])?;
             let out = stdout(it)?;
             print1(it, &out, cat(&[b"<!-- ", &f.to_bytes(), b" -->\n"]))?;
-        } else if !(sv(it, "json").truthy() || sv(it, "xml").truthy() || !sv(it, "diff").is_undef()) {
-            if (sv(it, "multiFile").truthy() && !sv(it, "quiet").truthy()) || sv(it, "progress").truthy() {
+        } else if !(sv(it, "json").truthy() || sv(it, "xml").truthy() || !sv(it, "diff").is_undef())
+            && ((sv(it, "multiFile").truthy() && !sv(it, "quiet").truthy()) || sv(it, "progress").truthy()) {
                 o = stdout(it)?;
             }
-        }
     }
     if sv(it, "progress").truthy() && !o.truthy() {
         o = stderr(it)?;

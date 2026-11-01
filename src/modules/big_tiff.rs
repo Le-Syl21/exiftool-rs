@@ -98,7 +98,7 @@ pub fn process_big_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
             pl::method(it, &et, "HDump", vec![pl::sub(&buf_pos, &n(8)), n(8), cat(&[&dir_name, &s(" entries")]), cat(&[&s("Entry count: "), &num_entries]), Value::Undef, off_name.clone()])?;
             if !next_ifd.is_undef() {
                 let off = g64u(it, &Value::ScalarRef(next_ifd_c.clone()), n(0))?;
-                let tip = pl::sprintf("Offset: 0x%.8x", &[off.clone()]);
+                let tip = pl::sprintf("Offset: 0x%.8x", std::slice::from_ref(&off));
                 let mut id = off_name.clone();
                 if off.truthy() {
                     let r = pl::call_list(it, "Image::ExifTool::Exif::NextOffsetName", vec![et.clone(), id.clone()])?;
@@ -120,7 +120,7 @@ pub fn process_big_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                 pl::method(it, &et, "HDump", vec![pl::add(&buf_pos, &entry), n(20), s("[invalid IFD entry]"), cat(&[&s("Bad format value: "), &format]), n(1), off_name.clone()])?;
                 // warn unless the IFD was just padded with zeros
                 let fmt = cat(&[&s("Unknown format ("), &format, &s(") for "), &dir_name, &s(" tag 0x%x")]);
-                let m = pl::sprintf_v(&fmt, &[tag_id.clone()]);
+                let m = pl::sprintf_v(&fmt, std::slice::from_ref(&tag_id));
                 warn(it, &et, m)?;
                 return ret(n(0)); // assume corrupted IFD
             }
@@ -178,11 +178,11 @@ pub fn process_big_ifd(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value
                 } else if tag_info.truthy() {
                     tag_name = tag_info.get("Name");
                 } else {
-                    tag_name = pl::sprintf("Tag 0x%.4x", &[tag_id.clone()]);
+                    tag_name = pl::sprintf("Tag 0x%.4x", std::slice::from_ref(&tag_id));
                 }
                 let dname = pl::sprintf_v(&cat(&[&dir_name, &s("-%.2d")]), &[index.clone()]);
                 // build our tool tip
-                let mut tip = cat(&[&pl::sprintf("Tag ID: 0x%.4x\n", &[tag_id.clone()]), &s("Format: "), &format_str, &s("["), &count, &s("]\nSize: "), &size, &s(" bytes\n")]);
+                let mut tip = cat(&[&pl::sprintf("Tag ID: 0x%.4x\n", std::slice::from_ref(&tag_id)), &s("Format: "), &format_str, &s("["), &count, &s("]\nSize: "), &size, &s(" bytes\n")]);
                 if pl::gt(&size, &n(8)) {
                     tip = cat(&[&tip, &pl::sprintf("Value offset: 0x%.8x\n", &[value_ptr.clone()])]);
                     col_name = cat(&[&s("<span class=H>"), &tag_name, &s("</span>")]);
@@ -347,7 +347,7 @@ pub fn process_btf(it: &mut Interp, a: Vec<Value>, _w: Want) -> ER<Vec<Value>> {
     if et.get("HTML_DUMP").truthy() {
         let o = if crate::modules::write_exif::byte_order(it)?.eq_str("II") { s("Little") } else { s("Big") };
         pl::method(it, &et, "HDump", vec![n(0), n(8), s("BigTIFF header"), cat(&[&s("Byte order: "), &o, &s(" endian")]), n(0)])?;
-        pl::method(it, &et, "HDump", vec![n(8), n(8), s("IFD0 pointer"), pl::sprintf("Offset: 0x%.8x", &[offset.clone()]), n(0)])?;
+        pl::method(it, &et, "HDump", vec![n(8), n(8), s("IFD0 pointer"), pl::sprintf("Offset: 0x%.8x", std::slice::from_ref(&offset)), n(0)])?;
     }
     let dir_info2 = Value::new_hash();
     dir_info2.set("RAF", raf);
