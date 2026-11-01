@@ -20,6 +20,11 @@ updates:
       # *minor* update while Cargo treats it as breaking.
       egui:
         patterns: ["egui", "egui-*", "egui_*", "eframe"]
+      # The RustCrypto hashes share digest: sha1, sha2 and md-5 0.11 only build
+      # together (Digest::MD5 and Digest::SHA), so they come as one PR, every
+      # update type included (0.10 -> 0.11 is breaking).
+      rustcrypto:
+        patterns: ["digest", "sha1", "sha2", "md-5", "crypto-common", "block-buffer"]
       crates:
         patterns: ["*"]
         update-types: ["minor", "patch"]
