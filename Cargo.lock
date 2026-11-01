@@ -1727,9 +1727,9 @@ dependencies = [
 
 [[package]]
 name = "mbrotli"
-version = "0.5.17"
+version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d489e1a02a7134d2ad3fa94716ccb1a70b79871d0c15d3be7ceb8d257b84fc"
+checksum = "fbeb9ddefd7127c439d38d6f317d21deca990c512602805565e0fa940207d0da"
 dependencies = [
  "borrowed-buf",
  "branches",
