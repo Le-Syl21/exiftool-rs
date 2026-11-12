@@ -12,7 +12,7 @@ both tools and verified by re-reading the outputs, summarised per format and
 detailed per file and case.
 
     parity --dump | python3 scripts/parity_report.py \
-        --rs 0.7.3 --exiftool 13.59 > index.html
+        --rs 1.0.0 --exiftool 13.60 > index.html
 """
 import argparse
 import html
@@ -134,7 +134,10 @@ def render_write(write):
       'outputs are re-read by Perl ExifTool, the independent referee, and ours also '
       'by exiftool-rs. A case is ISO when the requested state is there, the tags '
       'equal those of Perl\'s own output, our reader agrees with Perl on our file '
-      'and Perl reports no new error or warning.</p>')
+      'and Perl reports no new error or warning. An <code>Err:</code> in a cell is ExifTool\'s '
+      'own message: the corpus keeps only the metadata of its files, so some '
+      '(a cut preview, missing media data) cannot be rewritten by either tool; '
+      'such a case reads <em>neither writes</em> and is not a difference.</p>')
     w('<div class="tiles">'
       f'<div class="tile"><span class="n">{total}</span><span class="l">cases on {nfiles} files</span></div>'
       f'<div class="tile {"good" if iso == total - noref else ""}"><span class="n">{iso}</span><span class="l">ISO</span></div>'

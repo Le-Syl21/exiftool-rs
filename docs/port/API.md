@@ -289,7 +289,7 @@ destination's name comes first, then the order above (a recording time
 before a year). A later `set_new_value` request for the destination's tag
 overrides the equivalent, as it overrides any copied tag. The test matrix
 (`tests/api_media_copy.rs`: the six formats and an M4A, to each of the
-six) reads each output back with the port and with Perl ExifTool 13.59.
+six) reads each output back with the port and with Perl ExifTool 13.60.
 
 The same idea was proposed to ExifTool itself, for the formats it writes:
 <https://github.com/exiftool/exiftool/issues/497>.

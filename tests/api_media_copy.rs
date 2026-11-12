@@ -6,7 +6,7 @@
 //! kept. The tags the formats name differently (ID3 `Year`, Vorbis `DATE`,
 //! Matroska `DATE_RELEASED`, an M4A's `ContentCreateDate`...) carry over as
 //! their equivalents. Each output is read back by the port and, when found
-//! at `$EXIFTOOL_DIR`, by Perl ExifTool 13.59.
+//! at `$EXIFTOOL_DIR`, by Perl ExifTool 13.60.
 
 use exiftool_rs::ExifTool;
 
@@ -363,7 +363,7 @@ impl exiftool_rs::FormatExtension for Counting {
 
 /// A copy to a format ExifTool writes is ExifTool's, as before: no extension
 /// is called, and the output has what `exiftool -tagsFromFile SRC -o OUT
-/// DST` writes (Perl ExifTool 13.59, read back by the port).
+/// DST` writes (Perl ExifTool 13.60, read back by the port).
 #[test]
 fn copies_to_formats_exiftool_writes_are_exiftools() {
     use std::sync::atomic::{AtomicUsize, Ordering};

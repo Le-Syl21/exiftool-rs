@@ -122,7 +122,7 @@ needs a Perl module the host's Perl lacks, are told apart by their kind:
 lines that describe perl and its optional modules are the port's own:
 
 ```
-exiftool-rs version 0.0.0 (port of ExifTool 13.60)
+exiftool-rs version 1.0.0 (port of ExifTool 13.60)
 Rust version 1.99.1 (x86_64-unknown-linux-gnu)
 Platform: linux
 Included libraries:
