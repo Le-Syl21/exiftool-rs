@@ -36,7 +36,7 @@ jobs:
   # set up as ci.yml's parity job sets it, the Perl modules the judges expect
   # and the full-modules image.
   timings:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
